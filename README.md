@@ -15,10 +15,9 @@ NovaSVG is a lightweight, header-only C++17/20 library for parsing and rasterizi
 
 ## Usage
 
-Include the public header and define `NOVASVG_IMPLEMENTATION` in exactly one translation unit:
+<!--Include the public header and define `NOVASVG_IMPLEMENTATION` in exactly one translation unit:-->
 
 ```cpp
-#define NOVASVG_IMPLEMENTATION
 #include <novasvg/novasvg.h>
 ```
 
