@@ -5,7 +5,7 @@
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "NovaSVG"
-PROJECT_NUMBER         = @NOVASVG_VERSION@
+PROJECT_NUMBER         = @PROJECT_VERSION@
 PROJECT_BRIEF          = "A header-only SVG library"
 OUTPUT_DIRECTORY       = @CMAKE_CURRENT_BINARY_DIR@/docs
 OUTPUT_LANGUAGE        = English
@@ -26,7 +26,7 @@ INPUT                  = @CMAKE_CURRENT_SOURCE_DIR@/include \
                          @CMAKE_CURRENT_SOURCE_DIR@/docs/README.md
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.h *.hpp *.hxx
-RECURSIVE              = YES
+RECURSIVE              = NO
 EXAMPLE_PATH           = @CMAKE_CURRENT_SOURCE_DIR@/examples
 EXAMPLE_PATTERNS       = *.cpp
 EXAMPLE_RECURSIVE      = NO
