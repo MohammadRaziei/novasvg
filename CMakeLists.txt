@@ -47,6 +47,8 @@ endif()
 
 # Tests
 if(NOVASVG_BUILD_TESTS)
+    enable_testing()
+    
     # Add test executable
     add_executable(test_novasvg tests/cpp/test_basics.cpp)
     
