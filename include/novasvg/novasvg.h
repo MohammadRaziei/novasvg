@@ -138,6 +138,42 @@ NOVASVG_API bool novasvg_add_font_face_from_data(const char* family, bool bold, 
 namespace novasvg {
 
 /**
+ * @brief Version information for the NovaSVG library.
+ */
+class NOVASVG_API Version {
+public:
+    /**
+     * @brief Get the major version number.
+     * @return Major version number.
+     */
+    static int major() { return NOVASVG_VERSION_MAJOR; }
+    
+    /**
+     * @brief Get the minor version number.
+     * @return Minor version number.
+     */
+    static int minor() { return NOVASVG_VERSION_MINOR; }
+    
+    /**
+     * @brief Get the patch version number.
+     * @return Patch version number.
+     */
+    static int patch() { return NOVASVG_VERSION_PATCH; }
+    
+    /**
+     * @brief Get the version as a single integer.
+     * @return Version encoded as integer (major * 10000 + minor * 100 + patch).
+     */
+    static int version() { return NOVASVG_VERSION; }
+    
+    /**
+     * @brief Get the version as a string.
+     * @return Version string in "major.minor.patch" format.
+     */
+    static const char* version_string() { return NOVASVG_VERSION_STRING; }
+};
+
+/**
 * @note Bitmap pixel format is ARGB32_Premultiplied.
 */
 class NOVASVG_API Bitmap {
