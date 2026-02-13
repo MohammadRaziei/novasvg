@@ -15,7 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Project options
 option(NOVASVG_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
-option(NOVASVG_BUILD_DOCS "Build documentation" ${PROJECT_IS_TOP_LEVEL})
+option(NOVASVG_BUILD_DOCS "Build documentation" OFF)
 
 
 
