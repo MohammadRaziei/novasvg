@@ -40,8 +40,8 @@ typedef int plutovg_ref_count_t;
 
 struct plutovg_surface {
     plutovg_ref_count_t ref_count;
-    int width;
-    int height;
+    float width;
+    float height;
     int stride;
     unsigned char* data;
 };
