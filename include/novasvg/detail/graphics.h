@@ -1,7 +1,7 @@
 #ifndef NOVASVG_GRAPHICS_H
 #define NOVASVG_GRAPHICS_H
 
-#include <novasvg/plutovg.h>
+#include <novasvg/detail/plutovg.h>
 
 #include <cstdint>
 #include <algorithm>
