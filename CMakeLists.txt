@@ -2,8 +2,15 @@ cmake_minimum_required(VERSION 3.15)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(PyProject)
+include(DynamicVersion)
 
-project(${PyProject_NAME} LANGUAGES CXX VERSION ${PyProject_VERSION})
+extract_version_string(
+    HEADER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h"
+    VERSION_PREFIX "NOVASVG_"
+    OUTPUT_VAR PROJECT_VERSION
+)
+
+project(${PyProject_NAME} LANGUAGES CXX VERSION ${PROJECT_VERSION})
 message(STATUS "Project: ${PROJECT_NAME}@v${PROJECT_VERSION}")
 include(Startup)
 
@@ -15,6 +22,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Project options
 option(NOVASVG_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
+option(NOVASVG_BUILD_CLI "Build command line interface" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_DOCS "Build documentation" OFF)
 
 
@@ -56,6 +64,24 @@ if(NOVASVG_BUILD_TESTS)
     
     # Add test command
     add_test(NAME test_novasvg COMMAND test_novasvg)
+endif()
+
+# Command Line Interface
+if(NOVASVG_BUILD_CLI)
+    # Add CLI executable
+    add_executable(novasvg_cli src/novasvg_cli.cpp)
+    
+    target_link_libraries(novasvg_cli PRIVATE novasvg)
+    
+    # Set output name to just 'novasvg' for easier use
+    set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg)
+    
+    message(STATUS "Added CLI target: novasvg_cli (output: novasvg)")
+    
+    # Installation
+    install(TARGETS novasvg_cli
+        RUNTIME DESTINATION bin
+    )
 endif()
 
 # Documentation (Doxygen)
