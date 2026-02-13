@@ -8,7 +8,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "novasvg"
-version = "0.1.0"
+dynamic = ["version"]
 description = "NovaSVG is a header-only SVG library with Python bindings"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -44,3 +44,14 @@ cmake.args = ["-DNOVASVG_BUILD=ON", "-DCMAKE_BUILD_TYPE=Release"]
 cmake.define.NOVASVG_BUILD_SHARED = "OFF"
 cmake.define.NOVASVG_BUILD_STATIC = "ON"
 cmake.define.NANOBIND_PROJECT_NAME = "novasvg"
+
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "include/novasvg/novasvg.h"
+regex = '''(?sx)
+\#define \s+ NOVASVG_VERSION_MAJOR \s+ (?P<major>\d+) .*?
+\#define \s+ NOVASVG_VERSION_MINOR \s+ (?P<minor>\d+) .*?
+\#define \s+ NOVASVG_VERSION_PATCH \s+ (?P<patch>\d+) .*?
+'''
+result = "{major}.{minor}.{patch}"
