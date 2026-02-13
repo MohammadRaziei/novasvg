@@ -74,9 +74,7 @@ jobs:
           -DNOVASVG_BUILD_DOCS=ON
 
     - name: Build documentation
-      run: |
-        cd ${{github.workspace}}/build-docs
-        cmake --build . --target docs
+      run: cmake --build ${{github.workspace}}/build-docs --target docs
 
     - name: Upload documentation artifacts
       uses: actions/upload-artifact@v4
