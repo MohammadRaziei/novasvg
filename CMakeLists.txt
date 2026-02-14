@@ -81,7 +81,7 @@ if(NOVASVG_BUILD_TESTS)
 
         add_custom_target(coverage
             COMMAND ${CMAKE_COMMAND} -E echo "Running tests..."
-            COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --extra-verbose
+            COMMAND $<TARGET_FILE:test_novasvg>
 
             COMMAND ${CMAKE_COMMAND} -E echo "Capturing coverage..."
             COMMAND ${LCOV_EXECUTABLE}
@@ -161,6 +161,7 @@ if(NOVASVG_BUILD_DOCS)
     
     if(DOXYGEN_FOUND)
         message(STATUS "Doxygen found: ${DOXYGEN_EXECUTABLE}")
+        cmake_policy(SET CMP0135 NEW)
         
         include(FetchContent)
         FetchContent_Declare(
