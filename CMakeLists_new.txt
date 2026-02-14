@@ -1,0 +1,95 @@
+cmake_minimum_required(VERSION 3.15)
+project(novasvg LANGUAGES CXX)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Options
+option(NOVASVG_BUILD "Build NovaSVG library" ON)
+option(NOVASVG_BUILD_SHARED "Build shared library" OFF)
+option(NOVASVG_BUILD_STATIC "Build static library" ON)
+option(NOVASVG_BUILD_PYTHON "Build Python bindings" ON)
+
+
+# Main library (interface since it's header-only)
+add_library(novasvg INTERFACE)
+target_include_directories(novasvg INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Check if building through scikit-build (Python bindings)
+if(DEFINED SKBUILD AND NOVASVG_BUILD_PYTHON)
+    # Python bindings build (simplified for scikit-build)
+    find_package(Python COMPONENTS Interpreter Development REQUIRED)
+    find_package(nanobind CONFIG REQUIRED)
+    
+    # Include plutovg for Python bindings
+    target_include_directories(novasvg INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/lunasvg/plutovg/include
+    )
+    
+    # Python extension module
+    nanobind_add_module(_novasvg
+        src/novasvg/bindings.cpp
+    )
+    
+    # Link with standard libraries
+    target_link_libraries(_novasvg PRIVATE stdc++)
+    target_link_libraries(_novasvg PRIVATE novasvg)
+    
+    # Set output directory
+    set_target_properties(_novasvg PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/novasvg
+        PREFIX ""
+        SUFFIX "${CMAKE_SHARED_MODULE_SUFFIX}"
+    )
+    
+else()
+    # Regular C++ library build (non-Python)
+    # If we need to build a static library
+    if(NOVASVG_BUILD_STATIC)
+        # Find source files from third_party/lunasvg
+        file(GLOB_RECURSE LUNA_SOURCES
+            ${CMAKE_CURRENT_SOURCE_DIR}/third_party/lunasvg/source/*.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/third_party/lunasvg/plutovg/source/*.c
+        )
+        
+        add_library(novasvg_static STATIC ${LUNA_SOURCES})
+        target_include_directories(novasvg_static PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/third_party/lunasvg/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/third_party/lunasvg/plutovg/include
+        )
+        
+        # Set properties
+        set_target_properties(novasvg_static PROPERTIES
+            OUTPUT_NAME novasvg
+            POSITION_INDEPENDENT_CODE ON
+        )
+        
+        # Alias for consistency
+        add_library(novasvg::novasvg ALIAS novasvg_static)
+    endif()
+    
+    # Installation for C++ library
+    install(DIRECTORY include/novasvg DESTINATION include)
+    
+    if(NOVASVG_BUILD_STATIC)
+        install(TARGETS novasvg_static
+            ARCHIVE DESTINATION lib
+            LIBRARY DESTINATION lib
+        )
+    endif()
+endif()
+
+# Common installation (if not SKBUILD)
+if(NOT DEFINED SKBUILD)
+    # Export targets
+    install(EXPORT novasvg-targets
+        FILE novasvg-config.cmake
+        NAMESPACE novasvg::
+        DESTINATIONهمین lib/cmake/novasvg
+    )
+endif()
