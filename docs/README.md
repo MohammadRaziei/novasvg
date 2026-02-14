@@ -1,14 +1,28 @@
 # NovaSVG Documentation
 
-NovaSVG is a header-only C++ library for parsing, rendering, and manipulating SVG (Scalable Vector Graphics) files.
+\mainpage NovaSVG Documentation
+
+NovaSVG is a single-header, header-only SVG rendering library
+designed for minimal integration friction and clean dependency structure.
+
+Born from extensive refactoring and redesign of earlier ideas,
+NovaSVG focuses on:
+- Single-header distribution
+- No submodules
+- Easy C++ integration
+- Clean Python bindings
+
+See \ref about for the full origin story.
 
 ## Features
 
+- **Single-header distribution**: One include file for all APIs
 - **Header-only**: Easy integration, no linking required
 - **Fast rendering**: High-performance SVG rendering
 - **Complete SVG support**: Supports most SVG 1.1 features
 - **Modern C++**: Written in C++17 with clean API
 - **Cross-platform**: Works on Windows, Linux, macOS
+- **Python bindings**: Clean integration with Python
 
 ## Quick Start
 
