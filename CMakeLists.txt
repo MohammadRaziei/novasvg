@@ -40,24 +40,23 @@ target_include_directories(novasvg INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
 # Generate single-header distribution if NOVASVG_DIST_DIR is defined
 if(DEFINED NOVASVG_DIST_DIR)
     add_custom_target(dist_header
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_DIST_DIR}
-        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h ${NOVASVG_DIST_DIR}/novasvg.h -I ${CMAKE_CURRENT_SOURCE_DIR}/include
-        COMMENT "Generating single-header distribution: ${NOVASVG_DIST_DIR}/novasvg.h"
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_DIST_DIR}/${PROJECT_NAME}
+        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h 
+            ${NOVASVG_DIST_DIR}/${PROJECT_NAME}/novasvg.h 
+            -I ${CMAKE_CURRENT_SOURCE_DIR}/include
+        COMMENT "Generating single-header distribution: ${NOVASVG_DIST_DIR}/${PROJECT_NAME}/novasvg.h"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 endif()
-
 
 # Tests
 if(NOVASVG_BUILD_TESTS)
     enable_testing()
 
-    add_executable(test_novasvg
-        tests/cpp/test_basics.cpp
-    )
+    add_executable(test_novasvg tests/cpp/test_basics.cpp)
 
     # Default: test against normal headers (source tree)
-    set(NOVASVG_TEST_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg")
+    set(NOVASVG_TEST_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
     # test against amalgamated/single-header output
     if(NOVASVG_DIST_DIR)
@@ -70,6 +69,7 @@ if(NOVASVG_BUILD_TESTS)
 
     add_test(NAME test_novasvg COMMAND test_novasvg)
 endif()
+
 
 # Examples
 if(NOVASVG_BUILD_EXAMPLES)

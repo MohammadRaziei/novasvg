@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <string>
 
-#include "novasvg.h"
+#include <novasvg/novasvg.h>
 
 namespace {
 std::filesystem::path project_root()
