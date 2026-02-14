@@ -82,7 +82,7 @@ jobs:
         retention-days: 5
 
   build-coverage:
-    needs: build-and-test
+    # needs: build-and-test
     # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     
@@ -103,11 +103,9 @@ jobs:
     - name: Configure CMake with coverage
       run: |
         cmake -B ${{github.workspace}}/build-coverage \
-          -DCMAKE_BUILD_TYPE=Debug \
-          -DNOVASVG_BUILD_EXAMPLES=ON \
+          -DNOVASVG_BUILD_EXAMPLES=OFF \
           -DNOVASVG_BUILD_TESTS=ON \
           -DNOVASVG_BUILD_DOCS=OFF \
-          -DCMAKE_CXX_FLAGS="--coverage"
 
     - name: Build with coverage
       run: cmake --build ${{github.workspace}}/build-coverage -j4
@@ -147,7 +145,7 @@ jobs:
           -DNOVASVG_BUILD_EXAMPLES=OFF \
           -DNOVASVG_BUILD_TESTS=ON \
           -DNOVASVG_BUILD_DOCS=OFF \
-          -DNOVA_DIST_DIR=${{github.workspace}}/dist
+          -DNOVASVG_DIST_DIR=${{github.workspace}}/build-single/dist
 
     - name: Build single-header
       run: cmake --build ${{github.workspace}}/build-single --target dist_header
@@ -161,7 +159,7 @@ jobs:
         body: "Single-header distribution of NovaSVG"
         prerelease: true
         draft: false
-        files: ${{github.workspace}}/dist/novasvg.h
+        files: ${{github.workspace}}/build-single/dist/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
