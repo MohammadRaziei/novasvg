@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "../novasvg.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

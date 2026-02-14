@@ -1,4 +1,3 @@
-#include "../novasvg.h"
 #include "svgelement.h"
 #include "svgparserutils.h"
 
