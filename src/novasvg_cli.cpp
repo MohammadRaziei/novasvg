@@ -80,6 +80,20 @@ int cmd_convert(const std::string& input, const std::string& output,
     return 0;
 }
 
+// Helper function to count all elements recursively
+size_t count_all_elements(const novasvg::Element& element) {
+    size_t count = 1; // Count this element
+    
+    auto children = element.children();
+    for (const auto& child : children) {
+        if (child.isElement()) {
+            count += count_all_elements(child.toElement());
+        }
+    }
+    
+    return count;
+}
+
 int cmd_info(const std::string& input, bool show_file_size) {
     std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
     if (!doc) {
@@ -95,6 +109,14 @@ int cmd_info(const std::string& input, bool show_file_size) {
     std::cout << "  Bounding Box: " 
               << bbox.x << "," << bbox.y << " "
               << bbox.w << "x" << bbox.h << "\n";
+    
+    // Count total elements
+    size_t total_elements = 0;
+    auto root = doc->documentElement();
+    if (root) {
+        total_elements = count_all_elements(root);
+        std::cout << "  Total elements: " << total_elements << "\n";
+    }
     
     if (show_file_size) {
         if (fs::exists(input)) {
