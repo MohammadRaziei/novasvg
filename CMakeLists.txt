@@ -32,10 +32,7 @@ option(NOVASVG_BUILD_DOCS "Build documentation" OFF)
 add_library(novasvg INTERFACE)
 add_library(novasvg::novasvg ALIAS novasvg)
 
-target_include_directories(novasvg INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
+target_include_directories(novasvg INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # target_compile_features(novasvg INTERFACE cxx_std_17)
 
@@ -126,6 +123,16 @@ if(NOVASVG_BUILD_DOCS)
     else()
         message(WARNING "Doxygen not found - documentation will not be generated")
     endif()
+endif()
+
+# Generate single-header distribution if DIST_DIR is defined
+if(DEFINED DIST_DIR)
+    add_custom_target(dist_header
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${DIST_DIR}
+        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h ${DIST_DIR}/novasvg.h -I ${CMAKE_CURRENT_SOURCE_DIR}/include
+        COMMENT "Generating single-header distribution: ${DIST_DIR}/novasvg.h"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
 endif()
 
 # Installation
