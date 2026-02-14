@@ -157,7 +157,7 @@ jobs:
         body: "Single-header distribution of NovaSVG"
         prerelease: true
         draft: false
-        files: ${{github.workspace}}/build-single/dist/*
+        files: ${{github.workspace}}/build-single/dist/novasvg/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
