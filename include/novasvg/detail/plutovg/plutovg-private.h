@@ -3,7 +3,7 @@
 #ifndef PLUTOVG_PRIVATE_H
 #define PLUTOVG_PRIVATE_H
 
-#include <novasvg/detail/plutovg.h>
+#include "plutovg.h"
 
 #if defined(_WIN32)
 

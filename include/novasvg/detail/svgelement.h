@@ -1,7 +1,7 @@
 #ifndef NOVASVG_SVGELEMENT_H
 #define NOVASVG_SVGELEMENT_H
 
-#include <novasvg/novasvg.h>
+#include "../novasvg.h"
 #include "svgproperty.h"
 
 #include <string>

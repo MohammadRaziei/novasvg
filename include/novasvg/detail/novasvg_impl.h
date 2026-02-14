@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include <novasvg/novasvg.h>
+#include "../novasvg.h"
 
 #ifdef __cplusplus
 extern "C" {

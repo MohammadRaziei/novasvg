@@ -1,5 +1,5 @@
 #include "graphics.h"
-#include <novasvg/novasvg.h>
+#include "../novasvg.h"
 
 #include <cfloat>
 #include <cmath>

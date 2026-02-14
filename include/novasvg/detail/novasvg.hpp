@@ -1,4 +1,4 @@
-#include <novasvg/novasvg.h>
+#include "../novasvg.h"
 #include "svgelement.h"
 #include "svgrenderstate.h"
 
