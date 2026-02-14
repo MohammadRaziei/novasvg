@@ -57,7 +57,7 @@ if(NOVASVG_BUILD_TESTS)
     # Add test executable
     add_executable(test_novasvg tests/cpp/test_basics.cpp)
     
-    target_link_libraries(test_novasvg novasvg)
+    target_include_directories(test_novasvg PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg)
     
     # Add test command
     add_test(NAME test_novasvg COMMAND test_novasvg)
@@ -125,12 +125,12 @@ if(NOVASVG_BUILD_DOCS)
     endif()
 endif()
 
-# Generate single-header distribution if DIST_DIR is defined
-if(DEFINED DIST_DIR)
+# Generate single-header distribution if NOVA_DIST_DIR is defined
+if(DEFINED NOVA_DIST_DIR)
     add_custom_target(dist_header
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${DIST_DIR}
-        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h ${DIST_DIR}/novasvg.h -I ${CMAKE_CURRENT_SOURCE_DIR}/include
-        COMMENT "Generating single-header distribution: ${DIST_DIR}/novasvg.h"
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVA_DIST_DIR}
+        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h ${NOVA_DIST_DIR}/novasvg.h -I ${CMAKE_CURRENT_SOURCE_DIR}/include
+        COMMENT "Generating single-header distribution: ${NOVA_DIST_DIR}/novasvg.h"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 endif()
