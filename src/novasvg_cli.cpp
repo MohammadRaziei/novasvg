@@ -27,7 +27,7 @@
 namespace fs = std::filesystem;
 
 // Utility function to convert bytes to human readable format
-std::string humanReadableSize(std::uintmax_t bytes) {
+std::string human_readable_size(std::uintmax_t bytes) {
     const char* suffixes[] = {"B", "KB", "MB", "GB", "TB"};
     double size = static_cast<double>(bytes);
     int i = 0;
@@ -100,7 +100,7 @@ int cmd_info(const std::string& input, bool show_file_size) {
         if (fs::exists(input)) {
             auto size = fs::file_size(input);
             std::cout << "  File size: " << size << " bytes\n";
-            std::cout << "  Readable size: " << humanReadableSize(size) << "\n";
+            std::cout << "  Readable size: " << human_readable_size(size) << "\n";
         } else {
             std::cout << "  File size: N/A\n";
         }
@@ -263,6 +263,17 @@ int main(int argc, char** argv) {
     
     // Version information
     app.set_version_flag("-v,--version", NOVASVG_VERSION_STRING, "Show version information");
+    
+    // Add footer with examples
+    app.footer("\nEXAMPLES:\n"
+               "  novasvg convert input.svg output.png\n"
+               "  novasvg convert -w 800 -H 600 input.svg output.png\n"
+               "  novasvg convert -s 2.0 input.svg output.png\n"
+               "  novasvg info input.svg\n"
+               "  novasvg info --size input.svg\n"
+               "  novasvg query \"circle\" input.svg\n"
+               "  novasvg query \"rect[fill='red']\" input.svg\n"
+               "  novasvg batch input_dir/ output_dir/\n");
     
     // Convert command
     auto convert_cmd = app.add_subcommand("convert", "Convert SVG to PNG");
