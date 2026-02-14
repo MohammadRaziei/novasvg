@@ -59,6 +59,7 @@ GENERATE_TREEVIEW      = YES
 SEARCHENGINE           = YES
 DISABLE_INDEX          = NO
 FULL_SIDEBAR           = NO
+HTML_FOOTER            = @CMAKE_CURRENT_SOURCE_DIR@/docs/footer.html
 
 
 #---------------------------------------------------------------------------
