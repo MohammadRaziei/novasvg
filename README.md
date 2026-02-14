@@ -1,10 +1,11 @@
 # NovaSVG
 
 <div align="center">
-<img src="https://raw.githubusercontent.com/MohammadRaziei/novasvg/refs/heads/master/data/nova.svg" width="160">
+<img src="https://raw.githubusercontent.com/MohammadRaziei/novasvg/refs/heads/master/data/nova.svg" width="160"
+     onerror="this.onerror=null; this.src='data/nova.svg';" alt="NovaSvg">
 </div>
 
-NovaSVG is a lightweight, header-only C++17/20 library for parsing and rasterizing SVG files. It provides a compact API for loading SVG documents, querying elements, and rendering to a bitmap using a single include.
+NovaSVG is a lightweight, header-only C++17 library for parsing and rasterizing SVG files. It provides a compact API for loading SVG documents, querying elements, and rendering to a bitmap using a single include.
 
 ## Features
 
