@@ -36,6 +36,41 @@ target_include_directories(novasvg INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
 
 # target_compile_features(novasvg INTERFACE cxx_std_17)
 
+
+# Generate single-header distribution if NOVA_DIST_DIR is defined
+if(DEFINED NOVA_DIST_DIR)
+    add_custom_target(dist_header
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVA_DIST_DIR}
+        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h ${NOVA_DIST_DIR}/novasvg.h -I ${CMAKE_CURRENT_SOURCE_DIR}/include
+        COMMENT "Generating single-header distribution: ${NOVA_DIST_DIR}/novasvg.h"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+endif()
+
+
+# Tests
+if(NOVASVG_BUILD_TESTS)
+    enable_testing()
+
+    add_executable(test_novasvg
+        tests/cpp/test_basics.cpp
+    )
+
+    # Default: test against normal headers (source tree)
+    set(NOVASVG_TEST_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg")
+
+    # test against amalgamated/single-header output
+    if(NOVA_DIST_DIR)
+        message(STATUS "Testing against dist headers at: ${NOVA_DIST_DIR}")
+        set(NOVASVG_TEST_INCLUDE_DIR "${NOVA_DIST_DIR}")
+        add_dependencies(test_novasvg dist_header)
+    endif()
+
+    target_include_directories(test_novasvg PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}")
+
+    add_test(NAME test_novasvg COMMAND test_novasvg)
+endif()
+
 # Examples
 if(NOVASVG_BUILD_EXAMPLES)
     file(GLOB EXAMPLE_SOURCES CONFIGURE_DEPENDS
@@ -50,18 +85,6 @@ if(NOVASVG_BUILD_EXAMPLES)
     endforeach()
 endif()
 
-# Tests
-if(NOVASVG_BUILD_TESTS)
-    enable_testing()
-    
-    # Add test executable
-    add_executable(test_novasvg tests/cpp/test_basics.cpp)
-    
-    target_include_directories(test_novasvg PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg)
-    
-    # Add test command
-    add_test(NAME test_novasvg COMMAND test_novasvg)
-endif()
 
 # Command Line Interface
 if(NOVASVG_BUILD_CLI)
@@ -125,15 +148,6 @@ if(NOVASVG_BUILD_DOCS)
     endif()
 endif()
 
-# Generate single-header distribution if NOVA_DIST_DIR is defined
-if(DEFINED NOVA_DIST_DIR)
-    add_custom_target(dist_header
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVA_DIST_DIR}
-        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h ${NOVA_DIST_DIR}/novasvg.h -I ${CMAKE_CURRENT_SOURCE_DIR}/include
-        COMMENT "Generating single-header distribution: ${NOVA_DIST_DIR}/novasvg.h"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-endif()
 
 # Installation
 install(DIRECTORY include DESTINATION include)
