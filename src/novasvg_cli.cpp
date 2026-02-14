@@ -94,13 +94,47 @@ size_t count_all_elements(const novasvg::Element& element) {
     return count;
 }
 
-int cmd_info(const std::string& input) {
+int cmd_info(const std::string& input, bool json_output = false) {
     std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
     if (!doc) {
         std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
     }
 
+    if (json_output) {
+        // JSON output in one line
+        auto bbox = doc->boundingBox();
+        size_t total_elements = 0;
+        auto root = doc->documentElement();
+        if (root) {
+            total_elements = count_all_elements(root);
+        }
+        
+        std::uintmax_t file_size = 0;
+        std::string readable_size = "N/A";
+        if (fs::exists(input)) {
+            file_size = fs::file_size(input);
+            readable_size = human_readable_size(file_size);
+        }
+        
+        // Escape quotes in file path
+        std::string escaped_file = input;
+        size_t pos = 0;
+        while ((pos = escaped_file.find('"', pos)) != std::string::npos) {
+            escaped_file.replace(pos, 1, "\\\"");
+            pos += 2;
+        }
+        
+        std::cout << "{\"file\":\"" << escaped_file << "\",\"width\":" << doc->width() 
+                  << ",\"height\":" << doc->height() << ",\"bounding_box\":{\"x\":" 
+                  << bbox.x << ",\"y\":" << bbox.y << ",\"width\":" << bbox.w 
+                  << ",\"height\":" << bbox.h << "},\"total_elements\":" << total_elements 
+                  << ",\"file_size\":" << file_size << ",\"readable_size\":\"" 
+                  << readable_size << "\"}\n";
+        return 0;
+    }
+    
+    // Normal text output
     std::cout << "SVG Information:\n";
     std::cout << "  File: " << input << "\n";
     std::cout << "  Size: " << doc->width() << "x" << doc->height() << "px\n";
@@ -130,7 +164,7 @@ int cmd_info(const std::string& input) {
     return 0;
 }
 
-int cmd_query(const std::string& selector, const std::string& input) {
+int cmd_query(const std::string& selector, const std::string& input, bool json_output = false) {
     std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
     if (!doc) {
         std::cerr << "Error: Failed to load SVG file: " << input << "\n";
@@ -138,6 +172,59 @@ int cmd_query(const std::string& selector, const std::string& input) {
     }
 
     auto elements = doc->querySelectorAll(selector);
+    
+    if (json_output) {
+        // JSON output in one line
+        std::cout << "{\"selector\":\"" << selector << "\",\"count\":" << elements.size() << ",\"elements\":[";
+        
+        for (size_t i = 0; i < elements.size(); i++) {
+            const auto& elem = elements[i];
+            auto bbox = elem.getBoundingBox();
+            auto local_bbox = elem.getLocalBoundingBox();
+            auto global_bbox = elem.getGlobalBoundingBox();
+            
+            if (i > 0) std::cout << ",";
+            std::cout << "{\"index\":" << (i + 1) << ",\"bounding_box\":{\"x\":" 
+                      << bbox.x << ",\"y\":" << bbox.y << ",\"width\":" << bbox.w 
+                      << ",\"height\":" << bbox.h << "},\"local_bbox\":{\"x\":" 
+                      << local_bbox.x << ",\"y\":" << local_bbox.y << ",\"width\":" 
+                      << local_bbox.w << ",\"height\":" << local_bbox.h 
+                      << "},\"global_bbox\":{\"x\":" << global_bbox.x << ",\"y\":" 
+                      << global_bbox.y << ",\"width\":" << global_bbox.w << ",\"height\":" 
+                      << global_bbox.h << "}";
+            
+            // Add attributes
+            std::cout << ",\"attributes\":{";
+            bool first_attr = true;
+            
+            if (elem.hasAttribute("id")) {
+                std::cout << "\"id\":\"" << elem.getAttribute("id") << "\"";
+                first_attr = false;
+            }
+            if (elem.hasAttribute("class")) {
+                if (!first_attr) std::cout << ",";
+                std::cout << "\"class\":\"" << elem.getAttribute("class") << "\"";
+                first_attr = false;
+            }
+            if (elem.hasAttribute("fill")) {
+                if (!first_attr) std::cout << ",";
+                std::cout << "\"fill\":\"" << elem.getAttribute("fill") << "\"";
+                first_attr = false;
+            }
+            if (elem.hasAttribute("stroke")) {
+                if (!first_attr) std::cout << ",";
+                std::cout << "\"stroke\":\"" << elem.getAttribute("stroke") << "\"";
+                first_attr = false;
+            }
+            
+            std::cout << "}}";
+        }
+        
+        std::cout << "]}\n";
+        return 0;
+    }
+    
+    // Normal text output
     std::cout << "Found " << elements.size() << " element(s) matching: " << selector << "\n\n";
     
     for (size_t i = 0; i < elements.size(); i++) {
@@ -320,22 +407,26 @@ int main(int argc, char** argv) {
     // Info command
     auto info_cmd = app.add_subcommand("info", "Display SVG information");
     std::string info_input;
+    bool info_json = false;
     
     info_cmd->add_option("input", info_input, "Input SVG file")->required()->check(CLI::ExistingFile);
+    info_cmd->add_flag("--json", info_json, "Output in JSON format");
     
     info_cmd->callback([&]() {
-        return cmd_info(info_input);
+        return cmd_info(info_input, info_json);
     });
     
     // Query command
     auto query_cmd = app.add_subcommand("query", "Query elements using CSS selectors");
     std::string query_selector, query_input;
+    bool query_json = false;
     
     query_cmd->add_option("selector", query_selector, "CSS selector")->required();
     query_cmd->add_option("input", query_input, "Input SVG file")->required()->check(CLI::ExistingFile);
+    query_cmd->add_flag("--json", query_json, "Output in JSON format");
     
     query_cmd->callback([&]() {
-        return cmd_query(query_selector, query_input);
+        return cmd_query(query_selector, query_input, query_json);
     });
     
     // Apply CSS command
