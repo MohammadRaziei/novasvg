@@ -63,11 +63,50 @@ if(NOVASVG_BUILD_TESTS)
         message(STATUS "Testing against dist headers at: ${NOVASVG_DIST_DIR}")
         set(NOVASVG_TEST_INCLUDE_DIR "${NOVASVG_DIST_DIR}")
         add_dependencies(test_novasvg dist_header)
+        
     endif()
 
     target_include_directories(test_novasvg PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}")
 
-    add_test(NAME test_novasvg COMMAND test_novasvg)
+    add_test(NAME test_novasvg COMMAND $<TARGET_FILE:test_novasvg>)
+
+
+    find_program(LCOV_EXECUTABLE lcov)
+
+    if(LCOV_EXECUTABLE)
+        target_compile_options(test_novasvg PRIVATE -O0 -g --coverage)
+        target_link_options(test_novasvg PRIVATE --coverage)
+        add_custom_target(coverage
+            COMMAND ${CMAKE_COMMAND} -E echo "Running tests..."
+            COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+
+            COMMAND ${CMAKE_COMMAND} -E echo "Capturing coverage..."
+            COMMAND ${LCOV_EXECUTABLE}
+                    --capture
+                    --directory ${CMAKE_BINARY_DIR}
+                    --base-directory ${CMAKE_SOURCE_DIR}
+                    --no-external
+                    --rc function_coverage=1
+                    --output-file ${CMAKE_BINARY_DIR}/coverage.info
+
+            COMMAND ${CMAKE_COMMAND} -E echo "Filtering novasvg files..."
+            COMMAND ${LCOV_EXECUTABLE}
+                    --extract
+                    ${CMAKE_BINARY_DIR}/coverage.info
+                    "*/include/novasvg/*"
+                    --output-file ${CMAKE_BINARY_DIR}/coverage_novasvg.info
+
+            COMMAND ${CMAKE_COMMAND} -E echo "Coverage summary:"
+            COMMAND ${LCOV_EXECUTABLE}
+                    --list
+                    ${CMAKE_BINARY_DIR}/coverage_novasvg.info
+
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            USES_TERMINAL
+        )
+
+    endif()
+
 endif()
 
 
