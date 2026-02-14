@@ -5,7 +5,7 @@
  * 
  * Features:
  * - Convert SVG to PNG
- * - Query SVG information (size, bounding box)
+ * - Query SVG information (size, bounding box, file size)
  * - Extract elements using CSS selectors
  * - Apply CSS stylesheets
  * - Manage fonts
@@ -13,6 +13,7 @@
  */
 
 #include <novasvg/novasvg.h>
+#include "CLI11.hpp"
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -21,112 +22,42 @@
 #include <algorithm>
 #include <cstring>
 #include <iomanip>
+#include <sstream>
 
 namespace fs = std::filesystem;
 
-// Utility functions
-void print_help() {
-    std::cout << "\n";
-    std::cout << "NovaSVG CLI - SVG processing tool\n";
-    std::cout << "Version: " << NOVASVG_VERSION_STRING << "\n";
-    std::cout << "\n";
-    std::cout << "Usage: novasvg <command> [options] [input] [output]\n";
-    std::cout << "\n";
-    std::cout << "Commands:\n";
-    std::cout << "  convert      Convert SVG to PNG\n";
-    std::cout << "  info         Display SVG information\n";
-    std::cout << "  query        Query elements using CSS selectors\n";
-    std::cout << "  apply-css    Apply CSS stylesheet to SVG\n";
-    std::cout << "  font         Manage fonts\n";
-    std::cout << "  batch        Batch process multiple files\n";
-    std::cout << "\n";
-    std::cout << "Options:\n";
-    std::cout << "  -h, --help           Show this help message\n";
-    std::cout << "  -v, --version        Show version information\n";
-    std::cout << "  -w, --width <px>     Output width (default: auto)\n";
-    std::cout << "  -H, --height <px>    Output height (default: auto)\n";
-    std::cout << "  -b, --bg <color>     Background color (hex: RRGGBBAA, default: transparent)\n";
-    std::cout << "  -s, --scale <factor> Scale factor (default: 1.0)\n";
-    std::cout << "  -q, --quiet          Quiet mode (suppress non-error output)\n";
-    std::cout << "  -f, --force          Overwrite existing files\n";
-    std::cout << "\n";
-    std::cout << "Examples:\n";
-    std::cout << "  novasvg convert input.svg output.png\n";
-    std::cout << "  novasvg convert -w 800 -H 600 input.svg output.png\n";
-    std::cout << "  novasvg info input.svg\n";
-    std::cout << "  novasvg query \"rect\" input.svg\n";
-    std::cout << "  novasvg apply-css styles.css input.svg output.svg\n";
-    std::cout << "  novasvg font add \"Arial\" regular.ttf\n";
-    std::cout << "  novasvg batch convert data/ output/\n";
-    std::cout << "\n";
-}
+// Utility function to convert bytes to human readable format
+std::string humanReadableSize(std::uintmax_t bytes) {
+    const char* suffixes[] = {"B", "KB", "MB", "GB", "TB"};
+    double size = static_cast<double>(bytes);
+    int i = 0;
 
-void print_version() {
-    std::cout << "NovaSVG CLI v" << NOVASVG_VERSION_STRING << "\n";
-}
-
-bool load_svg(const std::string& filename, std::unique_ptr<novasvg::Document>& doc) {
-    doc = novasvg::Document::loadFromFile(filename);
-    if (!doc) {
-        std::cerr << "Error: Failed to load SVG file: " << filename << "\n";
-        return false;
+    while (size >= 1024 && i < 4) {
+        size /= 1024;
+        ++i;
     }
-    return true;
-}
 
-bool save_png(const novasvg::Bitmap& bitmap, const std::string& filename) {
-    return bitmap.writeToPng(filename);
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2) << size << " " << suffixes[i];
+    return oss.str();
 }
 
 // Command implementations
-int cmd_convert(const std::vector<std::string>& args) {
-    if (args.size() < 2) {
-        std::cerr << "Error: convert command requires input and output files\n";
-        return 1;
-    }
-
-    std::string input = args[0];
-    std::string output = args[1];
-    
-    int width = -1;
-    int height = -1;
-    uint32_t bg_color = 0x00000000; // Transparent
-    
-    // Parse additional arguments
-    for (size_t i = 2; i < args.size(); i++) {
-        if (args[i] == "-w" || args[i] == "--width") {
-            if (i + 1 < args.size()) {
-                width = std::stoi(args[++i]);
-            }
-        } else if (args[i] == "-H" || args[i] == "--height") {
-            if (i + 1 < args.size()) {
-                height = std::stoi(args[++i]);
-            }
-        } else if (args[i] == "-b" || args[i] == "--bg") {
-            if (i + 1 < args.size()) {
-                std::string color_str = args[++i];
-                bg_color = std::stoul(color_str, nullptr, 16);
-            }
-        } else if (args[i] == "-s" || args[i] == "--scale") {
-            if (i + 1 < args.size()) {
-                float scale = std::stof(args[++i]);
-                // Load document to get original size
-                std::unique_ptr<novasvg::Document> doc;
-                if (load_svg(input, doc)) {
-                    width = static_cast<int>(doc->width() * scale);
-                    height = static_cast<int>(doc->height() * scale);
-                }
-            }
-        }
-    }
-
-    std::unique_ptr<novasvg::Document> doc;
-    if (!load_svg(input, doc)) {
+int cmd_convert(const std::string& input, const std::string& output, 
+                int width, int height, uint32_t bg_color, float scale) {
+    std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
+    if (!doc) {
+        std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
     }
 
     std::cout << "Converting: " << input << " -> " << output << "\n";
-    std::cout << "Size: " << doc->width() << "x" << doc->height() << "px\n";
+    std::cout << "Original size: " << doc->width() << "x" << doc->height() << "px\n";
+    
+    if (scale > 0.0f && scale != 1.0f) {
+        width = static_cast<int>(doc->width() * scale);
+        height = static_cast<int>(doc->height() * scale);
+    }
     
     if (width > 0 || height > 0) {
         std::cout << "Output size: ";
@@ -140,7 +71,7 @@ int cmd_convert(const std::vector<std::string>& args) {
         return 1;
     }
 
-    if (!save_png(bitmap, output)) {
+    if (!bitmap.writeToPng(output)) {
         std::cerr << "Error: Failed to save PNG file: " << output << "\n";
         return 1;
     }
@@ -149,15 +80,10 @@ int cmd_convert(const std::vector<std::string>& args) {
     return 0;
 }
 
-int cmd_info(const std::vector<std::string>& args) {
-    if (args.empty()) {
-        std::cerr << "Error: info command requires input file\n";
-        return 1;
-    }
-
-    std::string input = args[0];
-    std::unique_ptr<novasvg::Document> doc;
-    if (!load_svg(input, doc)) {
+int cmd_info(const std::string& input, bool show_file_size) {
+    std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
+    if (!doc) {
+        std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
     }
 
@@ -170,45 +96,23 @@ int cmd_info(const std::vector<std::string>& args) {
               << bbox.x << "," << bbox.y << " "
               << bbox.w << "x" << bbox.h << "\n";
     
-    auto root = doc->documentElement();
-    if (root) {
-        auto children = root.children();
-        std::cout << "  Elements: " << children.size() << "\n";
-        
-        // Count element types
-        int rect_count = 0, circle_count = 0, path_count = 0, text_count = 0, other_count = 0;
-        for (const auto& child : children) {
-            if (child.isElement()) {
-                auto elem = child.toElement();
-                // Simple type detection based on tag name (would need actual tag name access)
-                other_count++;
-            } else if (child.isTextNode()) {
-                text_count++;
-            }
+    if (show_file_size) {
+        if (fs::exists(input)) {
+            auto size = fs::file_size(input);
+            std::cout << "  File size: " << size << " bytes\n";
+            std::cout << "  Readable size: " << humanReadableSize(size) << "\n";
+        } else {
+            std::cout << "  File size: N/A\n";
         }
-        
-        std::cout << "  Element types:\n";
-        std::cout << "    Rectangles: " << rect_count << "\n";
-        std::cout << "    Circles: " << circle_count << "\n";
-        std::cout << "    Paths: " << path_count << "\n";
-        std::cout << "    Text: " << text_count << "\n";
-        std::cout << "    Other: " << other_count << "\n";
     }
 
     return 0;
 }
 
-int cmd_query(const std::vector<std::string>& args) {
-    if (args.size() < 2) {
-        std::cerr << "Error: query command requires selector and input file\n";
-        return 1;
-    }
-
-    std::string selector = args[0];
-    std::string input = args[1];
-    
-    std::unique_ptr<novasvg::Document> doc;
-    if (!load_svg(input, doc)) {
+int cmd_query(const std::string& selector, const std::string& input) {
+    std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
+    if (!doc) {
+        std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
     }
 
@@ -252,16 +156,7 @@ int cmd_query(const std::vector<std::string>& args) {
     return 0;
 }
 
-int cmd_apply_css(const std::vector<std::string>& args) {
-    if (args.size() < 3) {
-        std::cerr << "Error: apply-css command requires CSS file, input SVG, and output SVG\n";
-        return 1;
-    }
-
-    std::string css_file = args[0];
-    std::string input = args[1];
-    std::string output = args[2];
-    
+int cmd_apply_css(const std::string& css_file, const std::string& input, const std::string& output) {
     // Load CSS
     std::ifstream css_stream(css_file);
     if (!css_stream) {
@@ -273,8 +168,9 @@ int cmd_apply_css(const std::vector<std::string>& args) {
                             std::istreambuf_iterator<char>());
     
     // Load SVG
-    std::unique_ptr<novasvg::Document> doc;
-    if (!load_svg(input, doc)) {
+    std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
+    if (!doc) {
+        std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
     }
     
@@ -285,7 +181,6 @@ int cmd_apply_css(const std::vector<std::string>& args) {
     doc->forceLayout();
     
     // For now, we'll just render to PNG since NovaSVG doesn't have SVG export
-    // In a real implementation, we would need SVG export functionality
     std::cout << "Note: CSS applied successfully. Rendering to PNG instead of SVG export.\n";
     
     auto bitmap = doc->renderToBitmap();
@@ -298,93 +193,18 @@ int cmd_apply_css(const std::vector<std::string>& args) {
     fs::path output_path(output);
     if (output_path.extension() == ".svg") {
         output_path.replace_extension(".png");
-        output = output_path.string();
     }
     
-    if (!save_png(bitmap, output)) {
-        std::cerr << "Error: Failed to save output file: " << output << "\n";
+    if (!bitmap.writeToPng(output_path.string())) {
+        std::cerr << "Error: Failed to save output file: " << output_path.string() << "\n";
         return 1;
     }
     
-    std::cout << "CSS applied and rendered to: " << output << "\n";
+    std::cout << "CSS applied and rendered to: " << output_path.string() << "\n";
     return 0;
 }
 
-int cmd_font(const std::vector<std::string>& args) {
-    if (args.empty() || args[0] == "help") {
-        std::cout << "\n";
-        std::cout << "Font management commands:\n";
-        std::cout << "  add <family> <filename> [bold] [italic]  Add font face from file\n";
-        std::cout << "  list                                     List available fonts\n";
-        std::cout << "  clear                                    Clear font cache\n";
-        std::cout << "\n";
-        return 0;
-    }
-    
-    std::string subcmd = args[0];
-    
-    if (subcmd == "add") {
-        if (args.size() < 3) {
-            std::cerr << "Error: font add requires family and filename\n";
-            return 1;
-        }
-        
-        std::string family = args[1];
-        std::string filename = args[2];
-        bool bold = false;
-        bool italic = false;
-        
-        if (args.size() > 3) {
-            std::string bold_str = args[3];
-            std::transform(bold_str.begin(), bold_str.end(), bold_str.begin(), ::tolower);
-            bold = (bold_str == "true" || bold_str == "1" || bold_str == "yes");
-        }
-        
-        if (args.size() > 4) {
-            std::string italic_str = args[4];
-            std::transform(italic_str.begin(), italic_str.end(), italic_str.begin(), ::tolower);
-            italic = (italic_str == "true" || italic_str == "1" || italic_str == "yes");
-        }
-        
-        if (novasvg_add_font_face_from_file(family.c_str(), bold, italic, filename.c_str())) {
-            std::cout << "Font added successfully: " << family 
-                      << " (bold=" << bold << ", italic=" << italic << ")\n";
-            return 0;
-        } else {
-            std::cerr << "Error: Failed to add font: " << filename << "\n";
-            return 1;
-        }
-    }
-    else if (subcmd == "list") {
-        std::cout << "Note: Font listing requires additional implementation\n";
-        std::cout << "Font cache management functions are available in the API.\n";
-        return 0;
-    }
-    else if (subcmd == "clear") {
-        std::cout << "Note: Font cache clearing requires additional implementation\n";
-        return 0;
-    }
-    else {
-        std::cerr << "Error: Unknown font command: " << subcmd << "\n";
-        return 1;
-    }
-}
-
-int cmd_batch(const std::vector<std::string>& args) {
-    if (args.size() < 2) {
-        std::cerr << "Error: batch command requires subcommand, input dir, and output dir\n";
-        return 1;
-    }
-    
-    std::string subcmd = args[0];
-    std::string input_dir = args[1];
-    std::string output_dir = args.size() > 2 ? args[2] : "output";
-    
-    if (subcmd != "convert") {
-        std::cerr << "Error: Only 'convert' subcommand is supported for batch processing\n";
-        return 1;
-    }
-    
+int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
     if (!fs::exists(input_dir) || !fs::is_directory(input_dir)) {
         std::cerr << "Error: Input directory does not exist: " << input_dir << "\n";
         return 1;
@@ -407,8 +227,9 @@ int cmd_batch(const std::vector<std::string>& args) {
         std::cout << "Processing: " << path.filename() << " -> " 
                   << fs::path(output_file).filename() << "\n";
         
-        std::unique_ptr<novasvg::Document> doc;
-        if (!load_svg(input_file, doc)) {
+        std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input_file);
+        if (!doc) {
+            std::cerr << "  Failed to load\n";
             failed++;
             continue;
         }
@@ -420,7 +241,7 @@ int cmd_batch(const std::vector<std::string>& args) {
             continue;
         }
         
-        if (!save_png(bitmap, output_file)) {
+        if (!bitmap.writeToPng(output_file)) {
             std::cerr << "  Failed to save\n";
             failed++;
             continue;
@@ -437,50 +258,85 @@ int cmd_batch(const std::vector<std::string>& args) {
     return failed > 0 ? 1 : 0;
 }
 
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        print_help();
-        return 0;
-    }
+int main(int argc, char** argv) {
+    CLI::App app{"NovaSVG CLI - SVG processing tool"};
     
-    std::string command = argv[1];
+    // Version information
+    app.set_version_flag("-v,--version", NOVASVG_VERSION_STRING, "Show version information");
     
-    // Handle global options
-    if (command == "-h" || command == "--help") {
-        print_help();
-        return 0;
-    }
+    // Convert command
+    auto convert_cmd = app.add_subcommand("convert", "Convert SVG to PNG");
+    std::string convert_input, convert_output;
+    int convert_width = -1, convert_height = -1;
+    std::string convert_bg_color;
+    float convert_scale = 0.0f;
     
-    if (command == "-v" || command == "--version") {
-        print_version();
-        return 0;
-    }
+    convert_cmd->add_option("input", convert_input, "Input SVG file")->required()->check(CLI::ExistingFile);
+    convert_cmd->add_option("output", convert_output, "Output PNG file")->required();
+    convert_cmd->add_option("-w,--width", convert_width, "Output width in pixels");
+    convert_cmd->add_option("-H,--height", convert_height, "Output height in pixels");
+    convert_cmd->add_option("-b,--bg", convert_bg_color, "Background color (hex: RRGGBBAA, default: transparent)");
+    convert_cmd->add_option("-s,--scale", convert_scale, "Scale factor");
     
-    // Collect remaining arguments
-    std::vector<std::string> args;
-    for (int i = 2; i < argc; i++) {
-        args.push_back(argv[i]);
-    }
-    
-    // Dispatch to appropriate command handler
-    try {
-        if (command == "convert") {
-            return cmd_convert(args);
-        } else if (command == "info") {
-            return cmd_info(args);
-        } else if (command == "query") {
-            return cmd_query(args);
-        } else if (command == "apply-css") {
-            return cmd_apply_css(args);
-        } else if (command == "font") {
-            return cmd_font(args);
-        } else if (command == "batch") {
-            return cmd_batch(args);
-        } else {
-            std::cerr << "Error: Unknown command: " << command << "\n";
-            print_help();
-            return 1;
+    convert_cmd->callback([&]() {
+        uint32_t bg_color = 0x00000000; // Transparent
+        if (!convert_bg_color.empty()) {
+            bg_color = std::stoul(convert_bg_color, nullptr, 16);
         }
+        return cmd_convert(convert_input, convert_output, convert_width, convert_height, bg_color, convert_scale);
+    });
+    
+    // Info command
+    auto info_cmd = app.add_subcommand("info", "Display SVG information");
+    std::string info_input;
+    bool info_show_size = false;
+    
+    info_cmd->add_option("input", info_input, "Input SVG file")->required()->check(CLI::ExistingFile);
+    info_cmd->add_flag("-s,--size", info_show_size, "Show file size information");
+    
+    info_cmd->callback([&]() {
+        return cmd_info(info_input, info_show_size);
+    });
+    
+    // Query command
+    auto query_cmd = app.add_subcommand("query", "Query elements using CSS selectors");
+    std::string query_selector, query_input;
+    
+    query_cmd->add_option("selector", query_selector, "CSS selector")->required();
+    query_cmd->add_option("input", query_input, "Input SVG file")->required()->check(CLI::ExistingFile);
+    
+    query_cmd->callback([&]() {
+        return cmd_query(query_selector, query_input);
+    });
+    
+    // Apply CSS command
+    auto apply_css_cmd = app.add_subcommand("apply-css", "Apply CSS stylesheet to SVG");
+    std::string css_file, css_input, css_output;
+    
+    apply_css_cmd->add_option("css", css_file, "CSS file")->required()->check(CLI::ExistingFile);
+    apply_css_cmd->add_option("input", css_input, "Input SVG file")->required()->check(CLI::ExistingFile);
+    apply_css_cmd->add_option("output", css_output, "Output file")->required();
+    
+    apply_css_cmd->callback([&]() {
+        return cmd_apply_css(css_file, css_input, css_output);
+    });
+    
+    // Batch command
+    auto batch_cmd = app.add_subcommand("batch", "Batch process multiple files");
+    std::string batch_input, batch_output = "output";
+    
+    batch_cmd->add_option("input", batch_input, "Input directory")->required()->check(CLI::ExistingDirectory);
+    batch_cmd->add_option("output", batch_output, "Output directory");
+    
+    batch_cmd->callback([&]() {
+        return cmd_batch(batch_input, batch_output);
+    });
+    
+    // Parse and run
+    try {
+        app.parse(argc, argv);
+    } catch (const CLI::ParseError &e) {
+        return app.exit(e);
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
         return 1;
