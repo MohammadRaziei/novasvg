@@ -76,10 +76,12 @@ if(NOVASVG_BUILD_TESTS)
 
 
     if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
+        target_compile_options(test_novasvg PRIVATE -O0 -g --coverage)
+        target_link_options(test_novasvg PRIVATE --coverage)
 
         add_custom_target(coverage
             COMMAND ${CMAKE_COMMAND} -E echo "Running tests..."
-            COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+            COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --extra-verbose
 
             COMMAND ${CMAKE_COMMAND} -E echo "Capturing coverage..."
             COMMAND ${LCOV_EXECUTABLE}
@@ -113,6 +115,7 @@ if(NOVASVG_BUILD_TESTS)
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
             USES_TERMINAL
         )
+        add_dependencies(coverage test_novasvg)
 
     endif()
 endif()
