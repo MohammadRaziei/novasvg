@@ -94,7 +94,7 @@ size_t count_all_elements(const novasvg::Element& element) {
     return count;
 }
 
-int cmd_info(const std::string& input, bool show_file_size) {
+int cmd_info(const std::string& input) {
     std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
     if (!doc) {
         std::cerr << "Error: Failed to load SVG file: " << input << "\n";
@@ -118,14 +118,13 @@ int cmd_info(const std::string& input, bool show_file_size) {
         std::cout << "  Total elements: " << total_elements << "\n";
     }
     
-    if (show_file_size) {
-        if (fs::exists(input)) {
-            auto size = fs::file_size(input);
-            std::cout << "  File size: " << size << " bytes\n";
-            std::cout << "  Readable size: " << human_readable_size(size) << "\n";
-        } else {
-            std::cout << "  File size: N/A\n";
-        }
+    // Always show file size
+    if (fs::exists(input)) {
+        auto size = fs::file_size(input);
+        std::cout << "  File size: " << size << " bytes\n";
+        std::cout << "  Readable size: " << human_readable_size(size) << "\n";
+    } else {
+        std::cout << "  File size: N/A\n";
     }
 
     return 0;
@@ -292,7 +291,6 @@ int main(int argc, char** argv) {
                "  novasvg convert -w 800 -H 600 input.svg output.png\n"
                "  novasvg convert -s 2.0 input.svg output.png\n"
                "  novasvg info input.svg\n"
-               "  novasvg info --size input.svg\n"
                "  novasvg query \"circle\" input.svg\n"
                "  novasvg query \"rect[fill='red']\" input.svg\n"
                "  novasvg batch input_dir/ output_dir/\n");
@@ -322,13 +320,11 @@ int main(int argc, char** argv) {
     // Info command
     auto info_cmd = app.add_subcommand("info", "Display SVG information");
     std::string info_input;
-    bool info_show_size = false;
     
     info_cmd->add_option("input", info_input, "Input SVG file")->required()->check(CLI::ExistingFile);
-    info_cmd->add_flag("-s,--size", info_show_size, "Show file size information");
     
     info_cmd->callback([&]() {
-        return cmd_info(info_input, info_show_size);
+        return cmd_info(info_input);
     });
     
     // Query command
