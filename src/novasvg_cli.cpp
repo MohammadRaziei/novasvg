@@ -26,48 +26,43 @@ namespace fs = std::filesystem;
 
 // Utility functions
 void print_help() {
-    std::cout << R"(
-NovaSVG CLI - SVG processing tool
-Version: )" << novasvg::Version::version_string() << R"(
-
-Usage: novasvg <command> [options] [input] [output]
-
-Commands:
-  convert      Convert SVG to PNG
-  info         Display SVG information
-  query        Query elements using CSS selectors
-  apply-css    Apply CSS stylesheet to SVG
-  font         Manage fonts
-  batch        Batch process multiple files
-
-Options:
-  -h, --help           Show this help message
-  -v, --version        Show version information
-  -w, --width <px>     Output width (default: auto)
-  -H, --height <px>    Output height (default: auto)
-  -b, --bg <color>     Background color (hex: RRGGBBAA, default: transparent)
-  -s, --scale <factor> Scale factor (default: 1.0)
-  -q, --quiet          Quiet mode (suppress non-error output)
-  -f, --force          Overwrite existing files
-
-Examples:
-  novasvg convert input.svg output.png
-  novasvg convert -w 800 -H 600 input.svg output.png
-  novasvg info input.svg
-  novasvg query "rect" input.svg
-  novasvg apply-css styles.css input.svg output.svg
-  novasvg font add "Arial" regular.ttf
-  novasvg batch convert data/ output/
-)";
+    std::cout << "\n";
+    std::cout << "NovaSVG CLI - SVG processing tool\n";
+    std::cout << "Version: " << NOVASVG_VERSION_STRING << "\n";
+    std::cout << "\n";
+    std::cout << "Usage: novasvg <command> [options] [input] [output]\n";
+    std::cout << "\n";
+    std::cout << "Commands:\n";
+    std::cout << "  convert      Convert SVG to PNG\n";
+    std::cout << "  info         Display SVG information\n";
+    std::cout << "  query        Query elements using CSS selectors\n";
+    std::cout << "  apply-css    Apply CSS stylesheet to SVG\n";
+    std::cout << "  font         Manage fonts\n";
+    std::cout << "  batch        Batch process multiple files\n";
+    std::cout << "\n";
+    std::cout << "Options:\n";
+    std::cout << "  -h, --help           Show this help message\n";
+    std::cout << "  -v, --version        Show version information\n";
+    std::cout << "  -w, --width <px>     Output width (default: auto)\n";
+    std::cout << "  -H, --height <px>    Output height (default: auto)\n";
+    std::cout << "  -b, --bg <color>     Background color (hex: RRGGBBAA, default: transparent)\n";
+    std::cout << "  -s, --scale <factor> Scale factor (default: 1.0)\n";
+    std::cout << "  -q, --quiet          Quiet mode (suppress non-error output)\n";
+    std::cout << "  -f, --force          Overwrite existing files\n";
+    std::cout << "\n";
+    std::cout << "Examples:\n";
+    std::cout << "  novasvg convert input.svg output.png\n";
+    std::cout << "  novasvg convert -w 800 -H 600 input.svg output.png\n";
+    std::cout << "  novasvg info input.svg\n";
+    std::cout << "  novasvg query \"rect\" input.svg\n";
+    std::cout << "  novasvg apply-css styles.css input.svg output.svg\n";
+    std::cout << "  novasvg font add \"Arial\" regular.ttf\n";
+    std::cout << "  novasvg batch convert data/ output/\n";
+    std::cout << "\n";
 }
 
 void print_version() {
-    std::cout << "NovaSVG CLI v" << novasvg::Version::version_string() << "\n";
-    std::cout << "Library version: " << novasvg::Version::version() << "\n";
-    std::cout << "Version components: " 
-              << novasvg::Version::major() << "." 
-              << novasvg::Version::minor() << "." 
-              << novasvg::Version::patch() << "\n";
+    std::cout << "NovaSVG CLI v" << NOVASVG_VERSION_STRING << "\n";
 }
 
 bool load_svg(const std::string& filename, std::unique_ptr<novasvg::Document>& doc) {
@@ -317,12 +312,12 @@ int cmd_apply_css(const std::vector<std::string>& args) {
 
 int cmd_font(const std::vector<std::string>& args) {
     if (args.empty() || args[0] == "help") {
-        std::cout << R"(
-Font management commands:
-  add <family> <filename> [bold] [italic]  Add font face from file
-  list                                     List available fonts
-  clear                                    Clear font cache
-)";
+        std::cout << "\n";
+        std::cout << "Font management commands:\n";
+        std::cout << "  add <family> <filename> [bold] [italic]  Add font face from file\n";
+        std::cout << "  list                                     List available fonts\n";
+        std::cout << "  clear                                    Clear font cache\n";
+        std::cout << "\n";
         return 0;
     }
     
