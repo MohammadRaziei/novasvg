@@ -43,7 +43,7 @@ auto matches = doc->querySelectorAll("rect");
 
 ## Examples
 
-See the `examples/` directory for complete examples that locate the `data/` directory using `std::filesystem::path(__FILE__)`:
+See the `examples/` directory for complete examples that locate the `data/` directory:
 
 - `sample01_convert_svg_to_png.cpp`
 - `sample02_query_svg_size.cpp`
