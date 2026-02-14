@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ master ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
@@ -46,14 +46,12 @@ jobs:
 
   build-docs:
     needs: build-and-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
     - name: Setup cmake
       uses: jwlawson/actions-setup-cmake@v2
@@ -82,6 +80,90 @@ jobs:
         name: documentation
         path: ${{github.workspace}}/build-docs/docs/html/
         retention-days: 5
+
+  build-coverage:
+    needs: build-and-test
+    # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup cmake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: '3.16.x'
+    
+    - name: Install coverage tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lcov gcovr
+
+    - name: Configure CMake with coverage
+      run: |
+        cmake -B ${{github.workspace}}/build-coverage \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DNOVASVG_BUILD_EXAMPLES=ON \
+          -DNOVASVG_BUILD_TESTS=ON \
+          -DNOVASVG_BUILD_DOCS=OFF \
+          -DCMAKE_CXX_FLAGS="--coverage"
+
+    - name: Build with coverage
+      run: cmake --build ${{github.workspace}}/build-coverage -j4
+
+
+    - name: Generate coverage report
+      run: cmake --build ${{github.workspace}}/build-coverage --target coverage
+
+    - name: Upload coverage artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: ${{github.workspace}}/build-coverage/coverage_html/
+        retention-days: 5
+
+  build-single-header:
+    needs: build-and-test
+    # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup cmake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: '3.16.x'
+    
+    - name: Install quom
+      run: pip install quom
+
+    - name: Configure CMake with DIST_DIR
+      run: |
+        cmake -B ${{github.workspace}}/build-single \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DNOVASVG_BUILD_EXAMPLES=OFF \
+          -DNOVASVG_BUILD_TESTS=ON \
+          -DNOVASVG_BUILD_DOCS=OFF \
+          -DNOVA_DIST_DIR=${{github.workspace}}/dist
+
+    - name: Build single-header
+      run: cmake --build ${{github.workspace}}/build-single --target dist_header
+
+    - name: Create beta release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: __beta__
+        name: "Beta Release"
+        body: "Single-header distribution of NovaSVG"
+        prerelease: true
+        draft: false
+        files: ${{github.workspace}}/dist/novasvg.h
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-docs:
     needs: build-docs
