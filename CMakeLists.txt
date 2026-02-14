@@ -72,10 +72,11 @@ if(NOVASVG_BUILD_TESTS)
 
 
     find_program(LCOV_EXECUTABLE lcov)
+    find_program(GENHTML_EXECUTABLE genhtml)
 
-    if(LCOV_EXECUTABLE)
-        target_compile_options(test_novasvg PRIVATE -O0 -g --coverage)
-        target_link_options(test_novasvg PRIVATE --coverage)
+
+    if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
+
         add_custom_target(coverage
             COMMAND ${CMAKE_COMMAND} -E echo "Running tests..."
             COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
@@ -96,7 +97,15 @@ if(NOVASVG_BUILD_TESTS)
                     "*/include/novasvg/*"
                     --output-file ${CMAKE_BINARY_DIR}/coverage_novasvg.info
 
-            COMMAND ${CMAKE_COMMAND} -E echo "Coverage summary:"
+            COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report..."
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage_html
+            COMMAND ${GENHTML_EXECUTABLE}
+                    ${CMAKE_BINARY_DIR}/coverage_novasvg.info
+                    --output-directory ${CMAKE_BINARY_DIR}/coverage_html
+
+            COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${CMAKE_BINARY_DIR}/coverage_html/index.html"
+
+            COMMAND ${CMAKE_COMMAND} -E echo "-- Coverage summary:"
             COMMAND ${LCOV_EXECUTABLE}
                     --list
                     ${CMAKE_BINARY_DIR}/coverage_novasvg.info
@@ -106,7 +115,6 @@ if(NOVASVG_BUILD_TESTS)
         )
 
     endif()
-
 endif()
 
 
