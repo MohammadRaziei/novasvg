@@ -53,7 +53,12 @@ endif()
 if(NOVASVG_BUILD_TESTS)
     enable_testing()
 
-    add_executable(test_novasvg tests/cpp/test_basics.cpp)
+    # Find all test source files matching test_*.cpp pattern
+    file(GLOB NOVASVG_TEST_SOURCES CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/cpp/test_*.cpp
+    )
+    
+    add_executable(test_novasvg ${NOVASVG_TEST_SOURCES})
 
     # Default: test against normal headers (source tree)
     set(NOVASVG_TEST_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")

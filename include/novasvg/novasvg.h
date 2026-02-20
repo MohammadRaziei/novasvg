@@ -25,13 +25,13 @@
 
 #ifndef NOVASVG_H
 #define NOVASVG_H
+#pragma once
 
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
-#define NOVASVG_IMPLEMENTATION
 
 #if defined(NOVASVG_BUILD_STATIC)
 #define NOVASVG_EXPORT
