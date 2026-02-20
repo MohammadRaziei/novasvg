@@ -13,7 +13,7 @@ int version()
     return NOVASVG_VERSION;
 }
 
-std::string versionString()
+std::string_view versionString()
 {
     return NOVASVG_VERSION_STRING;
 }
