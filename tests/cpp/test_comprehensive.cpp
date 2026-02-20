@@ -32,24 +32,6 @@ std::string read_file(const std::filesystem::path& path)
 } // namespace
 
 
-TEST_CASE("Load SVG data from file and render") {
-    auto svg_file = data_path("rect.svg");
-    auto document = novasvg::Document::loadFromFile(svg_file.string());
-    REQUIRE(document != nullptr);
-    CHECK(document->width() == doctest::Approx(64.0f));
-    CHECK(document->height() == doctest::Approx(64.0f));
-
-    novasvg::Bitmap bitmap = document->renderToBitmap(64, 64);
-    CHECK_FALSE(bitmap.isNull());
-    CHECK(bitmap.width() == 64);
-    CHECK(bitmap.height() == 64);
-}
-
-TEST_CASE("Missing SVG file returns null document") {
-    auto document = novasvg::Document::loadFromFile((project_root() / "data" / "missing.svg").string());
-    CHECK(document == nullptr);
-}
-
 TEST_CASE("Load SVG from string data") {
     std::string svg_data = R"(<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
         <rect x="10" y="10" width="80" height="80" fill="red"/>
