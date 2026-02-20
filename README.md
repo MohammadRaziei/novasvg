@@ -10,7 +10,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
 [![C++17](https://img.shields.io/badge/C++-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
 [![CMake](https://img.shields.io/badge/CMake-3.15+-blue.svg)](https://cmake.org/)
-[![Coverage](https://img.shields.io/badge/coverage-39.5%25-green.svg)](https://github.com/MohammadRaziei/novasvg)
+[![codecov](https://codecov.io/gh/MohammadRaziei/novasvg/branch/master/graph/badge.svg)](https://codecov.io/gh/MohammadRaziei/novasvg)
+[![single header file-novasvg.h](https://img.shields.io/badge/single_header_file-novasvg.h-blue.svg)](https://github.com/MohammadRaziei/novasvg/releases/download/__beta__/novasvg.h)
 
 </div>
 

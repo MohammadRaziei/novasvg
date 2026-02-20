@@ -112,6 +112,14 @@ jobs:
     - name: Generate coverage report
       run: cmake --build ${{github.workspace}}/build-coverage --target coverage
 
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ${{github.workspace}}/build-coverage/coverage_novasvg.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
     - name: Upload coverage artifacts
       uses: actions/upload-artifact@v4
       with:
