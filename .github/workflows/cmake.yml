@@ -113,12 +113,13 @@ jobs:
       run: cmake --build ${{github.workspace}}/build-coverage --target coverage
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
-        file: ${{github.workspace}}/build-coverage/coverage_novasvg.info
+        files: ${{github.workspace}}/build-coverage/coverage_novasvg.info
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
+        verbose: true
 
     - name: Upload coverage artifacts
       uses: actions/upload-artifact@v4
