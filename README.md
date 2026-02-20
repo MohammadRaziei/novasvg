@@ -9,8 +9,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
 [![C++17](https://img.shields.io/badge/C++-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
-[![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://www.python.org/)
 [![CMake](https://img.shields.io/badge/CMake-3.15+-blue.svg)](https://cmake.org/)
+[![Coverage](https://img.shields.io/badge/coverage-39.5%25-green.svg)](https://github.com/MohammadRaziei/novasvg)
 
 </div>
 
@@ -23,7 +23,7 @@
 
 NovaSVG is a lightweight, **header-only C++17 library** for parsing, manipulating, and rasterizing SVG files. It provides a clean, modern API for loading SVG documents, querying elements, applying CSS styles, and rendering to bitmaps or PNG files—all from a single include.
 
-The library also offers **Python bindings** for seamless integration with scientific computing and data visualization workflows, and a **command-line interface** for batch processing and automation.
+The library also offers a **command-line interface** for batch processing and automation.
 
 ## ✨ Features
 
@@ -38,12 +38,6 @@ The library also offers **Python bindings** for seamless integration with scient
 - **Font management** – Add custom fonts for text rendering
 - **Cross-platform** – Works on Windows, Linux, and macOS
 
-### Python Bindings
-- **NumPy integration** – Render directly to numpy arrays
-- **Matplotlib compatibility** – Easy visualization of SVG content
-- **Element manipulation** – Modify attributes and styles programmatically
-- **Batch processing** – Efficient handling of multiple SVG files
-
 ### Command-Line Interface
 - **SVG to PNG conversion** – Batch convert with customizable dimensions
 - **SVG information** – Extract metadata, bounding boxes, and element counts
@@ -56,6 +50,7 @@ The library also offers **Python bindings** for seamless integration with scient
 ### C++ Usage
 
 ```cpp
+#define NOVASVG_IMPLEMENTATION
 #include <novasvg/novasvg.h>
 
 int main() {
@@ -77,29 +72,6 @@ int main() {
     }
     return 0;
 }
-```
-
-### Python Usage
-
-```python
-import novasvg
-import numpy as np
-import matplotlib.pyplot as plt
-
-# Load SVG from file or string
-doc = novasvg.load("image.svg")  # or Document.load_from_data(svg_string)
-
-# Render to numpy array
-image = doc.render_to_array(width=400, height=300)  # shape: (height, width, 4) RGBA
-
-# Display with matplotlib
-plt.imshow(image)
-plt.axis('off')
-plt.show()
-
-# Save to PNG
-bitmap = doc.render_to_bitmap()
-bitmap.write_to_png("output.png")
 ```
 
 ### Command-Line Usage
@@ -135,15 +107,6 @@ cd novasvg
 mkdir build && cd build
 cmake .. -DNOVASVG_BUILD_EXAMPLES=ON -DNOVASVG_BUILD_CLI=ON
 make -j4
-```
-
-### Python Package
-```bash
-# Install from source
-pip install -e .
-
-# Or install via pip (when available)
-pip install novasvg
 ```
 
 ### Command-Line Tool
@@ -183,11 +146,6 @@ sudo make install  # Optional: install system-wide
 - `inverse()` – Matrix inversion
 - Operator `*` – Matrix multiplication
 
-### Python-Specific Features
-- `render_to_array()` – Return numpy array instead of bitmap
-- `to_numpy()` / `from_numpy()` – Convert between bitmaps and numpy arrays
-- Integration with SciPy/NumPy for image processing
-
 ## 🔧 Build Options
 
 | Option | Description | Default |
@@ -208,11 +166,10 @@ sudo make install  # Optional: install system-wide
 ## 🎯 Use Cases
 
 1. **Graphics Applications** – Embed SVG rendering in C++ applications
-2. **Data Visualization** – Use Python bindings with matplotlib/NumPy
-3. **Web Development** – Server-side SVG processing and optimization
-4. **Game Development** – Load vector graphics for UI elements
-5. **Scientific Computing** – Process SVG diagrams in research workflows
-6. **Automation** – Batch convert SVG assets with CLI tool
+2. **Web Development** – Server-side SVG processing and optimization
+3. **Game Development** – Load vector graphics for UI elements
+4. **Desktop Applications** – Display vector graphics in GUI applications
+5. **Automation** – Batch convert SVG assets with CLI tool
 
 ## 🔍 Performance Considerations
 
@@ -241,13 +198,13 @@ NovaSVG is distributed under the **MIT License**. See [LICENSE.txt](LICENSE.txt)
 - **API Reference**: Built with Doxygen (enable with `-DNOVASVG_BUILD_DOCS=ON`)
 - **Online Documentation**: https://mohammadraziei.github.io/novasvg
 - **Examples**: See `examples/` directory
-- **Python Documentation**: See `README_PYTHON.md`
+- **CLI Documentation**: See `README_CLI.md`
 
-## 🙏 Acknowledgments
+## � Acknowledgments
 
 NovaSVG builds upon ideas from existing SVG libraries while maintaining a distinct architectural philosophy focused on minimalism and header-only design.
 
-## 📞 Support
+## �📞 Support
 
 - **GitHub Issues**: https://github.com/MohammadRaziei/novasvg/issues
 - **Documentation**: https://mohammadraziei.github.io/novasvg
