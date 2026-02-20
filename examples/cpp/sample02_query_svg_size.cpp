@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <iostream>
 
+#define NOVASVG_IMPLEMENTATION
 #include <novasvg/novasvg.h>
 
 namespace {

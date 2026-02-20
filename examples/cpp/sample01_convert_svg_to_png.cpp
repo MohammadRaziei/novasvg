@@ -3,6 +3,7 @@
 #include <string>
 #include <algorithm>
 
+#define NOVASVG_IMPLEMENTATION
 #include <novasvg/novasvg.h>
 
 namespace {
