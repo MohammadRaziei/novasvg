@@ -103,7 +103,7 @@ jobs:
         cmake -B ${{github.workspace}}/build-coverage \
           -DNOVASVG_BUILD_EXAMPLES=OFF \
           -DNOVASVG_BUILD_TESTS=ON \
-          -DNOVASVG_BUILD_DOCS=OFF \
+          -DNOVASVG_BUILD_DOCS=OFF
 
     - name: Build with coverage
       run: cmake --build ${{github.workspace}}/build-coverage -j4
