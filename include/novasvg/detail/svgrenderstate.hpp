@@ -1,5 +1,3 @@
-#include "svgrenderstate.h"
-
 namespace novasvg {
 
 SVGBlendInfo::SVGBlendInfo(const SVGElement* element)

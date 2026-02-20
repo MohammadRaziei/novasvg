@@ -1,7 +1,3 @@
-#include "svgtextelement.h"
-#include "svglayoutstate.h"
-#include "svgrenderstate.h"
-
 #include <cassert>
 
 namespace novasvg {

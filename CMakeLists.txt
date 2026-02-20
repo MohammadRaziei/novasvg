@@ -85,10 +85,10 @@ if(NOVASVG_BUILD_TESTS)
         target_link_options(test_novasvg PRIVATE --coverage)
 
         add_custom_target(coverage
-            COMMAND ${CMAKE_COMMAND} -E echo "Running tests..."
+            COMMAND ${CMAKE_COMMAND} -E echo "-- Running tests..."
             COMMAND $<TARGET_FILE:test_novasvg>
 
-            COMMAND ${CMAKE_COMMAND} -E echo "Capturing coverage..."
+            COMMAND ${CMAKE_COMMAND} -E echo "-- Capturing coverage..."
             COMMAND ${LCOV_EXECUTABLE}
                     --capture
                     --directory ${CMAKE_BINARY_DIR}
@@ -101,7 +101,7 @@ if(NOVASVG_BUILD_TESTS)
             COMMAND ${LCOV_EXECUTABLE}
                     --extract
                     ${CMAKE_BINARY_DIR}/coverage.info
-                    "*/include/novasvg/*"
+                    "*/novasvg/*"
                     --output-file ${CMAKE_BINARY_DIR}/coverage_novasvg.info
 
             COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report..."

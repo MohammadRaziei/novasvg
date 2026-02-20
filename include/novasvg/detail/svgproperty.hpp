@@ -1,7 +1,3 @@
-#include "svgproperty.h"
-#include "svgelement.h"
-#include "svgparserutils.h"
-
 #include <cassert>
 
 namespace novasvg {

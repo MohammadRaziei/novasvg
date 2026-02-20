@@ -1,7 +1,3 @@
-#include "svgpaintelement.h"
-#include "svglayoutstate.h"
-#include "svgrenderstate.h"
-
 #include <cmath>
 #include <set>
 

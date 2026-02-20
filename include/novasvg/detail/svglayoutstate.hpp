@@ -1,5 +1,3 @@
-#include "svglayoutstate.h"
-#include "svgelement.h"
 #include "svgparserutils.h"
 
 #include <optional>

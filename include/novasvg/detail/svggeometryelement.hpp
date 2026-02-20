@@ -1,7 +1,3 @@
-#include "svggeometryelement.h"
-#include "svglayoutstate.h"
-#include "svgrenderstate.h"
-
 #include <cmath>
 
 namespace novasvg {

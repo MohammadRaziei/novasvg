@@ -1,10 +1,7 @@
-#include "svgelement.h"
 #include "svgpaintelement.h"
 #include "svggeometryelement.h"
 #include "svgtextelement.h"
-#include "svgproperty.h"
 #include "svglayoutstate.h"
-#include "svgrenderstate.h"
 
 #include <cassert>
 

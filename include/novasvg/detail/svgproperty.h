@@ -1,7 +1,6 @@
 #ifndef NOVASVG_SVGPROPERTY_H
 #define NOVASVG_SVGPROPERTY_H
 
-#include "graphics.h"
 
 #include <string>
 

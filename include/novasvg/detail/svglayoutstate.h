@@ -1,8 +1,6 @@
 #ifndef NOVASVG_SVGLAYOUTSTATE_H
 #define NOVASVG_SVGLAYOUTSTATE_H
 
-#include "svgproperty.h"
-
 namespace novasvg {
 
 class SVGLayoutState {
