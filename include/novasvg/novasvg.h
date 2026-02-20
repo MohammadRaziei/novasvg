@@ -64,9 +64,6 @@
 #define NOVASVG_VERSION_STRINGIZE(major, minor, patch) NOVASVG_VERSION_XSTRINGIZE(major, minor, patch)
 #define NOVASVG_VERSION_STRING NOVASVG_VERSION_STRINGIZE(NOVASVG_VERSION_MAJOR, NOVASVG_VERSION_MINOR, NOVASVG_VERSION_PATCH)
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 typedef struct plutovg_surface plutovg_surface_t;
 typedef struct plutovg_matrix plutovg_matrix_t;
@@ -88,6 +85,9 @@ typedef void (*novasvg_destroy_func_t)(void* closure);
  */
 typedef void (*novasvg_write_func_t)(void* closure, void* data, int size);
 
+
+namespace novasvg {
+
 /**
  * @brief Returns the version of the novasvg library encoded in a single integer.
  *
@@ -96,7 +96,7 @@ typedef void (*novasvg_write_func_t)(void* closure, void* data, int size);
  *
  * @return The novasvg library version as a single integer.
  */
-NOVASVG_API int novasvg_version(void);
+int version();
 
 /**
  * @brief Returns the novasvg library version as a human-readable string in "X.Y.Z" format.
@@ -106,7 +106,7 @@ NOVASVG_API int novasvg_version(void);
  *
  * @return A pointer to a string containing the version in "X.Y.Z" format.
  */
-NOVASVG_API const char* novasvg_version_string(void);
+std::string versionString();
 
 /**
 * @brief Add a font face from a file to the cache.
@@ -116,7 +116,7 @@ NOVASVG_API const char* novasvg_version_string(void);
 * @param filename The path to the font file.
 * @return `true` if the font face was successfully added to the cache, `false` otherwise.
 */
-NOVASVG_API bool novasvg_add_font_face_from_file(const char* family, bool bold, bool italic, const char* filename);
+bool addFontFaceFromFile(const char* family, bool bold, bool italic, const char* filename);
 
 /**
 * @brief Add a font face from memory to the cache.
@@ -129,13 +129,7 @@ NOVASVG_API bool novasvg_add_font_face_from_file(const char* family, bool bold, 
 * @param closure User-defined pointer passed to the `destroy_func` callback.
 * @return `true` if the font face was successfully added to the cache, `false` otherwise.
 */
-NOVASVG_API bool novasvg_add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length, novasvg_destroy_func_t destroy_func, void* closure);
-
-#ifdef __cplusplus
-}
-#endif
-
-namespace novasvg {
+bool addFontFaceFromData(const char* family, bool bold, bool italic, const void* data, size_t length, novasvg_destroy_func_t destroy_func, void* closure);
 
 /**
 * @note Bitmap pixel format is ARGB32_Premultiplied.

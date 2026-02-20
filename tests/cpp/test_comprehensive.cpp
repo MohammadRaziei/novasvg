@@ -31,10 +31,6 @@ std::string read_file(const std::filesystem::path& path)
 }
 } // namespace
 
-TEST_CASE("Version reporting") {
-    CHECK(novasvg_version() == NOVASVG_VERSION);
-    CHECK(std::string(novasvg_version_string()) == NOVASVG_VERSION_STRING);
-}
 
 TEST_CASE("Load SVG data from file and render") {
     auto svg_file = data_path("rect.svg");
@@ -367,11 +363,11 @@ TEST_CASE("Font face APIs") {
     
     // Test with null/invalid data
     // Commented out because these functions may crash with invalid input
-    // bool result1 = novasvg_add_font_face_from_file("Arial", false, false, "/nonexistent/font.ttf");
+    // bool result1 = novasvg::addFontFaceFromFile("Arial", false, false, "/nonexistent/font.ttf");
     // CHECK_FALSE(result1); // Should fail
     
     // Test with null data
-    // bool result2 = novasvg_add_font_face_from_data("Arial", false, false, nullptr, 0, nullptr, nullptr);
+    // bool result2 = novasvg::addFontFaceFromData("Arial", false, false, nullptr, 0, nullptr, nullptr);
     // CHECK_FALSE(result2); // Should fail
     
     // If we get here without crashing, test passes

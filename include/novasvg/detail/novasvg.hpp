@@ -5,27 +5,28 @@
 #include <fstream>
 #include <cmath>
 
-int novasvg_version()
+
+namespace novasvg {
+
+int version()
 {
     return NOVASVG_VERSION;
 }
 
-const char* novasvg_version_string()
+std::string versionString()
 {
     return NOVASVG_VERSION_STRING;
 }
 
-bool novasvg_add_font_face_from_file(const char* family, bool bold, bool italic, const char* filename)
+bool addFontFaceFromFile(const char* family, bool bold, bool italic, const char* filename)
 {
-    return novasvg::fontFaceCache()->addFontFace(family, bold, italic, novasvg::FontFace(filename));
+    return fontFaceCache()->addFontFace(family, bold, italic, FontFace(filename));
 }
 
-bool novasvg_add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length, novasvg_destroy_func_t destroy_func, void* closure)
+bool addFontFaceFromData(const char* family, bool bold, bool italic, const void* data, size_t length, novasvg_destroy_func_t destroy_func, void* closure)
 {
-    return novasvg::fontFaceCache()->addFontFace(family, bold, italic, novasvg::FontFace(data, length, destroy_func, closure));
+    return fontFaceCache()->addFontFace(family, bold, italic, FontFace(data, length, destroy_func, closure));
 }
-
-namespace novasvg {
 
 Bitmap::Bitmap(int width, int height)
     : m_surface(plutovg_surface_create(width, height))

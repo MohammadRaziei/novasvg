@@ -18,8 +18,8 @@ std::filesystem::path data_path(const std::string& filename)
 } // namespace
 
 TEST_CASE("Version reporting") {
-    CHECK(novasvg_version() == NOVASVG_VERSION);
-    CHECK(std::string(novasvg_version_string()) == NOVASVG_VERSION_STRING);
+    CHECK(novasvg::version() == NOVASVG_VERSION);
+    CHECK(novasvg::versionString() == NOVASVG_VERSION_STRING);
 }
 
 TEST_CASE("Load SVG data from file and render") {
