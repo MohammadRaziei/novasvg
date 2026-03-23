@@ -37,16 +37,25 @@ target_include_directories(novasvg INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
 # target_compile_features(novasvg INTERFACE cxx_std_17)
 
 
+function(generate_single_header_distribution dist_path)
+    add_custom_target(dist_header
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${dist_path}/${PROJECT_NAME}
+        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h 
+            ${NOVdist_pathASVG_DIST_DIR}/${PROJECT_NAME}/novasvg.h 
+            -I ${CMAKE_CURRENT_SOURCE_DIR}/include
+        COMMENT "Generating single-header distribution: ${dist_path}/${PROJECT_NAME}/novasvg.h"
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    )
+endfunction()
+
+if(DEFINED SKBUILD)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/src/bindings/python)
+    return()
+endif()
+
 # Generate single-header distribution if NOVASVG_DIST_DIR is defined
 if(DEFINED NOVASVG_DIST_DIR)
-    add_custom_target(dist_header
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_DIST_DIR}/${PROJECT_NAME}
-        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h 
-            ${NOVASVG_DIST_DIR}/${PROJECT_NAME}/novasvg.h 
-            -I ${CMAKE_CURRENT_SOURCE_DIR}/include
-        COMMENT "Generating single-header distribution: ${NOVASVG_DIST_DIR}/${PROJECT_NAME}/novasvg.h"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
+    generate_single_header_distribution(${NOVASVG_DIST_DIR})
 endif()
 
 # Tests
@@ -58,7 +67,7 @@ if(NOVASVG_BUILD_TESTS)
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/cpp/test_*.cpp
     )
     
-    add_executable(test_novasvg ${NOVASVG_TEST_SOURCES})
+    add_executable(test_novasvg_cpp ${NOVASVG_TEST_SOURCES})
 
     # Default: test against normal headers (source tree)
     set(NOVASVG_TEST_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -67,13 +76,13 @@ if(NOVASVG_BUILD_TESTS)
     if(NOVASVG_DIST_DIR)
         message(STATUS "Testing against dist headers at: ${NOVASVG_DIST_DIR}")
         set(NOVASVG_TEST_INCLUDE_DIR "${NOVASVG_DIST_DIR}")
-        add_dependencies(test_novasvg dist_header)
+        add_dependencies(test_novasvg_cpp dist_header)
         
     endif()
 
-    target_include_directories(test_novasvg PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}")
+    target_include_directories(test_novasvg_cpp PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}")
 
-    add_test(NAME test_novasvg COMMAND $<TARGET_FILE:test_novasvg>)
+    add_test(NAME test_novasvg_cpp COMMAND $<TARGET_FILE:test_novasvg_cpp>)
 
 
     find_program(LCOV_EXECUTABLE lcov)
@@ -81,12 +90,12 @@ if(NOVASVG_BUILD_TESTS)
 
 
     if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
-        target_compile_options(test_novasvg PRIVATE -O0 -g --coverage)
-        target_link_options(test_novasvg PRIVATE --coverage)
+        target_compile_options(test_novasvg_cpp PRIVATE -O0 -g --coverage)
+        target_link_options(test_novasvg_cpp PRIVATE --coverage)
 
         add_custom_target(coverage
             COMMAND ${CMAKE_COMMAND} -E echo "-- Running tests..."
-            COMMAND $<TARGET_FILE:test_novasvg>
+            COMMAND $<TARGET_FILE:test_novasvg_cpp>
 
             COMMAND ${CMAKE_COMMAND} -E echo "-- Capturing coverage..."
             COMMAND ${LCOV_EXECUTABLE}
@@ -120,7 +129,7 @@ if(NOVASVG_BUILD_TESTS)
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
             USES_TERMINAL
         )
-        add_dependencies(coverage test_novasvg)
+        add_dependencies(coverage test_novasvg_cpp)
 
     endif()
 endif()
