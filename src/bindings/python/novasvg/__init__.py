@@ -64,7 +64,7 @@ class Color:
     # --- Static Factory Methods ---
 
     @staticmethod
-    def argb(a: int, r: int, g: int, b: int) -> 'Color':
+    def rgba(r: int, g: int, b: int, a: int = 255) -> 'Color':
         """
         Create a color from Red, Green, Blue, and Alpha components.
 
@@ -197,16 +197,11 @@ def _handle_input_data(
     :rtype: Optional[Document]
     """
     doc = None
-    content_str: Optional[str] = None
 
     # 1. Handle File-like objects (IOBase)
     if isinstance(input_data, IOBase):
         try:
-            raw_data = input_data.read()
-            if isinstance(raw_data, bytes):
-                content_str = raw_data.decode('utf-8')
-            else:
-                content_str = str(raw_data)
+            doc = Document.load_from_data(input_data.read())
         except Exception as e:
             logger.error(f"Failed to read from file-like object: {e}")
             return None
@@ -214,7 +209,7 @@ def _handle_input_data(
     # 2. Handle Path objects (pathlib)
     elif isinstance(input_data, Path):
         if input_data.is_file():
-            doc = Document.load_from_file(str(input_data))
+            doc = Document.load_from_file(input_data.as_posix())
         else:
             logger.error(f"File not found at path: {input_data}")
             return None
@@ -229,20 +224,8 @@ def _handle_input_data(
         if is_file_path:
             doc = Document.load_from_file(input_data)
         else:
-            # Treat as raw data
-            if isinstance(input_data, bytes):
-                content_str = input_data.decode('utf-8')
-            else:
-                content_str = input_data
-
-    # 4. Load Document from raw string if not already loaded
-    if doc is None:
-        if content_str is not None:
-            doc = Document.load_from_data(content_str)
-        else:
-            logger.error("Invalid input data provided.")
-            return None
-
+            doc = Document.load_from_data(input_data)
+            
     if doc is None:
         logger.error("Failed to parse SVG content.")
         return None
@@ -269,16 +252,12 @@ def _handle_input_data(
     :raises ValueError: If input_data is invalid or cannot be parsed.
     """
     doc = None
-    content_str: Optional[str] = None
+    content_str = None
 
     # 1. Handle File-like objects (IOBase)
     if isinstance(input_data, IOBase):
         try:
-            raw_data = input_data.read()
-            if isinstance(raw_data, bytes):
-                content_str = raw_data.decode('utf-8')
-            else:
-                content_str = str(raw_data)
+            content_str = input_data.read()
         except Exception as e:
             raise IOError(f"Failed to read from file-like object: {e}")
 
@@ -286,23 +265,18 @@ def _handle_input_data(
     elif isinstance(input_data, Path):
         if not input_data.is_file():
             raise FileNotFoundError(f"SVG file not found at path: {input_data}")
-        doc = Document.load_from_file(str(input_data))
+        doc = Document.load_from_file(input_data.as_posix())
 
     # 3. Handle String or Bytes data
     elif isinstance(input_data, (str, bytes)):
-        # Check if it is a valid file path (only for strings)
-        is_file_path = False
-        if isinstance(input_data, str):
-            is_file_path = os.path.isfile(input_data)
-
+        # Check if it is a valid file path
+        is_file_path = len(input_data) < 1000 and not input_data.lstrip().startswith("<")
         if is_file_path:
+            if not os.path.isfile(input_data):
+                raise FileNotFoundError(f"SVG file not found at path: {input_data}")
             doc = Document.load_from_file(input_data)
         else:
-            # Treat as raw data
-            if isinstance(input_data, bytes):
-                content_str = input_data.decode('utf-8')
-            else:
-                content_str = input_data
+            content_str = input_data
 
     # 4. Load Document from raw string if not already loaded
     if doc is None:

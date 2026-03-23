@@ -85,7 +85,7 @@ NB_MODULE(novasvg_py, m) {
         .def(nb::init<>(), "Construct a null bitmap.")
         .def(nb::init<int, int>(), "width"_a, "height"_a, "Construct a bitmap with specified dimensions.")
         // Expose data as a NumPy array (read-only reference to internal data)
-        .def("to_numpy", [](const novasvg::Bitmap &bmp) {
+        .def("numpy", [](const novasvg::Bitmap &bmp) {
             if (bmp.isNull()) return nb::ndarray<nb::numpy, uint8_t>();
             // Shape: {height, width, 4} for ARGB32
             return nb::ndarray<nb::numpy, uint8_t>(bmp.data(), {bmp.height(), bmp.width(), 4});
@@ -142,15 +142,14 @@ NB_MODULE(novasvg_py, m) {
             nb::overload_cast<const std::string&>(&novasvg::Document::loadFromData), 
             "string"_a, "Load an SVG document from a string.")
         .def_static("load_from_data", 
-            nb::overload_cast<const char*>(&novasvg::Document::loadFromData), 
-            "data"_a, "Load an SVG document from a null-terminated char array.")
-        .def_static("load_from_data", 
-            nb::overload_cast<const char*, size_t>(&novasvg::Document::loadFromData), 
-            "data"_a, "length"_a, "Load an SVG document from a char array with length.")
+            [](const nb::bytes& data) {
+                return novasvg::Document::loadFromData(reinterpret_cast<const char*>(data.data()), data.size());
+            }, 
+            "data"_a, "Load an SVG document from a bytes object.")
         .def("apply_stylesheet", &novasvg::Document::applyStyleSheet, "content"_a, "Apply a CSS stylesheet to the document.")
         .def("query_selector_all", &novasvg::Document::querySelectorAll, "content"_a, "Select elements matching a CSS selector.")
-        .def("width", &novasvg::Document::width, "Get the intrinsic width of the document.")
-        .def("height", &novasvg::Document::height, "Get the intrinsic height of the document.")
+        .def_prop_ro("width", &novasvg::Document::width, "Get the intrinsic width of the document.")
+        .def_prop_ro("height", &novasvg::Document::height, "Get the intrinsic height of the document.")
         .def("bounding_box", &novasvg::Document::boundingBox, "Get the bounding box of the document content.")
         .def("update_layout", &novasvg::Document::updateLayout, "Update the layout of the document if needed.")
         .def("force_layout", &novasvg::Document::forceLayout, "Force an immediate layout update.")
