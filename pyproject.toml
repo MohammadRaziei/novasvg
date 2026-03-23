@@ -40,10 +40,10 @@ Repository = "https://github.com/mohammadraziei/novasvg"
 Documentation = "https://mohammadraziei.github.io/novasvg"
 
 [tool.scikit-build]
-cmake.args = ["-DNOVASVG_BUILD=ON", "-DCMAKE_BUILD_TYPE=Release"]
-cmake.define.NOVASVG_BUILD_SHARED = "OFF"
-cmake.define.NOVASVG_BUILD_STATIC = "ON"
-cmake.define.NANOBIND_PROJECT_NAME = "novasvg"
+cmake.args = ["-DCMAKE_BUILD_TYPE=Release"]
+# cmake.define.NOVASVG_BUILD_SHARED = "OFF"
+# cmake.define.NOVASVG_BUILD_STATIC = "ON"
+# cmake.define.NANOBIND_PROJECT_NAME = "novasvg"
 
 
 [tool.scikit-build.metadata.version]
