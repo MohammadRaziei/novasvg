@@ -31,19 +31,23 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "numpy>=1.20.0",
+    # "numpy>=1.20.0",
+    "numpy"
 ]
+scripts.novasvg = "novasvg.__main__:main"
+
 
 [project.urls]
 Homepage = "https://github.com/mohammadraziei/novasvg"
 Repository = "https://github.com/mohammadraziei/novasvg"
 Documentation = "https://mohammadraziei.github.io/novasvg"
 
-[tool.scikit-build]
-cmake.args = ["-DCMAKE_BUILD_TYPE=Release"]
-# cmake.define.NOVASVG_BUILD_SHARED = "OFF"
-# cmake.define.NOVASVG_BUILD_STATIC = "ON"
-# cmake.define.NANOBIND_PROJECT_NAME = "novasvg"
+[tool.scikit-build.cmake]
+args = ["-DCMAKE_BUILD_TYPE=Release"]
+build-type = "Release"
+define.NOVASVG_BUILD_TESTS = "OFF"
+define.NOVASVG_BUILD_DOCS = "OFF"
+define.NOVASVG_BUILD_EXAMPLES = "OFF"
 
 
 [tool.scikit-build.metadata.version]

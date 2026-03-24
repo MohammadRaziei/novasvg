@@ -106,7 +106,7 @@ int version();
  *
  * @return A pointer to a string containing the version in "X.Y.Z" format.
  */
-std::string_view versionString();
+std::string versionString();
 
 /**
 * @brief Add a font face from a file to the cache.

@@ -48,6 +48,11 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/novasvg/
     FILES_MATCHING PATTERN "*.py"
 )
 
+# Installation
+install(TARGETS novasvg_cli
+    RUNTIME DESTINATION novasvg/bin
+)
+
 # Optional: If you want to install the package directly to Python's site-packages
 # You would calculate the PYTHON_SITE_PACKAGES location and use that as DESTINATION.
 # Example:

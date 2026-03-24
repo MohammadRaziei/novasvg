@@ -1,6 +1,5 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
-#include <nanobind/stl/string_view.h>
 #include <nanobind/stl/vector.h>
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/ndarray.h>
@@ -13,36 +12,22 @@
 namespace nb = nanobind;
 using namespace nb::literals;
 
-namespace novasvg {
-
-// Helper struct to bind static utility functions
-struct StaticUtils {
-    static int version() { return novasvg::version(); }
-    static std::string_view versionString() { return novasvg::versionString(); }
-    static bool addFontFaceFromFile(const char* family, bool bold, bool italic, const char* filename) {
-        return novasvg::addFontFaceFromFile(family, bold, italic, filename);
-    }
-    // Note: Binding addFontFaceFromData with callbacks requires complex handling.
-    // This is a simplified binding assuming direct data usage or custom capsule handling.
-    static bool addFontFaceFromData(const char* family, bool bold, bool italic, nb::bytes data, novasvg_destroy_func_t destroy_func, void* closure) {
-        return novasvg::addFontFaceFromData(family, bold, italic, data.data(), data.size(), destroy_func, closure);
-    }
-};
-
-} // namespace novasvg
 
 NB_MODULE(novasvg_py, m) {
     m.doc() = "Python bindings for NovaSVG using nanobind";
 
     // --- Bind Static Utility Functions ---
-    m.def("version_string", &novasvg::StaticUtils::versionString, "Get the library version as a string (e.g., '0.1.0').");
-    m.def("add_font_face_from_file", &novasvg::StaticUtils::addFontFaceFromFile, 
+    m.def("version_string", &novasvg::versionString, "Get the library version as a string (e.g., '0.1.0').");
+    m.def("add_font_face_from_file", &novasvg::addFontFaceFromFile, 
           "family"_a, "bold"_a, "italic"_a, "filename"_a,
           "Add a font face from a file to the cache.");
     
     // Binding for adding font from memory. 
     // The destroy_func and closure are advanced usage; usually defaults to nullptr for simple bindings.
-    m.def("add_font_face_from_data", &novasvg::StaticUtils::addFontFaceFromData, 
+    m.def("add_font_face_from_data", 
+          [](const char* family, bool bold, bool italic, nb::bytes data, novasvg_destroy_func_t destroy_func, void* closure) -> bool {
+               return novasvg::addFontFaceFromData(family, bold, italic, data.data(), data.size(), destroy_func, closure);
+          }, 
           "family"_a, "bold"_a, "italic"_a, "data"_a, "destroy_func"_a = nullptr, "closure"_a = nullptr,
           "Add a font face from a memory buffer.");
 
@@ -88,7 +73,7 @@ NB_MODULE(novasvg_py, m) {
         .def("numpy", [](const novasvg::Bitmap &bmp) {
             if (bmp.isNull()) return nb::ndarray<nb::numpy, uint8_t>();
             // Shape: {height, width, 4} for ARGB32
-            return nb::ndarray<nb::numpy, uint8_t>(bmp.data(), {bmp.height(), bmp.width(), 4});
+            return nb::ndarray<nb::numpy, uint8_t>(bmp.data(), {(uint64_t) bmp.height(), (uint64_t) bmp.width(), 4});
         }, nb::rv_policy::reference_internal, "Get pixel data as a NumPy array.")
         .def_prop_ro("width", &novasvg::Bitmap::width, "Get the width of the bitmap.")
         .def_prop_ro("height", &novasvg::Bitmap::height, "Get the height of the bitmap.")

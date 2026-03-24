@@ -368,8 +368,9 @@ int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
 }
 
 int main(int argc, char** argv) {
-    CLI::App app{"NovaSVG CLI - SVG processing tool"};
-    
+    CLI::App app{"NovaSVG Command Line Interface v" + novasvg::versionString() + " - High-performance SVG rendering and processing toolkit."};   
+    app.name("novasvg");
+
     // Version information
     app.set_version_flag("-v,--version", NOVASVG_VERSION_STRING, "Show version information");
     
@@ -455,6 +456,10 @@ int main(int argc, char** argv) {
     
     // Parse and run
     try {
+        if (argc < 2) {
+            std::cout << app.help() << std::endl;
+            return 0;
+        }
         app.parse(argc, argv);
     } catch (const CLI::ParseError &e) {
         return app.exit(e);

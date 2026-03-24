@@ -22,7 +22,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Project options
 option(NOVASVG_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
-option(NOVASVG_BUILD_CLI "Build command line interface" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_DOCS "Build documentation" OFF)
 
 
@@ -34,8 +33,13 @@ add_library(novasvg::novasvg ALIAS novasvg)
 
 target_include_directories(novasvg INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# target_compile_features(novasvg INTERFACE cxx_std_17)
+# Add CLI executable
+add_executable(novasvg_cli src/novasvg_cli.cpp)
+target_link_libraries(novasvg_cli PRIVATE novasvg::novasvg)
+set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg)
 
+
+# target_compile_features(novasvg INTERFACE cxx_std_17)
 
 function(generate_single_header_distribution dist_path)
     add_custom_target(dist_header
@@ -48,10 +52,18 @@ function(generate_single_header_distribution dist_path)
     )
 endfunction()
 
+
+
+
 if(DEFINED SKBUILD)
     add_subdirectory(${PROJECT_SOURCE_DIR}/src/bindings/python)
     return()
 endif()
+
+# Installation
+install(TARGETS novasvg_cli
+    RUNTIME DESTINATION bin
+)
 
 # Generate single-header distribution if NOVASVG_DIST_DIR is defined
 if(DEFINED NOVASVG_DIST_DIR)
@@ -79,24 +91,6 @@ if(NOVASVG_BUILD_EXAMPLES)
     endforeach()
 endif()
 
-
-# Command Line Interface
-if(NOVASVG_BUILD_CLI)
-    # Add CLI executable
-    add_executable(novasvg_cli src/novasvg_cli.cpp)
-    
-    target_link_libraries(novasvg_cli PRIVATE novasvg)
-    
-    # Set output name to just 'novasvg' for easier use
-    set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg)
-    
-    message(STATUS "Added CLI target: novasvg_cli (output: novasvg)")
-    
-    # Installation
-    install(TARGETS novasvg_cli
-        RUNTIME DESTINATION bin
-    )
-endif()
 
 # Documentation (Doxygen)
 if(NOVASVG_BUILD_DOCS)
