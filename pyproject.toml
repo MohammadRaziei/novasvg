@@ -55,3 +55,15 @@ regex = '''(?sx)
 \#define \s+ NOVASVG_VERSION_PATCH \s+ (?P<patch>\d+) .*?
 '''
 result = "{major}.{minor}.{patch}"
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = [
+    "error",
+    "ignore:(ast.Str|Attribute s|ast.NameConstant|ast.Num) is deprecated:DeprecationWarning:_pytest",  # Python 3.12
+]
+testpaths = ["tests/python"]
+
