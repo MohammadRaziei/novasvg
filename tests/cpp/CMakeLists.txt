@@ -30,6 +30,10 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
     target_link_options(test_novasvg_cpp PRIVATE --coverage)
 
     add_custom_target(coverage
+        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/coverage_html
+
+
         COMMAND ${CMAKE_COMMAND} -E echo "-- Running tests..."
         COMMAND $<TARGET_FILE:test_novasvg_cpp>
 
@@ -47,12 +51,19 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
                 --extract
                 ${CMAKE_BINARY_DIR}/coverage.info
                 "*/novasvg/*"
-                --output-file ${CMAKE_BINARY_DIR}/coverage_novasvg.info
+                --output-file ${CMAKE_BINARY_DIR}/coverage_temp.info
+        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${LCOV_EXECUTABLE}
+            --remove
+            ${CMAKE_BINARY_DIR}/coverage_temp.info
+            "*/tests/*"
+            --output-file ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage_temp.info
 
         COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report..."
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage_html
         COMMAND ${GENHTML_EXECUTABLE}
-                ${CMAKE_BINARY_DIR}/coverage_novasvg.info
+                ${CMAKE_BINARY_DIR}/coverage.info
                 --output-directory ${CMAKE_BINARY_DIR}/coverage_html
 
         COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${CMAKE_BINARY_DIR}/coverage_html/index.html"
@@ -60,7 +71,7 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
         COMMAND ${CMAKE_COMMAND} -E echo "-- Coverage summary:"
         COMMAND ${LCOV_EXECUTABLE}
                 --list
-                ${CMAKE_BINARY_DIR}/coverage_novasvg.info
+                ${CMAKE_BINARY_DIR}/coverage.info
 
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         USES_TERMINAL
