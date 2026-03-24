@@ -1,7 +1,7 @@
 
 # Find all test source files matching test_*.cpp pattern
 file(GLOB NOVASVG_TEST_SOURCES CONFIGURE_DEPENDS
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/cpp/test_*.cpp
 )
 
 add_executable(test_novasvg_cpp ${NOVASVG_TEST_SOURCES})
@@ -29,7 +29,7 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
     target_compile_options(test_novasvg_cpp PRIVATE -O0 -g --coverage)
     target_link_options(test_novasvg_cpp PRIVATE --coverage)
 
-    add_custom_target(coverage
+    add_custom_target(novasvg_coverage
         COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info
         COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/coverage_html
 
@@ -76,6 +76,6 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         USES_TERMINAL
     )
-    add_dependencies(coverage test_novasvg_cpp)
+    add_dependencies(novasvg_coverage test_novasvg_cpp)
 
 endif()

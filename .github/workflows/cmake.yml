@@ -105,17 +105,13 @@ jobs:
           -DNOVASVG_BUILD_TESTS=ON \
           -DNOVASVG_BUILD_DOCS=OFF
 
-    - name: Build with coverage
-      run: cmake --build ${{github.workspace}}/build-coverage -j4
-
-
     - name: Generate coverage report
-      run: cmake --build ${{github.workspace}}/build-coverage --target coverage
+      run: cmake --build ${{github.workspace}}/build-coverage --target novasvg_coverage
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
-        files: ${{github.workspace}}/build-coverage/coverage_novasvg.info
+        files: ${{github.workspace}}/build-coverage/coverage.info
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false

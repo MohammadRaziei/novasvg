@@ -52,9 +52,6 @@ function(generate_single_header_distribution dist_path)
     )
 endfunction()
 
-
-
-
 if(DEFINED SKBUILD)
     add_subdirectory(${PROJECT_SOURCE_DIR}/src/bindings/python)
     return()
@@ -73,7 +70,7 @@ endif()
 # Tests
 if(NOVASVG_BUILD_TESTS)
     enable_testing()
-    add_subdirectory(${PROJECT_SOURCE_DIR}/tests/cpp)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/tests)
 endif()
 
 
