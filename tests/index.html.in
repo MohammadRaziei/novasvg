@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novasvg Coverage Report</title>
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --card-bg: #161b22;
+            --text-main: #e6edf3;
+            --text-muted: #8b949e;
+            --border: #30363d;
+            --success: #238636;
+            --cpp-color: #f0883e;
+            --py-color: #3572A5;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .stack-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-color: var(--text-muted);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .icon-box svg { width: 28px; height: 28px; }
+
+        .card-title { font-size: 1.25rem; font-weight: 600; }
+        .card-desc { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+
+        .actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--success);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-primary:hover { background-color: #2ea043; }
+
+        .btn-secondary {
+            background-color: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background-color: rgba(255,255,255,0.1); border-color: var(--text-muted); }
+
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge.cpp { background: rgba(240, 136, 62, 0.15); color: var(--cpp-color); border: 1px solid rgba(240, 136, 62, 0.4); }
+        .badge.py { background: rgba(53, 114, 165, 0.15); color: var(--py-color); border: 1px solid rgba(53, 114, 165, 0.4); }
+
+        .text-cpp { color: var(--cpp-color); }
+        .text-py { color: var(--py-color); }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            Novasvg Coverage
+        </h1>
+    </header>
+
+    <main>
+        <div id="card-container" class="stack-container">
+            <!-- Cards will be injected here by JavaScript -->
+        </div>
+    </main>
+
+    <footer>
+        <p>Generated by CMake &bull; Novasvg Project</p>
+    </footer>
+
+    <script>
+        // Data injected from CMake
+        const coverageData = @COVERAGE_DATA_JSON@;
+
+        // SVG Icons definitions
+        const icons = {
+            cpp: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-cpp"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>`,
+            py: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-py"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`,
+            link: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>`,
+            download: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`
+        };
+
+        const container = document.getElementById('card-container');
+
+        // Function to create cards
+        if (coverageData && coverageData.length > 0) {
+            coverageData.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                const iconSvg = icons[item.id] || icons.cpp; // Fallback to cpp icon
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="icon-box">
+                            ${iconSvg}
+                        </div>
+                        <div>
+                            <div class="card-title">${item.title}</div>
+                            <span class="badge ${item.badgeClass}">${item.badge}</span>
+                        </div>
+                    </div>
+                    <p class="card-desc">${item.desc}</p>
+                    <div class="actions">
+                        <a href="${item.htmlLink}" class="btn btn-primary">
+                            ${icons.link}
+                            View HTML Report
+                        </a>
+                        <a href="${item.infoLink}" class="btn btn-secondary" download>
+                            ${icons.download}
+                            Download .info
+                        </a>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        } else {
+            container.innerHTML = '<p style="text-align:center; color: var(--text-muted);">No coverage reports available.</p>';
+        }
+    </script>
+</body>
+</html>
