@@ -12,9 +12,6 @@
             --text-muted: #8b949e;
             --border: #30363d;
             --success: #238636;
-            --cpp-color: #f0883e;
-            --py-color: #3572A5;
-            --total-color: #a371f7; /* Purple for Total */
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -44,7 +41,7 @@
         main {
             flex: 1;
             padding: 2rem;
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             width: 100%;
         }
@@ -125,15 +122,8 @@
             border-radius: 6px;
             font-weight: 600;
             text-transform: uppercase;
+            /* Styles will be applied dynamically via JS */
         }
-        .badge.cpp { background: rgba(240, 136, 62, 0.15); color: var(--cpp-color); border: 1px solid rgba(240, 136, 62, 0.4); }
-        .badge.py { background: rgba(53, 114, 165, 0.15); color: var(--py-color); border: 1px solid rgba(53, 114, 165, 0.4); }
-        .badge.total { background: rgba(163, 113, 247, 0.15); color: var(--total-color); border: 1px solid rgba(163, 113, 247, 0.4); }
-
-        .text-cpp { color: var(--cpp-color); }
-        .text-py { color: var(--py-color); }
-        .text-total { color: var(--total-color); }
-
         footer {
             text-align: center;
             padding: 1.5rem;
@@ -170,7 +160,7 @@
 
         // SVG Icons definitions
         const icons = {
-            code: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-code"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>`,
+            code: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>`,
             total: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-total"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`,
             link: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>`,
             download: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`
@@ -184,20 +174,25 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 
-                const iconSvg = icons[item.id] || icons.code; // Fallback to code icon
+                // Select icon based on ID, fallback to 'code'
+                const iconSvg = icons[item.id] || icons.code; 
 
-                // Check if HTML link is valid, otherwise disable the button
+                // Check if HTML link is valid
                 const htmlButtonClass = item.htmlLink === "#" ? "btn btn-disabled" : "btn btn-primary";
                 const htmlButtonAttr = item.htmlLink === "#" ? "" : `href="${item.htmlLink}"`;
 
+                // Apply dynamic color styles
+                const iconStyle = `color: ${item.color};`;
+                const badgeStyle = `background: ${hexToRgba(item.color, 0.15)}; color: ${item.color}; border: 1px solid ${hexToRgba(item.color, 0.4)};`;
+
                 card.innerHTML = `
                     <div class="card-header">
-                        <div class="icon-box text-${item.id}">
+                        <div class="icon-box" style="${iconStyle}">
                             ${iconSvg}
                         </div>
                         <div>
                             <div class="card-title">${item.title}</div>
-                            <span class="badge ${item.badgeClass}">${item.badge}</span>
+                            <span class="badge" style="${badgeStyle}">${item.badge}</span>
                         </div>
                     </div>
                     <p class="card-desc">${item.desc}</p>
@@ -216,6 +211,14 @@
             });
         } else {
             container.innerHTML = '<p style="text-align:center; color: var(--text-muted);">No coverage reports available.</p>';
+        }
+
+        // Helper function to convert hex to rgba for transparency
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         }
     </script>
 </body>
