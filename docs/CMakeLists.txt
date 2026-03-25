@@ -19,23 +19,23 @@ if(DOXYGEN_FOUND)
     FetchContent_GetProperties(doxygen-awesome-css SOURCE_DIR AWESOME_CSS_DIR)
 
 
-    set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
-    set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+    set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
+    set(DOXYGEN_OUT ${CMAKE_BINARY_DIR}/Doxyfile)
     
     configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
     
     add_custom_target(docs
         COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND ${CMAKE_COMMAND} -E echo "-- Documentation generated at: ${CMAKE_BINARY_DIR}/docs/html/index.html"
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Generating API documentation with Doxygen"
         VERBATIM
     )
     
-    # Print documentation location after build
-    add_custom_command(TARGET docs POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E echo "Documentation generated at: ${CMAKE_CURRENT_BINARY_DIR}/docs/html/index.html"
-        VERBATIM
-    )
+    # # Print documentation location after build
+    # add_custom_command(TARGET docs POST_BUILD
+    #     VERBATIM
+    # )
 else()
     message(WARNING "Doxygen not found - documentation will not be generated")
 endif()
