@@ -1,5 +1,6 @@
 # --- Testing and Coverage Section ---
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
+set(NOVASVG_PYTHON_INSTALL_DIR ${CMAKE_BINARY_DIR}/python/install)
 
 if(TARGET novasvg_build_python)
     # Check for pytest
@@ -49,7 +50,7 @@ if(TARGET novasvg_build_python)
             COMMAND ${CMAKE_COMMAND} -E echo "-- Capturing coverage..."
             COMMAND ${Python3_EXECUTABLE} -m coverage run 
                     --source=${NOVASVG_PYTHON_INSTALL_DIR} 
-                    # --omit="*/tests/*" 
+                    --omit="*/tests/*" 
                     -m pytest ${CMAKE_CURRENT_SOURCE_DIR}
 
             # Generate HTML report
