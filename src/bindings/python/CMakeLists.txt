@@ -1,9 +1,8 @@
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
 
 if(DEFINED SKBUILD)
 
     # Find Python and nanobind
-    find_package(Python COMPONENTS Interpreter Development REQUIRED)
     find_package(nanobind CONFIG REQUIRED)
 
     # Define the source file for the binding
@@ -49,7 +48,7 @@ include(ExternalProject)
 # --- Check for nanobind dependency ---
 # We need to find the nanobind cmake directory using the python module.
 execute_process(
-    COMMAND ${Python3_EXECUTABLE} -c "import nanobind; print(nanobind.cmake_dir())"
+    COMMAND ${Python_EXECUTABLE} -c "import nanobind; print(nanobind.cmake_dir())"
     OUTPUT_VARIABLE NANOBIND_CMAKE_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_QUIET

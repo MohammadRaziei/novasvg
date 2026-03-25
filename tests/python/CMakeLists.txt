@@ -1,11 +1,12 @@
 # --- Testing and Coverage Section ---
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 if(TARGET novasvg_build_python)
     # Check for pytest
     execute_process(
         COMMAND ${Python3_EXECUTABLE} -m pytest --version
-        # OUTPUT_QUIET
-        # ERROR_QUIET
+        OUTPUT_QUIET
+        ERROR_QUIET
         RESULT_VARIABLE PYTEST_CHECK_RESULT
     )
 
@@ -17,7 +18,7 @@ if(TARGET novasvg_build_python)
         # In reality, we run pytest via the Python interpreter found above.
         add_custom_target(novasvg_test_python
             COMMAND ${CMAKE_COMMAND} -E echo "-- Running python tests..."
-            COMMAND ${Python3_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/tests
+            COMMAND ${Python3_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}
             WORKING_DIRECTORY ${NOVASVG_PYTHON_INSTALL_DIR}
             USES_TERMINAL
         )
@@ -45,7 +46,7 @@ if(TARGET novasvg_build_python)
             
             # Run tests with coverage enabled
             COMMAND ${CMAKE_COMMAND} -E echo "-- Capturing coverage..."
-            COMMAND ${Python3_EXECUTABLE} -m coverage run -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/tests
+            COMMAND ${Python3_EXECUTABLE} -m coverage run -m pytest ${CMAKE_CURRENT_SOURCE_DIR}
             
             # Generate HTML report
             COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report..."
@@ -64,11 +65,9 @@ if(TARGET novasvg_build_python)
         add_dependencies(novasvg_coverage_python novasvg_build_python)
         
         # Add this python coverage target to the main 'novasvg_coverage' target
-        if(TARGET novasvg_coverage)
-            add_dependencies(novasvg_coverage novasvg_coverage_python)
-        endif()
+        add_dependencies(novasvg_coverage novasvg_coverage_python)
     else()
-        message(WARNING "pytest-cov (coverage module) is not installed. Python coverage target will be skipped.")
-        message(WARNING "Please install it using: pip install pytest-cov")
+        message(WARNING "coverage module is not installed. Python coverage target will be skipped.")
+        message(WARNING "Please install it using: pip install coverage")
     endif()
 endif()
