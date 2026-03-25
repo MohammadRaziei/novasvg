@@ -1,6 +1,9 @@
+set(NOVASVG_TEST_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
 set(NOVASVG_TEST_BINARY_DIR ${CMAKE_BINARY_DIR}/tests)
 set(NOVASVG_COVERAGE_BINARY_DIR ${CMAKE_BINARY_DIR}/coverage)
 
+set(NOVASVG_COVERAGE_TOTAL_BINARY_DIR ${NOVASVG_COVERAGE_BINARY_DIR}/total)
 set(NOVASVG_COVERAGE_CPP_BINARY_DIR ${NOVASVG_COVERAGE_BINARY_DIR}/cpp)
 set(NOVASVG_COVERAGE_PYTHON_BINARY_DIR ${NOVASVG_COVERAGE_BINARY_DIR}/python)
 
@@ -16,15 +19,69 @@ add_custom_target(novasvg_coverage
 
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
+find_program(LCOV_EXECUTABLE lcov)
+find_program(GENHTML_EXECUTABLE genhtml)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cpp)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/python)
+add_subdirectory(${NOVASVG_TEST_SOURCE_DIR}/cpp)
+add_subdirectory(${NOVASVG_TEST_SOURCE_DIR}/python)
 
+if(TARGET novasvg_coverage_cpp AND TARGET novasvg_coverage_python)
+    if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
+        add_custom_target(novasvg_coverage_total
+                # Clean previous coverage data
+            COMMAND ${CMAKE_COMMAND} -E remove_directory ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/html
+            # Merge C++ and Python coverage info files
+            COMMAND ${CMAKE_COMMAND} -E echo "-- Merging C++ and Python coverage..."
+            COMMAND ${LCOV_EXECUTABLE}
+                    --add-tracefile ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.info
+                    --add-tracefile ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.info
+                    --base-directory ${PROJECT_SOURCE_DIR}
+                    --output-file ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/coverage.info
+            COMMAND ${CMAKE_COMMAND} -E echo "-- Total coverage info created at: ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/coverage.info"
+                    
+            # Generate HTML report
+            COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report..."
+            COMMAND ${GENHTML_EXECUTABLE} --quiet 
+                    ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/coverage.info
+                    --output-directory ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/html
+                    --prefix ${PROJECT_SOURCE_DIR}
+                    --title "Novasvg Total Coverage"
+                    # --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
+                    --dark-mode 
+            COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/html/index.html"
+        
+            
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+            USES_TERMINAL
+        )
+
+        # Ensure this target runs only after both individual coverages are done
+        add_dependencies(novasvg_coverage_total novasvg_coverage_cpp)
+        add_dependencies(novasvg_coverage_total novasvg_coverage_python)
+
+        add_dependencies(novasvg_coverage novasvg_coverage_total)
+    endif()
+endif()
 
 # --- Generate Coverage Dashboard HTML ---
-
 # Initialize the JSON array
 set(COVERAGE_DATA_JSON "[")
+
+# Check for Total Coverage (Merged)
+if(TARGET novasvg_coverage_total)
+    set(COVERAGE_DATA_JSON "${COVERAGE_DATA_JSON}
+        {
+            \"id\": \"total\",
+            \"title\": \"Total Coverage\",
+            \"badge\": \"Merged\",
+            \"badgeClass\": \"total\",
+            \"desc\": \"Combined coverage report for both C++ and Python codebases. Useful for SonarQube analysis.\",
+            \"htmlLink\": \"total/html/index.html\", 
+            \"infoLink\": \"total/coverage.info\"
+        },")
+endif()
+
 # Check for C++ Coverage
 if(TARGET novasvg_coverage_cpp)
     set(COVERAGE_DATA_JSON "${COVERAGE_DATA_JSON}
@@ -52,11 +109,18 @@ if(TARGET novasvg_coverage_python)
             \"infoLink\": \"python/coverage.info\"
         },")
 endif()
+
+# Remove the trailing comma if the list is not empty, then close the array
+string(LENGTH "${COVERAGE_DATA_JSON}" JSON_LEN)
+if(JSON_LEN GREATER 1)
+    string(REGEX REPLACE ",$" "" COVERAGE_DATA_JSON "${COVERAGE_DATA_JSON}")
+endif()
+
 set(COVERAGE_DATA_JSON "${COVERAGE_DATA_JSON}]")
 
 # Configure the HTML file
 configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/index.html.in
+    ${NOVASVG_TEST_SOURCE_DIR}/index.html.in
     ${NOVASVG_COVERAGE_BINARY_DIR}/index.html
     @ONLY
 )

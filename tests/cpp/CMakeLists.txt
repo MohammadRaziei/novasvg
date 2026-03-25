@@ -29,9 +29,6 @@ add_dependencies(novasvg_test_cpp test_novasvg_cpp)
 add_dependencies(novasvg_test novasvg_test_cpp)
 
 
-find_program(LCOV_EXECUTABLE lcov)
-find_program(GENHTML_EXECUTABLE genhtml)
-
 if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
     # Enable coverage flags for the test executable
     target_compile_options(test_novasvg_cpp PRIVATE -O0 -g --coverage)
@@ -89,6 +86,7 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
                 ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.info
                 --output-directory ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/html
                 --title "Novasvg C++ Coverage"
+                # --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
                 --dark-mode 
         COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/html/index.html"
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}

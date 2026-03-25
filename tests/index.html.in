@@ -14,10 +14,9 @@
             --success: #238636;
             --cpp-color: #f0883e;
             --py-color: #3572A5;
+            --total-color: #a371f7; /* Purple for Total */
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
@@ -27,7 +26,6 @@
             flex-direction: column;
             min-height: 100vh;
         }
-
         header {
             background-color: var(--card-bg);
             border-bottom: 1px solid var(--border);
@@ -36,7 +34,6 @@
             justify-content: space-between;
             align-items: center;
         }
-
         h1 {
             font-size: 1.5rem;
             font-weight: 600;
@@ -44,7 +41,6 @@
             align-items: center;
             gap: 10px;
         }
-
         main {
             flex: 1;
             padding: 2rem;
@@ -52,13 +48,11 @@
             margin: 0 auto;
             width: 100%;
         }
-
         .stack-container {
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
         }
-
         .card {
             background-color: var(--card-bg);
             border: 1px solid var(--border);
@@ -67,25 +61,21 @@
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             animation: fadeIn 0.5s ease-out;
         }
-
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
         .card:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             border-color: var(--text-muted);
         }
-
         .card-header {
             display: flex;
             align-items: center;
             gap: 1rem;
             margin-bottom: 1rem;
         }
-
         .icon-box {
             width: 48px;
             height: 48px;
@@ -95,14 +85,10 @@
             justify-content: center;
             background: rgba(255,255,255,0.05);
         }
-
         .icon-box svg { width: 28px; height: 28px; }
-
         .card-title { font-size: 1.25rem; font-weight: 600; }
         .card-desc { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
-
         .actions { display: flex; gap: 1rem; flex-wrap: wrap; }
-
         .btn {
             display: inline-flex;
             align-items: center;
@@ -114,21 +100,25 @@
             font-weight: 500;
             transition: all 0.2s;
         }
-
         .btn-primary {
             background-color: var(--success);
             color: white;
             border: 1px solid rgba(255,255,255,0.1);
         }
         .btn-primary:hover { background-color: #2ea043; }
-
         .btn-secondary {
             background-color: rgba(255,255,255,0.05);
             color: var(--text-main);
             border: 1px solid var(--border);
         }
         .btn-secondary:hover { background-color: rgba(255,255,255,0.1); border-color: var(--text-muted); }
-
+        .btn-disabled {
+            background-color: rgba(48, 54, 61, 0.5);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
         .badge {
             font-size: 0.75rem;
             padding: 0.2rem 0.5rem;
@@ -138,9 +128,11 @@
         }
         .badge.cpp { background: rgba(240, 136, 62, 0.15); color: var(--cpp-color); border: 1px solid rgba(240, 136, 62, 0.4); }
         .badge.py { background: rgba(53, 114, 165, 0.15); color: var(--py-color); border: 1px solid rgba(53, 114, 165, 0.4); }
+        .badge.total { background: rgba(163, 113, 247, 0.15); color: var(--total-color); border: 1px solid rgba(163, 113, 247, 0.4); }
 
         .text-cpp { color: var(--cpp-color); }
         .text-py { color: var(--py-color); }
+        .text-total { color: var(--total-color); }
 
         footer {
             text-align: center;
@@ -153,7 +145,6 @@
     </style>
 </head>
 <body>
-
     <header>
         <h1>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -179,8 +170,8 @@
 
         // SVG Icons definitions
         const icons = {
-            cpp: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-cpp"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>`,
-            py: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-py"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`,
+            code: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-code"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>`,
+            total: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-total"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`,
             link: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>`,
             download: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`
         };
@@ -193,11 +184,15 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 
-                const iconSvg = icons[item.id] || icons.cpp; // Fallback to cpp icon
+                const iconSvg = icons[item.id] || icons.code; // Fallback to code icon
+
+                // Check if HTML link is valid, otherwise disable the button
+                const htmlButtonClass = item.htmlLink === "#" ? "btn btn-disabled" : "btn btn-primary";
+                const htmlButtonAttr = item.htmlLink === "#" ? "" : `href="${item.htmlLink}"`;
 
                 card.innerHTML = `
                     <div class="card-header">
-                        <div class="icon-box">
+                        <div class="icon-box text-${item.id}">
                             ${iconSvg}
                         </div>
                         <div>
@@ -207,7 +202,7 @@
                     </div>
                     <p class="card-desc">${item.desc}</p>
                     <div class="actions">
-                        <a href="${item.htmlLink}" class="btn btn-primary">
+                        <a ${htmlButtonAttr} class="${htmlButtonClass}">
                             ${icons.link}
                             View HTML Report
                         </a>
@@ -217,7 +212,6 @@
                         </a>
                     </div>
                 `;
-                
                 container.appendChild(card);
             });
         } else {

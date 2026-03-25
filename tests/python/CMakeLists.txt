@@ -74,7 +74,6 @@ if(TARGET novasvg_build_python)
             WORKING_DIRECTORY ${NOVASVG_PYTHON_INSTALL_DIR}
             USES_TERMINAL            
         )
-        find_program(GENHTML_EXECUTABLE genhtml)
         if(GENHTML_EXECUTABLE)
             add_custom_command(TARGET novasvg_coverage_python POST_BUILD
                 # Generate HTML report
@@ -84,6 +83,7 @@ if(TARGET novasvg_build_python)
                         ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.info
                         --output-directory ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html
                         --title "Novasvg Python Coverage"
+                        # --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
                         --dark-mode 
                 COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html/index.html"
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
