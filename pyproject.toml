@@ -45,6 +45,8 @@ Documentation = "https://mohammadraziei.github.io/novasvg"
 [tool.scikit-build.cmake]
 args = ["-DCMAKE_BUILD_TYPE=Release"]
 build-type = "Release"
+define.CMAKE_BUILD_PARALLEL_LEVEL = 8
+define.NOVASVG_BUILD_PYTHON = "ON"
 define.NOVASVG_BUILD_TESTS = "OFF"
 define.NOVASVG_BUILD_DOCS = "OFF"
 define.NOVASVG_BUILD_EXAMPLES = "OFF"

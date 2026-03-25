@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.19)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(PyProject)
@@ -22,6 +22,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Project options
 option(NOVASVG_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
+option(NOVASVG_BUILD_PYTHON "Build Python" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_DOCS "Build documentation" OFF)
 
 
@@ -52,9 +53,11 @@ function(generate_single_header_distribution dist_path)
     )
 endfunction()
 
-if(DEFINED SKBUILD)
+if(NOVASVG_BUILD_PYTHON)
     add_subdirectory(${PROJECT_SOURCE_DIR}/src/bindings/python)
-    return()
+    if(DEFINED SKBUILD)
+        return()
+    endif()
 endif()
 
 # Installation
@@ -91,47 +94,7 @@ endif()
 
 # Documentation (Doxygen)
 if(NOVASVG_BUILD_DOCS)
-    # Find Doxygen
-    find_package(Doxygen)
-    
-    if(DOXYGEN_FOUND)
-        message(STATUS "Doxygen found: ${DOXYGEN_EXECUTABLE}")
-        cmake_policy(SET CMP0135 NEW)
-        
-        include(FetchContent)
-        FetchContent_Declare(
-            doxygen-awesome-css
-            URL https://github.com/jothepro/doxygen-awesome-css/archive/main.zip
-            # DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-            URL_HASH SHA256=286f8008c08bb80f88910b3333af763a20724e90c2fd70dd9ee24071e1856965
-        )
-        FetchContent_MakeAvailable(doxygen-awesome-css)
-
-        # Save the location the files were cloned into
-        # This allows us to get the path to doxygen-awesome.css
-        FetchContent_GetProperties(doxygen-awesome-css SOURCE_DIR AWESOME_CSS_DIR)
-
-
-        set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
-        set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
-        
-        configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
-        
-        add_custom_target(docs
-            COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            COMMENT "Generating API documentation with Doxygen"
-            VERBATIM
-        )
-        
-        # Print documentation location after build
-        add_custom_command(TARGET docs POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E echo "Documentation generated at: ${CMAKE_CURRENT_BINARY_DIR}/docs/html/index.html"
-            VERBATIM
-        )
-    else()
-        message(WARNING "Doxygen not found - documentation will not be generated")
-    endif()
+    add_subdirectory(${PROJECT_SOURCE_DIR}/docs)
 endif()
 
 
