@@ -17,3 +17,9 @@ add_custom_target(novasvg_coverage
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cpp)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/python)
 
+add_custom_target(novasvg_coverage_report
+    COMMAND ${CMAKE_COMMAND} -E echo "-- Finalize coverage reports..."
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/index.html ${NOVASVG_COVERAGE_BINARY_DIR}
+)
+add_dependencies(novasvg_coverage_report novasvg_coverage_cpp novasvg_coverage_python)
+add_dependencies(novasvg_coverage novasvg_coverage_report)
