@@ -45,9 +45,13 @@ if(TARGET novasvg_build_python)
             COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html
             
             # Run tests with coverage enabled
+            # We run from the install directory so Python can find the installed package.
             COMMAND ${CMAKE_COMMAND} -E echo "-- Capturing coverage..."
-            COMMAND ${Python3_EXECUTABLE} -m coverage run -m pytest ${CMAKE_CURRENT_SOURCE_DIR}
-            
+            COMMAND ${Python3_EXECUTABLE} -m coverage run 
+                    --source=${NOVASVG_PYTHON_INSTALL_DIR} 
+                    # --omit="*/tests/*" 
+                    -m pytest ${CMAKE_CURRENT_SOURCE_DIR}
+
             # Generate HTML report
             COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report..."
             COMMAND ${Python3_EXECUTABLE} -m coverage html -d ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html
@@ -57,10 +61,10 @@ if(TARGET novasvg_build_python)
             COMMAND ${CMAKE_COMMAND} -E echo "-- Coverage summary:"
             COMMAND ${Python3_EXECUTABLE} -m coverage report
             
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/python/build
-            USES_TERMINAL
+            # Changed working directory to the install directory
+            WORKING_DIRECTORY ${NOVASVG_PYTHON_INSTALL_DIR}
+            USES_TERMINAL            
         )
-        
         # Ensure coverage runs after the build is complete
         add_dependencies(novasvg_coverage_python novasvg_build_python)
         
