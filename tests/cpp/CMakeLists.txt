@@ -47,34 +47,34 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
                 --base-directory ${PROJECT_SOURCE_DIR}
                 --no-external
                 --rc function_coverage=1
-                --output-file ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.info
+                --output-file ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.lcov
         
         # Filter for novasvg files only
         COMMAND ${CMAKE_COMMAND} -E echo "Filtering novasvg files..."
         COMMAND ${LCOV_EXECUTABLE}
                 --extract
-                ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.info
+                ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.lcov
                 "*/novasvg/*"
-                --output-file ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage_temp.info
-        COMMAND ${CMAKE_COMMAND} -E remove ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.info
+                --output-file ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage_temp.lcov
+        COMMAND ${CMAKE_COMMAND} -E remove ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.lcov
         COMMAND ${LCOV_EXECUTABLE}
             --remove
-            ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage_temp.info
+            ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage_temp.lcov
             "*/tests/*"
-            --output-file ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.info
-        COMMAND ${CMAKE_COMMAND} -E remove ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage_temp.info
+            --output-file ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.lcov
+        COMMAND ${CMAKE_COMMAND} -E remove ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage_temp.lcov
         
         # Fix paths to be relative (for SonarQube, etc.)
         COMMAND ${CMAKE_COMMAND} -E echo "-- Fixing paths to relative..."
         COMMAND ${CMAKE_COMMAND} 
-                -DCOV_FILE=${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.info
+                -DCOV_FILE=${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.lcov
                 -DSOURCE_PATH=${PROJECT_SOURCE_DIR}/
                 -P ${PROJECT_SOURCE_DIR}/cmake/FixLCovPaths.cmake
         # Summary
         COMMAND ${CMAKE_COMMAND} -E echo "-- Coverage summary:"
         COMMAND ${LCOV_EXECUTABLE}
                 --list
-                ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.info
+                ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.lcov
                 
         WORKING_DIRECTORY ${NOVASVG_TEST_BINARY_DIR}
         USES_TERMINAL
@@ -83,7 +83,7 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
         # Generate HTML report
         COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report..."
         COMMAND ${GENHTML_EXECUTABLE} --quiet 
-                ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.info
+                ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.lcov
                 --output-directory ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/html
                 --title "Novasvg C++ Coverage"
                 # --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css

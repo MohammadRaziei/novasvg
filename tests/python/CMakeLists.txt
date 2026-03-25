@@ -58,11 +58,11 @@ if(TARGET novasvg_build_python)
                     -m pytest ${CMAKE_CURRENT_SOURCE_DIR}
                     
             # Generate lcov file
-            COMMAND ${CMAKE_COMMAND} -E echo "-- Generating coverage.info file..."
-            COMMAND ${Python3_EXECUTABLE} -m coverage lcov -o ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.info
+            COMMAND ${CMAKE_COMMAND} -E echo "-- Generating coverage.lcov file..."
+            COMMAND ${Python3_EXECUTABLE} -m coverage lcov -o ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.lcov
 
             COMMAND ${CMAKE_COMMAND} 
-                    -DCOV_FILE=${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.info
+                    -DCOV_FILE=${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.lcov
                     -DPREFIX_PATH=src/bindings/python/
                     -P ${PROJECT_SOURCE_DIR}/cmake/FixLCovPaths.cmake
 
@@ -85,7 +85,7 @@ if(TARGET novasvg_build_python)
                 COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report with GENHTML..."
                 COMMAND ${CMAKE_COMMAND} -E remove_directory ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html
                 COMMAND ${GENHTML_EXECUTABLE} --quiet 
-                        ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.info
+                        ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.lcov
                         --output-directory ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html
                         --title "Novasvg Python Coverage"
                         # --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css

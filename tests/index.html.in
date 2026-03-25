@@ -201,9 +201,9 @@
                             ${icons.link}
                             View HTML Report
                         </a>
-                        <a href="${item.infoLink}" class="btn btn-secondary" download>
+                        <a href="${item.lcovLink}" class="btn btn-secondary" download>
                             ${icons.download}
-                            Download .info
+                            Download .lcov
                         </a>
                     </div>
                 `;

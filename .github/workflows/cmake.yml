@@ -111,7 +111,7 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
-        files: ${{github.workspace}}/build-coverage/coverage.info
+        files: ${{github.workspace}}/build-coverage/coverage.lcov
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
