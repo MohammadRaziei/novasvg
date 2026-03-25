@@ -69,7 +69,7 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
         
         # Generate HTML report
         COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report..."
-        COMMAND ${GENHTML_EXECUTABLE}
+        COMMAND ${GENHTML_EXECUTABLE} --quiet
                 ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.info
                 --output-directory ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/html
         
@@ -86,4 +86,8 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
     
     add_dependencies(novasvg_coverage_cpp novasvg_test_cpp)
     add_dependencies(novasvg_coverage novasvg_coverage_cpp)
+else()
+    message(WARNING "LCOV or GENHTML executables not found.")
+    message(WARNING "C++ coverage targets will be skipped.")
+    message(WARNING "Please install them to enable coverage reports (e.g., 'sudo apt install lcov' on Linux).")
 endif()
