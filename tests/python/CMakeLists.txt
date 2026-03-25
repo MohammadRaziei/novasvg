@@ -1,5 +1,4 @@
 # --- Testing and Coverage Section ---
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
 set(NOVASVG_PYTHON_INSTALL_DIR ${CMAKE_BINARY_DIR}/python/install)
 
 if(TARGET novasvg_build_python)
@@ -52,11 +51,20 @@ if(TARGET novasvg_build_python)
                     --source=${NOVASVG_PYTHON_INSTALL_DIR} 
                     --omit="*/tests/*" 
                     -m pytest ${CMAKE_CURRENT_SOURCE_DIR}
+                    
+            # Generate lcov file
+            COMMAND ${CMAKE_COMMAND} -E echo "-- Generating coverage.info file..."
+            COMMAND ${Python3_EXECUTABLE} -m coverage lcov -o ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.info
+
+            COMMAND ${CMAKE_COMMAND} 
+                    -DCOV_FILE=${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.info
+                    -DPREFIX_PATH=src/bindings/python/
+                    -P ${PROJECT_SOURCE_DIR}/cmake/FixLCovPaths.cmake
 
             # Generate HTML report
             COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report..."
             COMMAND ${Python3_EXECUTABLE} -m coverage html -d ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html
-            
+
             # Summary
             COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html/index.html"
             COMMAND ${CMAKE_COMMAND} -E echo "-- Coverage summary:"
@@ -66,6 +74,21 @@ if(TARGET novasvg_build_python)
             WORKING_DIRECTORY ${NOVASVG_PYTHON_INSTALL_DIR}
             USES_TERMINAL            
         )
+        find_program(GENHTML_EXECUTABLE genhtml)
+        if(GENHTML_EXECUTABLE)
+            add_custom_command(TARGET novasvg_coverage_python POST_BUILD
+                # Generate HTML report
+                COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report with GENHTML..."
+                COMMAND ${CMAKE_COMMAND} -E remove_directory ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html
+                COMMAND ${GENHTML_EXECUTABLE} --quiet 
+                        ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.info
+                        --output-directory ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html
+                        --title "Novasvg Python Coverage"
+                        --dark-mode 
+                COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html/index.html"
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+            )
+        endif()
         # Ensure coverage runs after the build is complete
         add_dependencies(novasvg_coverage_python novasvg_build_python)
         

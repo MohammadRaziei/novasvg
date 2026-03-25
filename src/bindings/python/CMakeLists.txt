@@ -76,6 +76,7 @@ ExternalProject_Add(novasvg_build_python
     # Pass configuration arguments to CMake
     CMAKE_ARGS  
         --no-warn-unused-cli
+        -DNOVASVG_BUILD_PYTHON="ON"
         -DSKBUILD=2
         -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/python/install
         -Dnanobind_DIR=${NANOBIND_CMAKE_DIR}
