@@ -15,6 +15,11 @@ if(TARGET novasvg_build_python)
         message(WARNING "Please install it using: pip install pytest")
     else()
         # Define the test executable target (conceptually)
+        add_test(NAME novasvg_python_tests 
+                 COMMAND ${Python3_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}
+                 WORKING_DIRECTORY ${NOVASVG_PYTHON_INSTALL_DIR}
+        )
+
         # In reality, we run pytest via the Python interpreter found above.
         add_custom_target(novasvg_test_python
             COMMAND ${CMAKE_COMMAND} -E echo "-- Running python tests..."
