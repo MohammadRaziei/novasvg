@@ -63,6 +63,17 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
             "*/tests/*"
             --output-file ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.lcov
         COMMAND ${CMAKE_COMMAND} -E remove ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage_temp.lcov
+
+        # Generate HTML report
+        COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report..."
+        COMMAND ${GENHTML_EXECUTABLE} --quiet 
+                ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.lcov
+                --output-directory ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/html
+                --prefix ${PROJECT_SOURCE_DIR}
+                --title "Novasvg C++ Coverage"
+                # --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
+                --dark-mode 
+        COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/html/index.html"
         
         # Fix paths to be relative (for SonarQube, etc.)
         COMMAND ${CMAKE_COMMAND} -E echo "-- Fixing paths to relative..."
@@ -78,18 +89,6 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
                 
         WORKING_DIRECTORY ${NOVASVG_TEST_BINARY_DIR}
         USES_TERMINAL
-    )
-    add_custom_command(TARGET novasvg_coverage_cpp POST_BUILD
-        # Generate HTML report
-        COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report..."
-        COMMAND ${GENHTML_EXECUTABLE} --quiet 
-                ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.lcov
-                --output-directory ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/html
-                --title "Novasvg C++ Coverage"
-                # --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
-                --dark-mode 
-        COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/html/index.html"
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     )
     
     add_dependencies(novasvg_coverage_cpp novasvg_test_cpp)

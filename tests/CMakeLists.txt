@@ -36,7 +36,6 @@ if(TARGET novasvg_coverage_cpp AND TARGET novasvg_coverage_python)
             COMMAND ${LCOV_EXECUTABLE}
                     --add-tracefile ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/coverage.lcov
                     --add-tracefile ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.lcov
-                    --base-directory ${PROJECT_SOURCE_DIR}
                     --output-file ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/coverage.lcov
             COMMAND ${CMAKE_COMMAND} -E echo "-- Total coverage info created at: ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/coverage.lcov"
                     
@@ -51,7 +50,6 @@ if(TARGET novasvg_coverage_cpp AND TARGET novasvg_coverage_python)
                     --dark-mode 
             COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/html/index.html"
         
-            
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
             USES_TERMINAL
         )
