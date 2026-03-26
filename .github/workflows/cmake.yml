@@ -23,23 +23,32 @@ jobs:
       uses: jwlawson/actions-setup-cmake@v2
       with:
         cmake-version: '3.28.x'
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install python deps
+      run: pip install pytest-cov nanobind
     
     - name: Use cmake
       run: cmake --version
 
     - name: Configure CMake
       run: |
-        cmake -B ${{github.workspace}}/build \
+        cmake -B build \
           -DCMAKE_BUILD_TYPE=Release \
           -DNOVASVG_BUILD_EXAMPLES=ON \
+          -DNOVASVG_BUILD_PYTHON=ON \
           -DNOVASVG_BUILD_TESTS=ON \
           -DNOVASVG_BUILD_DOCS=OFF
 
     - name: Build
-      run: cmake --build ${{github.workspace}}/build -j4
+      run: cmake --build build -j4
 
     - name: Run tests
-      run: ctest --test-dir ${{github.workspace}}/build --output-on-failure --extra-verbose
+      run: ctest --test-dir build --output-on-failure --extra-verbose
       
 
   build-docs:
@@ -56,27 +65,28 @@ jobs:
       with:
         cmake-version: '3.28.x'
     
-    - name: Install dependencies
+    - name: Install apt dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y doxygen graphviz
 
     - name: Configure CMake
       run: |
-        cmake -B ${{github.workspace}}/build-docs \
+        cmake -B build \
           -DCMAKE_BUILD_TYPE=Release \
           -DNOVASVG_BUILD_EXAMPLES=OFF \
+          -DNOVASVG_BUILD_PYTHON=OFF \
           -DNOVASVG_BUILD_TESTS=OFF \
           -DNOVASVG_BUILD_DOCS=ON
 
     - name: Build documentation
-      run: cmake --build ${{github.workspace}}/build-docs --target docs
+      run: cmake --build build --target docs
 
     - name: Upload documentation artifacts
       uses: actions/upload-artifact@v4
       with:
         name: documentation
-        path: ${{github.workspace}}/build-docs/docs/html/
+        path: build/docs/html/
         retention-days: 5
 
   build-coverage:
@@ -92,26 +102,35 @@ jobs:
       uses: jwlawson/actions-setup-cmake@v2
       with:
         cmake-version: '3.28.x'
+        
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install python dependencies
+      run: pip install pytest-cov nanobind
     
     - name: Install coverage tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y lcov gcovr
+        sudo apt-get install -y lcov
 
     - name: Configure CMake with coverage
       run: |
-        cmake -B ${{github.workspace}}/build-coverage \
+        cmake -B build \
           -DNOVASVG_BUILD_EXAMPLES=OFF \
+          -DNOVASVG_BUILD_PYTHON=ON \
           -DNOVASVG_BUILD_TESTS=ON \
           -DNOVASVG_BUILD_DOCS=OFF
 
     - name: Generate coverage report
-      run: cmake --build ${{github.workspace}}/build-coverage --target novasvg_coverage
+      run: cmake --build build --target novasvg_coverage
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
-        files: ${{github.workspace}}/build-coverage/coverage.lcov
+        files: build/coverage/total/coverage.lcov
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
@@ -121,7 +140,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: coverage-report
-        path: ${{github.workspace}}/build-coverage/coverage_html/
+        path: build/coverage/
         retention-days: 5
 
   build-single-header:
@@ -143,15 +162,16 @@ jobs:
 
     - name: Configure CMake with DIST_DIR
       run: |
-        cmake -B ${{github.workspace}}/build-single \
+        cmake -B build \
           -DCMAKE_BUILD_TYPE=Release \
           -DNOVASVG_BUILD_EXAMPLES=OFF \
+          -DNOVASVG_BUILD_PYTHON=OFF \
           -DNOVASVG_BUILD_TESTS=ON \
           -DNOVASVG_BUILD_DOCS=OFF \
-          -DNOVASVG_DIST_DIR=${{github.workspace}}/build-single/dist
+          -DNOVASVG_DIST_DIR=build/dist
 
     - name: Build single-header
-      run: cmake --build ${{github.workspace}}/build-single --target dist_header
+      run: cmake --build build --target dist_header
 
     - name: Create beta release
       id: create_release
@@ -162,7 +182,7 @@ jobs:
         body: "Single-header distribution of NovaSVG"
         prerelease: true
         draft: false
-        files: ${{github.workspace}}/build-single/dist/novasvg/*
+        files: build/dist/novasvg/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
