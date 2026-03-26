@@ -43,9 +43,9 @@ Repository = "https://github.com/mohammadraziei/novasvg"
 Documentation = "https://mohammadraziei.github.io/novasvg"
 
 [tool.scikit-build.cmake]
-args = ["-DCMAKE_BUILD_TYPE=Release"]
+args = ["-DCMAKE_BUILD_TYPE=Release", "--no-warn-unused-cli"]
 build-type = "Release"
-define.CMAKE_BUILD_PARALLEL_LEVEL = 8
+define.CMAKE_BUILD_PARALLEL_LEVEL = "8"
 define.NOVASVG_BUILD_PYTHON = "ON"
 define.NOVASVG_BUILD_TESTS = "OFF"
 define.NOVASVG_BUILD_DOCS = "OFF"
