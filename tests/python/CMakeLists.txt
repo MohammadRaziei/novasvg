@@ -1,6 +1,8 @@
 # --- Testing and Coverage Section ---
 set(NOVASVG_PYTHON_INSTALL_DIR ${CMAKE_BINARY_DIR}/python/install)
 
+set(USE_GENHTML_FOR_PYTHON OFF)
+
 if(TARGET novasvg_build_python)
     # Check for pytest
     execute_process(
@@ -79,7 +81,7 @@ if(TARGET novasvg_build_python)
             WORKING_DIRECTORY ${NOVASVG_PYTHON_INSTALL_DIR}
             USES_TERMINAL            
         )
-        if(GENHTML_EXECUTABLE)
+        if(GENHTML_EXECUTABLE AND USE_GENHTML_FOR_PYTHON)
             add_custom_command(TARGET novasvg_coverage_python POST_BUILD
                 # Generate HTML report
                 COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report with GENHTML..."
