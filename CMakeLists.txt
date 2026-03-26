@@ -73,6 +73,7 @@ endif()
 # Tests
 if(NOVASVG_BUILD_TESTS)
     enable_testing()
+    set(CMAKE_CTEST_ARGUMENTS "--output-on-failure" "-V")
     add_subdirectory(${PROJECT_SOURCE_DIR}/tests)
 endif()
 
