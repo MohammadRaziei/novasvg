@@ -67,22 +67,30 @@ a:hover { text-decoration: underline; }
     text-align: center;
 }
 
+body > table {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
 .headerItem {
     color: var(--text-muted);
-    font-size: 13px;
+    font-size: 16px;
     text-align: right;
+    width: 8%!important;
 }
 
 .headerValue {
     color: var(--accent-color);
     font-weight: 600;
-    font-size: 13px;
+    font-size: 16px;
     text-align: left;
+    width: 30%!important;
 }
 
 .headerCovTableHead {
     color: var(--text-main);
-    font-size: 13px;
+    font-size: 16px;
     font-weight: bold;
     text-align: center;
 }
@@ -185,8 +193,9 @@ pre.source {
     margin-top: 2px;
     color: #e4e4e4;
     background-color: #1e1e1e; /* Furo-like code background */
-    padding: 10px;
-    border-radius: 4px;
+    padding: 10px 0;
+    /* border-radius: 4px; */
+    border-top: 1px solid var(--border-color);
 }
 
 /* Source code view: line number format */
@@ -203,10 +212,27 @@ pre.sourceHeading {
     font-family: var(--font-mono);
     font-weight: bold;
     margin: 0px;
-    color: #e4e4e4;
-    background-color: #1e1e1e;
     padding: 10px;
     border-bottom: 1px solid var(--border-color);
+}
+
+
+td:has(pre.source) {
+    overflow: auto;
+    /* max-width: 1200px; */
+    width: calc(100dvw - 40px);
+    display: block;
+    color: #e4e4e4;
+    background-color: #1e1e1e;
+    height: calc(100vh - 290px);
+    min-height: 60vh;
+}
+
+pre > span:hover {
+    /* Adds a semi-transparent white layer to lighten any background color */
+    background-color: rgba(255, 255, 255, 0.15); 
+    cursor: default;
+    width: 100%;
 }
 
 /* --- TLA (Trend Line Analysis) Colors --- */
