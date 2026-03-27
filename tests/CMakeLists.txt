@@ -46,7 +46,7 @@ if(TARGET novasvg_coverage_cpp AND TARGET novasvg_coverage_python)
                     --output-directory ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/html
                     --prefix ${PROJECT_SOURCE_DIR}
                     --title "Novasvg Total Coverage"
-                    # --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
+                    --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
                     --dark-mode 
             COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/html/index.html"
         

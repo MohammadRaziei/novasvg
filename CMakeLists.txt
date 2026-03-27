@@ -53,7 +53,7 @@ function(generate_single_header_distribution dist_path)
     )
 endfunction()
 
-if(NOVASVG_BUILD_PYTHON)
+if(NOVASVG_BUILD_PYTHON OR DEFINED SKBUILD)
     add_subdirectory(${PROJECT_SOURCE_DIR}/src/bindings/python)
     if(DEFINED SKBUILD)
         return()
