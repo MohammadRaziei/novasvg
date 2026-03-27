@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-include(PyProject)
 include(DynamicVersion)
 
 extract_version_string(
@@ -10,7 +9,7 @@ extract_version_string(
     OUTPUT_VAR PROJECT_VERSION
 )
 
-project(${PyProject_NAME} LANGUAGES CXX VERSION ${PROJECT_VERSION})
+project(NovaSVG LANGUAGES CXX VERSION ${PROJECT_VERSION})
 message(STATUS "Project: ${PROJECT_NAME}@v${PROJECT_VERSION}")
 include(Startup)
 
@@ -26,7 +25,7 @@ option(NOVASVG_BUILD_PYTHON "Build Python" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_DOCS "Build documentation" OFF)
 
 
-
+set(NOVASVG_SOURCE_DIR ${PROJECT_SOURCE_DIR})
 
 # Header-only library (interface target)
 add_library(novasvg INTERFACE)

@@ -7,14 +7,15 @@ set(NOVASVG_COVERAGE_TOTAL_BINARY_DIR ${NOVASVG_COVERAGE_BINARY_DIR}/total)
 set(NOVASVG_COVERAGE_CPP_BINARY_DIR ${NOVASVG_COVERAGE_BINARY_DIR}/cpp)
 set(NOVASVG_COVERAGE_PYTHON_BINARY_DIR ${NOVASVG_COVERAGE_BINARY_DIR}/python)
 
+file(REMOVE_RECURSE ${NOVASVG_COVERAGE_BINARY_DIR})
+file(MAKE_DIRECTORY ${NOVASVG_COVERAGE_BINARY_DIR})
+
 add_custom_target(novasvg_test
     COMMAND ${CMAKE_COMMAND} -E echo "-- Running All tests..."
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_TEST_BINARY_DIR}
 )
 
 add_custom_target(novasvg_coverage
     COMMAND ${CMAKE_COMMAND} -E echo "-- Running coverage for all languages ..."
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_COVERAGE_BINARY_DIR}
 )
 
 
@@ -40,6 +41,10 @@ if(TARGET novasvg_coverage_cpp AND TARGET novasvg_coverage_python)
             COMMAND ${CMAKE_COMMAND} -E echo "-- Total coverage info created at: ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/coverage.lcov"
                     
             # Generate HTML report
+            COMMAND ${CMAKE_COMMAND} 
+                -DCOV_FILE=${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/coverage.lcov
+                -DPREFIX_PATH=${PROJECT_SOURCE_DIR}/
+                -P ${PROJECT_SOURCE_DIR}/cmake/FixLCovPaths.cmake
             COMMAND ${CMAKE_COMMAND} -E echo "-- Generating HTML report..."
             COMMAND ${GENHTML_EXECUTABLE} --quiet 
                     ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/coverage.lcov
@@ -48,6 +53,10 @@ if(TARGET novasvg_coverage_cpp AND TARGET novasvg_coverage_python)
                     --title "Novasvg Total Coverage"
                     --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
                     --dark-mode 
+            COMMAND ${CMAKE_COMMAND} 
+                -DCOV_FILE=${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/coverage.lcov
+                -DSOURCE_PATH=${PROJECT_SOURCE_DIR}/
+                -P ${PROJECT_SOURCE_DIR}/cmake/FixLCovPaths.cmake
             COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_TOTAL_BINARY_DIR}/html/index.html"
         
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
@@ -116,10 +125,9 @@ if(JSON_LEN GREATER 1)
 endif()
 
 set(COVERAGE_DATA_JSON "${COVERAGE_DATA_JSON}]")
-
 # Configure the HTML file
 configure_file(
-    ${NOVASVG_TEST_SOURCE_DIR}/index.html.in
+    ${NOVASVG_TEST_SOURCE_DIR}/coverage_dashboard.html.in
     ${NOVASVG_COVERAGE_BINARY_DIR}/index.html
     @ONLY
 )
