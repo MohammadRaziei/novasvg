@@ -71,7 +71,7 @@ if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
                 --output-directory ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/html
                 --prefix ${PROJECT_SOURCE_DIR}
                 --title "Novasvg C++ Coverage"
-                # --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
+                --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
                 --dark-mode 
         COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_CPP_BINARY_DIR}/html/index.html"
         
