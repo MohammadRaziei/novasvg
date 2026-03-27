@@ -56,7 +56,7 @@ body {
     color: var(--text-main);
     font-family: var(--font-family);
     margin: 0;
-    padding: 20px;
+    padding: 20px 20px 0 20px;
     line-height: 1.6;
 }
 
@@ -180,9 +180,9 @@ td.coverBarOutline {
     text-decoration: none;
 }
 
-/* Add "Furo Theme By Mohammad Raziei" after the LCOV link */
+/* Add "Theme By Mohammad Raziei" after the LCOV link */
 .versionInfo::after {
-    content: "| Furo Theme By Mohammad Raziei";
+    content: "| Theme By Mohammad Raziei";
     color: var(--text-muted);
     font-weight: normal;
     margin-left: 5px;
@@ -225,12 +225,11 @@ pre.sourceHeading {
 
 td:has(pre.source) {
     overflow: auto;
-    /* max-width: 1200px; */
     width: calc(100dvw - 40px);
     display: block;
     color: #e4e4e4;
     background-color: #1e1e1e;
-    height: calc(100vh - 290px);
+    height: calc(100vh - 268px);
     min-height: 60vh;
 }
 
