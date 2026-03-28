@@ -17,6 +17,7 @@ from .novasvg_py import add_font_face_from_data
 
 # Set version directly from the C++ library
 __version__ = version_string()
+__author__ = "Mohammad Raziei"
 
 import os
 import logging
@@ -367,5 +368,5 @@ __all__ = [
     "add_font_face_from_file", "add_font_face_from_data",
     "Bitmap", "Box", "Matrix", "Node", "TextNode", "Element", "Document",
     "svg2png",
-    "__version__",
+    "__version__", "__author__"
 ]

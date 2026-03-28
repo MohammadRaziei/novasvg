@@ -36,7 +36,7 @@ target_include_directories(novasvg INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
 # Add CLI executable
 add_executable(novasvg_cli src/novasvg_cli.cpp)
 target_link_libraries(novasvg_cli PRIVATE novasvg::novasvg)
-set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg)
+set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg-cli)
 
 
 # target_compile_features(novasvg INTERFACE cxx_std_17)

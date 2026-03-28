@@ -35,6 +35,7 @@ dependencies = [
     "numpy"
 ]
 scripts.novasvg = "novasvg.__main__:main"
+scripts.novasvg-cli = "novasvg.native_cli:run"
 
 
 [project.urls]
