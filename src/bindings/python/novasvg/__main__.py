@@ -42,16 +42,6 @@ def handle_install(args):
         sys.stdout.write("Installing MATLAB support...\n")
         sys.stdout.write("MATLAB support installation complete.\n")
 
-
-def handle_cli(args):
-    """
-    Handle the 'cli' command.
-    Executes the native binary (novasvg-cli) passing all arguments.
-    """
-    logging.debug("Delegating to native CLI binary")
-    # Pass the remaining arguments to the native CLI runner
-    native_cli.run(sys.argv[2:])
-
 def main():
     """
     Main entry point for the 'novasvg' command.
@@ -59,10 +49,13 @@ def main():
     # 1. Check if no arguments are provided (excluding the script name)
     if len(sys.argv) == 1:
         # Print welcome message: Name, Version, Description, Help hint
-        sys.stdout.write(f"NovaSVG {__version__}\n")
+        sys.stdout.write(f"NovaSVG CLI {__version__}\n")
         sys.stdout.write("A high-performance tool for converting SVG files to PNG images and managing resources.\n")
         sys.stdout.write("Use --help for more information.\n")
         sys.exit(0)
+
+    if len(sys.argv) >= 2 and sys.argv[1] == "cli":
+        native_cli.run(sys.argv[2:])
 
     parser = argparse.ArgumentParser(
         description="High-performance SVG to PNG converter and resource manager."
@@ -98,8 +91,7 @@ def main():
     parser_install.set_defaults(func=handle_install)
 
     # --- Command: cli ---
-    parser_cli = subparsers.add_parser("cli", help="Run the native CLI binary (equivalent to novasvg-cli)")
-    parser_cli.set_defaults(func=handle_cli)
+    subparsers.add_parser("cli", help="Run the native CLI binary (equivalent to novasvg-cli)")
 
     # --- Path Arguments (Root Level) ---
     # These are used for CI/CD and automation, so output is clean (just the path).
@@ -157,7 +149,7 @@ def main():
         sys.stdout.write(f"{cmake_path}\n")
         sys.exit(0)
 
-    args.func(args)
+    # args.func(args)
 
 if __name__ == "__main__":
     main()
