@@ -79,6 +79,10 @@ endif()
 
 # Examples
 if(NOVASVG_BUILD_EXAMPLES)
+    add_custom_target(novasvg_build_examples
+        COMMAND ${CMAKE_COMMAND} -E echo "Building examples..."
+    )
+
     file(GLOB EXAMPLE_SOURCES CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/examples/cpp/sample*.cpp
     )
@@ -88,6 +92,7 @@ if(NOVASVG_BUILD_EXAMPLES)
         add_executable(${TARGET_NAME} ${SOURCE_FILE})
         target_link_libraries(${TARGET_NAME} PRIVATE novasvg)
         message(STATUS "Added example target: ${TARGET_NAME}")
+        add_dependencies(novasvg_build_examples ${TARGET_NAME})
     endforeach()
 endif()
 
