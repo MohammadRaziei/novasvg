@@ -90,7 +90,7 @@ if(TARGET novasvg_build_python)
                         ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.lcov
                         --output-directory ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html
                         --title "Novasvg Python Coverage"
-                        # --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
+                        --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
                         --dark-mode 
                 COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html/index.html"
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
