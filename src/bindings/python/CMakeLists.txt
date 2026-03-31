@@ -17,6 +17,14 @@ if(DEFINED SKBUILD)
     # Link against the novasvg library
     target_link_libraries(novasvg_py PRIVATE novasvg::novasvg)
 
+    add_custom_command(TARGET novasvg_py POST_BUILD
+        COMMAND ${Python_EXECUTABLE} -m nanobind.stubgen 
+                -m novasvg_py 
+                -o ${CMAKE_CURRENT_BINARY_DIR}/novasvg_py.pyi
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating Python stubs (.pyi) for novasvg_py..."
+        BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/novasvg_py.pyi
+    )
 
     # Install rules for the Python package
     # This installs the compiled module (.so or .pyd) and the python source files
@@ -24,6 +32,10 @@ if(DEFINED SKBUILD)
     # 1. Install the compiled extension module into the 'novasvg' package directory
     install(TARGETS novasvg_py
         LIBRARY DESTINATION novasvg
+    )
+
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/novasvg_py.pyi
+        DESTINATION novasvg
     )
 
     # 2. Install the Python source files (.py) into the package directory
