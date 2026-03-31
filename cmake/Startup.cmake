@@ -11,3 +11,7 @@ if(PROJECT_IS_TOP_LEVEL)
 else()
     message(STATUS "Project '${PROJECT_NAME}' is a SUBPROJECT")
 endif()
+
+if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/CMakeGraphVizOptions.cmake)
+    file(COPY_FILE ${CMAKE_CURRENT_LIST_DIR}/CMakeGraphVizOptions.cmake ${CMAKE_BINARY_DIR}/CMakeGraphVizOptions.cmake)
+endif()
