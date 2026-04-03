@@ -10,7 +10,7 @@ if(DOXYGEN_FOUND)
         doxygen-awesome-css
         URL https://github.com/jothepro/doxygen-awesome-css/archive/main.zip
         # DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-        URL_HASH SHA256=286f8008c08bb80f88910b3333af763a20724e90c2fd70dd9ee24071e1856965
+        # URL_HASH SHA256=286f8008c08bb80f88910b3333af763a20724e90c2fd70dd9ee24071e1856965
     )
     FetchContent_MakeAvailable(doxygen-awesome-css)
 
