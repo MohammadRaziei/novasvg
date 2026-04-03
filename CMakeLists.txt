@@ -43,11 +43,11 @@ set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg-cli)
 
 function(generate_single_header_distribution dist_path)
     add_custom_target(dist_header
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${dist_path}/${PROJECT_NAME}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${dist_path}/novasvg
         COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h 
             ${NOVdist_pathASVG_DIST_DIR}/${PROJECT_NAME}/novasvg.h 
             -I ${CMAKE_CURRENT_SOURCE_DIR}/include
-        COMMENT "Generating single-header distribution: ${dist_path}/${PROJECT_NAME}/novasvg.h"
+        COMMENT "Generating single-header distribution: ${dist_path}/novasvg/novasvg.h"
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     )
 endfunction()
