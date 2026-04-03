@@ -17,6 +17,7 @@ if(DEFINED SKBUILD)
     # Link against the novasvg library
     target_link_libraries(novasvg_py PRIVATE novasvg::novasvg)
 
+    # Generate Python stubs
     add_custom_command(TARGET novasvg_py POST_BUILD
         COMMAND ${Python_EXECUTABLE} -m nanobind.stubgen 
                 -m novasvg_py 
@@ -24,6 +25,17 @@ if(DEFINED SKBUILD)
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Generating Python stubs (.pyi) for novasvg_py..."
         BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/novasvg_py.pyi
+    )
+    
+    # Generate the single-header distribution for the Python package 
+    add_custom_command(
+        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/novasvg/novasvg.h"
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${dist_path}/novasvg
+        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h 
+            "${CMAKE_CURRENT_BINARY_DIR}/novasvg/novasvg.h"
+            -I ${CMAKE_CURRENT_SOURCE_DIR}/include
+        MAIN_DEPENDENCY novasvg
+        COMMENT "Generating: ${CMAKE_CURRENT_BINARY_DIR}/novasvg/novasvg.h"
     )
 
     # Install rules for the Python package
