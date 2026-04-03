@@ -17,11 +17,13 @@ if(DOXYGEN_FOUND)
     # Save the location the files were cloned into
     # This allows us to get the path to doxygen-awesome.css
     FetchContent_GetProperties(doxygen-awesome-css SOURCE_DIR AWESOME_CSS_DIR)
-
+    
+    set(DOXYGEN_FOOTER_IN ${CMAKE_CURRENT_SOURCE_DIR}/footer.html.in)
+    set(DOXYGEN_FOOTER_OUT ${CMAKE_CURRENT_BINARY_DIR}/footer.html)
+    configure_file(${DOXYGEN_FOOTER_IN} ${DOXYGEN_FOOTER_OUT} @ONLY)
 
     set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
     set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
-    
     configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
     
     add_custom_target(novasvg_docs
