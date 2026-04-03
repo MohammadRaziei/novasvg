@@ -41,16 +41,6 @@ set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg-cli)
 
 # target_compile_features(novasvg INTERFACE cxx_std_17)
 
-function(generate_single_header_distribution dist_path)
-    add_custom_target(dist_header
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${dist_path}/novasvg
-        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h 
-            ${dist_path}/novasvg/novasvg.h 
-            -I ${CMAKE_CURRENT_SOURCE_DIR}/include
-        COMMENT "Generating single-header distribution: ${dist_path}/novasvg/novasvg.h"
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-    )
-endfunction()
 
 if(NOVASVG_BUILD_PYTHON OR DEFINED SKBUILD)
     add_subdirectory(${PROJECT_SOURCE_DIR}/src/bindings/python)
@@ -66,7 +56,14 @@ install(TARGETS novasvg_cli
 
 # Generate single-header distribution if NOVASVG_DIST_DIR is defined
 if(DEFINED NOVASVG_DIST_DIR)
-    generate_single_header_distribution(${NOVASVG_DIST_DIR})
+    add_custom_target(novasvg_dist_header
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_DIST_DIR}/novasvg
+        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h 
+            ${NOVASVG_DIST_DIR}/novasvg/novasvg.h 
+            -I ${CMAKE_CURRENT_SOURCE_DIR}/include
+        COMMENT "Generating single-header distribution: ${NOVASVG_DIST_DIR}/novasvg/novasvg.h"
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    )
 endif()
 
 # Tests

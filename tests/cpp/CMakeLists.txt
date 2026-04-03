@@ -13,7 +13,7 @@ set(NOVASVG_TEST_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 if(NOVASVG_DIST_DIR)
     message(STATUS "Testing against dist headers at: ${NOVASVG_DIST_DIR}")
     set(NOVASVG_TEST_INCLUDE_DIR "${NOVASVG_DIST_DIR}")
-    add_dependencies(test_novasvg_cpp dist_header)
+    add_dependencies(test_novasvg_cpp novasvg_dist_header)
 endif()
 
 target_include_directories(test_novasvg_cpp PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}")

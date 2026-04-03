@@ -171,7 +171,7 @@ jobs:
           -DNOVASVG_DIST_DIR=build/dist
 
     - name: Build single-header
-      run: cmake --build build --target dist_header
+      run: cmake --build build --target novasvg_dist_header
 
     - name: Create beta release
       id: create_release
