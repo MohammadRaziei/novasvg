@@ -186,8 +186,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  deploy-docs:
-    needs: build-docs
+  deploy-pages:
+    needs: [build-docs, build-coverage]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -202,7 +202,13 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: documentation
-        path: ./docs
+        path: ./pages
+
+    - name: Download coverage artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-report
+        path: ./pages/coverage     
 
     - name: Setup Pages
       uses: actions/configure-pages@v4
@@ -210,7 +216,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: ./docs
+        path: ./pages
 
     - name: Deploy to GitHub Pages
       id: deployment
