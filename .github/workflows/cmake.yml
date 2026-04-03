@@ -80,13 +80,13 @@ jobs:
           -DNOVASVG_BUILD_DOCS=ON
 
     - name: Build documentation
-      run: cmake --build build --target docs
+      run: cmake --build build --target novasvg_docs
 
     - name: Upload documentation artifacts
       uses: actions/upload-artifact@v4
       with:
         name: documentation
-        path: build/docs/html/
+        path: build/docs/docs/html/
         retention-days: 5
 
   build-coverage:
