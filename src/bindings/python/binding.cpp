@@ -6,7 +6,6 @@
 #include <cstdint>
 
 // Include the main library header
-#define NOVASVG_IMPLEMENTATION
 #include "novasvg/novasvg.h"
 
 namespace nb = nanobind;

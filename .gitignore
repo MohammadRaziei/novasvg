@@ -149,3 +149,4 @@ Icon?
 .directory
 fseventsd
  Spotlight-V100
+tests/corpus/

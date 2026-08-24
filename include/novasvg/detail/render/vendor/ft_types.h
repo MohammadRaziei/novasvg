@@ -20,6 +20,8 @@
 #ifndef PLUTOVG_FT_TYPES_H
 #define PLUTOVG_FT_TYPES_H
 
+namespace {
+
 /*************************************************************************/
 /*                                                                       */
 /* <Type>                                                                */
@@ -176,3 +178,5 @@ typedef unsigned int            PVG_FT_UInt32;
 #define PVG_FT_END_STMNT } while (0)
 
 #endif // PLUTOVG_FT_TYPES_H
+
+} // namespace

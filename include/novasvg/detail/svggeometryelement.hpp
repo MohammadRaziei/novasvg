@@ -2,28 +2,28 @@
 
 namespace novasvg {
 
-Rect SVGMarkerPosition::markerBoundingBox(float strokeWidth) const
+NOVASVG_INLINE Rect SVGMarkerPosition::markerBoundingBox(float strokeWidth) const
 {
     return m_element->markerBoundingBox(m_origin, m_angle, strokeWidth);
 }
 
-void SVGMarkerPosition::renderMarker(SVGRenderState& state, float strokeWidth) const
+NOVASVG_INLINE void SVGMarkerPosition::renderMarker(SVGRenderState& state, float strokeWidth) const
 {
     m_element->renderMarker(state, m_origin, m_angle, strokeWidth);
 }
 
-SVGGeometryElement::SVGGeometryElement(Document* document, ElementID id)
+NOVASVG_INLINE SVGGeometryElement::SVGGeometryElement(Document* document, ElementID id)
     : SVGGraphicsElement(document, id)
 {
 }
 
-Rect SVGGeometryElement::strokeBoundingBox() const
+NOVASVG_INLINE Rect SVGGeometryElement::strokeBoundingBox() const
 {
     auto strokeBoundingBox = fillBoundingBox();
     if(m_stroke.isRenderable()) {
         float capLimit = m_strokeData.lineWidth() / 2.f;
         if(m_strokeData.lineCap() == LineCap::Square)
-            capLimit *= PLUTOVG_SQRT2;
+            capLimit *= NOVASVG_SQRT2;
         float joinLimit = m_strokeData.lineWidth() / 2.f;
         if(m_strokeData.lineJoin() == LineJoin::Miter) {
             joinLimit *= m_strokeData.miterLimit();
@@ -37,7 +37,7 @@ Rect SVGGeometryElement::strokeBoundingBox() const
     return strokeBoundingBox;
 }
 
-void SVGGeometryElement::layoutElement(const SVGLayoutState& state)
+NOVASVG_INLINE void SVGGeometryElement::layoutElement(const SVGLayoutState& state)
 {
     m_fill_rule = state.fill_rule();
     m_clip_rule = state.clip_rule();
@@ -52,7 +52,7 @@ void SVGGeometryElement::layoutElement(const SVGLayoutState& state)
     updateMarkerPositions(m_markerPositions, state);
 }
 
-void SVGGeometryElement::updateMarkerPositions(SVGMarkerPositionList& positions, const SVGLayoutState& state)
+NOVASVG_INLINE void SVGGeometryElement::updateMarkerPositions(SVGMarkerPositionList& positions, const SVGLayoutState& state)
 {
     if(m_path.isEmpty())
         return;
@@ -105,7 +105,7 @@ void SVGGeometryElement::updateMarkerPositions(SVGMarkerPositionList& positions,
             outslopePoints[1] = points[0];
             if(index == 0 && markerStart) {
                 auto slope = outslopePoints[1] - outslopePoints[0];
-                auto angle = 180.f * std::atan2(slope.y, slope.x) / PLUTOVG_PI;
+                auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVASVG_PI;
                 const auto& orient = markerStart->orient();
                 if(orient.orientType() == SVGAngle::OrientType::AutoStartReverse)
                     angle -= 180.f;
@@ -115,8 +115,8 @@ void SVGGeometryElement::updateMarkerPositions(SVGMarkerPositionList& positions,
             if(index > 0 && markerMid) {
                 auto inslope = inslopePoints[1] - inslopePoints[0];
                 auto outslope = outslopePoints[1] - outslopePoints[0];
-                auto inangle = 180.f * std::atan2(inslope.y, inslope.x) / PLUTOVG_PI;
-                auto outangle = 180.f * std::atan2(outslope.y, outslope.x) / PLUTOVG_PI;
+                auto inangle = 180.f * std::atan2(inslope.y, inslope.x) / NOVASVG_PI;
+                auto outangle = 180.f * std::atan2(outslope.y, outslope.x) / NOVASVG_PI;
                 if(std::abs(inangle - outangle) > 180.f)
                     inangle += 360.f;
                 auto angle = (inangle + outangle) * 0.5f;
@@ -126,7 +126,7 @@ void SVGGeometryElement::updateMarkerPositions(SVGMarkerPositionList& positions,
 
         if(markerEnd && it.isDone()) {
             auto slope = inslopePoints[1] - inslopePoints[0];
-            auto angle = 180.f * std::atan2(slope.y, slope.x) / PLUTOVG_PI;
+            auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVASVG_PI;
             positions.emplace_back(markerEnd, origin, angle);
         }
 
@@ -134,7 +134,7 @@ void SVGGeometryElement::updateMarkerPositions(SVGMarkerPositionList& positions,
     }
 }
 
-void SVGGeometryElement::render(SVGRenderState& state) const
+NOVASVG_INLINE void SVGGeometryElement::render(SVGRenderState& state) const
 {
     if(!isRenderable())
         return;
@@ -159,7 +159,7 @@ void SVGGeometryElement::render(SVGRenderState& state) const
     newState.endGroup(blendInfo);
 }
 
-SVGLineElement::SVGLineElement(Document* document)
+NOVASVG_INLINE SVGLineElement::SVGLineElement(Document* document)
     : SVGGeometryElement(document, ElementID::Line)
     , m_x1(PropertyID::X1, LengthDirection::Horizontal, LengthNegativeMode::Allow)
     , m_y1(PropertyID::Y1, LengthDirection::Vertical, LengthNegativeMode::Allow)
@@ -172,7 +172,7 @@ SVGLineElement::SVGLineElement(Document* document)
     addProperty(m_y2);
 }
 
-Rect SVGLineElement::updateShape(Path& path)
+NOVASVG_INLINE Rect SVGLineElement::updateShape(Path& path)
 {
     LengthContext lengthContext(this);
     auto x1 = lengthContext.valueForLength(m_x1);
@@ -185,7 +185,7 @@ Rect SVGLineElement::updateShape(Path& path)
     return Rect(x1, y1, x2 - x1, y2 - y1);
 }
 
-SVGRectElement::SVGRectElement(Document* document)
+NOVASVG_INLINE SVGRectElement::SVGRectElement(Document* document)
     : SVGGeometryElement(document, ElementID::Rect)
     , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow)
     , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow)
@@ -202,7 +202,7 @@ SVGRectElement::SVGRectElement(Document* document)
     addProperty(m_ry);
 }
 
-Rect SVGRectElement::updateShape(Path& path)
+NOVASVG_INLINE Rect SVGRectElement::updateShape(Path& path)
 {
     LengthContext lengthContext(this);
     auto width = lengthContext.valueForLength(m_width);
@@ -227,7 +227,7 @@ Rect SVGRectElement::updateShape(Path& path)
     return Rect(x, y, width, height);
 }
 
-SVGEllipseElement::SVGEllipseElement(Document* document)
+NOVASVG_INLINE SVGEllipseElement::SVGEllipseElement(Document* document)
     : SVGGeometryElement(document, ElementID::Ellipse)
     , m_cx(PropertyID::Cx, LengthDirection::Horizontal, LengthNegativeMode::Allow)
     , m_cy(PropertyID::Cy, LengthDirection::Vertical, LengthNegativeMode::Allow)
@@ -240,7 +240,7 @@ SVGEllipseElement::SVGEllipseElement(Document* document)
     addProperty(m_ry);
 }
 
-Rect SVGEllipseElement::updateShape(Path& path)
+NOVASVG_INLINE Rect SVGEllipseElement::updateShape(Path& path)
 {
     LengthContext lengthContext(this);
     auto rx = lengthContext.valueForLength(m_rx);
@@ -255,7 +255,7 @@ Rect SVGEllipseElement::updateShape(Path& path)
     return Rect(cx - rx, cy - ry, rx + rx, ry + ry);
 }
 
-SVGCircleElement::SVGCircleElement(Document* document)
+NOVASVG_INLINE SVGCircleElement::SVGCircleElement(Document* document)
     : SVGGeometryElement(document, ElementID::Circle)
     , m_cx(PropertyID::Cx, LengthDirection::Horizontal, LengthNegativeMode::Allow)
     , m_cy(PropertyID::Cy, LengthDirection::Vertical, LengthNegativeMode::Allow)
@@ -266,7 +266,7 @@ SVGCircleElement::SVGCircleElement(Document* document)
     addProperty(m_r);
 }
 
-Rect SVGCircleElement::updateShape(Path& path)
+NOVASVG_INLINE Rect SVGCircleElement::updateShape(Path& path)
 {
     LengthContext lengthContext(this);
     auto r = lengthContext.valueForLength(m_r);
@@ -280,14 +280,14 @@ Rect SVGCircleElement::updateShape(Path& path)
     return Rect(cx - r, cy - r, r + r, r + r);
 }
 
-SVGPolyElement::SVGPolyElement(Document* document, ElementID id)
+NOVASVG_INLINE SVGPolyElement::SVGPolyElement(Document* document, ElementID id)
     : SVGGeometryElement(document, id)
     , m_points(PropertyID::Points)
 {
     addProperty(m_points);
 }
 
-Rect SVGPolyElement::updateShape(Path& path)
+NOVASVG_INLINE Rect SVGPolyElement::updateShape(Path& path)
 {
     const auto& points = m_points.values();
     if(points.empty()) {
@@ -304,14 +304,14 @@ Rect SVGPolyElement::updateShape(Path& path)
     return path.boundingRect();
 }
 
-SVGPathElement::SVGPathElement(Document* document)
+NOVASVG_INLINE SVGPathElement::SVGPathElement(Document* document)
     : SVGGeometryElement(document, ElementID::Path)
     , m_d(PropertyID::D)
 {
     addProperty(m_d);
 }
 
-Rect SVGPathElement::updateShape(Path& path)
+NOVASVG_INLINE Rect SVGPathElement::updateShape(Path& path)
 {
     path = m_d.value();
     return path.boundingRect();

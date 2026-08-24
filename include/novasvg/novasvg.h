@@ -32,6 +32,14 @@
 #include <string>
 #include <vector>
 
+// True header-only linkage: every function/method defined in the detail/
+// implementation headers is marked NOVASVG_INLINE (plain `inline`), so
+// this whole library -- including its rendering backend -- can safely be
+// #included from any number of translation units with no separate
+// "#define NOVASVG_IMPLEMENTATION in exactly one .cpp" step required.
+#ifndef NOVASVG_INLINE
+#define NOVASVG_INLINE inline
+#endif
 
 #if defined(NOVASVG_BUILD_STATIC)
 #define NOVASVG_EXPORT
@@ -66,8 +74,8 @@
 
 #include "detail/novacolor.h"
 
-typedef struct plutovg_surface plutovg_surface_t;
-typedef struct plutovg_matrix plutovg_matrix_t;
+typedef struct novasvg_surface novasvg_surface_t;
+typedef struct novasvg_matrix novasvg_matrix_t;
 
 /**
  * @brief Callback for cleaning up resources.
@@ -175,7 +183,7 @@ public:
     /**
      * @internal
      */
-    Bitmap(plutovg_surface_t* surface) : m_surface(surface) {}
+    Bitmap(novasvg_surface_t* surface) : m_surface(surface) {}
 
     /**
      * @brief Cleans up any resources associated with the bitmap.
@@ -268,11 +276,11 @@ public:
     /**
      * @internal
      */
-    plutovg_surface_t* surface() const { return m_surface; }
+    novasvg_surface_t* surface() const { return m_surface; }
 
 private:
-    plutovg_surface_t* release();
-    plutovg_surface_t* m_surface{nullptr};
+    novasvg_surface_t* release();
+    novasvg_surface_t* m_surface{nullptr};
 };
 
 class Rect;
@@ -348,7 +356,7 @@ public:
     /**
      * @internal
      */
-    Matrix(const plutovg_matrix_t& matrix);
+    Matrix(const novasvg_matrix_t& matrix);
 
     /**
      * @internal
@@ -788,8 +796,10 @@ private:
 
 } // namespace novasvg
 
-#ifdef NOVASVG_IMPLEMENTATION
+// Always included -- see the NOVASVG_INLINE note above. Defining
+// NOVASVG_IMPLEMENTATION is no longer required and has no effect; it is
+// kept as a harmless no-op purely so existing code that still defines it
+// keeps compiling unchanged.
 #include "detail/novasvg_impl.h"
-#endif
 
 #endif // NOVASVG_H

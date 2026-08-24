@@ -10,12 +10,12 @@ static std::optional<Color> parseColorValue(std::string_view& input, const SVGLa
         return state->color();
     }
 
-    plutovg_color_t color;
-    int length = plutovg_color_parse(&color, input.data(), input.length());
+    novasvg_color_t color;
+    int length = novasvg_color_parse(&color, input.data(), input.length());
     if(length == 0)
         return std::nullopt;
     input.remove_prefix(length);
-    return Color(plutovg_color_to_argb32(&color));
+    return Color(novasvg_color_to_argb32(&color));
 }
 
 static Color parseColor(std::string_view input, const SVGLayoutState* state, const Color& defaultValue)
@@ -403,7 +403,7 @@ static LineJoin parseLineJoin(std::string_view input)
     return parseEnumValue(input, entries, LineJoin::Miter);
 }
 
-SVGLayoutState::SVGLayoutState(const SVGLayoutState& parent, const SVGElement* element)
+NOVASVG_INLINE SVGLayoutState::SVGLayoutState(const SVGLayoutState& parent, const SVGElement* element)
     : m_parent(&parent)
     , m_element(element)
     , m_fill(parent.fill())
@@ -570,7 +570,7 @@ SVGLayoutState::SVGLayoutState(const SVGLayoutState& parent, const SVGElement* e
     }
 }
 
-Font SVGLayoutState::font() const
+NOVASVG_INLINE Font SVGLayoutState::font() const
 {
     auto bold = m_font_weight == FontWeight::Bold;
     auto italic = m_font_style == FontStyle::Italic;

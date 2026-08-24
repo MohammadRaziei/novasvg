@@ -1,64 +1,64 @@
 #pragma once
 
-#include "plutovg-private.h"
-#include "plutovg-utils.h"
+#include "private.h"
+#include "utils.h"
 
 #include <ctype.h>
 
-void plutovg_color_init_rgb(plutovg_color_t* color, float r, float g, float b)
+NOVASVG_INLINE void novasvg_color_init_rgb(novasvg_color_t* color, float r, float g, float b)
 {
-    plutovg_color_init_rgba(color, r, g, b, 1.f);
+    novasvg_color_init_rgba(color, r, g, b, 1.f);
 }
 
-void plutovg_color_init_rgba(plutovg_color_t* color, float r, float g, float b, float a)
+NOVASVG_INLINE void novasvg_color_init_rgba(novasvg_color_t* color, float r, float g, float b, float a)
 {
-    color->r = plutovg_clamp(r, 0.f, 1.f);
-    color->g = plutovg_clamp(g, 0.f, 1.f);
-    color->b = plutovg_clamp(b, 0.f, 1.f);
-    color->a = plutovg_clamp(a, 0.f, 1.f);
+    color->r = novasvg_clamp(r, 0.f, 1.f);
+    color->g = novasvg_clamp(g, 0.f, 1.f);
+    color->b = novasvg_clamp(b, 0.f, 1.f);
+    color->a = novasvg_clamp(a, 0.f, 1.f);
 }
 
-void plutovg_color_init_rgb8(plutovg_color_t* color, int r, int g, int b)
+NOVASVG_INLINE void novasvg_color_init_rgb8(novasvg_color_t* color, int r, int g, int b)
 {
-    plutovg_color_init_rgba8(color, r, g, b, 255);
+    novasvg_color_init_rgba8(color, r, g, b, 255);
 }
 
-void plutovg_color_init_rgba8(plutovg_color_t* color, int r, int g, int b, int a)
+NOVASVG_INLINE void novasvg_color_init_rgba8(novasvg_color_t* color, int r, int g, int b, int a)
 {
-    plutovg_color_init_rgba(color, r / 255.f, g / 255.f, b / 255.f, a / 255.f);
+    novasvg_color_init_rgba(color, r / 255.f, g / 255.f, b / 255.f, a / 255.f);
 }
 
-void plutovg_color_init_rgba32(plutovg_color_t* color, unsigned int value)
+NOVASVG_INLINE void novasvg_color_init_rgba32(novasvg_color_t* color, unsigned int value)
 {
     uint8_t r = (value >> 24) & 0xFF;
     uint8_t g = (value >> 16) & 0xFF;
     uint8_t b = (value >>  8) & 0xFF;
     uint8_t a = (value >>  0) & 0xFF;
-    plutovg_color_init_rgba8(color, r, g, b, a);
+    novasvg_color_init_rgba8(color, r, g, b, a);
 }
 
-void plutovg_color_init_argb32(plutovg_color_t* color, unsigned int value)
+NOVASVG_INLINE void novasvg_color_init_argb32(novasvg_color_t* color, unsigned int value)
 {
     uint8_t a = (value >> 24) & 0xFF;
     uint8_t r = (value >> 16) & 0xFF;
     uint8_t g = (value >>  8) & 0xFF;
     uint8_t b = (value >>  0) & 0xFF;
-    plutovg_color_init_rgba8(color, r, g, b, a);
+    novasvg_color_init_rgba8(color, r, g, b, a);
 }
 
-void plutovg_color_init_hsl(plutovg_color_t* color, float h, float s, float l)
+NOVASVG_INLINE void novasvg_color_init_hsl(novasvg_color_t* color, float h, float s, float l)
 {
-    plutovg_color_init_hsla(color, h, s, l, 1.f);
+    novasvg_color_init_hsla(color, h, s, l, 1.f);
 }
 
 static inline float hsl_component(float h, float s, float l, float n)
 {
     const float k = fmodf(n + h / 30.f, 12.f);
-    const float a = s * plutovg_min(l, 1.f - l);
-    return l - a * plutovg_max(-1.f, plutovg_min(1.f, plutovg_min(k - 3.f, 9.f - k)));
+    const float a = s * novasvg_min(l, 1.f - l);
+    return l - a * novasvg_max(-1.f, novasvg_min(1.f, novasvg_min(k - 3.f, 9.f - k)));
 }
 
-void plutovg_color_init_hsla(plutovg_color_t* color, float h, float s, float l, float a)
+NOVASVG_INLINE void novasvg_color_init_hsla(novasvg_color_t* color, float h, float s, float l, float a)
 {
     h = fmodf(h, 360.f);
     if(h < 0.f) { h += 360.f; }
@@ -66,10 +66,10 @@ void plutovg_color_init_hsla(plutovg_color_t* color, float h, float s, float l, 
     float r = hsl_component(h, s, l, 0);
     float g = hsl_component(h, s, l, 8);
     float b = hsl_component(h, s, l, 4);
-    plutovg_color_init_rgba(color, r, g, b, a);
+    novasvg_color_init_rgba(color, r, g, b, a);
 }
 
-unsigned int plutovg_color_to_rgba32(const plutovg_color_t* color)
+NOVASVG_INLINE unsigned int novasvg_color_to_rgba32(const novasvg_color_t* color)
 {
     uint32_t r = lroundf(color->r * 255);
     uint32_t g = lroundf(color->g * 255);
@@ -78,7 +78,7 @@ unsigned int plutovg_color_to_rgba32(const plutovg_color_t* color)
     return (r << 24) | (g << 16) | (b << 8) | (a);
 }
 
-unsigned int plutovg_color_to_argb32(const plutovg_color_t* color)
+NOVASVG_INLINE unsigned int novasvg_color_to_argb32(const novasvg_color_t* color)
 {
     uint32_t a = lroundf(color->a * 255);
     uint32_t r = lroundf(color->r * 255);
@@ -119,33 +119,33 @@ static int color_entry_compare(const void* a, const void* b)
 static bool parse_rgb_component(const char** begin, const char* end, float* component)
 {
     float value = 0;
-    if(!plutovg_parse_number(begin, end, &value))
+    if(!novasvg_parse_number(begin, end, &value))
         return false;
-    if(plutovg_skip_delim(begin, end, '%'))
+    if(novasvg_skip_delim(begin, end, '%'))
         value *= 2.55f;
-    *component = plutovg_clamp(value, 0.f, 255.f) / 255.f;
+    *component = novasvg_clamp(value, 0.f, 255.f) / 255.f;
     return true;
 }
 
 static bool parse_alpha_component(const char** begin, const char* end, float* component)
 {
     float value = 0;
-    if(!plutovg_parse_number(begin, end, &value))
+    if(!novasvg_parse_number(begin, end, &value))
         return false;
-    if(plutovg_skip_delim(begin, end, '%'))
+    if(novasvg_skip_delim(begin, end, '%'))
         value /= 100.f;
-    *component = plutovg_clamp(value, 0.f, 1.f);
+    *component = novasvg_clamp(value, 0.f, 1.f);
     return true;
 }
 
-int plutovg_color_parse(plutovg_color_t* color, const char* data, int length)
+NOVASVG_INLINE int novasvg_color_parse(novasvg_color_t* color, const char* data, int length)
 {
     if(length == -1)
         length = strlen(data);
     const char* it = data;
     const char* end = it + length;
-    plutovg_skip_ws(&it, end);
-    if(plutovg_skip_delim(&it, end, '#')) {
+    novasvg_skip_ws(&it, end);
+    if(novasvg_skip_delim(&it, end, '#')) {
         int r, g, b, a = 255;
         const char* begin = it;
         while(it < end && isxdigit(*it))
@@ -169,7 +169,7 @@ int plutovg_color_parse(plutovg_color_t* color, const char* data, int length)
             return 0;
         }
 
-        plutovg_color_init_rgba8(color, r, g, b, a);
+        novasvg_color_init_rgba8(color, r, g, b, a);
     } else {
         int name_length = 0;
         char name[MAX_NAME + 1];
@@ -178,49 +178,49 @@ int plutovg_color_parse(plutovg_color_t* color, const char* data, int length)
         name[name_length] = '\0';
 
         if(strcmp(name, "transparent") == 0) {
-            plutovg_color_init_rgba(color, 0, 0, 0, 0);
+            novasvg_color_init_rgba(color, 0, 0, 0, 0);
         } else if(strcmp(name, "rgb") == 0 || strcmp(name, "rgba") == 0) {
-            if(!plutovg_skip_ws_and_delim(&it, end, '('))
+            if(!novasvg_skip_ws_and_delim(&it, end, '('))
                 return 0;
             float r, g, b, a = 1.f;
             if(!parse_rgb_component(&it, end, &r)
-                || !plutovg_skip_ws_and_comma(&it, end)
+                || !novasvg_skip_ws_and_comma(&it, end)
                 || !parse_rgb_component(&it, end, &g)
-                || !plutovg_skip_ws_and_comma(&it, end)
+                || !novasvg_skip_ws_and_comma(&it, end)
                 || !parse_rgb_component(&it, end, &b)) {
                 return 0;
             }
 
-            if(plutovg_skip_ws_and_comma(&it, end)
+            if(novasvg_skip_ws_and_comma(&it, end)
                 && !parse_alpha_component(&it, end, &a)) {
                 return 0;
             }
 
-            plutovg_skip_ws(&it, end);
-            if(!plutovg_skip_delim(&it, end, ')'))
+            novasvg_skip_ws(&it, end);
+            if(!novasvg_skip_delim(&it, end, ')'))
                 return 0;
-            plutovg_color_init_rgba(color, r, g, b, a);
+            novasvg_color_init_rgba(color, r, g, b, a);
         } else if(strcmp(name, "hsl") == 0 || strcmp(name, "hsla") == 0) {
-            if(!plutovg_skip_ws_and_delim(&it, end, '('))
+            if(!novasvg_skip_ws_and_delim(&it, end, '('))
                 return 0;
             float h, s, l, a = 1.f;
-            if(!plutovg_parse_number(&it, end, &h)
-                || !plutovg_skip_ws_and_comma(&it, end)
+            if(!novasvg_parse_number(&it, end, &h)
+                || !novasvg_skip_ws_and_comma(&it, end)
                 || !parse_alpha_component(&it, end, &s)
-                || !plutovg_skip_ws_and_comma(&it, end)
+                || !novasvg_skip_ws_and_comma(&it, end)
                 || !parse_alpha_component(&it, end, &l)) {
                 return 0;
             }
 
-            if(plutovg_skip_ws_and_comma(&it, end)
+            if(novasvg_skip_ws_and_comma(&it, end)
                 && !parse_alpha_component(&it, end, &a)) {
                 return 0;
             }
 
-            plutovg_skip_ws(&it, end);
-            if(!plutovg_skip_delim(&it, end, ')'))
+            novasvg_skip_ws(&it, end);
+            if(!novasvg_skip_delim(&it, end, ')'))
                 return 0;
-            plutovg_color_init_hsla(color, h, s, l, a);
+            novasvg_color_init_hsla(color, h, s, l, a);
         } else {
             static const color_entry_t colormap[] = {
                 {"aliceblue", 0xF0F8FF},
@@ -382,74 +382,74 @@ int plutovg_color_parse(plutovg_color_t* color, const char* data, int length)
             ));
             if(entry == NULL)
                 return 0;
-            plutovg_color_init_argb32(color, 0xFF000000 | entry->value);
+            novasvg_color_init_argb32(color, 0xFF000000 | entry->value);
         }
     }
 
-    plutovg_skip_ws(&it, end);
+    novasvg_skip_ws(&it, end);
     return it - data;
 }
 
-static void* plutovg_paint_create(plutovg_paint_type_t type, size_t size)
+static void* novasvg_paint_create(novasvg_paint_type_t type, size_t size)
 {
-    plutovg_paint_t* paint = static_cast<plutovg_paint_t*>(malloc(size));
-    plutovg_init_reference(paint);
+    novasvg_paint_t* paint = static_cast<novasvg_paint_t*>(malloc(size));
+    novasvg_init_reference(paint);
     paint->type = type;
     return paint;
 }
 
-plutovg_paint_t* plutovg_paint_create_rgb(float r, float g, float b)
+NOVASVG_INLINE novasvg_paint_t* novasvg_paint_create_rgb(float r, float g, float b)
 {
-    return plutovg_paint_create_rgba(r, g, b, 1.f);
+    return novasvg_paint_create_rgba(r, g, b, 1.f);
 }
 
-plutovg_paint_t* plutovg_paint_create_rgba(float r, float g, float b, float a)
+NOVASVG_INLINE novasvg_paint_t* novasvg_paint_create_rgba(float r, float g, float b, float a)
 {
-    plutovg_solid_paint_t* solid = static_cast<plutovg_solid_paint_t*>(plutovg_paint_create(
-        PLUTOVG_PAINT_TYPE_COLOR,
-        sizeof(plutovg_solid_paint_t)
+    novasvg_solid_paint_t* solid = static_cast<novasvg_solid_paint_t*>(novasvg_paint_create(
+        NOVASVG_PAINT_TYPE_COLOR,
+        sizeof(novasvg_solid_paint_t)
     ));
-    solid->color.r = plutovg_clamp(r, 0.f, 1.f);
-    solid->color.g = plutovg_clamp(g, 0.f, 1.f);
-    solid->color.b = plutovg_clamp(b, 0.f, 1.f);
-    solid->color.a = plutovg_clamp(a, 0.f, 1.f);
+    solid->color.r = novasvg_clamp(r, 0.f, 1.f);
+    solid->color.g = novasvg_clamp(g, 0.f, 1.f);
+    solid->color.b = novasvg_clamp(b, 0.f, 1.f);
+    solid->color.a = novasvg_clamp(a, 0.f, 1.f);
     return &solid->base;
 }
 
-plutovg_paint_t* plutovg_paint_create_color(const plutovg_color_t* color)
+NOVASVG_INLINE novasvg_paint_t* novasvg_paint_create_color(const novasvg_color_t* color)
 {
-    return plutovg_paint_create_rgba(color->r, color->g, color->b, color->a);
+    return novasvg_paint_create_rgba(color->r, color->g, color->b, color->a);
 }
 
-static plutovg_gradient_paint_t* plutovg_gradient_create(plutovg_gradient_type_t type, plutovg_spread_method_t spread, const plutovg_gradient_stop_t* stops, int nstops, const plutovg_matrix_t* matrix)
+static novasvg_gradient_paint_t* novasvg_gradient_create(novasvg_gradient_type_t type, novasvg_spread_method_t spread, const novasvg_gradient_stop_t* stops, int nstops, const novasvg_matrix_t* matrix)
 {
-    plutovg_gradient_paint_t* gradient = static_cast<plutovg_gradient_paint_t*>(plutovg_paint_create(
-        PLUTOVG_PAINT_TYPE_GRADIENT,
-        sizeof(plutovg_gradient_paint_t) + nstops * sizeof(plutovg_gradient_stop_t)
+    novasvg_gradient_paint_t* gradient = static_cast<novasvg_gradient_paint_t*>(novasvg_paint_create(
+        NOVASVG_PAINT_TYPE_GRADIENT,
+        sizeof(novasvg_gradient_paint_t) + nstops * sizeof(novasvg_gradient_stop_t)
     ));
     gradient->type = type;
     gradient->spread = spread;
-    gradient->matrix = matrix ? *matrix : PLUTOVG_IDENTITY_MATRIX;
-    gradient->stops = (plutovg_gradient_stop_t*)(gradient + 1);
+    gradient->matrix = matrix ? *matrix : NOVASVG_IDENTITY_MATRIX;
+    gradient->stops = (novasvg_gradient_stop_t*)(gradient + 1);
     gradient->nstops = nstops;
 
     float prev_offset = 0.f;
     for(int i = 0; i < nstops; ++i) {
-        const plutovg_gradient_stop_t* stop = stops + i;
-        gradient->stops[i].offset = plutovg_max(prev_offset, plutovg_clamp(stop->offset, 0.f, 1.f));
-        gradient->stops[i].color.r = plutovg_clamp(stop->color.r, 0.f, 1.f);
-        gradient->stops[i].color.g = plutovg_clamp(stop->color.g, 0.f, 1.f);
-        gradient->stops[i].color.b = plutovg_clamp(stop->color.b, 0.f, 1.f);
-        gradient->stops[i].color.a = plutovg_clamp(stop->color.a, 0.f, 1.f);
+        const novasvg_gradient_stop_t* stop = stops + i;
+        gradient->stops[i].offset = novasvg_max(prev_offset, novasvg_clamp(stop->offset, 0.f, 1.f));
+        gradient->stops[i].color.r = novasvg_clamp(stop->color.r, 0.f, 1.f);
+        gradient->stops[i].color.g = novasvg_clamp(stop->color.g, 0.f, 1.f);
+        gradient->stops[i].color.b = novasvg_clamp(stop->color.b, 0.f, 1.f);
+        gradient->stops[i].color.a = novasvg_clamp(stop->color.a, 0.f, 1.f);
         prev_offset = gradient->stops[i].offset;
     }
 
     return gradient;
 }
 
-plutovg_paint_t* plutovg_paint_create_linear_gradient(float x1, float y1, float x2, float y2, plutovg_spread_method_t spread, const plutovg_gradient_stop_t* stops, int nstops, const plutovg_matrix_t* matrix)
+NOVASVG_INLINE novasvg_paint_t* novasvg_paint_create_linear_gradient(float x1, float y1, float x2, float y2, novasvg_spread_method_t spread, const novasvg_gradient_stop_t* stops, int nstops, const novasvg_matrix_t* matrix)
 {
-    plutovg_gradient_paint_t* gradient = plutovg_gradient_create(PLUTOVG_GRADIENT_TYPE_LINEAR, spread, stops, nstops, matrix);
+    novasvg_gradient_paint_t* gradient = novasvg_gradient_create(NOVASVG_GRADIENT_TYPE_LINEAR, spread, stops, nstops, matrix);
     gradient->values[0] = x1;
     gradient->values[1] = y1;
     gradient->values[2] = x2;
@@ -457,9 +457,9 @@ plutovg_paint_t* plutovg_paint_create_linear_gradient(float x1, float y1, float 
     return &gradient->base;
 }
 
-plutovg_paint_t* plutovg_paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr, plutovg_spread_method_t spread, const plutovg_gradient_stop_t* stops, int nstops, const plutovg_matrix_t* matrix)
+NOVASVG_INLINE novasvg_paint_t* novasvg_paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr, novasvg_spread_method_t spread, const novasvg_gradient_stop_t* stops, int nstops, const novasvg_matrix_t* matrix)
 {
-    plutovg_gradient_paint_t* gradient = plutovg_gradient_create(PLUTOVG_GRADIENT_TYPE_RADIAL, spread, stops, nstops, matrix);
+    novasvg_gradient_paint_t* gradient = novasvg_gradient_create(NOVASVG_GRADIENT_TYPE_RADIAL, spread, stops, nstops, matrix);
     gradient->values[0] = cx;
     gradient->values[1] = cy;
     gradient->values[2] = cr;
@@ -469,38 +469,38 @@ plutovg_paint_t* plutovg_paint_create_radial_gradient(float cx, float cy, float 
     return &gradient->base;
 }
 
-plutovg_paint_t* plutovg_paint_create_texture(plutovg_surface_t* surface, plutovg_texture_type_t type, float opacity, const plutovg_matrix_t* matrix)
+NOVASVG_INLINE novasvg_paint_t* novasvg_paint_create_texture(novasvg_surface_t* surface, novasvg_texture_type_t type, float opacity, const novasvg_matrix_t* matrix)
 {
-    plutovg_texture_paint_t* texture = static_cast<plutovg_texture_paint_t*>(plutovg_paint_create(
-        PLUTOVG_PAINT_TYPE_TEXTURE,
-        sizeof(plutovg_texture_paint_t)
+    novasvg_texture_paint_t* texture = static_cast<novasvg_texture_paint_t*>(novasvg_paint_create(
+        NOVASVG_PAINT_TYPE_TEXTURE,
+        sizeof(novasvg_texture_paint_t)
     ));
     texture->type = type;
-    texture->opacity = plutovg_clamp(opacity, 0.f, 1.f);
-    texture->matrix = matrix ? *matrix : PLUTOVG_IDENTITY_MATRIX;
-    texture->surface = plutovg_surface_reference(surface);
+    texture->opacity = novasvg_clamp(opacity, 0.f, 1.f);
+    texture->matrix = matrix ? *matrix : NOVASVG_IDENTITY_MATRIX;
+    texture->surface = novasvg_surface_reference(surface);
     return &texture->base;
 }
 
-plutovg_paint_t* plutovg_paint_reference(plutovg_paint_t* paint)
+NOVASVG_INLINE novasvg_paint_t* novasvg_paint_reference(novasvg_paint_t* paint)
 {
-    plutovg_increment_reference(paint);
+    novasvg_increment_reference(paint);
     return paint;
 }
 
-void plutovg_paint_destroy(plutovg_paint_t* paint)
+NOVASVG_INLINE void novasvg_paint_destroy(novasvg_paint_t* paint)
 {
-    if(plutovg_destroy_reference(paint)) {
-        if(paint->type == PLUTOVG_PAINT_TYPE_TEXTURE) {
-            plutovg_texture_paint_t* texture = (plutovg_texture_paint_t*)(paint);
-            plutovg_surface_destroy(texture->surface);
+    if(novasvg_destroy_reference(paint)) {
+        if(paint->type == NOVASVG_PAINT_TYPE_TEXTURE) {
+            novasvg_texture_paint_t* texture = (novasvg_texture_paint_t*)(paint);
+            novasvg_surface_destroy(texture->surface);
         }
 
         free(paint);
     }
 }
 
-int plutovg_paint_get_reference_count(const plutovg_paint_t* paint)
+NOVASVG_INLINE int novasvg_paint_get_reference_count(const novasvg_paint_t* paint)
 {
-    return plutovg_get_reference_count(paint);
+    return novasvg_get_reference_count(paint);
 }

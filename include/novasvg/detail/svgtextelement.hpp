@@ -217,14 +217,14 @@ static void handleTextChunk(SVGTextFragmentIterator begin, SVGTextFragmentIterat
     }
 }
 
-SVGTextFragmentsBuilder::SVGTextFragmentsBuilder(std::u32string& text, SVGTextFragmentList& fragments)
+NOVASVG_INLINE SVGTextFragmentsBuilder::SVGTextFragmentsBuilder(std::u32string& text, SVGTextFragmentList& fragments)
     : m_text(text), m_fragments(fragments)
 {
     m_text.clear();
     m_fragments.clear();
 }
 
-void SVGTextFragmentsBuilder::build(const SVGTextElement* textElement)
+NOVASVG_INLINE void SVGTextFragmentsBuilder::build(const SVGTextElement* textElement)
 {
     handleElement(textElement);
     for(const auto& position : m_textPositions) {
@@ -343,7 +343,7 @@ void SVGTextFragmentsBuilder::build(const SVGTextElement* textElement)
     handleTextChunk(begin, it);
 }
 
-void SVGTextFragmentsBuilder::handleText(const SVGTextNode* node)
+NOVASVG_INLINE void SVGTextFragmentsBuilder::handleText(const SVGTextNode* node)
 {
     const auto& text = node->data();
     if(text.empty())
@@ -355,10 +355,10 @@ void SVGTextFragmentsBuilder::handleText(const SVGTextNode* node)
         lastCharacter = m_text.back();
     }
 
-    plutovg_text_iterator_t it;
-    plutovg_text_iterator_init(&it, text.data(), text.length(), PLUTOVG_TEXT_ENCODING_UTF8);
-    while(plutovg_text_iterator_has_next(&it)) {
-        auto currentCharacter = plutovg_text_iterator_next(&it);
+    novasvg_text_iterator_t it;
+    novasvg_text_iterator_init(&it, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF8);
+    while(novasvg_text_iterator_has_next(&it)) {
+        auto currentCharacter = novasvg_text_iterator_next(&it);
         if(currentCharacter == '\t' || currentCharacter == '\n' || currentCharacter == '\r')
             currentCharacter = ' ';
         if(currentCharacter == ' ' && lastCharacter == ' ' && element->white_space() == WhiteSpace::Default)
@@ -372,7 +372,7 @@ void SVGTextFragmentsBuilder::handleText(const SVGTextNode* node)
     }
 }
 
-void SVGTextFragmentsBuilder::handleElement(const SVGTextPositioningElement* element)
+NOVASVG_INLINE void SVGTextFragmentsBuilder::handleElement(const SVGTextPositioningElement* element)
 {
     if(element->isDisplayNone())
         return;
@@ -391,7 +391,7 @@ void SVGTextFragmentsBuilder::handleElement(const SVGTextPositioningElement* ele
     position.endOffset = m_text.length();
 }
 
-void SVGTextFragmentsBuilder::fillCharacterPositions(const SVGTextPosition& position)
+NOVASVG_INLINE void SVGTextFragmentsBuilder::fillCharacterPositions(const SVGTextPosition& position)
 {
     if(!position.node->isTextPositioningElement())
         return;
@@ -440,7 +440,7 @@ void SVGTextFragmentsBuilder::fillCharacterPositions(const SVGTextPosition& posi
     }
 }
 
-SVGTextPositioningElement::SVGTextPositioningElement(Document* document, ElementID id)
+NOVASVG_INLINE SVGTextPositioningElement::SVGTextPositioningElement(Document* document, ElementID id)
     : SVGGraphicsElement(document, id)
     , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow)
     , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow)
@@ -459,7 +459,7 @@ SVGTextPositioningElement::SVGTextPositioningElement(Document* document, Element
     addProperty(m_lengthAdjust);
 }
 
-void SVGTextPositioningElement::layoutElement(const SVGLayoutState& state)
+NOVASVG_INLINE void SVGTextPositioningElement::layoutElement(const SVGLayoutState& state)
 {
     m_font = state.font();
     m_fill = getPaintServer(state.fill(), state.fill_opacity());
@@ -481,7 +481,7 @@ void SVGTextPositioningElement::layoutElement(const SVGLayoutState& state)
     m_direction = state.direction();
 }
 
-float SVGTextPositioningElement::convertBaselineOffset(const BaselineShift& baselineShift) const
+NOVASVG_INLINE float SVGTextPositioningElement::convertBaselineOffset(const BaselineShift& baselineShift) const
 {
     if(baselineShift.type() == BaselineShift::Type::Baseline)
         return 0.f;
@@ -501,23 +501,23 @@ float SVGTextPositioningElement::convertBaselineOffset(const BaselineShift& base
     return length.value();
 }
 
-SVGTSpanElement::SVGTSpanElement(Document* document)
+NOVASVG_INLINE SVGTSpanElement::SVGTSpanElement(Document* document)
     : SVGTextPositioningElement(document, ElementID::Tspan)
 {
 }
 
-SVGTextElement::SVGTextElement(Document* document)
+NOVASVG_INLINE SVGTextElement::SVGTextElement(Document* document)
     : SVGTextPositioningElement(document, ElementID::Text)
 {
 }
 
-void SVGTextElement::layout(SVGLayoutState& state)
+NOVASVG_INLINE void SVGTextElement::layout(SVGLayoutState& state)
 {
     SVGTextPositioningElement::layout(state);
     SVGTextFragmentsBuilder(m_text, m_fragments).build(this);
 }
 
-void SVGTextElement::render(SVGRenderState& state) const
+NOVASVG_INLINE void SVGTextElement::render(SVGRenderState& state) const
 {
     if(m_fragments.empty() || isVisibilityHidden() || isDisplayNone())
         return;
@@ -554,7 +554,7 @@ void SVGTextElement::render(SVGRenderState& state) const
     newState.endGroup(blendInfo);
 }
 
-Rect SVGTextElement::boundingBox(bool includeStroke) const
+NOVASVG_INLINE Rect SVGTextElement::boundingBox(bool includeStroke) const
 {
     auto boundingBox = Rect::Invalid;
     for(const auto& fragment : m_fragments) {

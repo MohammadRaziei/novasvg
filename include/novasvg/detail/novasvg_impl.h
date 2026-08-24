@@ -22,25 +22,20 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+// NOTE: this used to be wrapped in `extern "C" { ... }`. That wrapper is
+// gone now: the render/ layer is pure, header-only C++ (NOVASVG_INLINE /
+// internal-linkage everywhere below), nothing in this project links
+// against it from actual C code, and the vendored STB headers already
+// manage their own `extern "C"` internally when compiled as C++.
 
-#include "plutovg/plutovg-blend.h"
-#include "plutovg/plutovg-canvas.h"
-#include "plutovg/plutovg-font.h"
-#include "plutovg/plutovg-ft-math.h"
-#include "plutovg/plutovg-ft-raster.h"
-#include "plutovg/plutovg-ft-stroker.h"
-#include "plutovg/plutovg-matrix.h"
-#include "plutovg/plutovg-paint.h"
-#include "plutovg/plutovg-path.h"
-#include "plutovg/plutovg-rasterize.h"
-#include "plutovg/plutovg-surface.h"
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
+#include "render/blend.h"
+#include "render/canvas.h"
+#include "render/font.h"
+#include "render/matrix.h"
+#include "render/paint.h"
+#include "render/path.h"
+#include "render/rasterize.h"
+#include "render/surface.h"
 
 #include "graphics.hpp"
 #include "novasvg.hpp"

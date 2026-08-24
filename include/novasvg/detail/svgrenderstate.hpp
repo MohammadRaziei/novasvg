@@ -1,18 +1,18 @@
 namespace novasvg {
 
-SVGBlendInfo::SVGBlendInfo(const SVGElement* element)
+NOVASVG_INLINE SVGBlendInfo::SVGBlendInfo(const SVGElement* element)
     : m_clipper(element->clipper())
     , m_masker(element->masker())
     , m_opacity(element->opacity())
 {
 }
 
-bool SVGBlendInfo::requiresCompositing(SVGRenderMode mode) const
+NOVASVG_INLINE bool SVGBlendInfo::requiresCompositing(SVGRenderMode mode) const
 {
     return (m_clipper && m_clipper->requiresMasking()) || (mode == SVGRenderMode::Painting && (m_masker || m_opacity < 1.f));
 }
 
-bool SVGRenderState::hasCycleReference(const SVGElement* element) const
+NOVASVG_INLINE bool SVGRenderState::hasCycleReference(const SVGElement* element) const
 {
     auto current = this;
     do {
@@ -23,7 +23,7 @@ bool SVGRenderState::hasCycleReference(const SVGElement* element) const
     return false;
 }
 
-void SVGRenderState::beginGroup(const SVGBlendInfo& blendInfo)
+NOVASVG_INLINE void SVGRenderState::beginGroup(const SVGBlendInfo& blendInfo)
 {
     auto requiresCompositing = blendInfo.requiresCompositing(m_mode);
     if(requiresCompositing) {
@@ -39,7 +39,7 @@ void SVGRenderState::beginGroup(const SVGBlendInfo& blendInfo)
     }
 }
 
-void SVGRenderState::endGroup(const SVGBlendInfo& blendInfo)
+NOVASVG_INLINE void SVGRenderState::endGroup(const SVGBlendInfo& blendInfo)
 {
     if(m_canvas == m_parent->canvas()) {
         m_canvas->restore();

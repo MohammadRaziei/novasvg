@@ -19,7 +19,11 @@
 /***************************************************************************/
 
 
-#include "plutovg-ft-types.h"
+#include "ft_types.h"
+
+// Internal linkage: safe to include this header from multiple
+// translation units without ODR / duplicate-symbol issues.
+namespace {
 
 /*************************************************************************/
 /*                                                                       */
@@ -475,7 +479,7 @@ PVG_FT_Raster_Render(const PVG_FT_Raster_Params *params);
 /*                                                                       */
 /*************************************************************************/
 
-#include "plutovg-ft-math.h"
+#include "ft_math.h"
 
 #include <setjmp.h>
 
@@ -2306,3 +2310,5 @@ void PVG_FT_Outline_Get_CBox(const PVG_FT_Outline* outline, PVG_FT_BBox* acbox)
   }
 
 /* END */
+
+} // namespace

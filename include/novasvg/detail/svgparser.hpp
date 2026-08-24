@@ -98,17 +98,17 @@ inline bool operator<(const RuleData& a, const RuleData& b) { return a.isLessTha
 
 using RuleDataList = std::vector<RuleData>;
 
-constexpr bool equals(std::string_view value, std::string_view subvalue)
+NOVASVG_INLINE constexpr bool equals(std::string_view value, std::string_view subvalue)
 {
     return value.compare(subvalue) == 0;
 }
 
-constexpr bool contains(std::string_view value, std::string_view subvalue)
+NOVASVG_INLINE constexpr bool contains(std::string_view value, std::string_view subvalue)
 {
     return value.find(subvalue) != std::string_view::npos;
 }
 
-constexpr bool includes(std::string_view value, std::string_view subvalue)
+NOVASVG_INLINE constexpr bool includes(std::string_view value, std::string_view subvalue)
 {
     if(subvalue.empty() || subvalue.length() > value.length())
         return false;
@@ -126,21 +126,21 @@ constexpr bool includes(std::string_view value, std::string_view subvalue)
     return false;
 }
 
-constexpr bool startswith(std::string_view value, std::string_view subvalue)
+NOVASVG_INLINE constexpr bool startswith(std::string_view value, std::string_view subvalue)
 {
     if(subvalue.empty() || subvalue.length() > value.length())
         return false;
     return subvalue == value.substr(0, subvalue.size());
 }
 
-constexpr bool endswith(std::string_view value, std::string_view subvalue)
+NOVASVG_INLINE constexpr bool endswith(std::string_view value, std::string_view subvalue)
 {
     if(subvalue.empty() || subvalue.length() > value.length())
         return false;
     return subvalue == value.substr(value.size() - subvalue.size(), subvalue.size());
 }
 
-constexpr bool dashequals(std::string_view value, std::string_view subvalue)
+NOVASVG_INLINE constexpr bool dashequals(std::string_view value, std::string_view subvalue)
 {
     if(startswith(value, subvalue))
         return (value.length() == subvalue.length() || value.at(subvalue.length()) == '-');
@@ -290,7 +290,7 @@ static bool matchSelector(const Selector& selector, const SVGElement* element)
     return true;
 }
 
-bool RuleData::match(const SVGElement* element) const
+NOVASVG_INLINE bool RuleData::match(const SVGElement* element) const
 {
     return matchSelector(m_selector, element);
 }
@@ -707,7 +707,7 @@ inline bool readIdentifier(std::string_view& input, std::string& output)
     return true;
 }
 
-bool Document::parse(const char* data, size_t length)
+NOVASVG_INLINE bool Document::parse(const char* data, size_t length)
 {
     std::string buffer;
     std::string styleSheet;
@@ -914,7 +914,7 @@ bool Document::parse(const char* data, size_t length)
     return true;
 }
 
-void Document::applyStyleSheet(const std::string& content)
+NOVASVG_INLINE void Document::applyStyleSheet(const std::string& content)
 {
     auto rules = parseStyleSheet(content);
     if(!rules.empty()) {
@@ -931,7 +931,7 @@ void Document::applyStyleSheet(const std::string& content)
     }
 }
 
-ElementList Document::querySelectorAll(const std::string& content) const
+NOVASVG_INLINE ElementList Document::querySelectorAll(const std::string& content) const
 {
     auto selectors = parseQuerySelectors(content);
     if(selectors.empty())

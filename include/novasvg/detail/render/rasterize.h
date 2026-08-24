@@ -1,24 +1,24 @@
 #pragma once
 
-#include "plutovg-private.h"
-#include "plutovg-utils.h"
+#include "private.h"
+#include "utils.h"
 
-#include "plutovg-ft-raster.h"
-#include "plutovg-ft-stroker.h"
+#include "vendor/ft_raster.h"
+#include "vendor/ft_stroker.h"
 
 #include <limits.h>
 
-void plutovg_span_buffer_init(plutovg_span_buffer_t* span_buffer)
+NOVASVG_INLINE void novasvg_span_buffer_init(novasvg_span_buffer_t* span_buffer)
 {
-    plutovg_array_init(span_buffer->spans);
-    plutovg_span_buffer_reset(span_buffer);
+    novasvg_array_init(span_buffer->spans);
+    novasvg_span_buffer_reset(span_buffer);
 }
 
-void plutovg_span_buffer_init_rect(plutovg_span_buffer_t* span_buffer, int x, int y, int width, int height)
+NOVASVG_INLINE void novasvg_span_buffer_init_rect(novasvg_span_buffer_t* span_buffer, int x, int y, int width, int height)
 {
-    plutovg_array_clear(span_buffer->spans);
-    plutovg_array_ensure(span_buffer->spans, height);
-    plutovg_span_t* spans = span_buffer->spans.data;
+    novasvg_array_clear(span_buffer->spans);
+    novasvg_array_ensure(span_buffer->spans, height);
+    novasvg_span_t* spans = span_buffer->spans.data;
     for(int i = 0; i < height; i++) {
         spans[i].x = x;
         spans[i].y = y + i;
@@ -33,37 +33,37 @@ void plutovg_span_buffer_init_rect(plutovg_span_buffer_t* span_buffer, int x, in
     span_buffer->spans.size = height;
 }
 
-void plutovg_span_buffer_reset(plutovg_span_buffer_t* span_buffer)
+NOVASVG_INLINE void novasvg_span_buffer_reset(novasvg_span_buffer_t* span_buffer)
 {
-    plutovg_array_clear(span_buffer->spans);
+    novasvg_array_clear(span_buffer->spans);
     span_buffer->x = 0;
     span_buffer->y = 0;
     span_buffer->w = -1;
     span_buffer->h = -1;
 }
 
-void plutovg_span_buffer_destroy(plutovg_span_buffer_t* span_buffer)
+NOVASVG_INLINE void novasvg_span_buffer_destroy(novasvg_span_buffer_t* span_buffer)
 {
-    plutovg_array_destroy(span_buffer->spans);
+    novasvg_array_destroy(span_buffer->spans);
 }
 
-void plutovg_span_buffer_copy(plutovg_span_buffer_t* span_buffer, const plutovg_span_buffer_t* source)
+NOVASVG_INLINE void novasvg_span_buffer_copy(novasvg_span_buffer_t* span_buffer, const novasvg_span_buffer_t* source)
 {
-    plutovg_array_clear(span_buffer->spans);
-    plutovg_array_append(span_buffer->spans, source->spans);
+    novasvg_array_clear(span_buffer->spans);
+    novasvg_array_append(span_buffer->spans, source->spans);
     span_buffer->x = source->x;
     span_buffer->y = source->y;
     span_buffer->w = source->w;
     span_buffer->h = source->h;
 }
 
-bool plutovg_span_buffer_contains(const plutovg_span_buffer_t* span_buffer, float x, float y)
+NOVASVG_INLINE bool novasvg_span_buffer_contains(const novasvg_span_buffer_t* span_buffer, float x, float y)
 {
     const int ix = (int)floorf(x);
     const int iy = (int)floorf(y);
 
     for(int i = 0; i < span_buffer->spans.size; i++) {
-        plutovg_span_t* span = &span_buffer->spans.data[i];
+        novasvg_span_t* span = &span_buffer->spans.data[i];
         if(span->y != iy)
             continue;
         if(ix >= span->x && ix < (span->x + span->len)) {
@@ -74,7 +74,7 @@ bool plutovg_span_buffer_contains(const plutovg_span_buffer_t* span_buffer, floa
     return false;
 }
 
-static void plutovg_span_buffer_update_extents(plutovg_span_buffer_t* span_buffer)
+static void novasvg_span_buffer_update_extents(novasvg_span_buffer_t* span_buffer)
 {
     if(span_buffer->w != -1 && span_buffer->h != -1)
         return;
@@ -86,7 +86,7 @@ static void plutovg_span_buffer_update_extents(plutovg_span_buffer_t* span_buffe
         return;
     }
 
-    plutovg_span_t* spans = span_buffer->spans.data;
+    novasvg_span_t* spans = span_buffer->spans.data;
     int x1 = INT_MAX;
     int y1 = spans[0].y;
     int x2 = 0;
@@ -102,25 +102,25 @@ static void plutovg_span_buffer_update_extents(plutovg_span_buffer_t* span_buffe
     span_buffer->h = y2 - y1 + 1;
 }
 
-void plutovg_span_buffer_extents(plutovg_span_buffer_t* span_buffer, plutovg_rect_t* extents)
+NOVASVG_INLINE void novasvg_span_buffer_extents(novasvg_span_buffer_t* span_buffer, novasvg_rect_t* extents)
 {
-    plutovg_span_buffer_update_extents(span_buffer);
+    novasvg_span_buffer_update_extents(span_buffer);
     extents->x = span_buffer->x;
     extents->y = span_buffer->y;
     extents->w = span_buffer->w;
     extents->h = span_buffer->h;
 }
 
-void plutovg_span_buffer_intersect(plutovg_span_buffer_t* span_buffer, const plutovg_span_buffer_t* a, const plutovg_span_buffer_t* b)
+NOVASVG_INLINE void novasvg_span_buffer_intersect(novasvg_span_buffer_t* span_buffer, const novasvg_span_buffer_t* a, const novasvg_span_buffer_t* b)
 {
-    plutovg_span_buffer_reset(span_buffer);
-    plutovg_array_ensure(span_buffer->spans, plutovg_max(a->spans.size, b->spans.size));
+    novasvg_span_buffer_reset(span_buffer);
+    novasvg_array_ensure(span_buffer->spans, novasvg_max(a->spans.size, b->spans.size));
 
-    plutovg_span_t* a_spans = a->spans.data;
-    plutovg_span_t* a_end = a_spans + a->spans.size;
+    novasvg_span_t* a_spans = a->spans.data;
+    novasvg_span_t* a_end = a_spans + a->spans.size;
 
-    plutovg_span_t* b_spans = b->spans.data;
-    plutovg_span_t* b_end = b_spans + b->spans.size;
+    novasvg_span_t* b_spans = b->spans.data;
+    novasvg_span_t* b_end = b_spans + b->spans.size;
     while(a_spans < a_end && b_spans < b_end) {
         if(b_spans->y > a_spans->y) {
             ++a_spans;
@@ -146,11 +146,11 @@ void plutovg_span_buffer_intersect(plutovg_span_buffer_t* span_buffer, const plu
             continue;
         }
 
-        int x = plutovg_max(ax1, bx1);
-        int len = plutovg_min(ax2, bx2) - x;
+        int x = novasvg_max(ax1, bx1);
+        int len = novasvg_min(ax2, bx2) - x;
         if(len) {
-            plutovg_array_ensure(span_buffer->spans, 1);
-            plutovg_span_t* span = span_buffer->spans.data + span_buffer->spans.size;
+            novasvg_array_ensure(span_buffer->spans, 1);
+            novasvg_span_t* span = span_buffer->spans.data + span_buffer->spans.size;
             span->x = x;
             span->len = len;
             span->y = a_spans->y;
@@ -252,34 +252,34 @@ static void ft_outline_end(PVG_FT_Outline* ft)
     }
 }
 
-static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data);
+static PVG_FT_Outline* ft_outline_convert_stroke(const novasvg_path_t* path, const novasvg_matrix_t* matrix, const novasvg_stroke_data_t* stroke_data);
 
-static PVG_FT_Outline* ft_outline_convert(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data)
+static PVG_FT_Outline* ft_outline_convert(const novasvg_path_t* path, const novasvg_matrix_t* matrix, const novasvg_stroke_data_t* stroke_data)
 {
     if(stroke_data) {
         return ft_outline_convert_stroke(path, matrix, stroke_data);
     }
 
-    plutovg_path_iterator_t it;
-    plutovg_path_iterator_init(&it, path);
+    novasvg_path_iterator_t it;
+    novasvg_path_iterator_init(&it, path);
 
-    plutovg_point_t points[3];
+    novasvg_point_t points[3];
     PVG_FT_Outline* outline = ft_outline_create(path->num_points, path->num_contours);
-    while(plutovg_path_iterator_has_next(&it)) {
-        switch(plutovg_path_iterator_next(&it, points)) {
-        case PLUTOVG_PATH_COMMAND_MOVE_TO:
-            plutovg_matrix_map_points(matrix, points, points, 1);
+    while(novasvg_path_iterator_has_next(&it)) {
+        switch(novasvg_path_iterator_next(&it, points)) {
+        case NOVASVG_PATH_COMMAND_MOVE_TO:
+            novasvg_matrix_map_points(matrix, points, points, 1);
             ft_outline_move_to(outline, points[0].x, points[0].y);
             break;
-        case PLUTOVG_PATH_COMMAND_LINE_TO:
-            plutovg_matrix_map_points(matrix, points, points, 1);
+        case NOVASVG_PATH_COMMAND_LINE_TO:
+            novasvg_matrix_map_points(matrix, points, points, 1);
             ft_outline_line_to(outline, points[0].x, points[0].y);
             break;
-        case PLUTOVG_PATH_COMMAND_CUBIC_TO:
-            plutovg_matrix_map_points(matrix, points, points, 3);
+        case NOVASVG_PATH_COMMAND_CUBIC_TO:
+            novasvg_matrix_map_points(matrix, points, points, 3);
             ft_outline_cubic_to(outline, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
             break;
-        case PLUTOVG_PATH_COMMAND_CLOSE:
+        case NOVASVG_PATH_COMMAND_CLOSE:
             ft_outline_close(outline);
             break;
         }
@@ -289,22 +289,22 @@ static PVG_FT_Outline* ft_outline_convert(const plutovg_path_t* path, const plut
     return outline;
 }
 
-static PVG_FT_Outline* ft_outline_convert_dash(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_dash_t* stroke_dash)
+static PVG_FT_Outline* ft_outline_convert_dash(const novasvg_path_t* path, const novasvg_matrix_t* matrix, const novasvg_stroke_dash_t* stroke_dash)
 {
     if(stroke_dash->array.size == 0)
         return ft_outline_convert(path, matrix, NULL);
-    plutovg_path_t* dashed = plutovg_path_clone_dashed(path, stroke_dash->offset, stroke_dash->array.data, stroke_dash->array.size);
+    novasvg_path_t* dashed = novasvg_path_clone_dashed(path, stroke_dash->offset, stroke_dash->array.data, stroke_dash->array.size);
     PVG_FT_Outline* outline = ft_outline_convert(dashed, matrix, NULL);
-    plutovg_path_destroy(dashed);
+    novasvg_path_destroy(dashed);
     return outline;
 }
 
-static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data)
+static PVG_FT_Outline* ft_outline_convert_stroke(const novasvg_path_t* path, const novasvg_matrix_t* matrix, const novasvg_stroke_data_t* stroke_data)
 {
     double scale_x = sqrt(matrix->a * matrix->a + matrix->b * matrix->b);
     double scale_y = sqrt(matrix->c * matrix->c + matrix->d * matrix->d);
 
-    double scale = hypot(scale_x, scale_y) / PLUTOVG_SQRT2;
+    double scale = hypot(scale_x, scale_y) / NOVASVG_SQRT2;
     double width = stroke_data->style.width * scale;
 
     PVG_FT_Fixed ftWidth = (PVG_FT_Fixed)(width * 0.5 * (1 << 6));
@@ -312,10 +312,10 @@ static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, con
 
     PVG_FT_Stroker_LineCap ftCap;
     switch(stroke_data->style.cap) {
-    case PLUTOVG_LINE_CAP_SQUARE:
+    case NOVASVG_LINE_CAP_SQUARE:
         ftCap = PVG_FT_STROKER_LINECAP_SQUARE;
         break;
-    case PLUTOVG_LINE_CAP_ROUND:
+    case NOVASVG_LINE_CAP_ROUND:
         ftCap = PVG_FT_STROKER_LINECAP_ROUND;
         break;
     default:
@@ -325,10 +325,10 @@ static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, con
 
     PVG_FT_Stroker_LineJoin ftJoin;
     switch(stroke_data->style.join) {
-    case PLUTOVG_LINE_JOIN_BEVEL:
+    case NOVASVG_LINE_JOIN_BEVEL:
         ftJoin = PVG_FT_STROKER_LINEJOIN_BEVEL;
         break;
-    case PLUTOVG_LINE_JOIN_ROUND:
+    case NOVASVG_LINE_JOIN_ROUND:
         ftJoin = PVG_FT_STROKER_LINEJOIN_ROUND;
         break;
     default:
@@ -357,18 +357,18 @@ static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, con
 
 static void spans_generation_callback(int count, const PVG_FT_Span* spans, void* user)
 {
-    plutovg_span_buffer_t* span_buffer = (plutovg_span_buffer_t*)(user);
-    plutovg_array_append_data(span_buffer->spans, spans, count);
+    novasvg_span_buffer_t* span_buffer = (novasvg_span_buffer_t*)(user);
+    novasvg_array_append_data(span_buffer->spans, spans, count);
 }
 
-void plutovg_rasterize(plutovg_span_buffer_t* span_buffer, const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_rect_t* clip_rect, const plutovg_stroke_data_t* stroke_data, plutovg_fill_rule_t winding)
+NOVASVG_INLINE void novasvg_rasterize(novasvg_span_buffer_t* span_buffer, const novasvg_path_t* path, const novasvg_matrix_t* matrix, const novasvg_rect_t* clip_rect, const novasvg_stroke_data_t* stroke_data, novasvg_fill_rule_t winding)
 {
     PVG_FT_Outline* outline = ft_outline_convert(path, matrix, stroke_data);
     if(stroke_data) {
         outline->flags = PVG_FT_OUTLINE_NONE;
     } else {
         switch(winding) {
-        case PLUTOVG_FILL_RULE_EVEN_ODD:
+        case NOVASVG_FILL_RULE_EVEN_ODD:
             outline->flags = PVG_FT_OUTLINE_EVEN_ODD_FILL;
             break;
         default:
@@ -390,7 +390,7 @@ void plutovg_rasterize(plutovg_span_buffer_t* span_buffer, const plutovg_path_t*
         params.clip_box.yMax = (PVG_FT_Pos)(clip_rect->y + clip_rect->h);
     }
 
-    plutovg_span_buffer_reset(span_buffer);
+    novasvg_span_buffer_reset(span_buffer);
     PVG_FT_Raster_Render(&params);
     ft_outline_destroy(outline);
 }

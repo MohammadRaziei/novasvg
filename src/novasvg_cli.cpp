@@ -10,7 +10,6 @@
  * - Batch processing
  */
 
-#define NOVASVG_IMPLEMENTATION
 #include <novasvg/novasvg.h>
 #include "CLI11.hpp"
 #include <iostream>

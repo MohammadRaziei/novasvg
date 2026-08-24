@@ -3,26 +3,26 @@
 
 namespace novasvg {
 
-SVGPaintElement::SVGPaintElement(Document* document, ElementID id)
+NOVASVG_INLINE SVGPaintElement::SVGPaintElement(Document* document, ElementID id)
     : SVGElement(document, id)
 {
 }
 
-SVGStopElement::SVGStopElement(Document* document)
+NOVASVG_INLINE SVGStopElement::SVGStopElement(Document* document)
     : SVGElement(document, ElementID::Stop)
     , m_offset(PropertyID::Offset, 0.f)
 {
     addProperty(m_offset);
 }
 
-void SVGStopElement::layoutElement(const SVGLayoutState& state)
+NOVASVG_INLINE void SVGStopElement::layoutElement(const SVGLayoutState& state)
 {
     m_stop_color = state.stop_color();
     m_stop_opacity = state.stop_opacity();
     SVGElement::layoutElement(state);
 }
 
-GradientStop SVGStopElement::gradientStop(float opacity) const
+NOVASVG_INLINE GradientStop SVGStopElement::gradientStop(float opacity) const
 {
     Color stopColor = m_stop_color.colorWithAlpha(m_stop_opacity * opacity);
     GradientStop gradientStop = {
@@ -32,7 +32,7 @@ GradientStop SVGStopElement::gradientStop(float opacity) const
     return gradientStop;
 }
 
-SVGGradientElement::SVGGradientElement(Document* document, ElementID id)
+NOVASVG_INLINE SVGGradientElement::SVGGradientElement(Document* document, ElementID id)
     : SVGPaintElement(document, id)
     , SVGURIReference(this)
     , m_gradientTransform(PropertyID::GradientTransform)
@@ -44,7 +44,7 @@ SVGGradientElement::SVGGradientElement(Document* document, ElementID id)
     addProperty(m_spreadMethod);
 }
 
-void SVGGradientElement::collectGradientAttributes(SVGGradientAttributes& attributes) const
+NOVASVG_INLINE void SVGGradientElement::collectGradientAttributes(SVGGradientAttributes& attributes) const
 {
     if(!attributes.hasGradientTransform() && hasAttribute(PropertyID::GradientTransform))
         attributes.setGradientTransform(this);
@@ -62,7 +62,7 @@ void SVGGradientElement::collectGradientAttributes(SVGGradientAttributes& attrib
     }
 }
 
-SVGLinearGradientElement::SVGLinearGradientElement(Document* document)
+NOVASVG_INLINE SVGLinearGradientElement::SVGLinearGradientElement(Document* document)
     : SVGGradientElement(document, ElementID::LinearGradient)
     , m_x1(PropertyID::X1, LengthDirection::Horizontal, LengthNegativeMode::Allow, 0.f, LengthUnits::Percent)
     , m_y1(PropertyID::Y1, LengthDirection::Vertical, LengthNegativeMode::Allow, 0.f, LengthUnits::Percent)
@@ -75,7 +75,7 @@ SVGLinearGradientElement::SVGLinearGradientElement(Document* document)
     addProperty(m_y2);
 }
 
-SVGLinearGradientAttributes SVGLinearGradientElement::collectGradientAttributes() const
+NOVASVG_INLINE SVGLinearGradientAttributes SVGLinearGradientElement::collectGradientAttributes() const
 {
     SVGLinearGradientAttributes attributes;
     std::set<const SVGGradientElement*> processedGradients;
@@ -126,7 +126,7 @@ static GradientStops buildGradientStops(const SVGGradientElement* element, float
     return gradientStops;
 }
 
-bool SVGLinearGradientElement::applyPaint(SVGRenderState& state, float opacity) const
+NOVASVG_INLINE bool SVGLinearGradientElement::applyPaint(SVGRenderState& state, float opacity) const
 {
     auto attributes = collectGradientAttributes();
     auto gradientContentElement = attributes.gradientContentElement();
@@ -156,7 +156,7 @@ bool SVGLinearGradientElement::applyPaint(SVGRenderState& state, float opacity) 
     return true;
 }
 
-SVGRadialGradientElement::SVGRadialGradientElement(Document* document)
+NOVASVG_INLINE SVGRadialGradientElement::SVGRadialGradientElement(Document* document)
     : SVGGradientElement(document, ElementID::RadialGradient)
     , m_cx(PropertyID::Cx, LengthDirection::Horizontal, LengthNegativeMode::Allow, 50.f, LengthUnits::Percent)
     , m_cy(PropertyID::Cy, LengthDirection::Vertical, LengthNegativeMode::Allow, 50.f, LengthUnits::Percent)
@@ -171,7 +171,7 @@ SVGRadialGradientElement::SVGRadialGradientElement(Document* document)
     addProperty(m_fy);
 }
 
-bool SVGRadialGradientElement::applyPaint(SVGRenderState& state, float opacity) const
+NOVASVG_INLINE bool SVGRadialGradientElement::applyPaint(SVGRenderState& state, float opacity) const
 {
     auto attributes = collectGradientAttributes();
     auto gradientContentElement = attributes.gradientContentElement();
@@ -203,7 +203,7 @@ bool SVGRadialGradientElement::applyPaint(SVGRenderState& state, float opacity) 
     return true;
 }
 
-SVGRadialGradientAttributes SVGRadialGradientElement::collectGradientAttributes() const
+NOVASVG_INLINE SVGRadialGradientAttributes SVGRadialGradientElement::collectGradientAttributes() const
 {
     SVGRadialGradientAttributes attributes;
     std::set<const SVGGradientElement*> processedGradients;
@@ -239,7 +239,7 @@ SVGRadialGradientAttributes SVGRadialGradientElement::collectGradientAttributes(
     return attributes;
 }
 
-SVGPatternElement::SVGPatternElement(Document* document)
+NOVASVG_INLINE SVGPatternElement::SVGPatternElement(Document* document)
     : SVGPaintElement(document, ElementID::Pattern)
     , SVGURIReference(this)
     , SVGFitToViewBox(this)
@@ -260,7 +260,7 @@ SVGPatternElement::SVGPatternElement(Document* document)
     addProperty(m_patternContentUnits);
 }
 
-bool SVGPatternElement::applyPaint(SVGRenderState& state, float opacity) const
+NOVASVG_INLINE bool SVGPatternElement::applyPaint(SVGRenderState& state, float opacity) const
 {
     if(state.hasCycleReference(this))
         return false;
@@ -310,7 +310,7 @@ bool SVGPatternElement::applyPaint(SVGRenderState& state, float opacity) const
     return true;
 }
 
-SVGPatternAttributes SVGPatternElement::collectPatternAttributes() const
+NOVASVG_INLINE SVGPatternAttributes SVGPatternElement::collectPatternAttributes() const
 {
     SVGPatternAttributes attributes;
     std::set<const SVGPatternElement*> processedPatterns;

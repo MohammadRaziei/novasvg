@@ -8,328 +8,328 @@
 
 namespace novasvg {
 
-int version()
+NOVASVG_INLINE int version()
 {
     return NOVASVG_VERSION;
 }
 
-std::string versionString()
+NOVASVG_INLINE std::string versionString()
 {
     return NOVASVG_VERSION_STRING;
 }
 
-bool addFontFaceFromFile(const char* family, bool bold, bool italic, const char* filename)
+NOVASVG_INLINE bool addFontFaceFromFile(const char* family, bool bold, bool italic, const char* filename)
 {
     return fontFaceCache()->addFontFace(family, bold, italic, FontFace(filename));
 }
 
-bool addFontFaceFromData(const char* family, bool bold, bool italic, const void* data, size_t length, novasvg_destroy_func_t destroy_func, void* closure)
+NOVASVG_INLINE bool addFontFaceFromData(const char* family, bool bold, bool italic, const void* data, size_t length, novasvg_destroy_func_t destroy_func, void* closure)
 {
     return fontFaceCache()->addFontFace(family, bold, italic, FontFace(data, length, destroy_func, closure));
 }
 
-Bitmap::Bitmap(int width, int height)
-    : m_surface(plutovg_surface_create(width, height))
+NOVASVG_INLINE Bitmap::Bitmap(int width, int height)
+    : m_surface(novasvg_surface_create(width, height))
 {
 }
 
-Bitmap::Bitmap(uint8_t* data, int width, int height, int stride)
-    : m_surface(plutovg_surface_create_for_data(data, width, height, stride))
+NOVASVG_INLINE Bitmap::Bitmap(uint8_t* data, int width, int height, int stride)
+    : m_surface(novasvg_surface_create_for_data(data, width, height, stride))
 {
 }
 
-Bitmap::Bitmap(const Bitmap& bitmap)
-    : m_surface(plutovg_surface_reference(bitmap.surface()))
+NOVASVG_INLINE Bitmap::Bitmap(const Bitmap& bitmap)
+    : m_surface(novasvg_surface_reference(bitmap.surface()))
 {
 }
 
-Bitmap::Bitmap(Bitmap&& bitmap)
+NOVASVG_INLINE Bitmap::Bitmap(Bitmap&& bitmap)
     : m_surface(bitmap.release())
 {
 }
 
-Bitmap::~Bitmap()
+NOVASVG_INLINE Bitmap::~Bitmap()
 {
-    plutovg_surface_destroy(m_surface);
+    novasvg_surface_destroy(m_surface);
 }
 
-Bitmap& Bitmap::operator=(const Bitmap& bitmap)
+NOVASVG_INLINE Bitmap& Bitmap::operator=(const Bitmap& bitmap)
 {
     Bitmap(bitmap).swap(*this);
     return *this;
 }
 
-void Bitmap::swap(Bitmap& bitmap)
+NOVASVG_INLINE void Bitmap::swap(Bitmap& bitmap)
 {
     std::swap(m_surface, bitmap.m_surface);
 }
 
-uint8_t* Bitmap::data() const
+NOVASVG_INLINE uint8_t* Bitmap::data() const
 {
     if(m_surface)
-        return plutovg_surface_get_data(m_surface);
+        return novasvg_surface_get_data(m_surface);
     return nullptr;
 }
 
-int Bitmap::width() const
+NOVASVG_INLINE int Bitmap::width() const
 {
     if(m_surface)
-        return plutovg_surface_get_width(m_surface);
+        return novasvg_surface_get_width(m_surface);
     return 0;
 }
 
-int Bitmap::height() const
+NOVASVG_INLINE int Bitmap::height() const
 {
     if(m_surface)
-        return plutovg_surface_get_height(m_surface);
+        return novasvg_surface_get_height(m_surface);
     return 0;
 }
 
-int Bitmap::stride() const
+NOVASVG_INLINE int Bitmap::stride() const
 {
     if(m_surface)
-        return plutovg_surface_get_stride(m_surface);
+        return novasvg_surface_get_stride(m_surface);
     return 0;
 }
 
-void Bitmap::clear(uint32_t value)
+NOVASVG_INLINE void Bitmap::clear(uint32_t value)
 {
     if(m_surface == nullptr)
         return;
-    plutovg_color_t color;
-    plutovg_color_init_rgba32(&color, value);
-    plutovg_surface_clear(m_surface, &color);
+    novasvg_color_t color;
+    novasvg_color_init_rgba32(&color, value);
+    novasvg_surface_clear(m_surface, &color);
 }
 
-void Bitmap::convertToRGBA()
+NOVASVG_INLINE void Bitmap::convertToRGBA()
 {
     if(m_surface == nullptr)
         return;
-    auto data = plutovg_surface_get_data(m_surface);
-    auto width = plutovg_surface_get_width(m_surface);
-    auto height = plutovg_surface_get_height(m_surface);
-    auto stride = plutovg_surface_get_stride(m_surface);
-    plutovg_convert_argb_to_rgba(data, data, width, height, stride);
+    auto data = novasvg_surface_get_data(m_surface);
+    auto width = novasvg_surface_get_width(m_surface);
+    auto height = novasvg_surface_get_height(m_surface);
+    auto stride = novasvg_surface_get_stride(m_surface);
+    novasvg_convert_argb_to_rgba(data, data, width, height, stride);
 }
 
-Bitmap& Bitmap::operator=(Bitmap&& bitmap)
+NOVASVG_INLINE Bitmap& Bitmap::operator=(Bitmap&& bitmap)
 {
     Bitmap(std::move(bitmap)).swap(*this);
     return *this;
 }
 
-bool Bitmap::writeToPng(const std::string& filename) const
+NOVASVG_INLINE bool Bitmap::writeToPng(const std::string& filename) const
 {
     if(m_surface)
-        return plutovg_surface_write_to_png(m_surface, filename.data());
+        return novasvg_surface_write_to_png(m_surface, filename.data());
     return false;
 }
 
-bool Bitmap::writeToPng(novasvg_write_func_t callback, void* closure) const
+NOVASVG_INLINE bool Bitmap::writeToPng(novasvg_write_func_t callback, void* closure) const
 {
     if(m_surface)
-        return plutovg_surface_write_to_png_stream(m_surface, callback, closure);
+        return novasvg_surface_write_to_png_stream(m_surface, callback, closure);
     return false;
 }
 
-plutovg_surface_t* Bitmap::release()
+NOVASVG_INLINE novasvg_surface_t* Bitmap::release()
 {
     return std::exchange(m_surface, nullptr);
 }
 
-Box::Box(float x, float y, float w, float h)
+NOVASVG_INLINE Box::Box(float x, float y, float w, float h)
     : x(x), y(y), w(w), h(h)
 {
 }
 
-Box::Box(const Rect& rect)
+NOVASVG_INLINE Box::Box(const Rect& rect)
     : x(rect.x), y(rect.y), w(rect.w), h(rect.h)
 {
 }
 
-Box& Box::transform(const Matrix &matrix)
+NOVASVG_INLINE Box& Box::transform(const Matrix &matrix)
 {
     *this = transformed(matrix);
     return *this;
 }
 
-Box Box::transformed(const Matrix& matrix) const
+NOVASVG_INLINE Box Box::transformed(const Matrix& matrix) const
 {
     return Transform(matrix).mapRect(*this);
 }
 
-Matrix::Matrix(float a, float b, float c, float d, float e, float f)
+NOVASVG_INLINE Matrix::Matrix(float a, float b, float c, float d, float e, float f)
     : a(a), b(b), c(c), d(d), e(e), f(f)
 {
 }
 
-Matrix::Matrix(const plutovg_matrix_t& matrix)
+NOVASVG_INLINE Matrix::Matrix(const novasvg_matrix_t& matrix)
     : a(matrix.a), b(matrix.b), c(matrix.c), d(matrix.d), e(matrix.e), f(matrix.f)
 {
 }
 
-Matrix::Matrix(const Transform& transform)
+NOVASVG_INLINE Matrix::Matrix(const Transform& transform)
     : Matrix(transform.matrix())
 {
 }
 
-Matrix Matrix::operator*(const Matrix& matrix) const
+NOVASVG_INLINE Matrix Matrix::operator*(const Matrix& matrix) const
 {
     return Transform(*this) * Transform(matrix);
 }
 
-Matrix& Matrix::operator*=(const Matrix &matrix)
+NOVASVG_INLINE Matrix& Matrix::operator*=(const Matrix &matrix)
 {
     return (*this = *this * matrix);
 }
 
-Matrix& Matrix::multiply(const Matrix& matrix)
+NOVASVG_INLINE Matrix& Matrix::multiply(const Matrix& matrix)
 {
     return (*this *= matrix);
 }
 
-Matrix& Matrix::scale(float sx, float sy)
+NOVASVG_INLINE Matrix& Matrix::scale(float sx, float sy)
 {
     return multiply(scaled(sx, sy));
 }
 
-Matrix& Matrix::translate(float tx, float ty)
+NOVASVG_INLINE Matrix& Matrix::translate(float tx, float ty)
 {
     return multiply(translated(tx, ty));
 }
 
-Matrix& Matrix::rotate(float angle, float cx, float cy)
+NOVASVG_INLINE Matrix& Matrix::rotate(float angle, float cx, float cy)
 {
     return multiply(rotated(angle, cx, cy));
 }
 
-Matrix& Matrix::shear(float shx, float shy)
+NOVASVG_INLINE Matrix& Matrix::shear(float shx, float shy)
 {
     return multiply(sheared(shx, shy));
 }
 
-Matrix Matrix::inverse() const
+NOVASVG_INLINE Matrix Matrix::inverse() const
 {
     return Transform(*this).inverse();
 }
 
-Matrix& Matrix::invert()
+NOVASVG_INLINE Matrix& Matrix::invert()
 {
     return (*this = inverse());
 }
 
-void Matrix::reset()
+NOVASVG_INLINE void Matrix::reset()
 {
     *this = Matrix(1, 0, 0, 1, 0, 0);
 }
 
-Matrix Matrix::translated(float tx, float ty)
+NOVASVG_INLINE Matrix Matrix::translated(float tx, float ty)
 {
     return Transform::translated(tx, ty);
 }
 
-Matrix Matrix::scaled(float sx, float sy)
+NOVASVG_INLINE Matrix Matrix::scaled(float sx, float sy)
 {
     return Transform::scaled(sx, sy);
 }
 
-Matrix Matrix::rotated(float angle, float cx, float cy)
+NOVASVG_INLINE Matrix Matrix::rotated(float angle, float cx, float cy)
 {
     return Transform::rotated(angle, cx, cy);
 }
 
-Matrix Matrix::sheared(float shx, float shy)
+NOVASVG_INLINE Matrix Matrix::sheared(float shx, float shy)
 {
     return Transform::sheared(shx, shy);
 }
 
-Node::Node(SVGNode* node)
+NOVASVG_INLINE Node::Node(SVGNode* node)
     : m_node(node)
 {
 }
 
-bool Node::isTextNode() const
+NOVASVG_INLINE bool Node::isTextNode() const
 {
     return m_node && m_node->isTextNode();
 }
 
-bool Node::isElement() const
+NOVASVG_INLINE bool Node::isElement() const
 {
     return m_node && m_node->isElement();
 }
 
-TextNode Node::toTextNode() const
+NOVASVG_INLINE TextNode Node::toTextNode() const
 {
     if(m_node && m_node->isTextNode())
         return static_cast<SVGTextNode*>(m_node);
     return TextNode();
 }
 
-Element Node::toElement() const
+NOVASVG_INLINE Element Node::toElement() const
 {
     if(m_node && m_node->isElement())
         return static_cast<SVGElement*>(m_node);
     return Element();
 }
 
-Element Node::parentElement() const
+NOVASVG_INLINE Element Node::parentElement() const
 {
     if(m_node)
         return m_node->parentElement();
     return Element();
 }
 
-TextNode::TextNode(SVGTextNode* text)
+NOVASVG_INLINE TextNode::TextNode(SVGTextNode* text)
     : Node(text)
 {
 }
 
-const std::string& TextNode::data() const
+NOVASVG_INLINE const std::string& TextNode::data() const
 {
     if(m_node)
         return text()->data();
     return emptyString;
 }
 
-void TextNode::setData(const std::string& data)
+NOVASVG_INLINE void TextNode::setData(const std::string& data)
 {
     if(m_node) {
         text()->setData(data);
     }
 }
 
-SVGTextNode* TextNode::text() const
+NOVASVG_INLINE SVGTextNode* TextNode::text() const
 {
     return static_cast<SVGTextNode*>(m_node);
 }
 
-Element::Element(SVGElement* element)
+NOVASVG_INLINE Element::Element(SVGElement* element)
     : Node(element)
 {
 }
 
-bool Element::hasAttribute(const std::string& name) const
+NOVASVG_INLINE bool Element::hasAttribute(const std::string& name) const
 {
     if(m_node)
         return element()->hasAttribute(name);
     return false;
 }
 
-const std::string& Element::getAttribute(const std::string& name) const
+NOVASVG_INLINE const std::string& Element::getAttribute(const std::string& name) const
 {
     if(m_node)
         return element()->getAttribute(name);
     return emptyString;
 }
 
-void Element::setAttribute(const std::string& name, const std::string& value)
+NOVASVG_INLINE void Element::setAttribute(const std::string& name, const std::string& value)
 {
     if(m_node) {
         element()->setAttribute(name, value);
     }
 }
 
-void Element::render(Bitmap& bitmap, const Matrix& matrix) const
+NOVASVG_INLINE void Element::render(Bitmap& bitmap, const Matrix& matrix) const
 {
     if(m_node == nullptr || bitmap.isNull())
         return;
@@ -338,7 +338,7 @@ void Element::render(Bitmap& bitmap, const Matrix& matrix) const
     element(true)->render(state);
 }
 
-Bitmap Element::renderToBitmap(int width, int height, uint32_t backgroundColor) const
+NOVASVG_INLINE Bitmap Element::renderToBitmap(int width, int height, uint32_t backgroundColor) const
 {
     if(m_node == nullptr)
         return Bitmap();
@@ -364,14 +364,14 @@ Bitmap Element::renderToBitmap(int width, int height, uint32_t backgroundColor) 
     return bitmap;
 }
 
-Matrix Element::getLocalMatrix() const
+NOVASVG_INLINE Matrix Element::getLocalMatrix() const
 {
     if(m_node)
         return element(true)->localTransform();
     return Matrix();
 }
 
-Matrix Element::getGlobalMatrix() const
+NOVASVG_INLINE Matrix Element::getGlobalMatrix() const
 {
     if(m_node == nullptr)
         return Matrix();
@@ -381,24 +381,24 @@ Matrix Element::getGlobalMatrix() const
     return transform;
 }
 
-Box Element::getLocalBoundingBox() const
+NOVASVG_INLINE Box Element::getLocalBoundingBox() const
 {
     return getBoundingBox().transformed(getLocalMatrix());
 }
 
-Box Element::getGlobalBoundingBox() const
+NOVASVG_INLINE Box Element::getGlobalBoundingBox() const
 {
     return getBoundingBox().transformed(getGlobalMatrix());
 }
 
-Box Element::getBoundingBox() const
+NOVASVG_INLINE Box Element::getBoundingBox() const
 {
     if(m_node)
         return element(true)->paintBoundingBox();
     return Box();
 }
 
-NodeList Element::children() const
+NOVASVG_INLINE NodeList Element::children() const
 {
     if(m_node == nullptr)
         return NodeList();
@@ -408,7 +408,7 @@ NodeList Element::children() const
     return children;
 }
 
-SVGElement* Element::element(bool layoutIfNeeded) const
+NOVASVG_INLINE SVGElement* Element::element(bool layoutIfNeeded) const
 {
     auto element = static_cast<SVGElement*>(m_node);
     if(element && layoutIfNeeded)
@@ -416,7 +416,7 @@ SVGElement* Element::element(bool layoutIfNeeded) const
     return element;
 }
 
-std::unique_ptr<Document> Document::loadFromFile(const std::string& filename)
+NOVASVG_INLINE std::unique_ptr<Document> Document::loadFromFile(const std::string& filename)
 {
     std::ifstream fs;
     fs.open(filename);
@@ -428,17 +428,17 @@ std::unique_ptr<Document> Document::loadFromFile(const std::string& filename)
     return loadFromData(content);
 }
 
-std::unique_ptr<Document> Document::loadFromData(const std::string& string)
+NOVASVG_INLINE std::unique_ptr<Document> Document::loadFromData(const std::string& string)
 {
     return loadFromData(string.data(), string.size());
 }
 
-std::unique_ptr<Document> Document::loadFromData(const char* data)
+NOVASVG_INLINE std::unique_ptr<Document> Document::loadFromData(const char* data)
 {
     return loadFromData(data, std::strlen(data));
 }
 
-std::unique_ptr<Document> Document::loadFromData(const char* data, size_t length)
+NOVASVG_INLINE std::unique_ptr<Document> Document::loadFromData(const char* data, size_t length)
 {
     std::unique_ptr<Document> document(new Document);
     if(!document->parse(data, length))
@@ -446,32 +446,32 @@ std::unique_ptr<Document> Document::loadFromData(const char* data, size_t length
     return document;
 }
 
-float Document::width() const
+NOVASVG_INLINE float Document::width() const
 {
     return rootElement(true)->intrinsicWidth();
 }
 
-float Document::height() const
+NOVASVG_INLINE float Document::height() const
 {
     return rootElement(true)->intrinsicHeight();
 }
 
-Box Document::boundingBox() const
+NOVASVG_INLINE Box Document::boundingBox() const
 {
     return rootElement(true)->localTransform().mapRect(rootElement()->paintBoundingBox());
 }
 
-void Document::updateLayout()
+NOVASVG_INLINE void Document::updateLayout()
 {
     m_rootElement->layoutIfNeeded();
 }
 
-void Document::forceLayout()
+NOVASVG_INLINE void Document::forceLayout()
 {
     m_rootElement->forceLayout();
 }
 
-void Document::render(Bitmap& bitmap, const Matrix& matrix) const
+NOVASVG_INLINE void Document::render(Bitmap& bitmap, const Matrix& matrix) const
 {
     if(bitmap.isNull())
         return;
@@ -480,7 +480,7 @@ void Document::render(Bitmap& bitmap, const Matrix& matrix) const
     rootElement(true)->render(state);
 }
 
-Bitmap Document::renderToBitmap(int width, int height, uint32_t backgroundColor) const
+NOVASVG_INLINE Bitmap Document::renderToBitmap(int width, int height, uint32_t backgroundColor) const
 {
     auto intrinsicWidth = rootElement(true)->intrinsicWidth();
     auto intrinsicHeight = rootElement()->intrinsicHeight();
@@ -505,32 +505,32 @@ Bitmap Document::renderToBitmap(int width, int height, uint32_t backgroundColor)
     return bitmap;
 }
 
-Element Document::elementFromPoint(float x, float y) const
+NOVASVG_INLINE Element Document::elementFromPoint(float x, float y) const
 {
     return rootElement(true)->elementFromPoint(x, y);
 }
 
-Element Document::getElementById(const std::string& id) const
+NOVASVG_INLINE Element Document::getElementById(const std::string& id) const
 {
     return m_rootElement->getElementById(id);
 }
 
-Element Document::documentElement() const
+NOVASVG_INLINE Element Document::documentElement() const
 {
     return m_rootElement.get();
 }
 
-SVGRootElement* Document::rootElement(bool layoutIfNeeded) const
+NOVASVG_INLINE SVGRootElement* Document::rootElement(bool layoutIfNeeded) const
 {
     if(layoutIfNeeded)
         m_rootElement->layoutIfNeeded();
     return m_rootElement.get();
 }
 
-Document::Document(Document&&) = default;
-Document& Document::operator=(Document&&) = default;
+NOVASVG_INLINE Document::Document(Document&&) = default;
+NOVASVG_INLINE Document& Document::operator=(Document&&) = default;
 
-Document::Document() = default;
-Document::~Document() = default;
+NOVASVG_INLINE Document::Document() = default;
+NOVASVG_INLINE Document::~Document() = default;
 
 } // namespace novasvg

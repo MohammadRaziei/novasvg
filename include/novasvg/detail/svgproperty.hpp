@@ -2,7 +2,7 @@
 
 namespace novasvg {
 
-PropertyID propertyid(std::string_view name)
+NOVASVG_INLINE PropertyID propertyid(std::string_view name)
 {
     static const struct {
         std::string_view name;
@@ -63,7 +63,7 @@ PropertyID propertyid(std::string_view name)
     return it->value;
 }
 
-PropertyID csspropertyid(std::string_view name)
+NOVASVG_INLINE PropertyID csspropertyid(std::string_view name)
 {
     static const struct {
         std::string_view name;
@@ -117,12 +117,12 @@ PropertyID csspropertyid(std::string_view name)
     return it->value;
 }
 
-SVGProperty::SVGProperty(PropertyID id)
+NOVASVG_INLINE SVGProperty::SVGProperty(PropertyID id)
     : m_id(id)
 {
 }
 
-bool SVGString::parse(std::string_view input)
+NOVASVG_INLINE bool SVGString::parse(std::string_view input)
 {
     stripLeadingAndTrailingSpaces(input);
     m_value.assign(input);
@@ -130,7 +130,7 @@ bool SVGString::parse(std::string_view input)
 }
 
 template<>
-bool SVGEnumeration<SpreadMethod>::parse(std::string_view input)
+NOVASVG_INLINE bool SVGEnumeration<SpreadMethod>::parse(std::string_view input)
 {
     static const SVGEnumerationEntry<SpreadMethod> entries[] = {
         {SpreadMethod::Pad, "pad"},
@@ -142,7 +142,7 @@ bool SVGEnumeration<SpreadMethod>::parse(std::string_view input)
 }
 
 template<>
-bool SVGEnumeration<Units>::parse(std::string_view input)
+NOVASVG_INLINE bool SVGEnumeration<Units>::parse(std::string_view input)
 {
     static const SVGEnumerationEntry<Units> entries[] = {
         {Units::UserSpaceOnUse, "userSpaceOnUse"},
@@ -153,7 +153,7 @@ bool SVGEnumeration<Units>::parse(std::string_view input)
 }
 
 template<>
-bool SVGEnumeration<MarkerUnits>::parse(std::string_view input)
+NOVASVG_INLINE bool SVGEnumeration<MarkerUnits>::parse(std::string_view input)
 {
     static const SVGEnumerationEntry<MarkerUnits> entries[] = {
         {MarkerUnits::StrokeWidth, "strokeWidth"},
@@ -164,7 +164,7 @@ bool SVGEnumeration<MarkerUnits>::parse(std::string_view input)
 }
 
 template<>
-bool SVGEnumeration<LengthAdjust>::parse(std::string_view input)
+NOVASVG_INLINE bool SVGEnumeration<LengthAdjust>::parse(std::string_view input)
 {
     static const SVGEnumerationEntry<LengthAdjust> entries[] = {
         {LengthAdjust::Spacing, "spacing"},
@@ -176,7 +176,7 @@ bool SVGEnumeration<LengthAdjust>::parse(std::string_view input)
 
 template<typename Enum>
 template<unsigned int N>
-bool SVGEnumeration<Enum>::parseEnum(std::string_view input, const SVGEnumerationEntry<Enum>(&entries)[N])
+NOVASVG_INLINE bool SVGEnumeration<Enum>::parseEnum(std::string_view input, const SVGEnumerationEntry<Enum>(&entries)[N])
 {
     stripLeadingAndTrailingSpaces(input);
     for(const auto& entry : entries) {
@@ -189,7 +189,7 @@ bool SVGEnumeration<Enum>::parseEnum(std::string_view input, const SVGEnumeratio
     return false;
 }
 
-bool SVGAngle::parse(std::string_view input)
+NOVASVG_INLINE bool SVGAngle::parse(std::string_view input)
 {
     stripLeadingAndTrailingSpaces(input);
     if(input == "auto") {
@@ -209,7 +209,7 @@ bool SVGAngle::parse(std::string_view input)
         return false;
     if(!input.empty()) {
         if(input == "rad")
-            value *= 180.f / PLUTOVG_PI;
+            value *= 180.f / NOVASVG_PI;
         else if(input == "grad")
             value *= 360.f / 400.f;
         else if(input == "turn")
@@ -224,7 +224,7 @@ bool SVGAngle::parse(std::string_view input)
     return true;
 }
 
-bool Length::parse(std::string_view input, LengthNegativeMode mode)
+NOVASVG_INLINE bool Length::parse(std::string_view input, LengthNegativeMode mode)
 {
     float value = 0.f;
     stripLeadingAndTrailingSpaces(input);
@@ -313,7 +313,7 @@ bool Length::parse(std::string_view input, LengthNegativeMode mode)
     return input.empty();
 }
 
-float LengthContext::valueForLength(const Length& length, LengthDirection direction) const
+NOVASVG_INLINE float LengthContext::valueForLength(const Length& length, LengthDirection direction) const
 {
     if(length.units() == LengthUnits::Percent) {
         if(m_units == Units::UserSpaceOnUse)
@@ -328,7 +328,7 @@ float LengthContext::valueForLength(const Length& length, LengthDirection direct
     return length.value();
 }
 
-float LengthContext::viewportDimension(LengthDirection direction) const
+NOVASVG_INLINE float LengthContext::viewportDimension(LengthDirection direction) const
 {
     auto viewportSize = m_element->currentViewportSize();
     switch(direction) {
@@ -337,16 +337,16 @@ float LengthContext::viewportDimension(LengthDirection direction) const
     case LengthDirection::Vertical:
         return viewportSize.h;
     default:
-        return std::sqrt(viewportSize.w * viewportSize.w + viewportSize.h * viewportSize.h) / PLUTOVG_SQRT2;
+        return std::sqrt(viewportSize.w * viewportSize.w + viewportSize.h * viewportSize.h) / NOVASVG_SQRT2;
     }
 }
 
-bool SVGLength::parse(std::string_view input)
+NOVASVG_INLINE bool SVGLength::parse(std::string_view input)
 {
     return m_value.parse(input, m_negativeMode);
 }
 
-bool SVGLengthList::parse(std::string_view input)
+NOVASVG_INLINE bool SVGLengthList::parse(std::string_view input)
 {
     m_values.clear();
     while(!input.empty()) {
@@ -366,7 +366,7 @@ bool SVGLengthList::parse(std::string_view input)
     return true;
 }
 
-bool SVGNumber::parse(std::string_view input)
+NOVASVG_INLINE bool SVGNumber::parse(std::string_view input)
 {
     float value = 0.f;
     stripLeadingAndTrailingSpaces(input);
@@ -378,7 +378,7 @@ bool SVGNumber::parse(std::string_view input)
     return true;
 }
 
-bool SVGNumberPercentage::parse(std::string_view input)
+NOVASVG_INLINE bool SVGNumberPercentage::parse(std::string_view input)
 {
     float value = 0.f;
     stripLeadingAndTrailingSpaces(input);
@@ -395,7 +395,7 @@ bool SVGNumberPercentage::parse(std::string_view input)
     return true;
 }
 
-bool SVGNumberList::parse(std::string_view input)
+NOVASVG_INLINE bool SVGNumberList::parse(std::string_view input)
 {
     m_values.clear();
     stripLeadingSpaces(input);
@@ -410,12 +410,12 @@ bool SVGNumberList::parse(std::string_view input)
     return true;
 }
 
-bool SVGPath::parse(std::string_view input)
+NOVASVG_INLINE bool SVGPath::parse(std::string_view input)
 {
     return m_value.parse(input.data(), input.length());
 }
 
-bool SVGPoint::parse(std::string_view input)
+NOVASVG_INLINE bool SVGPoint::parse(std::string_view input)
 {
     Point value;
     stripLeadingAndTrailingSpaces(input);
@@ -430,7 +430,7 @@ bool SVGPoint::parse(std::string_view input)
     return true;
 }
 
-bool SVGPointList::parse(std::string_view input)
+NOVASVG_INLINE bool SVGPointList::parse(std::string_view input)
 {
     m_values.clear();
     stripLeadingSpaces(input);
@@ -449,7 +449,7 @@ bool SVGPointList::parse(std::string_view input)
     return true;
 }
 
-bool SVGRect::parse(std::string_view input)
+NOVASVG_INLINE bool SVGRect::parse(std::string_view input)
 {
     Rect value;
     stripLeadingAndTrailingSpaces(input);
@@ -470,12 +470,12 @@ bool SVGRect::parse(std::string_view input)
     return true;
 }
 
-bool SVGTransform::parse(std::string_view input)
+NOVASVG_INLINE bool SVGTransform::parse(std::string_view input)
 {
     return m_value.parse(input.data(), input.length());
 }
 
-bool SVGPreserveAspectRatio::parse(std::string_view input)
+NOVASVG_INLINE bool SVGPreserveAspectRatio::parse(std::string_view input)
 {
     auto alignType = AlignType::xMidYMid;
     stripLeadingSpaces(input);
@@ -521,7 +521,7 @@ bool SVGPreserveAspectRatio::parse(std::string_view input)
     return true;
 }
 
-Rect SVGPreserveAspectRatio::getClipRect(const Rect& viewBoxRect, const Size& viewportSize) const
+NOVASVG_INLINE Rect SVGPreserveAspectRatio::getClipRect(const Rect& viewBoxRect, const Size& viewportSize) const
 {
     assert(!viewBoxRect.isEmpty() && !viewportSize.isEmpty());
     auto xScale = viewportSize.w / viewBoxRect.w;
@@ -568,7 +568,7 @@ Rect SVGPreserveAspectRatio::getClipRect(const Rect& viewBoxRect, const Size& vi
     return Rect(-xOffset / scale, -yOffset / scale, viewportSize.w / scale, viewportSize.h / scale);
 }
 
-Transform SVGPreserveAspectRatio::getTransform(const Rect& viewBoxRect, const Size& viewportSize) const
+NOVASVG_INLINE Transform SVGPreserveAspectRatio::getTransform(const Rect& viewBoxRect, const Size& viewportSize) const
 {
     assert(!viewBoxRect.isEmpty() && !viewportSize.isEmpty());
     auto xScale = viewportSize.w / viewBoxRect.w;
@@ -615,7 +615,7 @@ Transform SVGPreserveAspectRatio::getTransform(const Rect& viewBoxRect, const Si
     return Transform(scale, 0, 0, scale, xOffset, yOffset);
 }
 
-void SVGPreserveAspectRatio::transformRect(Rect& dstRect, Rect& srcRect) const
+NOVASVG_INLINE void SVGPreserveAspectRatio::transformRect(Rect& dstRect, Rect& srcRect) const
 {
     if(m_alignType == AlignType::None)
         return;

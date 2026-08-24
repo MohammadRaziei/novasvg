@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <cctype>
 #include <ostream>
+#include <utility>
+#include <type_traits>
 
 /**
  * @namespace novasvg::color
@@ -124,6 +126,70 @@ public:
      * @see fromName()
      */
     Color(const std::string& str) : Color(fromString(str)) {}
+
+    // ==================== Interop with Other Color Types ====================
+
+    /**
+     * @brief Construct a Color from any "color-like" type.
+     *
+     * This constructor lets Color be built (implicitly) from any other
+     * color type that exposes red()/green()/blue()/alpha() accessors
+     * returning integral values -- for example novasvg::Color from
+     * graphics.h. It exists so that novasvg::color::Color can be used
+     * as a drop-in replacement for novasvg::Color throughout the engine.
+     *
+     * @warning The conversion is always done component-by-component
+     *          (r, g, b, a), NEVER via value()/raw 32-bit integers.
+     *          Different Color types are free to pack RGBA into a
+     *          32-bit value using different byte orders -- this class
+     *          uses 0xRRGGBBAA, while e.g. novasvg::Color uses
+     *          0xAARRGGBB. Converting through the packed value would
+     *          silently corrupt colors.
+     *
+     * @tparam OtherColor Any type providing red()/green()/blue()/alpha().
+     *
+     * @par Example
+     * @code
+     * novasvg::Color engine_color(255, 0, 0);     // engine's own Color
+     * novasvg::color::Color c = engine_color;      // implicit conversion in
+     * @endcode
+     */
+    template <typename OtherColor,
+              typename = decltype(std::declval<const OtherColor&>().red()),
+              typename = decltype(std::declval<const OtherColor&>().green()),
+              typename = decltype(std::declval<const OtherColor&>().blue()),
+              typename = decltype(std::declval<const OtherColor&>().alpha())>
+    constexpr Color(const OtherColor& other)
+        : r(static_cast<uint8_t>(other.red())),
+          g(static_cast<uint8_t>(other.green())),
+          b(static_cast<uint8_t>(other.blue())),
+          a(static_cast<uint8_t>(other.alpha())) {}
+
+    /**
+     * @brief Convert this Color to any "color-like" type constructible
+     *        from four (r, g, b, a) components.
+     *
+     * Symmetric counterpart to the templated constructor above. Lets this
+     * Color be handed to APIs expecting a different Color type (e.g. the
+     * engine's novasvg::Color) without ever touching value()/raw bit
+     * layout. Kept explicit (a named method, not an implicit conversion
+     * operator) since an unconstrained implicit `operator T()` would be
+     * far too eager to match unrelated types and would also collide with
+     * the existing `operator std::string()` below.
+     *
+     * @tparam OtherColor Target type, constructible as OtherColor(r, g, b, a).
+     *
+     * @par Example
+     * @code
+     * using namespace novasvg::color_literals;
+     * novasvg::color::Color c = "red"_c;
+     * novasvg::Color engine_color = c.as<novasvg::Color>();  // out
+     * @endcode
+     */
+    template <typename OtherColor>
+    constexpr OtherColor as() const {
+        return OtherColor(r, g, b, a);
+    }
 
     // ==================== Getters & Setters ====================
 

@@ -1,26 +1,26 @@
 #pragma once
 
-#include "plutovg-private.h"
-#include "plutovg-utils.h"
+#include "private.h"
+#include "utils.h"
 
 #define STB_IMAGE_WRITE_STATIC
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "plutovg-stb-image-write.h"
+#include "vendor/stb_image_write.h"
 
 #define STB_IMAGE_STATIC
 #define STB_IMAGE_IMPLEMENTATION
-#include "plutovg-stb-image.h"
+#include "vendor/stb_image.h"
 
-static plutovg_surface_t* plutovg_surface_create_uninitialized(int width, int height)
+static novasvg_surface_t* novasvg_surface_create_uninitialized(int width, int height)
 {
     static const int kMaxSize = 1 << 15;
     if(width <= 0 || height <= 0 || width >= kMaxSize || height >= kMaxSize)
         return NULL;
     const size_t size = width * height * 4;
-    plutovg_surface_t* surface = static_cast<plutovg_surface_t*>(malloc(size + sizeof(plutovg_surface_t)));
+    novasvg_surface_t* surface = static_cast<novasvg_surface_t*>(malloc(size + sizeof(novasvg_surface_t)));
     if(surface == NULL)
         return NULL;
-    plutovg_init_reference(surface);
+    novasvg_init_reference(surface);
     surface->width = width;
     surface->height = height;
     surface->stride = width * 4;
@@ -28,18 +28,18 @@ static plutovg_surface_t* plutovg_surface_create_uninitialized(int width, int he
     return surface;
 }
 
-plutovg_surface_t* plutovg_surface_create(int width, int height)
+NOVASVG_INLINE novasvg_surface_t* novasvg_surface_create(int width, int height)
 {
-    plutovg_surface_t* surface = plutovg_surface_create_uninitialized(width, height);
+    novasvg_surface_t* surface = novasvg_surface_create_uninitialized(width, height);
     if(surface)
         memset(surface->data, 0, surface->height * surface->stride);
     return surface;
 }
 
-plutovg_surface_t* plutovg_surface_create_for_data(unsigned char* data, int width, int height, int stride)
+NOVASVG_INLINE novasvg_surface_t* novasvg_surface_create_for_data(unsigned char* data, int width, int height, int stride)
 {
-    plutovg_surface_t* surface = static_cast<plutovg_surface_t*>(malloc(sizeof(plutovg_surface_t)));
-    plutovg_init_reference(surface);
+    novasvg_surface_t* surface = static_cast<novasvg_surface_t*>(malloc(sizeof(novasvg_surface_t)));
+    novasvg_init_reference(surface);
     surface->width = width;
     surface->height = height;
     surface->stride = stride;
@@ -47,31 +47,31 @@ plutovg_surface_t* plutovg_surface_create_for_data(unsigned char* data, int widt
     return surface;
 }
 
-static plutovg_surface_t* plutovg_surface_load_from_image(stbi_uc* image, int width, int height)
+static novasvg_surface_t* novasvg_surface_load_from_image(stbi_uc* image, int width, int height)
 {
-    plutovg_surface_t* surface = plutovg_surface_create_uninitialized(width, height);
+    novasvg_surface_t* surface = novasvg_surface_create_uninitialized(width, height);
     if(surface)
-        plutovg_convert_rgba_to_argb(surface->data, image, surface->width, surface->height, surface->stride);
+        novasvg_convert_rgba_to_argb(surface->data, image, surface->width, surface->height, surface->stride);
     stbi_image_free(image);
     return surface;
 }
 
-plutovg_surface_t* plutovg_surface_load_from_image_file(const char* filename)
+NOVASVG_INLINE novasvg_surface_t* novasvg_surface_load_from_image_file(const char* filename)
 {
     int width, height, channels;
     stbi_uc* image = stbi_load(filename, &width, &height, &channels, STBI_rgb_alpha);
     if(image == NULL)
         return NULL;
-    return plutovg_surface_load_from_image(image, width, height);
+    return novasvg_surface_load_from_image(image, width, height);
 }
 
-plutovg_surface_t* plutovg_surface_load_from_image_data(const void* data, int length)
+NOVASVG_INLINE novasvg_surface_t* novasvg_surface_load_from_image_data(const void* data, int length)
 {
     int width, height, channels;
     stbi_uc* image = stbi_load_from_memory(static_cast<const stbi_uc*>(data), length, &width, &height, &channels, STBI_rgb_alpha);
     if(image == NULL)
         return NULL;
-    return plutovg_surface_load_from_image(image, width, height);
+    return novasvg_surface_load_from_image(image, width, height);
 }
 
 static const uint8_t base64_table[128] = {
@@ -93,9 +93,9 @@ static const uint8_t base64_table[128] = {
     0x31, 0x32, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-plutovg_surface_t* plutovg_surface_load_from_image_base64(const char* data, int length)
+NOVASVG_INLINE novasvg_surface_t* novasvg_surface_load_from_image_base64(const char* data, int length)
 {
-    plutovg_surface_t* surface = NULL;
+    novasvg_surface_t* surface = NULL;
     uint8_t* output_data = NULL;
     size_t output_length = 0;
 
@@ -112,11 +112,11 @@ plutovg_surface_t* plutovg_surface_load_from_image_base64(const char* data, int 
         uint8_t cc = data[i];
         if(cc == '=') {
             ++equals_sign_count;
-        } else if(cc == '+' || cc == '/' || PLUTOVG_IS_ALNUM(cc)) {
+        } else if(cc == '+' || cc == '/' || NOVASVG_IS_ALNUM(cc)) {
             if(equals_sign_count > 0)
                 goto cleanup;
             output_data[output_length++] = base64_table[cc];
-        } else if(!PLUTOVG_IS_WS(cc)) {
+        } else if(!NOVASVG_IS_WS(cc)) {
             goto cleanup;
         }
     }
@@ -144,102 +144,102 @@ plutovg_surface_t* plutovg_surface_load_from_image_base64(const char* data, int 
         output_data[didx] = (((output_data[sidx + 1] << 4) & 255) | ((output_data[sidx + 2] >> 2) & 017));
     }
 
-    surface = plutovg_surface_load_from_image_data(output_data, output_length);
+    surface = novasvg_surface_load_from_image_data(output_data, output_length);
 cleanup:
     free(output_data);
     return surface;
 }
 
-plutovg_surface_t* plutovg_surface_reference(plutovg_surface_t* surface)
+NOVASVG_INLINE novasvg_surface_t* novasvg_surface_reference(novasvg_surface_t* surface)
 {
-    plutovg_increment_reference(surface);
+    novasvg_increment_reference(surface);
     return surface;
 }
 
-void plutovg_surface_destroy(plutovg_surface_t* surface)
+NOVASVG_INLINE void novasvg_surface_destroy(novasvg_surface_t* surface)
 {
-    if(plutovg_destroy_reference(surface)) {
+    if(novasvg_destroy_reference(surface)) {
         free(surface);
     }
 }
 
-int plutovg_surface_get_reference_count(const plutovg_surface_t* surface)
+NOVASVG_INLINE int novasvg_surface_get_reference_count(const novasvg_surface_t* surface)
 {
-    return plutovg_get_reference_count(surface);
+    return novasvg_get_reference_count(surface);
 }
 
-unsigned char* plutovg_surface_get_data(const plutovg_surface_t* surface)
+NOVASVG_INLINE unsigned char* novasvg_surface_get_data(const novasvg_surface_t* surface)
 {
     return surface->data;
 }
 
-int plutovg_surface_get_width(const plutovg_surface_t* surface)
+NOVASVG_INLINE int novasvg_surface_get_width(const novasvg_surface_t* surface)
 {
     return surface->width;
 }
 
-int plutovg_surface_get_height(const plutovg_surface_t* surface)
+NOVASVG_INLINE int novasvg_surface_get_height(const novasvg_surface_t* surface)
 {
     return surface->height;
 }
 
-int plutovg_surface_get_stride(const plutovg_surface_t* surface)
+NOVASVG_INLINE int novasvg_surface_get_stride(const novasvg_surface_t* surface)
 {
     return surface->stride;
 }
 
-void plutovg_surface_clear(plutovg_surface_t* surface, const plutovg_color_t* color)
+NOVASVG_INLINE void novasvg_surface_clear(novasvg_surface_t* surface, const novasvg_color_t* color)
 {
-    uint32_t pixel = plutovg_premultiply_argb(plutovg_color_to_argb32(color));
+    uint32_t pixel = novasvg_premultiply_argb(novasvg_color_to_argb32(color));
     for(int y = 0; y < surface->height; y++) {
         uint32_t* pixels = (uint32_t*)(surface->data + surface->stride * y);
-        plutovg_memfill32(pixels, surface->width, pixel);
+        novasvg_memfill32(pixels, surface->width, pixel);
     }
 }
 
-static void plutovg_surface_write_begin(const plutovg_surface_t* surface)
+static void novasvg_surface_write_begin(const novasvg_surface_t* surface)
 {
-    plutovg_convert_argb_to_rgba(surface->data, surface->data, surface->width, surface->height, surface->stride);
+    novasvg_convert_argb_to_rgba(surface->data, surface->data, surface->width, surface->height, surface->stride);
 }
 
-static void plutovg_surface_write_end(const plutovg_surface_t* surface)
+static void novasvg_surface_write_end(const novasvg_surface_t* surface)
 {
-    plutovg_convert_rgba_to_argb(surface->data, surface->data, surface->width, surface->height, surface->stride);
+    novasvg_convert_rgba_to_argb(surface->data, surface->data, surface->width, surface->height, surface->stride);
 }
 
-bool plutovg_surface_write_to_png(const plutovg_surface_t* surface, const char* filename)
+NOVASVG_INLINE bool novasvg_surface_write_to_png(const novasvg_surface_t* surface, const char* filename)
 {
-    plutovg_surface_write_begin(surface);
+    novasvg_surface_write_begin(surface);
     int success = stbi_write_png(filename, surface->width, surface->height, 4, surface->data, surface->stride);
-    plutovg_surface_write_end(surface);
+    novasvg_surface_write_end(surface);
     return success;
 }
 
-bool plutovg_surface_write_to_jpg(const plutovg_surface_t* surface, const char* filename, int quality)
+NOVASVG_INLINE bool novasvg_surface_write_to_jpg(const novasvg_surface_t* surface, const char* filename, int quality)
 {
-    plutovg_surface_write_begin(surface);
+    novasvg_surface_write_begin(surface);
     int success = stbi_write_jpg(filename, surface->width, surface->height, 4, surface->data, quality);
-    plutovg_surface_write_end(surface);
+    novasvg_surface_write_end(surface);
     return success;
 }
 
-bool plutovg_surface_write_to_png_stream(const plutovg_surface_t* surface, plutovg_write_func_t write_func, void* closure)
+NOVASVG_INLINE bool novasvg_surface_write_to_png_stream(const novasvg_surface_t* surface, novasvg_write_func_t write_func, void* closure)
 {
-    plutovg_surface_write_begin(surface);
+    novasvg_surface_write_begin(surface);
     int success = stbi_write_png_to_func(write_func, closure, surface->width, surface->height, 4, surface->data, surface->stride);
-    plutovg_surface_write_end(surface);
+    novasvg_surface_write_end(surface);
     return success;
 }
 
-bool plutovg_surface_write_to_jpg_stream(const plutovg_surface_t* surface, plutovg_write_func_t write_func, void* closure, int quality)
+NOVASVG_INLINE bool novasvg_surface_write_to_jpg_stream(const novasvg_surface_t* surface, novasvg_write_func_t write_func, void* closure, int quality)
 {
-    plutovg_surface_write_begin(surface);
+    novasvg_surface_write_begin(surface);
     int success = stbi_write_jpg_to_func(write_func, closure, surface->width, surface->height, 4, surface->data, quality);
-    plutovg_surface_write_end(surface);
+    novasvg_surface_write_end(surface);
     return success;
 }
 
-void plutovg_convert_argb_to_rgba(unsigned char* dst, const unsigned char* src, int width, int height, int stride)
+NOVASVG_INLINE void novasvg_convert_argb_to_rgba(unsigned char* dst, const unsigned char* src, int width, int height, int stride)
 {
     for(int y = 0; y < height; y++) {
         const uint32_t* src_row = (const uint32_t*)(src + stride * y);
@@ -271,7 +271,7 @@ void plutovg_convert_argb_to_rgba(unsigned char* dst, const unsigned char* src, 
     }
 }
 
-void plutovg_convert_rgba_to_argb(unsigned char* dst, const unsigned char* src, int width, int height, int stride)
+NOVASVG_INLINE void novasvg_convert_rgba_to_argb(unsigned char* dst, const unsigned char* src, int width, int height, int stride)
 {
     for(int y = 0; y < height; y++) {
         const unsigned char* src_row = src + stride * y;

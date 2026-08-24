@@ -18,7 +18,11 @@
 /***************************************************************************/
 
 
-#include "plutovg-ft-types.h"
+#include "ft_types.h"
+
+// Internal linkage: safe to include this header from multiple
+// translation units without ODR / duplicate-symbol issues.
+namespace {
 
 /*************************************************************************/
 /*                                                                       */
@@ -873,3 +877,5 @@ PVG_FT_Angle PVG_FT_Angle_Diff( PVG_FT_Angle  angle1, PVG_FT_Angle  angle2 )
 }
 
 /* END */
+
+} // namespace

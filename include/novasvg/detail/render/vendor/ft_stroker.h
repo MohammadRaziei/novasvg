@@ -18,7 +18,11 @@
 /***************************************************************************/
 
 
-#include "plutovg-ft-raster.h"
+#include "ft_raster.h"
+
+// Internal linkage: safe to include this header from multiple
+// translation units without ODR / duplicate-symbol issues.
+namespace {
 
 /**************************************************************
  *
@@ -335,7 +339,7 @@ PVG_FT_Stroker_Done( PVG_FT_Stroker  stroker );
 /*                                                                         */
 /***************************************************************************/
 
-#include "plutovg-ft-math.h"
+#include "ft_math.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -2189,3 +2193,5 @@ Invalid_Outline:
 }
 
 /* END */
+
+} // namespace
