@@ -30,6 +30,20 @@ NB_MODULE(novasvg_py, m) {
           "family"_a, "bold"_a, "italic"_a, "data"_a, "destroy_func"_a = nullptr, "closure"_a = nullptr,
           "Add a font face from a memory buffer.");
 
+    // --- Bind Color Class ---
+    nb::class_<novasvg::color::Color>(m, "Color")
+        .def(nb::init<uint8_t, uint8_t, uint8_t, uint8_t>(),
+             "r"_a = 0, "g"_a = 0, "b"_a = 0, "a"_a = 255,
+             "Construct a color from red, green, blue, alpha components (0-255 each).")
+        .def_static("from_value", &novasvg::color::Color::fromValue, "value"_a,
+                    "Construct a color from a packed 0xRRGGBBAA integer.")
+        .def("value", &novasvg::color::Color::value,
+             "Get the color packed as a 0xRRGGBBAA integer.")
+        .def_rw("r", &novasvg::color::Color::r)
+        .def_rw("g", &novasvg::color::Color::g)
+        .def_rw("b", &novasvg::color::Color::b)
+        .def_rw("a", &novasvg::color::Color::a);
+
     // --- Bind Matrix Class ---
     nb::class_<novasvg::Matrix>(m, "Matrix")
         .def(nb::init<>(), "Construct an identity matrix.")
