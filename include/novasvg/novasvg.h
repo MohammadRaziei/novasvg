@@ -807,6 +807,29 @@ private:
 // NOVASVG_IMPLEMENTATION is no longer required and has no effect; it is
 // kept as a harmless no-op purely so existing code that still defines it
 // keeps compiling unchanged.
-#include "detail/novasvg_impl.h"
+//
+// This used to be a separate "detail/novasvg_impl.h" file, but that file
+// did nothing except forward this exact list of includes to the one
+// place (here) that used it, so it's inlined directly instead.
+//
+// The render/ layer's own extern "C" wrapper is gone too: it's pure,
+// header-only C++ (NOVASVG_INLINE / internal-linkage everywhere), nothing
+// in this project links against it from actual C code, and the vendored
+// STB headers already manage their own extern "C" internally when
+// compiled as C++.
+
+#include "detail/render/blend.h"
+#include "detail/render/canvas.h"
+#include "detail/render/font.h"
+#include "detail/render/matrix.h"
+#include "detail/render/paint.h"
+#include "detail/render/path.h"
+#include "detail/render/rasterize.h"
+#include "detail/render/surface.h"
+
+#include "detail/graphics.h"
+#include "detail/novasvg.hpp"
+#include "detail/svgelement.h"
+#include "detail/svgparser.hpp"
 
 #endif // NOVASVG_H
