@@ -10,15 +10,23 @@
 #include <string.h>
 #include <float.h>
 #include <math.h>
+#include <algorithm>
+
+namespace novasvg {
+namespace render {
 
 #define NOVASVG_IS_NUM(c) ((c) >= '0' && (c) <= '9')
 #define NOVASVG_IS_ALPHA(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z'))
 #define NOVASVG_IS_ALNUM(c) (NOVASVG_IS_ALPHA(c) || NOVASVG_IS_NUM(c))
 #define NOVASVG_IS_WS(c) ((c) == ' ' || (c) == '\t' || (c) == '\n' || (c) == '\r')
 
-#define novasvg_min(a, b) ((a) < (b) ? (a) : (b))
-#define novasvg_max(a, b) ((a) > (b) ? (a) : (b))
-#define novasvg_clamp(v, lo, hi) ((v) < (lo) ? (lo) : ((v) > (hi) ? (hi) : (v)))
+// min/max/clamp were plain macros here (novasvg_min/max/clamp) -- pure
+// numeric helpers with an exact STL equivalent, so they're gone in favor
+// of std::min/std::max/std::clamp at every call site instead of being
+// reimplemented. What's left below (alpha/red/green/blue channel
+// extraction, the dynamic array, the mutex wrapper, the refcounting
+// helpers) has no STL equivalent doing the same job, so those stay as
+// genuinely-own, C-style, prefixed macros/functions.
 
 #define novasvg_alpha(c) (((c) >> 24) & 0xff)
 #define novasvg_red(c) (((c) >> 16) & 0xff)
@@ -62,7 +70,7 @@
 #define novasvg_array_clear(array) ((array).size = 0)
 #define novasvg_array_destroy(array) free((array).data)
 
-static inline uint32_t novasvg_premultiply_argb(uint32_t color)
+static inline uint32_t premultiply_argb(uint32_t color)
 {
     uint32_t a = novasvg_alpha(color);
     uint32_t r = novasvg_red(color);
@@ -77,7 +85,7 @@ static inline uint32_t novasvg_premultiply_argb(uint32_t color)
     return (a << 24) | (r << 16) | (g << 8) | (b);
 }
 
-static inline bool novasvg_parse_number(const char** begin, const char* end, float* number)
+static inline bool parse_number(const char** begin, const char* end, float* number)
 {
     const char* it = *begin;
     float integer = 0;
@@ -136,7 +144,7 @@ static inline bool novasvg_parse_number(const char** begin, const char* end, flo
     return *number >= -FLT_MAX && *number <= FLT_MAX;
 }
 
-static inline bool novasvg_skip_delim(const char** begin, const char* end, const char delim)
+static inline bool skip_delim(const char** begin, const char* end, const char delim)
 {
     const char* it = *begin;
     if(it < end && *it == delim) {
@@ -147,7 +155,7 @@ static inline bool novasvg_skip_delim(const char** begin, const char* end, const
     return false;
 }
 
-static inline bool novasvg_skip_string(const char** begin, const char* end, const char* data)
+static inline bool skip_string(const char** begin, const char* end, const char* data)
 {
     const char* it = *begin;
     while(it < end && *data && *it == *data) {
@@ -163,7 +171,7 @@ static inline bool novasvg_skip_string(const char** begin, const char* end, cons
     return false;
 }
 
-static inline bool novasvg_skip_ws(const char** begin, const char* end)
+static inline bool skip_ws(const char** begin, const char* end)
 {
     const char* it = *begin;
     while(it < end && NOVASVG_IS_WS(*it))
@@ -172,13 +180,13 @@ static inline bool novasvg_skip_ws(const char** begin, const char* end)
     return it < end;
 }
 
-static inline bool novasvg_skip_ws_and_delim(const char** begin, const char* end, char delim)
+static inline bool skip_ws_and_delim(const char** begin, const char* end, char delim)
 {
     const char* it = *begin;
-    if(novasvg_skip_ws(&it, end)) {
-        if(!novasvg_skip_delim(&it, end, delim))
+    if(skip_ws(&it, end)) {
+        if(!skip_delim(&it, end, delim))
             return false;
-        novasvg_skip_ws(&it, end);
+        skip_ws(&it, end);
     } else {
         return false;
     }
@@ -187,21 +195,21 @@ static inline bool novasvg_skip_ws_and_delim(const char** begin, const char* end
     return it < end;
 }
 
-static inline bool novasvg_skip_ws_and_comma(const char** begin, const char* end)
+static inline bool skip_ws_and_comma(const char** begin, const char* end)
 {
-    return novasvg_skip_ws_and_delim(begin, end, ',');
+    return skip_ws_and_delim(begin, end, ',');
 }
 
-static inline bool novasvg_skip_ws_or_delim(const char** begin, const char* end, char delim, bool* has_delim)
+static inline bool skip_ws_or_delim(const char** begin, const char* end, char delim, bool* has_delim)
 {
     const char* it = *begin;
     if(has_delim)
         *has_delim = false;
-    if(novasvg_skip_ws(&it, end)) {
-        if(novasvg_skip_delim(&it, end, delim)) {
+    if(skip_ws(&it, end)) {
+        if(skip_delim(&it, end, delim)) {
             if(has_delim)
                 *has_delim = true;
-            novasvg_skip_ws(&it, end);
+            skip_ws(&it, end);
         }
     }
 
@@ -211,9 +219,12 @@ static inline bool novasvg_skip_ws_or_delim(const char** begin, const char* end,
     return it < end;
 }
 
-static inline bool novasvg_skip_ws_or_comma(const char** begin, const char* end, bool* has_comma)
+static inline bool skip_ws_or_comma(const char** begin, const char* end, bool* has_comma)
 {
-    return novasvg_skip_ws_or_delim(begin, end, ',', has_comma);
+    return skip_ws_or_delim(begin, end, ',', has_comma);
 }
+
+} // namespace render
+} // namespace novasvg
 
 #endif // NOVASVG_UTILS_H

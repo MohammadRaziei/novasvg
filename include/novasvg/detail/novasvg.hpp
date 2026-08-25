@@ -1,5 +1,4 @@
 #include "svgelement.h"
-#include "svgrenderstate.h"
 
 #include <cstring>
 #include <fstream>
@@ -7,6 +6,7 @@
 
 
 namespace novasvg {
+using namespace render; // render/ layer (novasvg::render), the former plutovg
 
 NOVASVG_INLINE int version()
 {
@@ -23,23 +23,23 @@ NOVASVG_INLINE bool addFontFaceFromFile(const char* family, bool bold, bool ital
     return fontFaceCache()->addFontFace(family, bold, italic, FontFace(filename));
 }
 
-NOVASVG_INLINE bool addFontFaceFromData(const char* family, bool bold, bool italic, const void* data, size_t length, novasvg_destroy_func_t destroy_func, void* closure)
+NOVASVG_INLINE bool addFontFaceFromData(const char* family, bool bold, bool italic, const void* data, size_t length, destroy_func_t destroy_func, void* closure)
 {
     return fontFaceCache()->addFontFace(family, bold, italic, FontFace(data, length, destroy_func, closure));
 }
 
 NOVASVG_INLINE Bitmap::Bitmap(int width, int height)
-    : m_surface(novasvg_surface_create(width, height))
+    : m_surface(surface_create(width, height))
 {
 }
 
 NOVASVG_INLINE Bitmap::Bitmap(uint8_t* data, int width, int height, int stride)
-    : m_surface(novasvg_surface_create_for_data(data, width, height, stride))
+    : m_surface(surface_create_for_data(data, width, height, stride))
 {
 }
 
 NOVASVG_INLINE Bitmap::Bitmap(const Bitmap& bitmap)
-    : m_surface(novasvg_surface_reference(bitmap.surface()))
+    : m_surface(surface_reference(bitmap.surface()))
 {
 }
 
@@ -50,7 +50,7 @@ NOVASVG_INLINE Bitmap::Bitmap(Bitmap&& bitmap)
 
 NOVASVG_INLINE Bitmap::~Bitmap()
 {
-    novasvg_surface_destroy(m_surface);
+    surface_destroy(m_surface);
 }
 
 NOVASVG_INLINE Bitmap& Bitmap::operator=(const Bitmap& bitmap)
@@ -67,28 +67,28 @@ NOVASVG_INLINE void Bitmap::swap(Bitmap& bitmap)
 NOVASVG_INLINE uint8_t* Bitmap::data() const
 {
     if(m_surface)
-        return novasvg_surface_get_data(m_surface);
+        return surface_get_data(m_surface);
     return nullptr;
 }
 
 NOVASVG_INLINE int Bitmap::width() const
 {
     if(m_surface)
-        return novasvg_surface_get_width(m_surface);
+        return surface_get_width(m_surface);
     return 0;
 }
 
 NOVASVG_INLINE int Bitmap::height() const
 {
     if(m_surface)
-        return novasvg_surface_get_height(m_surface);
+        return surface_get_height(m_surface);
     return 0;
 }
 
 NOVASVG_INLINE int Bitmap::stride() const
 {
     if(m_surface)
-        return novasvg_surface_get_stride(m_surface);
+        return surface_get_stride(m_surface);
     return 0;
 }
 
@@ -96,20 +96,20 @@ NOVASVG_INLINE void Bitmap::clear(uint32_t value)
 {
     if(m_surface == nullptr)
         return;
-    novasvg_color_t color;
-    novasvg_color_init_rgba32(&color, value);
-    novasvg_surface_clear(m_surface, &color);
+    color_t color;
+    color_init_rgba32(&color, value);
+    surface_clear(m_surface, &color);
 }
 
 NOVASVG_INLINE void Bitmap::convertToRGBA()
 {
     if(m_surface == nullptr)
         return;
-    auto data = novasvg_surface_get_data(m_surface);
-    auto width = novasvg_surface_get_width(m_surface);
-    auto height = novasvg_surface_get_height(m_surface);
-    auto stride = novasvg_surface_get_stride(m_surface);
-    novasvg_convert_argb_to_rgba(data, data, width, height, stride);
+    auto data = surface_get_data(m_surface);
+    auto width = surface_get_width(m_surface);
+    auto height = surface_get_height(m_surface);
+    auto stride = surface_get_stride(m_surface);
+    convert_argb_to_rgba(data, data, width, height, stride);
 }
 
 NOVASVG_INLINE Bitmap& Bitmap::operator=(Bitmap&& bitmap)
@@ -121,18 +121,18 @@ NOVASVG_INLINE Bitmap& Bitmap::operator=(Bitmap&& bitmap)
 NOVASVG_INLINE bool Bitmap::writeToPng(const std::string& filename) const
 {
     if(m_surface)
-        return novasvg_surface_write_to_png(m_surface, filename.data());
+        return surface_write_to_png(m_surface, filename.data());
     return false;
 }
 
-NOVASVG_INLINE bool Bitmap::writeToPng(novasvg_write_func_t callback, void* closure) const
+NOVASVG_INLINE bool Bitmap::writeToPng(write_func_t callback, void* closure) const
 {
     if(m_surface)
-        return novasvg_surface_write_to_png_stream(m_surface, callback, closure);
+        return surface_write_to_png_stream(m_surface, callback, closure);
     return false;
 }
 
-NOVASVG_INLINE novasvg_surface_t* Bitmap::release()
+NOVASVG_INLINE surface_t* Bitmap::release()
 {
     return std::exchange(m_surface, nullptr);
 }
@@ -163,7 +163,7 @@ NOVASVG_INLINE Matrix::Matrix(float a, float b, float c, float d, float e, float
 {
 }
 
-NOVASVG_INLINE Matrix::Matrix(const novasvg_matrix_t& matrix)
+NOVASVG_INLINE Matrix::Matrix(const matrix_t& matrix)
     : a(matrix.a), b(matrix.b), c(matrix.c), d(matrix.d), e(matrix.e), f(matrix.f)
 {
 }

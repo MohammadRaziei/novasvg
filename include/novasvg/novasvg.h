@@ -74,8 +74,14 @@
 
 #include "detail/novacolor.h"
 
-typedef struct novasvg_surface novasvg_surface_t;
-typedef struct novasvg_matrix novasvg_matrix_t;
+namespace novasvg {
+namespace render {
+struct surface;
+struct matrix;
+using surface_t = surface;
+using matrix_t = matrix;
+} // namespace render
+} // namespace novasvg
 
 /**
  * @brief Callback for cleaning up resources.
@@ -96,6 +102,7 @@ typedef void (*novasvg_write_func_t)(void* closure, void* data, int size);
 
 
 namespace novasvg {
+using namespace render;
 
 /**
  * @brief Returns the version of the novasvg library encoded in a single integer.
@@ -183,7 +190,7 @@ public:
     /**
      * @internal
      */
-    Bitmap(novasvg_surface_t* surface) : m_surface(surface) {}
+    Bitmap(surface_t* surface) : m_surface(surface) {}
 
     /**
      * @brief Cleans up any resources associated with the bitmap.
@@ -276,11 +283,11 @@ public:
     /**
      * @internal
      */
-    novasvg_surface_t* surface() const { return m_surface; }
+    surface_t* surface() const { return m_surface; }
 
 private:
-    novasvg_surface_t* release();
-    novasvg_surface_t* m_surface{nullptr};
+    surface_t* release();
+    surface_t* m_surface{nullptr};
 };
 
 class Rect;
@@ -356,7 +363,7 @@ public:
     /**
      * @internal
      */
-    Matrix(const novasvg_matrix_t& matrix);
+    Matrix(const matrix_t& matrix);
 
     /**
      * @internal

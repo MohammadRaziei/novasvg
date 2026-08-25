@@ -37,14 +37,8 @@
 #include "render/rasterize.h"
 #include "render/surface.h"
 
-#include "graphics.hpp"
+#include "graphics.h"
 #include "novasvg.hpp"
-#include "svgelement.hpp"
-#include "svggeometryelement.hpp"
-#include "svglayoutstate.hpp"
-#include "svgpaintelement.hpp"
+#include "svgelement.h"
 #include "svgparser.hpp"
-#include "svgproperty.hpp"
-#include "svgrenderstate.hpp"
-#include "svgtextelement.hpp"
 

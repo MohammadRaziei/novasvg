@@ -10,7 +10,10 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "vendor/stb_truetype.h"
 
-static int novasvg_text_iterator_length(const void* data, novasvg_text_encoding_t encoding)
+namespace novasvg {
+namespace render {
+
+static int text_iterator_length(const void* data, text_encoding_t encoding)
 {
     int length = 0;
     switch(encoding) {
@@ -37,24 +40,24 @@ static int novasvg_text_iterator_length(const void* data, novasvg_text_encoding_
     return length;
 }
 
-NOVASVG_INLINE void novasvg_text_iterator_init(novasvg_text_iterator_t* it, const void* text, int length, novasvg_text_encoding_t encoding)
+NOVASVG_INLINE void text_iterator_init(text_iterator_t* it, const void* text, int length, text_encoding_t encoding)
 {
     if(length == -1)
-        length = novasvg_text_iterator_length(text, encoding);
+        length = text_iterator_length(text, encoding);
     it->text = text;
     it->length = length;
     it->encoding = encoding;
     it->index = 0;
 }
 
-NOVASVG_INLINE bool novasvg_text_iterator_has_next(const novasvg_text_iterator_t* it)
+NOVASVG_INLINE bool text_iterator_has_next(const text_iterator_t* it)
 {
     return it->index < it->length;
 }
 
-NOVASVG_INLINE novasvg_codepoint_t novasvg_text_iterator_next(novasvg_text_iterator_t* it)
+NOVASVG_INLINE codepoint_t text_iterator_next(text_iterator_t* it)
 {
-    novasvg_codepoint_t codepoint = 0;
+    codepoint_t codepoint = 0;
     switch(it->encoding) {
     case NOVASVG_TEXT_ENCODING_LATIN1: {
         const uint8_t* text = static_cast<const uint8_t*>(it->text);
@@ -112,9 +115,13 @@ NOVASVG_INLINE novasvg_codepoint_t novasvg_text_iterator_next(novasvg_text_itera
 
 #if defined(_WIN32)
 
+} // namespace render
+} // namespace novasvg
 #include <windows.h>
+namespace novasvg {
+namespace render {
 
-typedef CRITICAL_SECTION novasvg_mutex_t;
+typedef CRITICAL_SECTION mutex_t;
 
 #define novasvg_mutex_init(mutex) InitializeCriticalSection(mutex)
 #define novasvg_mutex_lock(mutex) EnterCriticalSection(mutex)
@@ -123,9 +130,13 @@ typedef CRITICAL_SECTION novasvg_mutex_t;
 
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && defined(HAVE_THREADS_H) && !defined(__STDC_NO_THREADS__)
 
+} // namespace render
+} // namespace novasvg
 #include <threads.h>
+namespace novasvg {
+namespace render {
 
-typedef mtx_t novasvg_mutex_t;
+typedef mtx_t mutex_t;
 
 #define novasvg_mutex_init(mutex) mtx_init(mutex, mtx_plain | mtx_recursive)
 #define novasvg_mutex_lock(mutex) mtx_lock(mutex)
@@ -134,7 +145,7 @@ typedef mtx_t novasvg_mutex_t;
 
 #else
 
-typedef int novasvg_mutex_t;
+typedef int mutex_t;
 
 #define novasvg_mutex_init(mutex) ((void)(mutex))
 #define novasvg_mutex_lock(mutex) ((void)(mutex))
@@ -143,8 +154,8 @@ typedef int novasvg_mutex_t;
 
 #endif
 
-typedef struct novasvg_glyph {
-    novasvg_codepoint_t codepoint;
+typedef struct glyph {
+    codepoint_t codepoint;
     stbtt_vertex* vertices;
     int nvertices;
     int index;
@@ -154,17 +165,17 @@ typedef struct novasvg_glyph {
     int y1;
     int x2;
     int y2;
-    struct novasvg_glyph* next;
-} novasvg_glyph_t;
+    struct glyph* next;
+} glyph_t;
 
 typedef struct {
-    novasvg_glyph_t** glyphs;
+    glyph_t** glyphs;
     size_t size;
     size_t capacity;
-} novasvg_glyph_cache_t;
+} glyph_cache_t;
 
-struct novasvg_font_face {
-    novasvg_ref_count_t ref_count;
+struct font_face {
+    ref_count_t ref_count;
     int ascent;
     int descent;
     int line_gap;
@@ -173,28 +184,28 @@ struct novasvg_font_face {
     int x2;
     int y2;
     stbtt_fontinfo info;
-    novasvg_mutex_t mutex;
-    novasvg_glyph_cache_t cache;
-    novasvg_destroy_func_t destroy_func;
+    mutex_t mutex;
+    glyph_cache_t cache;
+    destroy_func_t destroy_func;
     void* closure;
 };
 
-static void novasvg_glyph_cache_init(novasvg_glyph_cache_t* cache)
+static void glyph_cache_init(glyph_cache_t* cache)
 {
     cache->glyphs = NULL;
     cache->size = 0;
     cache->capacity = 0;
 }
 
-static void novasvg_glyph_cache_finish(novasvg_glyph_cache_t* cache, novasvg_font_face_t* face)
+static void glyph_cache_finish(glyph_cache_t* cache, font_face_t* face)
 {
     novasvg_mutex_lock(&face->mutex);
 
     if(cache->glyphs) {
         for(size_t i = 0; i < cache->capacity; ++i) {
-            novasvg_glyph_t* glyph = cache->glyphs[i];
+            glyph_t* glyph = cache->glyphs[i];
             while(glyph) {
-                novasvg_glyph_t* next = glyph->next;
+                glyph_t* next = glyph->next;
                 stbtt_FreeShape(&face->info, glyph->vertices);
                 free(glyph);
                 glyph = next;
@@ -212,24 +223,24 @@ static void novasvg_glyph_cache_finish(novasvg_glyph_cache_t* cache, novasvg_fon
 
 #define GLYPH_CACHE_INIT_CAPACITY 128
 
-static novasvg_glyph_t* novasvg_glyph_cache_get(novasvg_glyph_cache_t* cache, novasvg_font_face_t* face, novasvg_codepoint_t codepoint)
+static glyph_t* glyph_cache_get(glyph_cache_t* cache, font_face_t* face, codepoint_t codepoint)
 {
     novasvg_mutex_lock(&face->mutex);
 
     if(cache->glyphs == NULL) {
         assert(cache->size == 0);
-        cache->glyphs = static_cast<decltype(cache->glyphs)>(calloc(GLYPH_CACHE_INIT_CAPACITY, sizeof(novasvg_glyph_t*)));
+        cache->glyphs = static_cast<decltype(cache->glyphs)>(calloc(GLYPH_CACHE_INIT_CAPACITY, sizeof(glyph_t*)));
         cache->capacity = GLYPH_CACHE_INIT_CAPACITY;
     }
 
     size_t index = codepoint & (cache->capacity - 1);
-    novasvg_glyph_t* glyph = cache->glyphs[index];
+    glyph_t* glyph = cache->glyphs[index];
     while(glyph && glyph->codepoint != codepoint) {
         glyph = glyph->next;
     }
 
     if(glyph == NULL) {
-        glyph = static_cast<decltype(glyph)>(malloc(sizeof(novasvg_glyph_t)));
+        glyph = static_cast<decltype(glyph)>(malloc(sizeof(glyph_t)));
         glyph->codepoint = codepoint;
         glyph->index = stbtt_FindGlyphIndex(&face->info, codepoint);
         glyph->nvertices = stbtt_GetGlyphShape(&face->info, glyph->index, &glyph->vertices);
@@ -244,12 +255,12 @@ static novasvg_glyph_t* novasvg_glyph_cache_get(novasvg_glyph_cache_t* cache, no
 
         if(cache->size > (cache->capacity * 3 / 4)) {
             size_t newcapacity = cache->capacity << 1;
-            novasvg_glyph_t** newglyphs = static_cast<novasvg_glyph_t**>(calloc(newcapacity, sizeof(novasvg_glyph_t*)));
+            glyph_t** newglyphs = static_cast<glyph_t**>(calloc(newcapacity, sizeof(glyph_t*)));
 
             for(size_t i = 0; i < cache->capacity; ++i) {
-                novasvg_glyph_t* entry = cache->glyphs[i];
+                glyph_t* entry = cache->glyphs[i];
                 while(entry) {
-                    novasvg_glyph_t* next = entry->next;
+                    glyph_t* next = entry->next;
                     size_t newindex = entry->codepoint & (newcapacity - 1);
                     entry->next = newglyphs[newindex];
                     newglyphs[newindex] = entry;
@@ -267,7 +278,7 @@ static novasvg_glyph_t* novasvg_glyph_cache_get(novasvg_glyph_cache_t* cache, no
     return glyph;
 }
 
-NOVASVG_INLINE novasvg_font_face_t* novasvg_font_face_load_from_file(const char* filename, int ttcindex)
+NOVASVG_INLINE font_face_t* font_face_load_from_file(const char* filename, int ttcindex)
 {
     FILE* fp = fopen(filename, "rb");
     if(fp == NULL) {
@@ -296,10 +307,10 @@ NOVASVG_INLINE novasvg_font_face_t* novasvg_font_face_load_from_file(const char*
         return NULL;
     }
 
-    return novasvg_font_face_load_from_data(data, length, ttcindex, free, data);
+    return font_face_load_from_data(data, length, ttcindex, free, data);
 }
 
-NOVASVG_INLINE novasvg_font_face_t* novasvg_font_face_load_from_data(const void* data, unsigned int length, int ttcindex, novasvg_destroy_func_t destroy_func, void* closure)
+NOVASVG_INLINE font_face_t* font_face_load_from_data(const void* data, unsigned int length, int ttcindex, destroy_func_t destroy_func, void* closure)
 {
     stbtt_fontinfo info;
     int offset = stbtt_GetFontOffsetForIndex(static_cast<const unsigned char*>(data), ttcindex);
@@ -309,28 +320,28 @@ NOVASVG_INLINE novasvg_font_face_t* novasvg_font_face_load_from_data(const void*
         return NULL;
     }
 
-    novasvg_font_face_t* face = static_cast<novasvg_font_face_t*>(malloc(sizeof(novasvg_font_face_t)));
+    font_face_t* face = static_cast<font_face_t*>(malloc(sizeof(font_face_t)));
     novasvg_init_reference(face);
     face->info = info;
     stbtt_GetFontVMetrics(&face->info, &face->ascent, &face->descent, &face->line_gap);
     stbtt_GetFontBoundingBox(&face->info, &face->x1, &face->y1, &face->x2, &face->y2);
     novasvg_mutex_init(&face->mutex);
-    novasvg_glyph_cache_init(&face->cache);
+    glyph_cache_init(&face->cache);
     face->destroy_func = destroy_func;
     face->closure = closure;
     return face;
 }
 
-NOVASVG_INLINE novasvg_font_face_t* novasvg_font_face_reference(novasvg_font_face_t* face)
+NOVASVG_INLINE font_face_t* font_face_reference(font_face_t* face)
 {
     novasvg_increment_reference(face);
     return face;
 }
 
-NOVASVG_INLINE void novasvg_font_face_destroy(novasvg_font_face_t* face)
+NOVASVG_INLINE void font_face_destroy(font_face_t* face)
 {
     if(novasvg_destroy_reference(face)) {
-        novasvg_glyph_cache_finish(&face->cache, face);
+        glyph_cache_finish(&face->cache, face);
         novasvg_mutex_destroy(&face->mutex);
         if(face->destroy_func)
             face->destroy_func(face->closure);
@@ -338,19 +349,19 @@ NOVASVG_INLINE void novasvg_font_face_destroy(novasvg_font_face_t* face)
     }
 }
 
-NOVASVG_INLINE int novasvg_font_face_get_reference_count(const novasvg_font_face_t* face)
+NOVASVG_INLINE int font_face_get_reference_count(const font_face_t* face)
 {
     return novasvg_get_reference_count(face);
 }
 
-static float novasvg_font_face_get_scale(const novasvg_font_face_t* face, float size)
+static float font_face_get_scale(const font_face_t* face, float size)
 {
     return stbtt_ScaleForMappingEmToPixels(&face->info, size);
 }
 
-NOVASVG_INLINE void novasvg_font_face_get_metrics(const novasvg_font_face_t* face, float size, float* ascent, float* descent, float* line_gap, novasvg_rect_t* extents)
+NOVASVG_INLINE void font_face_get_metrics(const font_face_t* face, float size, float* ascent, float* descent, float* line_gap, rect_t* extents)
 {
-    float scale = novasvg_font_face_get_scale(face, size);
+    float scale = font_face_get_scale(face, size);
     if(ascent) *ascent = face->ascent * scale;
     if(descent) *descent = face->descent * scale;
     if(line_gap) *line_gap = face->line_gap * scale;
@@ -362,15 +373,15 @@ NOVASVG_INLINE void novasvg_font_face_get_metrics(const novasvg_font_face_t* fac
     }
 }
 
-static novasvg_glyph_t* novasvg_font_face_get_glyph(novasvg_font_face_t* face, novasvg_codepoint_t codepoint)
+static glyph_t* font_face_get_glyph(font_face_t* face, codepoint_t codepoint)
 {
-    return novasvg_glyph_cache_get(&face->cache, face, codepoint);
+    return glyph_cache_get(&face->cache, face, codepoint);
 }
 
-NOVASVG_INLINE void novasvg_font_face_get_glyph_metrics(novasvg_font_face_t* face, float size, novasvg_codepoint_t codepoint, float* advance_width, float* left_side_bearing, novasvg_rect_t* extents)
+NOVASVG_INLINE void font_face_get_glyph_metrics(font_face_t* face, float size, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents)
 {
-    float scale = novasvg_font_face_get_scale(face, size);
-    novasvg_glyph_t* glyph = novasvg_font_face_get_glyph(face, codepoint);
+    float scale = font_face_get_scale(face, size);
+    glyph_t* glyph = font_face_get_glyph(face, codepoint);
     if(advance_width) *advance_width = glyph->advance_width * scale;
     if(left_side_bearing) *left_side_bearing = glyph->left_side_bearing * scale;
     if(extents) {
@@ -381,53 +392,53 @@ NOVASVG_INLINE void novasvg_font_face_get_glyph_metrics(novasvg_font_face_t* fac
     }
 }
 
-static void glyph_traverse_func(void* closure, novasvg_path_command_t command, const novasvg_point_t* points, int npoints)
+static void glyph_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
 {
-    novasvg_path_t* path = (novasvg_path_t*)(closure);
+    path_t* path = (path_t*)(closure);
     switch(command) {
     case NOVASVG_PATH_COMMAND_MOVE_TO:
-        novasvg_path_move_to(path, points[0].x, points[0].y);
+        path_move_to(path, points[0].x, points[0].y);
         break;
     case NOVASVG_PATH_COMMAND_LINE_TO:
-        novasvg_path_line_to(path, points[0].x, points[0].y);
+        path_line_to(path, points[0].x, points[0].y);
         break;
     case NOVASVG_PATH_COMMAND_CUBIC_TO:
-        novasvg_path_cubic_to(path, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
+        path_cubic_to(path, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
         break;
     case NOVASVG_PATH_COMMAND_CLOSE:
         assert(false);
     }
 }
 
-NOVASVG_INLINE float novasvg_font_face_get_glyph_path(novasvg_font_face_t* face, float size, float x, float y, novasvg_codepoint_t codepoint, novasvg_path_t* path)
+NOVASVG_INLINE float font_face_get_glyph_path(font_face_t* face, float size, float x, float y, codepoint_t codepoint, path_t* path)
 {
-    return novasvg_font_face_traverse_glyph_path(face, size, x, y, codepoint, glyph_traverse_func, path);
+    return font_face_traverse_glyph_path(face, size, x, y, codepoint, glyph_traverse_func, path);
 }
 
-NOVASVG_INLINE float novasvg_font_face_traverse_glyph_path(novasvg_font_face_t* face, float size, float x, float y, novasvg_codepoint_t codepoint, novasvg_path_traverse_func_t traverse_func, void* closure)
+NOVASVG_INLINE float font_face_traverse_glyph_path(font_face_t* face, float size, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure)
 {
-    float scale = novasvg_font_face_get_scale(face, size);
-    novasvg_matrix_t matrix;
-    novasvg_matrix_init_translate(&matrix, x, y);
-    novasvg_matrix_scale(&matrix, scale, -scale);
+    float scale = font_face_get_scale(face, size);
+    matrix_t matrix;
+    matrix_init_translate(&matrix, x, y);
+    matrix_scale(&matrix, scale, -scale);
 
-    novasvg_point_t points[3];
-    novasvg_point_t current_point = {0, 0};
-    novasvg_glyph_t* glyph = novasvg_font_face_get_glyph(face, codepoint);
+    point_t points[3];
+    point_t current_point = {0, 0};
+    glyph_t* glyph = font_face_get_glyph(face, codepoint);
     for(int i = 0; i < glyph->nvertices; i++) {
         switch(glyph->vertices[i].type) {
         case STBTT_vmove:
             points[0].x = glyph->vertices[i].x;
             points[0].y = glyph->vertices[i].y;
             current_point = points[0];
-            novasvg_matrix_map_points(&matrix, points, points, 1);
+            matrix_map_points(&matrix, points, points, 1);
             traverse_func(closure, NOVASVG_PATH_COMMAND_MOVE_TO, points, 1);
             break;
         case STBTT_vline:
             points[0].x = glyph->vertices[i].x;
             points[0].y = glyph->vertices[i].y;
             current_point = points[0];
-            novasvg_matrix_map_points(&matrix, points, points, 1);
+            matrix_map_points(&matrix, points, points, 1);
             traverse_func(closure, NOVASVG_PATH_COMMAND_LINE_TO, points, 1);
             break;
         case STBTT_vcurve:
@@ -438,7 +449,7 @@ NOVASVG_INLINE float novasvg_font_face_traverse_glyph_path(novasvg_font_face_t* 
             points[2].x = glyph->vertices[i].x;
             points[2].y = glyph->vertices[i].y;
             current_point = points[2];
-            novasvg_matrix_map_points(&matrix, points, points, 3);
+            matrix_map_points(&matrix, points, points, 3);
             traverse_func(closure, NOVASVG_PATH_COMMAND_CUBIC_TO, points, 3);
             break;
         case STBTT_vcubic:
@@ -449,7 +460,7 @@ NOVASVG_INLINE float novasvg_font_face_traverse_glyph_path(novasvg_font_face_t* 
             points[2].x = glyph->vertices[i].x;
             points[2].y = glyph->vertices[i].y;
             current_point = points[2];
-            novasvg_matrix_map_points(&matrix, points, points, 3);
+            matrix_map_points(&matrix, points, points, 3);
             traverse_func(closure, NOVASVG_PATH_COMMAND_CUBIC_TO, points, 3);
             break;
         default:
@@ -460,24 +471,24 @@ NOVASVG_INLINE float novasvg_font_face_traverse_glyph_path(novasvg_font_face_t* 
     return glyph->advance_width * scale;
 }
 
-NOVASVG_INLINE float novasvg_font_face_text_extents(novasvg_font_face_t* face, float size, const void* text, int length, novasvg_text_encoding_t encoding, novasvg_rect_t* extents)
+NOVASVG_INLINE float font_face_text_extents(font_face_t* face, float size, const void* text, int length, text_encoding_t encoding, rect_t* extents)
 {
-    novasvg_text_iterator_t it;
-    novasvg_text_iterator_init(&it, text, length, encoding);
-    novasvg_rect_t* text_extents = NULL;
+    text_iterator_t it;
+    text_iterator_init(&it, text, length, encoding);
+    rect_t* text_extents = NULL;
     float total_advance_width = 0.f;
-    while(novasvg_text_iterator_has_next(&it)) {
-        novasvg_codepoint_t codepoint = novasvg_text_iterator_next(&it);
+    while(text_iterator_has_next(&it)) {
+        codepoint_t codepoint = text_iterator_next(&it);
 
         float advance_width;
         if(extents == NULL) {
-            novasvg_font_face_get_glyph_metrics(face, size, codepoint, &advance_width, NULL, NULL);
+            font_face_get_glyph_metrics(face, size, codepoint, &advance_width, NULL, NULL);
             total_advance_width += advance_width;
             continue;
         }
 
-        novasvg_rect_t glyph_extents;
-        novasvg_font_face_get_glyph_metrics(face, size, codepoint, &advance_width, NULL, &glyph_extents);
+        rect_t glyph_extents;
+        font_face_get_glyph_metrics(face, size, codepoint, &advance_width, NULL, &glyph_extents);
 
         glyph_extents.x += total_advance_width;
         total_advance_width += advance_width;
@@ -487,10 +498,10 @@ NOVASVG_INLINE float novasvg_font_face_text_extents(novasvg_font_face_t* face, f
             continue;
         }
 
-        float x1 = novasvg_min(text_extents->x, glyph_extents.x);
-        float y1 = novasvg_min(text_extents->y, glyph_extents.y);
-        float x2 = novasvg_max(text_extents->x + text_extents->w, glyph_extents.x + glyph_extents.w);
-        float y2 = novasvg_max(text_extents->y + text_extents->h, glyph_extents.y + glyph_extents.h);
+        float x1 = std::min(text_extents->x, glyph_extents.x);
+        float y1 = std::min(text_extents->y, glyph_extents.y);
+        float x2 = std::max(text_extents->x + text_extents->w, glyph_extents.x + glyph_extents.w);
+        float y2 = std::max(text_extents->y + text_extents->h, glyph_extents.y + glyph_extents.h);
 
         text_extents->x = x1;
         text_extents->y = y1;
@@ -508,28 +519,28 @@ NOVASVG_INLINE float novasvg_font_face_text_extents(novasvg_font_face_t* face, f
     return total_advance_width;
 }
 
-typedef struct novasvg_font_face_entry {
-    novasvg_font_face_t* face;
+typedef struct font_face_entry {
+    font_face_t* face;
     char* family;
     char* filename;
     int ttcindex;
     bool bold;
     bool italic;
-    struct novasvg_font_face_entry* next;
-} novasvg_font_face_entry_t;
+    struct font_face_entry* next;
+} font_face_entry_t;
 
-struct novasvg_font_face_cache {
-    novasvg_ref_count_t ref_count;
-    novasvg_mutex_t mutex;
-    novasvg_font_face_entry_t** entries;
+struct font_face_cache {
+    ref_count_t ref_count;
+    mutex_t mutex;
+    font_face_entry_t** entries;
     int size;
     int capacity;
     bool is_sorted;
 };
 
-NOVASVG_INLINE novasvg_font_face_cache_t* novasvg_font_face_cache_create(void)
+NOVASVG_INLINE font_face_cache_t* font_face_cache_create(void)
 {
-    novasvg_font_face_cache_t* cache = static_cast<novasvg_font_face_cache_t*>(malloc(sizeof(novasvg_font_face_cache_t)));
+    font_face_cache_t* cache = static_cast<font_face_cache_t*>(malloc(sizeof(font_face_cache_t)));
     novasvg_init_reference(cache);
     novasvg_mutex_init(&cache->mutex);
     cache->entries = NULL;
@@ -539,35 +550,35 @@ NOVASVG_INLINE novasvg_font_face_cache_t* novasvg_font_face_cache_create(void)
     return cache;
 }
 
-NOVASVG_INLINE novasvg_font_face_cache_t* novasvg_font_face_cache_reference(novasvg_font_face_cache_t* cache)
+NOVASVG_INLINE font_face_cache_t* font_face_cache_reference(font_face_cache_t* cache)
 {
     novasvg_increment_reference(cache);
     return cache;
 }
 
-NOVASVG_INLINE void novasvg_font_face_cache_destroy(novasvg_font_face_cache_t* cache)
+NOVASVG_INLINE void font_face_cache_destroy(font_face_cache_t* cache)
 {
     if(novasvg_destroy_reference(cache)) {
-        novasvg_font_face_cache_reset(cache);
+        font_face_cache_reset(cache);
         novasvg_mutex_destroy(&cache->mutex);
         free(cache);
     }
 }
 
-NOVASVG_INLINE int novasvg_font_face_cache_reference_count(const novasvg_font_face_cache_t* cache)
+NOVASVG_INLINE int font_face_cache_reference_count(const font_face_cache_t* cache)
 {
     return novasvg_get_reference_count(cache);
 }
 
-NOVASVG_INLINE void novasvg_font_face_cache_reset(novasvg_font_face_cache_t* cache)
+NOVASVG_INLINE void font_face_cache_reset(font_face_cache_t* cache)
 {
     novasvg_mutex_lock(&cache->mutex);
 
     for(int i = 0; i < cache->size; ++i) {
-        novasvg_font_face_entry_t* entry = cache->entries[i];
+        font_face_entry_t* entry = cache->entries[i];
         do {
-            novasvg_font_face_entry_t* next = entry->next;
-            novasvg_font_face_destroy(entry->face);
+            font_face_entry_t* next = entry->next;
+            font_face_destroy(entry->face);
             free(entry);
             entry = next;
         } while(entry);
@@ -582,7 +593,7 @@ NOVASVG_INLINE void novasvg_font_face_cache_reset(novasvg_font_face_cache_t* cac
     novasvg_mutex_unlock(&cache->mutex);
 }
 
-static void novasvg_font_face_cache_add_entry(novasvg_font_face_cache_t* cache, novasvg_font_face_entry_t* entry)
+static void font_face_cache_add_entry(font_face_cache_t* cache, font_face_entry_t* entry)
 {
     novasvg_mutex_lock(&cache->mutex);
 
@@ -596,7 +607,7 @@ static void novasvg_font_face_cache_add_entry(novasvg_font_face_cache_t* cache, 
 
     if(cache->size >= cache->capacity) {
         cache->capacity = cache->capacity == 0 ? 8 : cache->capacity << 2;
-        cache->entries = static_cast<decltype(cache->entries)>(realloc(cache->entries, cache->capacity * sizeof(novasvg_font_face_entry_t*)));
+        cache->entries = static_cast<decltype(cache->entries)>(realloc(cache->entries, cache->capacity * sizeof(font_face_entry_t*)));
     }
 
     entry->next = NULL;
@@ -607,13 +618,13 @@ unlock:
     novasvg_mutex_unlock(&cache->mutex);
 }
 
-NOVASVG_INLINE void novasvg_font_face_cache_add(novasvg_font_face_cache_t* cache, const char* family, bool bold, bool italic, novasvg_font_face_t* face)
+NOVASVG_INLINE void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold, bool italic, font_face_t* face)
 {
     if(family == NULL) family = "";
     size_t family_length = strlen(family) + 1;
 
-    novasvg_font_face_entry_t* entry = static_cast<novasvg_font_face_entry_t*>(malloc(family_length + sizeof(novasvg_font_face_entry_t)));
-    entry->face = novasvg_font_face_reference(face);
+    font_face_entry_t* entry = static_cast<font_face_entry_t*>(malloc(family_length + sizeof(font_face_entry_t)));
+    entry->face = font_face_reference(face);
     entry->family = (char*)(entry + 1);
     memcpy(entry->family, family, family_length);
 
@@ -622,65 +633,65 @@ NOVASVG_INLINE void novasvg_font_face_cache_add(novasvg_font_face_cache_t* cache
     entry->bold = bold;
     entry->italic = italic;
 
-    novasvg_font_face_cache_add_entry(cache, entry);
+    font_face_cache_add_entry(cache, entry);
 }
 
-NOVASVG_INLINE bool novasvg_font_face_cache_add_file(novasvg_font_face_cache_t* cache, const char* family, bool bold, bool italic, const char* filename, int ttcindex)
+NOVASVG_INLINE bool font_face_cache_add_file(font_face_cache_t* cache, const char* family, bool bold, bool italic, const char* filename, int ttcindex)
 {
-    novasvg_font_face_t* face = novasvg_font_face_load_from_file(filename, ttcindex);
+    font_face_t* face = font_face_load_from_file(filename, ttcindex);
     if(face == NULL)
         return false;
-    novasvg_font_face_cache_add(cache, family, bold, italic, face);
-    novasvg_font_face_destroy(face);
+    font_face_cache_add(cache, family, bold, italic, face);
+    font_face_destroy(face);
     return true;
 }
 
-static novasvg_font_face_entry_t* novasvg_font_face_entry_select(novasvg_font_face_entry_t* a, novasvg_font_face_entry_t* b, bool bold, bool italic)
+static font_face_entry_t* font_face_entry_select(font_face_entry_t* a, font_face_entry_t* b, bool bold, bool italic)
 {
     int a_score = (bold == a->bold) + (italic == a->italic);
     int b_score = (bold == b->bold) + (italic == b->italic);
     return a_score > b_score ? a : b;
 }
 
-static int novasvg_font_face_entry_compare(const void* a, const void* b)
+static int font_face_entry_compare(const void* a, const void* b)
 {
-    const novasvg_font_face_entry_t* a_entry = *(const novasvg_font_face_entry_t**)a;
-    const novasvg_font_face_entry_t* b_entry = *(const novasvg_font_face_entry_t**)b;
+    const font_face_entry_t* a_entry = *(const font_face_entry_t**)a;
+    const font_face_entry_t* b_entry = *(const font_face_entry_t**)b;
     return strcmp(a_entry->family, b_entry->family);
 }
 
-NOVASVG_INLINE novasvg_font_face_t* novasvg_font_face_cache_get(novasvg_font_face_cache_t* cache, const char* family, bool bold, bool italic)
+NOVASVG_INLINE font_face_t* font_face_cache_get(font_face_cache_t* cache, const char* family, bool bold, bool italic)
 {
     novasvg_mutex_lock(&cache->mutex);
 
     if(!cache->is_sorted && cache->size > 0) {
-        qsort(cache->entries, cache->size, sizeof(cache->entries[0]), novasvg_font_face_entry_compare);
+        qsort(cache->entries, cache->size, sizeof(cache->entries[0]), font_face_entry_compare);
         cache->is_sorted = true;
     }
 
-    novasvg_font_face_entry_t entry_key;
+    font_face_entry_t entry_key;
     entry_key.family = (char*)(family);
 
-    novasvg_font_face_entry_t* entry_key_ptr = &entry_key;
-    novasvg_font_face_entry_t** entry_result = static_cast<novasvg_font_face_entry_t**>(bsearch(
+    font_face_entry_t* entry_key_ptr = &entry_key;
+    font_face_entry_t** entry_result = static_cast<font_face_entry_t**>(bsearch(
         &entry_key_ptr,
         cache->entries,
         cache->size,
         sizeof(cache->entries[0]),
-        novasvg_font_face_entry_compare
+        font_face_entry_compare
     ));
 
-    novasvg_font_face_t* face = NULL;
+    font_face_t* face = NULL;
     if(entry_result) {
-        novasvg_font_face_entry_t* selected = *entry_result;
-        novasvg_font_face_entry_t* entry = selected->next;
+        font_face_entry_t* selected = *entry_result;
+        font_face_entry_t* entry = selected->next;
         while(entry) {
-            selected = novasvg_font_face_entry_select(entry, selected, bold, italic);
+            selected = font_face_entry_select(entry, selected, bold, italic);
             entry = entry->next;
         }
 
         if(selected->filename && selected->face == NULL)
-            selected->face = novasvg_font_face_load_from_file(selected->filename, selected->ttcindex);
+            selected->face = font_face_load_from_file(selected->filename, selected->ttcindex);
         face = selected->face;
     }
 
@@ -690,28 +701,64 @@ NOVASVG_INLINE novasvg_font_face_t* novasvg_font_face_cache_get(novasvg_font_fac
 
 #ifndef NOVASVG_DISABLE_FONT_FACE_CACHE_LOAD
 
+} // namespace render
+} // namespace novasvg
 #include <ctype.h>
+namespace novasvg {
+namespace render {
 
 #ifdef _WIN32
+} // namespace render
+} // namespace novasvg
 #include <windows.h>
+namespace novasvg {
+namespace render {
 #else
+} // namespace render
+} // namespace novasvg
 #include <fcntl.h>
+namespace novasvg {
+namespace render {
+} // namespace render
+} // namespace novasvg
 #include <unistd.h>
+namespace novasvg {
+namespace render {
+} // namespace render
+} // namespace novasvg
 #include <dirent.h>
+namespace novasvg {
+namespace render {
 
 #ifdef __linux__
+} // namespace render
+} // namespace novasvg
 #include <linux/limits.h>
+namespace novasvg {
+namespace render {
 #else
+} // namespace render
+} // namespace novasvg
 #include <limits.h>
+namespace novasvg {
+namespace render {
 #endif
 
+} // namespace render
+} // namespace novasvg
 #include <sys/mman.h>
+namespace novasvg {
+namespace render {
+} // namespace render
+} // namespace novasvg
 #include <sys/stat.h>
+namespace novasvg {
+namespace render {
 #endif
 
 #ifdef _WIN32
 
-static void* novasvg_mmap(const char* filename, long* length)
+static void* mmap(const char* filename, long* length)
 {
     HANDLE file = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if(file == INVALID_HANDLE_VALUE)
@@ -738,14 +785,14 @@ static void* novasvg_mmap(const char* filename, long* length)
     return data;
 }
 
-static void novasvg_unmap(void* data, long length)
+static void unmap(void* data, long length)
 {
     UnmapViewOfFile(data);
 }
 
 #else
 
-static void* novasvg_mmap(const char* filename, long* length)
+static void* mmap(const char* filename, long* length)
 {
     int fd = open(filename, O_RDONLY);
     if(fd < 0)
@@ -761,7 +808,7 @@ static void* novasvg_mmap(const char* filename, long* length)
         return NULL;
     }
 
-    void* data = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    void* data = ::mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     close(fd);
 
     if(data == MAP_FAILED)
@@ -770,17 +817,17 @@ static void* novasvg_mmap(const char* filename, long* length)
     return data;
 }
 
-static void novasvg_unmap(void* data, long length)
+static void unmap(void* data, long length)
 {
     munmap(data, length);
 }
 
 #endif // _WIN32
 
-NOVASVG_INLINE int novasvg_font_face_cache_load_file(novasvg_font_face_cache_t* cache, const char* filename)
+NOVASVG_INLINE int font_face_cache_load_file(font_face_cache_t* cache, const char* filename)
 {
     long length;
-    stbtt_uint8* data = static_cast<stbtt_uint8*>(novasvg_mmap(filename, &length));
+    stbtt_uint8* data = static_cast<stbtt_uint8*>(mmap(filename, &length));
     if(data == NULL) {
         return 0;
     }
@@ -830,7 +877,7 @@ NOVASVG_INLINE int novasvg_font_face_cache_load_file(novasvg_font_face_cache_t* 
         size_t filename_length = strlen(filename) + 1;
         size_t max_family_length = (unicode_family_name ? 3 * (family_length / 2) : family_length * 3) + 1;
 
-        novasvg_font_face_entry_t* entry = static_cast<novasvg_font_face_entry_t*>(malloc(max_family_length + filename_length + sizeof(novasvg_font_face_entry_t)));
+        font_face_entry_t* entry = static_cast<font_face_entry_t*>(malloc(max_family_length + filename_length + sizeof(font_face_entry_t)));
         entry->family = (char*)(entry + 1);
         entry->filename = entry->family + max_family_length;
         memcpy(entry->filename, filename, filename_length);
@@ -937,15 +984,15 @@ NOVASVG_INLINE int novasvg_font_face_cache_load_file(novasvg_font_face_cache_t* 
             entry->italic = true;
         }
 
-        novasvg_font_face_cache_add_entry(cache, entry);
+        font_face_cache_add_entry(cache, entry);
         num_faces++;
     }
 
-    novasvg_unmap(data, length);
+    unmap(data, length);
     return num_faces;
 }
 
-static bool novasvg_font_face_supports_file(const char* filename)
+static bool font_face_supports_file(const char* filename)
 {
     const char* extension = strrchr(filename, '.');
     if(extension) {
@@ -967,7 +1014,7 @@ static bool novasvg_font_face_supports_file(const char* filename)
 
 #ifdef _WIN32
 
-NOVASVG_INLINE int novasvg_font_face_cache_load_dir(novasvg_font_face_cache_t* cache, const char* dirname)
+NOVASVG_INLINE int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirname)
 {
     char search_path[MAX_PATH];
     snprintf(search_path, sizeof(search_path), "%s\\*", dirname);
@@ -988,9 +1035,9 @@ NOVASVG_INLINE int novasvg_font_face_cache_load_dir(novasvg_font_face_cache_t* c
         snprintf(path, sizeof(path), "%s\\%s", dirname, name);
 
         if(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-            num_faces += novasvg_font_face_cache_load_dir(cache, path);
-        } else if(novasvg_font_face_supports_file(path)) {
-            num_faces += novasvg_font_face_cache_load_file(cache, path);
+            num_faces += font_face_cache_load_dir(cache, path);
+        } else if(font_face_supports_file(path)) {
+            num_faces += font_face_cache_load_file(cache, path);
         }
     } while(FindNextFileA(handle, &find_data));
 
@@ -1000,7 +1047,7 @@ NOVASVG_INLINE int novasvg_font_face_cache_load_dir(novasvg_font_face_cache_t* c
 
 #else
 
-NOVASVG_INLINE int novasvg_font_face_cache_load_dir(novasvg_font_face_cache_t* cache, const char* dirname)
+NOVASVG_INLINE int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirname)
 {
     DIR* dir = opendir(dirname);
     if(dir == NULL) {
@@ -1020,9 +1067,9 @@ NOVASVG_INLINE int novasvg_font_face_cache_load_dir(novasvg_font_face_cache_t* c
         if(stat(path, &st) == -1)
             continue;
         if(S_ISDIR(st.st_mode)) {
-            num_faces += novasvg_font_face_cache_load_dir(cache, path);
-        } else if(S_ISREG(st.st_mode) && novasvg_font_face_supports_file(path)) {
-            num_faces += novasvg_font_face_cache_load_file(cache, path);
+            num_faces += font_face_cache_load_dir(cache, path);
+        } else if(S_ISREG(st.st_mode) && font_face_supports_file(path)) {
+            num_faces += font_face_cache_load_file(cache, path);
         }
     }
 
@@ -1032,36 +1079,40 @@ NOVASVG_INLINE int novasvg_font_face_cache_load_dir(novasvg_font_face_cache_t* c
 
 #endif // _WIN32
 
-NOVASVG_INLINE int novasvg_font_face_cache_load_sys(novasvg_font_face_cache_t* cache)
+NOVASVG_INLINE int font_face_cache_load_sys(font_face_cache_t* cache)
 {
     int num_faces = 0;
 #if defined(_WIN32)
-    num_faces += novasvg_font_face_cache_load_dir(cache, "C:\\Windows\\Fonts");
+    num_faces += font_face_cache_load_dir(cache, "C:\\Windows\\Fonts");
 #elif defined(__APPLE__)
-    num_faces += novasvg_font_face_cache_load_dir(cache, "/Library/Fonts");
-    num_faces += novasvg_font_face_cache_load_dir(cache, "/System/Library/Fonts");
+    num_faces += font_face_cache_load_dir(cache, "/Library/Fonts");
+    num_faces += font_face_cache_load_dir(cache, "/System/Library/Fonts");
 #elif defined(__linux__)
-    num_faces += novasvg_font_face_cache_load_dir(cache, "/usr/share/fonts");
-    num_faces += novasvg_font_face_cache_load_dir(cache, "/usr/local/share/fonts");
+    num_faces += font_face_cache_load_dir(cache, "/usr/share/fonts");
+    num_faces += font_face_cache_load_dir(cache, "/usr/local/share/fonts");
 #endif
     return num_faces;
 }
 
 #else
 
-NOVASVG_INLINE int novasvg_font_face_cache_load_file(novasvg_font_face_cache_t* cache, const char* filename)
+NOVASVG_INLINE int font_face_cache_load_file(font_face_cache_t* cache, const char* filename)
 {
     return -1;
 }
 
-NOVASVG_INLINE int novasvg_font_face_cache_load_dir(novasvg_font_face_cache_t* cache, const char* dirname)
+NOVASVG_INLINE int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirname)
 {
     return -1;
 }
 
-NOVASVG_INLINE int novasvg_font_face_cache_load_sys(novasvg_font_face_cache_t* cache)
+NOVASVG_INLINE int font_face_cache_load_sys(font_face_cache_t* cache)
 {
     return -1;
 }
 
 #endif // NOVASVG_DISABLE_FONT_FACE_CACHE_LOAD
+
+
+} // namespace render
+} // namespace novasvg

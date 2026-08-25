@@ -6,10 +6,13 @@
 #include <assert.h>
 #include <limits.h>
 
+namespace novasvg {
+namespace render {
+
 #define COLOR_TABLE_SIZE 1024
 typedef struct {
-    novasvg_matrix_t matrix;
-    novasvg_spread_method_t spread;
+    matrix_t matrix;
+    spread_method_t spread;
     uint32_t colortable[COLOR_TABLE_SIZE];
     union {
         struct {
@@ -24,7 +27,7 @@ typedef struct {
 } gradient_data_t;
 
 typedef struct {
-    novasvg_matrix_t matrix;
+    matrix_t matrix;
     uint8_t* data;
     int width;
     int height;
@@ -48,7 +51,7 @@ typedef struct {
     bool extended;
 } radial_gradient_values_t;
 
-static inline uint32_t premultiply_color_with_opacity(const novasvg_color_t* color, float opacity)
+static inline uint32_t premultiply_color_with_opacity(const color_t* color, float opacity)
 {
     uint32_t alpha = lroundf(color->a * opacity * 255);
     uint32_t pr = lroundf(color->r * alpha);
@@ -97,9 +100,13 @@ static inline uint32_t BYTE_MUL(uint32_t x, uint32_t a)
 
 #ifdef __SSE2__
 
+} // namespace render
+} // namespace novasvg
 #include <emmintrin.h>
+namespace novasvg {
+namespace render {
 
-NOVASVG_INLINE void novasvg_memfill32(unsigned int* dest, int length, unsigned int value)
+NOVASVG_INLINE void memfill32(unsigned int* dest, int length, unsigned int value)
 {
     __m128i vector_data = _mm_set_epi32(value, value, value, value);
     while(length && ((uintptr_t)dest & 0xf)) {
@@ -154,7 +161,7 @@ NOVASVG_INLINE void novasvg_memfill32(unsigned int* dest, int length, unsigned i
 
 #else
 
-NOVASVG_INLINE void novasvg_memfill32(unsigned int* dest, int length, unsigned int value)
+NOVASVG_INLINE void memfill32(unsigned int* dest, int length, unsigned int value)
 {
     while(length--) {
         *dest++ = value;
@@ -216,7 +223,7 @@ static void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values
 
     const uint32_t* end = buffer + length;
     if(inc > -1e-5f && inc < 1e-5f) {
-        novasvg_memfill32(buffer, length, gradient_pixel_fixed(gradient, (int)(t * FIXPT_SIZE)));
+        memfill32(buffer, length, gradient_pixel_fixed(gradient, (int)(t * FIXPT_SIZE)));
     } else {
         if(t + inc * length < (float)(INT_MAX >> (FIXPT_BITS + 1)) && t + inc * length > (float)(INT_MIN >> (FIXPT_BITS + 1))) {
             int t_fixed = (int)(t * FIXPT_SIZE);
@@ -239,7 +246,7 @@ static void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values
 static void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length)
 {
     if(v->a == 0.f) {
-        novasvg_memfill32(buffer, length, 0);
+        memfill32(buffer, length, 0);
         return;
     }
 
@@ -305,7 +312,7 @@ static void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values
 static void composition_solid_clear(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        novasvg_memfill32(dest, length, 0);
+        memfill32(dest, length, 0);
     } else {
         uint32_t ialpha = 255 - const_alpha;
         for(int i = 0; i < length; i++) {
@@ -317,7 +324,7 @@ static void composition_solid_clear(uint32_t* dest, int length, uint32_t color, 
 static void composition_solid_source(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        novasvg_memfill32(dest, length, color);
+        memfill32(dest, length, color);
     } else {
         uint32_t ialpha = 255 - const_alpha;
         color = BYTE_MUL(color, const_alpha);
@@ -459,7 +466,7 @@ static const composition_solid_function_t composition_solid_table[] = {
 static void composition_clear(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        novasvg_memfill32(dest, length, 0);
+        memfill32(dest, length, 0);
     } else {
         uint32_t ialpha = 255 - const_alpha;
         for(int i = 0; i < length; i++) {
@@ -651,11 +658,11 @@ static const composition_function_t composition_table[] = {
     composition_xor
 };
 
-static void blend_solid(novasvg_surface_t* surface, novasvg_operator_t op, uint32_t solid, const novasvg_span_buffer_t* span_buffer)
+static void blend_solid(surface_t* surface, operator_t op, uint32_t solid, const span_buffer_t* span_buffer)
 {
     composition_solid_function_t func = composition_solid_table[op];
     int count = span_buffer->spans.size;
-    const novasvg_span_t* spans = span_buffer->spans.data;
+    const span_t* spans = span_buffer->spans.data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + spans->x;
         func(target, spans->len, solid, spans->coverage);
@@ -664,7 +671,7 @@ static void blend_solid(novasvg_surface_t* surface, novasvg_operator_t op, uint3
 }
 
 #define BUFFER_SIZE 1024
-static void blend_linear_gradient(novasvg_surface_t* surface, novasvg_operator_t op, const gradient_data_t* gradient, const novasvg_span_buffer_t* span_buffer)
+static void blend_linear_gradient(surface_t* surface, operator_t op, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
     unsigned int buffer[BUFFER_SIZE];
@@ -681,12 +688,12 @@ static void blend_linear_gradient(novasvg_surface_t* surface, novasvg_operator_t
     }
 
     int count = span_buffer->spans.size;
-    const novasvg_span_t* spans = span_buffer->spans.data;
+    const span_t* spans = span_buffer->spans.data;
     while(count--) {
         int length = spans->len;
         int x = spans->x;
         while(length) {
-            int l = novasvg_min(length, BUFFER_SIZE);
+            int l = std::min(length, BUFFER_SIZE);
             fetch_linear_gradient(buffer, &v, gradient, spans->y, x, l);
             uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + x;
             func(target, l, buffer, spans->coverage);
@@ -698,7 +705,7 @@ static void blend_linear_gradient(novasvg_surface_t* surface, novasvg_operator_t
     }
 }
 
-static void blend_radial_gradient(novasvg_surface_t* surface, novasvg_operator_t op, const gradient_data_t* gradient, const novasvg_span_buffer_t* span_buffer)
+static void blend_radial_gradient(surface_t* surface, operator_t op, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
     unsigned int buffer[BUFFER_SIZE];
@@ -712,12 +719,12 @@ static void blend_radial_gradient(novasvg_surface_t* surface, novasvg_operator_t
     v.extended = gradient->values.radial.fr != 0.f || v.a <= 0.f;
 
     int count = span_buffer->spans.size;
-    const novasvg_span_t* spans = span_buffer->spans.data;
+    const span_t* spans = span_buffer->spans.data;
     while(count--) {
         int length = spans->len;
         int x = spans->x;
         while(length) {
-            int l = novasvg_min(length, BUFFER_SIZE);
+            int l = std::min(length, BUFFER_SIZE);
             fetch_radial_gradient(buffer, &v, gradient, spans->y, x, l);
             uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + x;
             func(target, l, buffer, spans->coverage);
@@ -729,7 +736,7 @@ static void blend_radial_gradient(novasvg_surface_t* surface, novasvg_operator_t
     }
 }
 
-static void blend_untransformed_argb(novasvg_surface_t* surface, novasvg_operator_t op, const texture_data_t* texture, const novasvg_span_buffer_t* span_buffer)
+static void blend_untransformed_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
 
@@ -740,7 +747,7 @@ static void blend_untransformed_argb(novasvg_surface_t* surface, novasvg_operato
     int yoff = (int)(texture->matrix.f);
 
     int count = span_buffer->spans.size;
-    const novasvg_span_t* spans = span_buffer->spans.data;
+    const span_t* spans = span_buffer->spans.data;
     while(count--) {
         int x = spans->x;
         int length = spans->len;
@@ -768,7 +775,7 @@ static void blend_untransformed_argb(novasvg_surface_t* surface, novasvg_operato
 }
 
 #define FIXED_SCALE (1 << 16)
-static void blend_transformed_argb(novasvg_surface_t* surface, novasvg_operator_t op, const texture_data_t* texture, const novasvg_span_buffer_t* span_buffer)
+static void blend_transformed_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
     uint32_t buffer[BUFFER_SIZE];
@@ -780,7 +787,7 @@ static void blend_transformed_argb(novasvg_surface_t* surface, novasvg_operator_
     int fdy = (int)(texture->matrix.b * FIXED_SCALE);
 
     int count = span_buffer->spans.size;
-    const novasvg_span_t* spans = span_buffer->spans.data;
+    const span_t* spans = span_buffer->spans.data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + spans->x;
 
@@ -793,7 +800,7 @@ static void blend_transformed_argb(novasvg_surface_t* surface, novasvg_operator_
         int length = spans->len;
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
         while(length) {
-            int l = novasvg_min(length, BUFFER_SIZE);
+            int l = std::min(length, BUFFER_SIZE);
             const uint32_t* end = buffer + l;
             uint32_t* b = buffer;
             while(b < end) {
@@ -819,7 +826,7 @@ static void blend_transformed_argb(novasvg_surface_t* surface, novasvg_operator_
     }
 }
 
-static void blend_untransformed_tiled_argb(novasvg_surface_t* surface, novasvg_operator_t op, const texture_data_t* texture, const novasvg_span_buffer_t* span_buffer)
+static void blend_untransformed_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
 
@@ -836,7 +843,7 @@ static void blend_untransformed_tiled_argb(novasvg_surface_t* surface, novasvg_o
     }
 
     int count = span_buffer->spans.size;
-    const novasvg_span_t* spans = span_buffer->spans.data;
+    const span_t* spans = span_buffer->spans.data;
     while(count--) {
         int x = spans->x;
         int length = spans->len;
@@ -850,7 +857,7 @@ static void blend_untransformed_tiled_argb(novasvg_surface_t* surface, novasvg_o
 
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
         while(length) {
-            int l = novasvg_min(image_width - sx, length);
+            int l = std::min(image_width - sx, length);
             if(BUFFER_SIZE < l)
                 l = BUFFER_SIZE;
             const uint32_t* src = (const uint32_t*)(texture->data + sy * texture->stride) + sx;
@@ -868,7 +875,7 @@ static void blend_untransformed_tiled_argb(novasvg_surface_t* surface, novasvg_o
     }
 }
 
-static void blend_transformed_tiled_argb(novasvg_surface_t* surface, novasvg_operator_t op, const texture_data_t* texture, const novasvg_span_buffer_t* span_buffer)
+static void blend_transformed_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
     uint32_t buffer[BUFFER_SIZE];
@@ -881,7 +888,7 @@ static void blend_transformed_tiled_argb(novasvg_surface_t* surface, novasvg_ope
     int fdy = (int)(texture->matrix.b * FIXED_SCALE);
 
     int count = span_buffer->spans.size;
-    const novasvg_span_t* spans = span_buffer->spans.data;
+    const span_t* spans = span_buffer->spans.data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + spans->x;
         const uint32_t* image_bits = (const uint32_t*)texture->data;
@@ -895,7 +902,7 @@ static void blend_transformed_tiled_argb(novasvg_surface_t* surface, novasvg_ope
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
         int length = spans->len;
         while(length) {
-            int l = novasvg_min(length, BUFFER_SIZE);
+            int l = std::min(length, BUFFER_SIZE);
             const uint32_t* end = buffer + l;
             uint32_t* b = buffer;
             while(b < end) {
@@ -935,7 +942,7 @@ static inline uint32_t interpolate_4_pixels(uint32_t tl, uint32_t tr, uint32_t b
 }
 
 #define HALF_POINT (1 << 15)
-static void blend_transformed_bilinear_tiled_argb(novasvg_surface_t* surface, novasvg_operator_t op, const texture_data_t* texture, const novasvg_span_buffer_t* span_buffer)
+static void blend_transformed_bilinear_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
     uint32_t buffer[BUFFER_SIZE];
@@ -947,7 +954,7 @@ static void blend_transformed_bilinear_tiled_argb(novasvg_surface_t* surface, no
     int fdy = (int)(texture->matrix.b * FIXED_SCALE);
 
     int count = span_buffer->spans.size;
-    const novasvg_span_t* spans = span_buffer->spans.data;
+    const span_t* spans = span_buffer->spans.data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + spans->x;
 
@@ -963,7 +970,7 @@ static void blend_transformed_bilinear_tiled_argb(novasvg_surface_t* surface, no
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
         int length = spans->len;
         while(length) {
-            int l = novasvg_min(length, BUFFER_SIZE);
+            int l = std::min(length, BUFFER_SIZE);
             const uint32_t* end = buffer + l;
             uint32_t* b = buffer;
             while (b < end) {
@@ -1002,9 +1009,9 @@ static void blend_transformed_bilinear_tiled_argb(novasvg_surface_t* surface, no
     }
 }
 
-static void novasvg_blend_color(novasvg_canvas_t* canvas, const novasvg_color_t* color, const novasvg_span_buffer_t* span_buffer)
+static void blend_color(canvas_t* canvas, const color_t* color, const span_buffer_t* span_buffer)
 {
-    novasvg_state_t* state = canvas->state;
+    state_t* state = canvas->state;
     uint32_t solid = premultiply_color_with_opacity(color, state->opacity);
     uint32_t alpha = novasvg_alpha(solid);
 
@@ -1015,19 +1022,19 @@ static void novasvg_blend_color(novasvg_canvas_t* canvas, const novasvg_color_t*
     }
 }
 
-static void novasvg_blend_gradient(novasvg_canvas_t* canvas, const novasvg_gradient_paint_t* gradient, const novasvg_span_buffer_t* span_buffer)
+static void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const span_buffer_t* span_buffer)
 {
     if(gradient->nstops == 0)
         return;
-    novasvg_state_t* state = canvas->state;
+    state_t* state = canvas->state;
     gradient_data_t data;
     data.spread = gradient->spread;
     data.matrix = gradient->matrix;
-    novasvg_matrix_multiply(&data.matrix, &data.matrix, &state->matrix);
-    if(!novasvg_matrix_invert(&data.matrix, &data.matrix))
+    matrix_multiply(&data.matrix, &data.matrix, &state->matrix);
+    if(!matrix_invert(&data.matrix, &data.matrix))
         return;
     int i, pos = 0, nstops = gradient->nstops;
-    const novasvg_gradient_stop_t *curr, *next, *start, *last;
+    const gradient_stop_t *curr, *next, *start, *last;
     uint32_t curr_color, next_color, last_color;
     uint32_t dist, idist;
     float delta, t, incr, fpos;
@@ -1089,11 +1096,11 @@ static void novasvg_blend_gradient(novasvg_canvas_t* canvas, const novasvg_gradi
     }
 }
 
-static void novasvg_blend_texture(novasvg_canvas_t* canvas, const novasvg_texture_paint_t* texture, const novasvg_span_buffer_t* span_buffer)
+static void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_buffer_t* span_buffer)
 {
     if(texture->surface == NULL)
         return;
-    novasvg_state_t* state = canvas->state;
+    state_t* state = canvas->state;
     texture_data_t data;
     data.matrix = texture->matrix;
     data.data = texture->surface->data;
@@ -1102,10 +1109,10 @@ static void novasvg_blend_texture(novasvg_canvas_t* canvas, const novasvg_textur
     data.stride = texture->surface->stride;
     data.const_alpha = lroundf(state->opacity * texture->opacity * 256);
 
-    novasvg_matrix_multiply(&data.matrix, &data.matrix, &state->matrix);
-    if(!novasvg_matrix_invert(&data.matrix, &data.matrix))
+    matrix_multiply(&data.matrix, &data.matrix, &state->matrix);
+    if(!matrix_invert(&data.matrix, &data.matrix))
         return;
-    const novasvg_matrix_t* matrix = &data.matrix;
+    const matrix_t* matrix = &data.matrix;
     if(matrix->a == 1 && matrix->b == 0 && matrix->c == 0 && matrix->d == 1) {
         if(texture->type == NOVASVG_TEXTURE_TYPE_PLAIN) {
             blend_untransformed_argb(canvas->surface, state->op, &data, span_buffer);
@@ -1123,24 +1130,28 @@ static void novasvg_blend_texture(novasvg_canvas_t* canvas, const novasvg_textur
     }
 }
 
-NOVASVG_INLINE void novasvg_blend(novasvg_canvas_t* canvas, const novasvg_span_buffer_t* span_buffer)
+NOVASVG_INLINE void blend(canvas_t* canvas, const span_buffer_t* span_buffer)
 {
     if(span_buffer->spans.size == 0)
         return;
     if(canvas->state->paint == NULL) {
-        novasvg_blend_color(canvas, &canvas->state->color, span_buffer);
+        blend_color(canvas, &canvas->state->color, span_buffer);
         return;
     }
 
-    novasvg_paint_t* paint = canvas->state->paint;
+    paint_t* paint = canvas->state->paint;
     if(paint->type == NOVASVG_PAINT_TYPE_COLOR) {
-        novasvg_solid_paint_t* solid = (novasvg_solid_paint_t*)(paint);
-        novasvg_blend_color(canvas, &solid->color, span_buffer);
+        solid_paint_t* solid = (solid_paint_t*)(paint);
+        blend_color(canvas, &solid->color, span_buffer);
     } else if(paint->type == NOVASVG_PAINT_TYPE_GRADIENT) {
-        novasvg_gradient_paint_t* gradient = (novasvg_gradient_paint_t*)(paint);
-        novasvg_blend_gradient(canvas, gradient, span_buffer);
+        gradient_paint_t* gradient = (gradient_paint_t*)(paint);
+        blend_gradient(canvas, gradient, span_buffer);
     } else {
-        novasvg_texture_paint_t* texture = (novasvg_texture_paint_t*)(paint);
-        novasvg_blend_texture(canvas, texture, span_buffer);
+        texture_paint_t* texture = (texture_paint_t*)(paint);
+        blend_texture(canvas, texture, span_buffer);
     }
 }
+
+
+} // namespace render
+} // namespace novasvg

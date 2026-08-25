@@ -11,13 +11,16 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "vendor/stb_image.h"
 
-static novasvg_surface_t* novasvg_surface_create_uninitialized(int width, int height)
+namespace novasvg {
+namespace render {
+
+static surface_t* surface_create_uninitialized(int width, int height)
 {
     static const int kMaxSize = 1 << 15;
     if(width <= 0 || height <= 0 || width >= kMaxSize || height >= kMaxSize)
         return NULL;
     const size_t size = width * height * 4;
-    novasvg_surface_t* surface = static_cast<novasvg_surface_t*>(malloc(size + sizeof(novasvg_surface_t)));
+    surface_t* surface = static_cast<surface_t*>(malloc(size + sizeof(surface_t)));
     if(surface == NULL)
         return NULL;
     novasvg_init_reference(surface);
@@ -28,17 +31,17 @@ static novasvg_surface_t* novasvg_surface_create_uninitialized(int width, int he
     return surface;
 }
 
-NOVASVG_INLINE novasvg_surface_t* novasvg_surface_create(int width, int height)
+NOVASVG_INLINE surface_t* surface_create(int width, int height)
 {
-    novasvg_surface_t* surface = novasvg_surface_create_uninitialized(width, height);
+    surface_t* surface = surface_create_uninitialized(width, height);
     if(surface)
         memset(surface->data, 0, surface->height * surface->stride);
     return surface;
 }
 
-NOVASVG_INLINE novasvg_surface_t* novasvg_surface_create_for_data(unsigned char* data, int width, int height, int stride)
+NOVASVG_INLINE surface_t* surface_create_for_data(unsigned char* data, int width, int height, int stride)
 {
-    novasvg_surface_t* surface = static_cast<novasvg_surface_t*>(malloc(sizeof(novasvg_surface_t)));
+    surface_t* surface = static_cast<surface_t*>(malloc(sizeof(surface_t)));
     novasvg_init_reference(surface);
     surface->width = width;
     surface->height = height;
@@ -47,31 +50,31 @@ NOVASVG_INLINE novasvg_surface_t* novasvg_surface_create_for_data(unsigned char*
     return surface;
 }
 
-static novasvg_surface_t* novasvg_surface_load_from_image(stbi_uc* image, int width, int height)
+static surface_t* surface_load_from_image(stbi_uc* image, int width, int height)
 {
-    novasvg_surface_t* surface = novasvg_surface_create_uninitialized(width, height);
+    surface_t* surface = surface_create_uninitialized(width, height);
     if(surface)
-        novasvg_convert_rgba_to_argb(surface->data, image, surface->width, surface->height, surface->stride);
+        convert_rgba_to_argb(surface->data, image, surface->width, surface->height, surface->stride);
     stbi_image_free(image);
     return surface;
 }
 
-NOVASVG_INLINE novasvg_surface_t* novasvg_surface_load_from_image_file(const char* filename)
+NOVASVG_INLINE surface_t* surface_load_from_image_file(const char* filename)
 {
     int width, height, channels;
     stbi_uc* image = stbi_load(filename, &width, &height, &channels, STBI_rgb_alpha);
     if(image == NULL)
         return NULL;
-    return novasvg_surface_load_from_image(image, width, height);
+    return surface_load_from_image(image, width, height);
 }
 
-NOVASVG_INLINE novasvg_surface_t* novasvg_surface_load_from_image_data(const void* data, int length)
+NOVASVG_INLINE surface_t* surface_load_from_image_data(const void* data, int length)
 {
     int width, height, channels;
     stbi_uc* image = stbi_load_from_memory(static_cast<const stbi_uc*>(data), length, &width, &height, &channels, STBI_rgb_alpha);
     if(image == NULL)
         return NULL;
-    return novasvg_surface_load_from_image(image, width, height);
+    return surface_load_from_image(image, width, height);
 }
 
 static const uint8_t base64_table[128] = {
@@ -93,9 +96,9 @@ static const uint8_t base64_table[128] = {
     0x31, 0x32, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-NOVASVG_INLINE novasvg_surface_t* novasvg_surface_load_from_image_base64(const char* data, int length)
+NOVASVG_INLINE surface_t* surface_load_from_image_base64(const char* data, int length)
 {
-    novasvg_surface_t* surface = NULL;
+    surface_t* surface = NULL;
     uint8_t* output_data = NULL;
     size_t output_length = 0;
 
@@ -144,102 +147,102 @@ NOVASVG_INLINE novasvg_surface_t* novasvg_surface_load_from_image_base64(const c
         output_data[didx] = (((output_data[sidx + 1] << 4) & 255) | ((output_data[sidx + 2] >> 2) & 017));
     }
 
-    surface = novasvg_surface_load_from_image_data(output_data, output_length);
+    surface = surface_load_from_image_data(output_data, output_length);
 cleanup:
     free(output_data);
     return surface;
 }
 
-NOVASVG_INLINE novasvg_surface_t* novasvg_surface_reference(novasvg_surface_t* surface)
+NOVASVG_INLINE surface_t* surface_reference(surface_t* surface)
 {
     novasvg_increment_reference(surface);
     return surface;
 }
 
-NOVASVG_INLINE void novasvg_surface_destroy(novasvg_surface_t* surface)
+NOVASVG_INLINE void surface_destroy(surface_t* surface)
 {
     if(novasvg_destroy_reference(surface)) {
         free(surface);
     }
 }
 
-NOVASVG_INLINE int novasvg_surface_get_reference_count(const novasvg_surface_t* surface)
+NOVASVG_INLINE int surface_get_reference_count(const surface_t* surface)
 {
     return novasvg_get_reference_count(surface);
 }
 
-NOVASVG_INLINE unsigned char* novasvg_surface_get_data(const novasvg_surface_t* surface)
+NOVASVG_INLINE unsigned char* surface_get_data(const surface_t* surface)
 {
     return surface->data;
 }
 
-NOVASVG_INLINE int novasvg_surface_get_width(const novasvg_surface_t* surface)
+NOVASVG_INLINE int surface_get_width(const surface_t* surface)
 {
     return surface->width;
 }
 
-NOVASVG_INLINE int novasvg_surface_get_height(const novasvg_surface_t* surface)
+NOVASVG_INLINE int surface_get_height(const surface_t* surface)
 {
     return surface->height;
 }
 
-NOVASVG_INLINE int novasvg_surface_get_stride(const novasvg_surface_t* surface)
+NOVASVG_INLINE int surface_get_stride(const surface_t* surface)
 {
     return surface->stride;
 }
 
-NOVASVG_INLINE void novasvg_surface_clear(novasvg_surface_t* surface, const novasvg_color_t* color)
+NOVASVG_INLINE void surface_clear(surface_t* surface, const color_t* color)
 {
-    uint32_t pixel = novasvg_premultiply_argb(novasvg_color_to_argb32(color));
+    uint32_t pixel = premultiply_argb(color_to_argb32(color));
     for(int y = 0; y < surface->height; y++) {
         uint32_t* pixels = (uint32_t*)(surface->data + surface->stride * y);
-        novasvg_memfill32(pixels, surface->width, pixel);
+        memfill32(pixels, surface->width, pixel);
     }
 }
 
-static void novasvg_surface_write_begin(const novasvg_surface_t* surface)
+static void surface_write_begin(const surface_t* surface)
 {
-    novasvg_convert_argb_to_rgba(surface->data, surface->data, surface->width, surface->height, surface->stride);
+    convert_argb_to_rgba(surface->data, surface->data, surface->width, surface->height, surface->stride);
 }
 
-static void novasvg_surface_write_end(const novasvg_surface_t* surface)
+static void surface_write_end(const surface_t* surface)
 {
-    novasvg_convert_rgba_to_argb(surface->data, surface->data, surface->width, surface->height, surface->stride);
+    convert_rgba_to_argb(surface->data, surface->data, surface->width, surface->height, surface->stride);
 }
 
-NOVASVG_INLINE bool novasvg_surface_write_to_png(const novasvg_surface_t* surface, const char* filename)
+NOVASVG_INLINE bool surface_write_to_png(const surface_t* surface, const char* filename)
 {
-    novasvg_surface_write_begin(surface);
+    surface_write_begin(surface);
     int success = stbi_write_png(filename, surface->width, surface->height, 4, surface->data, surface->stride);
-    novasvg_surface_write_end(surface);
+    surface_write_end(surface);
     return success;
 }
 
-NOVASVG_INLINE bool novasvg_surface_write_to_jpg(const novasvg_surface_t* surface, const char* filename, int quality)
+NOVASVG_INLINE bool surface_write_to_jpg(const surface_t* surface, const char* filename, int quality)
 {
-    novasvg_surface_write_begin(surface);
+    surface_write_begin(surface);
     int success = stbi_write_jpg(filename, surface->width, surface->height, 4, surface->data, quality);
-    novasvg_surface_write_end(surface);
+    surface_write_end(surface);
     return success;
 }
 
-NOVASVG_INLINE bool novasvg_surface_write_to_png_stream(const novasvg_surface_t* surface, novasvg_write_func_t write_func, void* closure)
+NOVASVG_INLINE bool surface_write_to_png_stream(const surface_t* surface, write_func_t write_func, void* closure)
 {
-    novasvg_surface_write_begin(surface);
+    surface_write_begin(surface);
     int success = stbi_write_png_to_func(write_func, closure, surface->width, surface->height, 4, surface->data, surface->stride);
-    novasvg_surface_write_end(surface);
+    surface_write_end(surface);
     return success;
 }
 
-NOVASVG_INLINE bool novasvg_surface_write_to_jpg_stream(const novasvg_surface_t* surface, novasvg_write_func_t write_func, void* closure, int quality)
+NOVASVG_INLINE bool surface_write_to_jpg_stream(const surface_t* surface, write_func_t write_func, void* closure, int quality)
 {
-    novasvg_surface_write_begin(surface);
+    surface_write_begin(surface);
     int success = stbi_write_jpg_to_func(write_func, closure, surface->width, surface->height, 4, surface->data, quality);
-    novasvg_surface_write_end(surface);
+    surface_write_end(surface);
     return success;
 }
 
-NOVASVG_INLINE void novasvg_convert_argb_to_rgba(unsigned char* dst, const unsigned char* src, int width, int height, int stride)
+NOVASVG_INLINE void convert_argb_to_rgba(unsigned char* dst, const unsigned char* src, int width, int height, int stride)
 {
     for(int y = 0; y < height; y++) {
         const uint32_t* src_row = (const uint32_t*)(src + stride * y);
@@ -271,7 +274,7 @@ NOVASVG_INLINE void novasvg_convert_argb_to_rgba(unsigned char* dst, const unsig
     }
 }
 
-NOVASVG_INLINE void novasvg_convert_rgba_to_argb(unsigned char* dst, const unsigned char* src, int width, int height, int stride)
+NOVASVG_INLINE void convert_rgba_to_argb(unsigned char* dst, const unsigned char* src, int width, int height, int stride)
 {
     for(int y = 0; y < height; y++) {
         const unsigned char* src_row = src + stride * y;
@@ -295,3 +298,7 @@ NOVASVG_INLINE void novasvg_convert_rgba_to_argb(unsigned char* dst, const unsig
         }
     }
 }
+
+
+} // namespace render
+} // namespace novasvg
