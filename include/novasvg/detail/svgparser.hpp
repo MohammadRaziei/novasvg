@@ -891,8 +891,23 @@ NOVASVG_INLINE bool Document::parse(const char* data, size_t length)
         }
 
         if(skipDelimiter(input, '>')) {
-            if(element != nullptr)
-                currentElement = element;
+            if(element != nullptr) {
+                if(element->id() == ElementID::ForeignObject) {
+                    // foreignObject content is arbitrary HTML/XML, not SVG --
+                    // capture it verbatim instead of trying (and failing) to
+                    // parse div/span/p/etc. as SVG elements. Mirrors the
+                    // CDATA/comment handling above: find the matching close
+                    // tag and skip straight past it.
+                    static constexpr std::string_view closeTag = "</foreignObject>";
+                    auto n = input.find(closeTag);
+                    if(n == std::string_view::npos)
+                        return false;
+                    static_cast<SVGForeignObjectElement*>(element)->setRawContent(std::string(input.substr(0, n)));
+                    input.remove_prefix(n + closeTag.length());
+                } else {
+                    currentElement = element;
+                }
+            }
             continue;
         }
 
