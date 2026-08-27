@@ -668,6 +668,7 @@ enum class ElementID : uint8_t {
     ClipPath,
     Defs,
     Ellipse,
+    ForeignObject,
     G,
     Image,
     Line,
@@ -983,6 +984,80 @@ private:
     SVGLength m_height;
     SVGPreserveAspectRatio m_preserveAspectRatio;
     Bitmap m_image;
+};
+
+class SVGForeignObjectElement;
+
+/**
+ * @brief Renders the (HTML-ish) content captured inside a <foreignObject>.
+ *
+ * This is an extension point on purpose: ForeignObjectSimple below only
+ * understands a small, deliberately shallow slice of HTML5 -- it strips
+ * every tag (div/span/p/i/b/...) and just draws the remaining plain text
+ * centered in the foreignObject's box, using the font/fill already
+ * inherited through the normal SVG/CSS cascade. That's enough to cover
+ * what tools like Mermaid actually emit (a single short, non-wrapping,
+ * centered text run per foreignObject), without pretending to be a real
+ * HTML/CSS layout engine.
+ *
+ * A more complete renderer (e.g. one backed by litehtml) can be hooked in
+ * later without touching SVGForeignObjectElement itself: implement this
+ * interface and call SVGForeignObjectElement::setRenderer() (or replace
+ * ForeignObjectSimple::instance() below) to swap it in.
+ */
+class ForeignObjectRenderer {
+public:
+    virtual ~ForeignObjectRenderer() = default;
+    virtual void render(const SVGForeignObjectElement* element, SVGRenderState& state) const = 0;
+};
+
+/**
+ * @brief Default ForeignObjectRenderer: tag-stripped plain text, centered.
+ */
+class ForeignObjectSimple final : public ForeignObjectRenderer {
+public:
+    static ForeignObjectSimple* instance();
+
+    void render(const SVGForeignObjectElement* element, SVGRenderState& state) const final;
+};
+
+class SVGForeignObjectElement final : public SVGGraphicsElement {
+public:
+    SVGForeignObjectElement(Document* document);
+
+    const SVGLength& x() const { return m_x; }
+    const SVGLength& y() const { return m_y; }
+    const SVGLength& width() const { return m_width; }
+    const SVGLength& height() const { return m_height; }
+    const Font& font() const { return m_font; }
+    const SVGPaintServer& fill() const { return m_fill; }
+
+    /**
+     * @brief Raw markup captured between <foreignObject ...> and
+     * </foreignObject> (whatever HTML/XML the document embedded there),
+     * exactly as it appeared in the source -- untouched, unparsed. What a
+     * ForeignObjectRenderer does with it is entirely up to that renderer.
+     */
+    const std::string& rawContent() const { return m_rawContent; }
+    void setRawContent(std::string content) { m_rawContent = std::move(content); }
+
+    ForeignObjectRenderer* renderer() const { return m_renderer; }
+    void setRenderer(ForeignObjectRenderer* renderer) { m_renderer = renderer; }
+
+    Rect fillBoundingBox() const final;
+    Rect strokeBoundingBox() const final;
+    void layoutElement(const SVGLayoutState& state) final;
+    void render(SVGRenderState& state) const final;
+
+private:
+    SVGLength m_x;
+    SVGLength m_y;
+    SVGLength m_width;
+    SVGLength m_height;
+    Font m_font;
+    SVGPaintServer m_fill;
+    std::string m_rawContent;
+    ForeignObjectRenderer* m_renderer = nullptr;
 };
 
 class SVGSymbolElement final : public SVGGraphicsElement, public SVGFitToViewBox {
@@ -4433,6 +4508,7 @@ NOVASVG_INLINE ElementID elementid(std::string_view name)
         {"clipPath", ElementID::ClipPath},
         {"defs", ElementID::Defs},
         {"ellipse", ElementID::Ellipse},
+        {"foreignObject", ElementID::ForeignObject},
         {"g", ElementID::G},
         {"image", ElementID::Image},
         {"line", ElementID::Line},
@@ -4522,6 +4598,8 @@ NOVASVG_INLINE std::unique_ptr<SVGElement> SVGElement::create(Document* document
         return std::make_unique<SVGMarkerElement>(document);
     case ElementID::Image:
         return std::make_unique<SVGImageElement>(document);
+    case ElementID::ForeignObject:
+        return std::make_unique<SVGForeignObjectElement>(document);
     case ElementID::Style:
         return std::make_unique<SVGStyleElement>(document);
     case ElementID::Text:
@@ -4940,6 +5018,7 @@ NOVASVG_INLINE bool SVGElement::isPointableElement() const
         case ElementID::Path:
         case ElementID::Text:
         case ElementID::Image:
+        case ElementID::ForeignObject:
             return true;
         default:
             break;
@@ -5208,6 +5287,7 @@ inline bool isDisallowedElement(const SVGElement* element)
     switch(element->id()) {
     case ElementID::Circle:
     case ElementID::Ellipse:
+    case ElementID::ForeignObject:
     case ElementID::G:
     case ElementID::Image:
     case ElementID::Line:
@@ -5330,6 +5410,165 @@ NOVASVG_INLINE void SVGImageElement::parseAttribute(PropertyID id, const std::st
     } else {
         SVGGraphicsElement::parseAttribute(id, value);
     }
+}
+
+// ---------------------------------------------------------------
+// SVGForeignObjectElement / ForeignObjectSimple
+// ---------------------------------------------------------------
+
+NOVASVG_INLINE SVGForeignObjectElement::SVGForeignObjectElement(Document* document)
+    : SVGGraphicsElement(document, ElementID::ForeignObject)
+    , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
+    , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
+    , m_width(PropertyID::Width, LengthDirection::Horizontal, LengthNegativeMode::Forbid, 0.f, LengthUnits::None)
+    , m_height(PropertyID::Height, LengthDirection::Vertical, LengthNegativeMode::Forbid, 0.f, LengthUnits::None)
+{
+    addProperty(m_x);
+    addProperty(m_y);
+    addProperty(m_width);
+    addProperty(m_height);
+}
+
+NOVASVG_INLINE Rect SVGForeignObjectElement::fillBoundingBox() const
+{
+    LengthContext lengthContext(this);
+    return Rect(
+        lengthContext.valueForLength(m_x),
+        lengthContext.valueForLength(m_y),
+        lengthContext.valueForLength(m_width),
+        lengthContext.valueForLength(m_height)
+    );
+}
+
+NOVASVG_INLINE Rect SVGForeignObjectElement::strokeBoundingBox() const
+{
+    return fillBoundingBox();
+}
+
+NOVASVG_INLINE void SVGForeignObjectElement::layoutElement(const SVGLayoutState& state)
+{
+    m_font = state.font();
+    m_fill = getPaintServer(state.fill(), state.fill_opacity());
+    SVGGraphicsElement::layoutElement(state);
+}
+
+NOVASVG_INLINE void SVGForeignObjectElement::render(SVGRenderState& state) const
+{
+    if(m_rawContent.empty() || isDisplayNone() || isVisibilityHidden())
+        return;
+    SVGBlendInfo blendInfo(this);
+    SVGRenderState newState(this, state, localTransform());
+    newState.beginGroup(blendInfo);
+    auto renderer = m_renderer ? m_renderer : ForeignObjectSimple::instance();
+    renderer->render(this, newState);
+    newState.endGroup(blendInfo);
+}
+
+NOVASVG_INLINE ForeignObjectSimple* ForeignObjectSimple::instance()
+{
+    static ForeignObjectSimple s_instance;
+    return &s_instance;
+}
+
+namespace {
+
+// Strips HTML/XML tags, decodes a handful of common entities, and
+// collapses runs of whitespace to a single space -- roughly
+// "element.innerText" for the tiny subset of HTML this cares about.
+// Deliberately not a real parser: no nesting/structure is kept, no
+// per-tag CSS (display:block vs inline, margins, ...) is applied. That
+// matches what Mermaid (and most SVG-generating tools) actually need,
+// since their foreignObject content is always a single short,
+// non-wrapping, already-pre-laid-out text run.
+inline std::string foreignObjectPlainText(std::string_view html)
+{
+    std::string out;
+    out.reserve(html.size());
+    bool inTag = false;
+    for(size_t i = 0; i < html.size();) {
+        char c = html[i];
+        if(inTag) {
+            if(c == '>')
+                inTag = false;
+            ++i;
+            continue;
+        }
+
+        if(c == '<') {
+            inTag = true;
+            ++i;
+            continue;
+        }
+
+        if(c == '&') {
+            if(html.compare(i, 5, "&amp;") == 0) { out += '&'; i += 5; continue; }
+            if(html.compare(i, 4, "&lt;") == 0) { out += '<'; i += 4; continue; }
+            if(html.compare(i, 4, "&gt;") == 0) { out += '>'; i += 4; continue; }
+            if(html.compare(i, 6, "&quot;") == 0) { out += '"'; i += 6; continue; }
+            if(html.compare(i, 6, "&apos;") == 0) { out += '\''; i += 6; continue; }
+            if(html.compare(i, 6, "&nbsp;") == 0) { out += ' '; i += 6; continue; }
+        }
+
+        out += c;
+        ++i;
+    }
+
+    std::string collapsed;
+    collapsed.reserve(out.size());
+    bool lastWasSpace = true; // trims leading whitespace too
+    for(char c : out) {
+        if(c == '\t' || c == '\n' || c == '\r')
+            c = ' ';
+        if(c == ' ') {
+            if(lastWasSpace)
+                continue;
+            lastWasSpace = true;
+        } else {
+            lastWasSpace = false;
+        }
+        collapsed += c;
+    }
+    while(!collapsed.empty() && collapsed.back() == ' ')
+        collapsed.pop_back();
+    return collapsed;
+}
+
+inline std::u32string utf8ToU32(const std::string& text)
+{
+    std::u32string result;
+    result.reserve(text.size());
+    text_iterator_t it;
+    text_iterator_init(&it, text.data(), (int)text.length(), NOVASVG_TEXT_ENCODING_UTF8);
+    while(text_iterator_has_next(&it))
+        result.push_back(text_iterator_next(&it));
+    return result;
+}
+
+} // namespace
+
+NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* element, SVGRenderState& state) const
+{
+    auto text = foreignObjectPlainText(element->rawContent());
+    if(text.empty())
+        return;
+
+    const auto& font = element->font();
+    if(font.isNull())
+        return;
+
+    auto u32text = utf8ToU32(text);
+    std::u32string_view textView(u32text);
+
+    auto box = element->fillBoundingBox();
+    auto textWidth = font.measureText(textView);
+    Point origin(
+        box.x + (box.w - textWidth) / 2.f,
+        box.y + (box.h + font.ascent() - font.descent()) / 2.f
+    );
+
+    const auto& fill = element->fill();
+    if(fill.applyPaint(state))
+        state->fillText(textView, font, origin, state.currentTransform());
 }
 
 NOVASVG_INLINE SVGSymbolElement::SVGSymbolElement(Document* document)
