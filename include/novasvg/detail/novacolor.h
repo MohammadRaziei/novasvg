@@ -14,10 +14,10 @@
 #include <type_traits>
 
 /**
- * @namespace novasvg::color
+ * @namespace novasvg
  * @brief Main namespace for the NovaSVG library
  */
-namespace novasvg::color {
+namespace novasvg {
 struct ColorBlend;
 
 /**
@@ -135,7 +135,7 @@ public:
      * This constructor lets Color be built (implicitly) from any other
      * color type that exposes red()/green()/blue()/alpha() accessors
      * returning integral values -- for example novasvg::Color from
-     * graphics.h. It exists so that novasvg::color::Color can be used
+     * graphics.h. It exists so that novasvg::Color can be used
      * as a drop-in replacement for novasvg::Color throughout the engine.
      *
      * @warning The conversion is always done component-by-component
@@ -151,7 +151,7 @@ public:
      * @par Example
      * @code
      * novasvg::Color engine_color(255, 0, 0);     // engine's own Color
-     * novasvg::color::Color c = engine_color;      // implicit conversion in
+     * novasvg::Color c = engine_color;      // implicit conversion in
      * @endcode
      */
     template <typename OtherColor,
@@ -182,7 +182,7 @@ public:
      * @par Example
      * @code
      * using namespace novasvg::color_literals;
-     * novasvg::color::Color c = "red"_c;
+     * novasvg::Color c = "red"_c;
      * novasvg::Color engine_color = c.as<novasvg::Color>();  // out
      * @endcode
      */
@@ -241,6 +241,34 @@ public:
      * @param value New alpha component value (0-255).
      */
     void setA(uint8_t value) { a = value; }
+
+    // ==================== Engine-Facing Additions ====================
+    // The methods below are additions for the SVG rendering engine's
+    // internal use (float 0..1 channel access, opacity checks, deriving
+    // a new color with a different alpha) -- your original getters/
+    // setters/static factories above are untouched.
+
+    /// Red component as a 0..1 float.
+    float getRF() const { return r / 255.f; }
+    /// Green component as a 0..1 float.
+    float getGF() const { return g / 255.f; }
+    /// Blue component as a 0..1 float.
+    float getBF() const { return b / 255.f; }
+    /// Alpha component as a 0..1 float.
+    float getAF() const { return a / 255.f; }
+
+    /// True if fully opaque (alpha == 255).
+    bool isOpaque() const { return a == 255; }
+    /// True if not fully transparent (alpha > 0).
+    bool isVisible() const { return a > 0; }
+
+    /// This color with alpha forced to fully opaque (255).
+    Color opaqueColor() const { return Color(r, g, b, 255); }
+
+    /// This color with its alpha scaled by @p opacity (0..1).
+    Color colorWithAlpha(float opacity) const {
+        return Color(r, g, b, static_cast<uint8_t>(a * opacity));
+    }
 
     // ==================== Value Conversion ====================
 
@@ -776,7 +804,18 @@ public:
      * @return Color instance representing fully transparent.
      */
     static Color transparent() { return Color(0, 0, 0, 0); }
+
+    // Static member-variable form, distinct from the black()/white()/
+    // transparent() factory functions above (used pervasively as
+    // default values through the SVG engine, e.g. `Color::Transparent`).
+    static const Color Black;
+    static const Color White;
+    static const Color Transparent;
 };
+
+inline const Color Color::Black(0, 0, 0, 255);
+inline const Color Color::White(255, 255, 255, 255);
+inline const Color Color::Transparent(0, 0, 0, 0);
 
 // ==================== ColorBlend ====================
 
@@ -932,7 +971,7 @@ inline std::ostream& operator<<(std::ostream& os, const ColorBlend& blend) {
  * @note Always include "using namespace novasvg::color_literals;" or
  *       use explicit qualification to use these literals.
  */
-namespace novasvg::color::literals {
+namespace novasvg::color_literals {
 
 /**
  * @brief String literal operator for creating Color instances.
@@ -962,8 +1001,8 @@ namespace novasvg::color::literals {
  * @note The string must be a valid string literal. For runtime strings,
  *       use Color::fromString() instead.
  */
-inline novasvg::color::Color operator""_c(const char* str, std::size_t len) {
-    return novasvg::color::Color::fromString(std::string(str, len));
+inline novasvg::Color operator""_c(const char* str, std::size_t len) {
+    return novasvg::Color::fromString(std::string(str, len));
 }
 
 } // namespace novasvg::color_literals

@@ -122,7 +122,7 @@ int cmd_convert(const std::string& input,
     }
     
     // Render
-    auto bitmap = doc->renderToBitmap(width, height, novasvg::color::Color::fromValue(bg_color));
+    auto bitmap = doc->renderToBitmap(width, height, novasvg::Color::fromValue(bg_color));
     if (bitmap.isNull()) {
         std::cerr << "Error: Failed to render SVG\n";
         return 1;

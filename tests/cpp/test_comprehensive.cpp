@@ -141,7 +141,7 @@ TEST_CASE("Bitmap operations") {
     REQUIRE(data != nullptr);
     
     // Test clear
-    bitmap.clear(novasvg::color::Color::fromValue(0xFF0000FF)); // Red color
+    bitmap.clear(novasvg::Color::fromValue(0xFF0000FF)); // Red color
     
     // Test copy constructor
     novasvg::Bitmap bitmap2 = bitmap;
@@ -290,7 +290,7 @@ TEST_CASE("Complex SVG rendering") {
     CHECK(bitmap2.height() == 200);
     
     // Test with background color
-    auto bitmap3 = document->renderToBitmap(100, 100, novasvg::color::Color::fromValue(0xFFFFFFFF));
+    auto bitmap3 = document->renderToBitmap(100, 100, novasvg::Color::fromValue(0xFFFFFFFF));
     CHECK_FALSE(bitmap3.isNull());
 }
 

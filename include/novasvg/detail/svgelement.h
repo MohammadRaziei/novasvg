@@ -867,7 +867,7 @@ public:
         : m_element(element), m_color(color), m_opacity(opacity)
     {}
 
-    bool isRenderable() const { return m_opacity > 0.f && (m_element || m_color.alpha() > 0); }
+    bool isRenderable() const { return m_opacity > 0.f && (m_element || m_color.getA() > 0); }
 
     const SVGPaintElement* element() const { return m_element; }
     const Color& color() const { return  m_color; }
@@ -2671,7 +2671,7 @@ NOVASVG_INLINE GradientStop SVGStopElement::gradientStop(float opacity) const
 {
     Color stopColor = m_stop_color.colorWithAlpha(m_stop_opacity * opacity);
     GradientStop gradientStop = {
-        m_offset.value(), { stopColor.redF(), stopColor.greenF(), stopColor.blueF(), stopColor.alphaF() }
+        m_offset.value(), { stopColor.getRF(), stopColor.getGF(), stopColor.getBF(), stopColor.getAF() }
     };
 
     return gradientStop;
@@ -3907,7 +3907,11 @@ static std::optional<Color> parseColorValue(std::string_view& input, const SVGLa
     if(length == 0)
         return std::nullopt;
     input.remove_prefix(length);
-    return Color(color_to_argb32(&color));
+    // color_to_argb32() packs as 0xAARRGGBB (alpha high byte) -- a
+    // different layout than Color::value()'s 0xRRGGBBAA, so this goes
+    // through components, never through the raw packed value.
+    auto argb = color_to_argb32(&color);
+    return Color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff);
 }
 
 static Color parseColor(std::string_view input, const SVGLayoutState* state, const Color& defaultValue)

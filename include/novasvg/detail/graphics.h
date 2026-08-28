@@ -9,6 +9,8 @@
 #include <array>
 #include <string>
 
+#include "novacolor.h"
+
 namespace novasvg {
 using namespace render; // render/ layer (novasvg::render), the former plutovg
 
@@ -35,44 +37,9 @@ enum class SpreadMethod : uint8_t {
     Repeat = NOVASVG_SPREAD_METHOD_REPEAT
 };
 
-class Color {
-public:
-    constexpr Color() = default;
-    constexpr explicit Color(uint32_t value) : m_value(value) {}
-    constexpr Color(int r, int g, int b, int a = 255) : m_value(a << 24 | r << 16 | g << 8 | b) {}
-
-    constexpr uint8_t alpha() const { return (m_value >> 24) & 0xff; }
-    constexpr uint8_t red() const { return (m_value >> 16) & 0xff; }
-    constexpr uint8_t green() const { return (m_value >> 8) & 0xff; }
-    constexpr uint8_t blue() const { return (m_value >> 0) & 0xff; }
-
-    constexpr float alphaF() const { return alpha() / 255.f; }
-    constexpr float redF() const { return red() / 255.f; }
-    constexpr float greenF() const { return green() / 255.f; }
-    constexpr float blueF() const { return blue() / 255.f; }
-
-    constexpr uint32_t value() const { return m_value; }
-
-    constexpr bool isOpaque() const { return alpha() == 255; }
-    constexpr bool isVisible() const { return alpha() > 0; }
-
-    constexpr Color opaqueColor() const { return Color(m_value | 0xFF000000); }
-    constexpr Color colorWithAlpha(float opacity) const;
-
-    static const Color Transparent;
-    static const Color Black;
-    static const Color White;
-
-private:
-    uint32_t m_value = 0;
-};
-
-constexpr Color Color::colorWithAlpha(float opacity) const
-{
-    auto rgb = m_value & 0x00FFFFFF;
-    auto a = static_cast<int>(alpha() * std::clamp(opacity, 0.f, 1.f));
-    return Color(rgb | a << 24);
-}
+// `Color` now lives in novacolor.h (a single merged class covering both
+// this engine's needs and the richer string-parsing/blending API) --
+// no separate definition here anymore.
 
 class Point {
 public:
@@ -566,9 +533,7 @@ private:
 // ---------------------------------------------------------------
 using namespace render; // render/ layer (novasvg::render), the former plutovg
 
-NOVASVG_INLINE const Color Color::Black(0xFF000000);
-NOVASVG_INLINE const Color Color::White(0xFFFFFFFF);
-NOVASVG_INLINE const Color Color::Transparent(0x00000000);
+// Color::Black/White/Transparent are defined once, in novacolor.h.
 
 NOVASVG_INLINE const Rect Rect::Empty(0, 0, 0, 0);
 NOVASVG_INLINE const Rect Rect::Invalid(0, 0, -1, -1);
@@ -1072,7 +1037,7 @@ NOVASVG_INLINE std::shared_ptr<Canvas> Canvas::create(const Rect& extents)
 
 NOVASVG_INLINE void Canvas::setColor(const Color& color)
 {
-    setColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
+    setColor(color.getRF(), color.getGF(), color.getBF(), color.getAF());
 }
 
 NOVASVG_INLINE void Canvas::setColor(float r, float g, float b, float a)

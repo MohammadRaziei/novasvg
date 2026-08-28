@@ -245,7 +245,7 @@ public:
      * @brief Clears the bitmap with the specified color.
      * @param value The color to clear with.
      */
-    void clear(const color::Color& value);
+    void clear(const Color& value);
 
     /**
      * @brief Converts the bitmap pixel data from ARGB32 Premultiplied to RGBA Plain format in place.
@@ -628,7 +628,7 @@ public:
      * @param backgroundColor The background color to render onto.
      * @return A Bitmap containing the raster representation of the element.
      */
-    Bitmap renderToBitmap(int width = -1, int height = -1, const color::Color& backgroundColor = color::Color(0, 0, 0, 0)) const;
+    Bitmap renderToBitmap(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
 
     /**
      * @brief Retrieves the local transformation matrix of the element.
@@ -763,7 +763,7 @@ public:
      * @param backgroundColor The background color to render onto.
      * @return A Bitmap containing the raster representation of the document.
      */
-    Bitmap renderToBitmap(int width = -1, int height = -1, const color::Color& backgroundColor = color::Color(0, 0, 0, 0)) const;
+    Bitmap renderToBitmap(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
 
     /**
      * @brief Returns the topmost element under the specified point.
@@ -930,7 +930,7 @@ NOVASVG_INLINE int Bitmap::stride() const
     return 0;
 }
 
-NOVASVG_INLINE void Bitmap::clear(const color::Color& value)
+NOVASVG_INLINE void Bitmap::clear(const Color& value)
 {
     if(m_surface == nullptr)
         return;
@@ -1176,7 +1176,7 @@ NOVASVG_INLINE void Element::render(Bitmap& bitmap, const Matrix& matrix) const
     element(true)->render(state);
 }
 
-NOVASVG_INLINE Bitmap Element::renderToBitmap(int width, int height, const color::Color& backgroundColor) const
+NOVASVG_INLINE Bitmap Element::renderToBitmap(int width, int height, const Color& backgroundColor) const
 {
     if(m_node == nullptr)
         return Bitmap();
@@ -1318,7 +1318,7 @@ NOVASVG_INLINE void Document::render(Bitmap& bitmap, const Matrix& matrix) const
     rootElement(true)->render(state);
 }
 
-NOVASVG_INLINE Bitmap Document::renderToBitmap(int width, int height, const color::Color& backgroundColor) const
+NOVASVG_INLINE Bitmap Document::renderToBitmap(int width, int height, const Color& backgroundColor) const
 {
     auto intrinsicWidth = rootElement(true)->intrinsicWidth();
     auto intrinsicHeight = rootElement()->intrinsicHeight();
