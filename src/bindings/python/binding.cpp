@@ -31,18 +31,42 @@ NB_MODULE(novasvg_py, m) {
           "Add a font face from a memory buffer.");
 
     // --- Bind Color Class ---
-    nb::class_<novasvg::color::Color>(m, "Color")
+    nb::class_<novasvg::Color>(m, "Color")
         .def(nb::init<uint8_t, uint8_t, uint8_t, uint8_t>(),
              "r"_a = 0, "g"_a = 0, "b"_a = 0, "a"_a = 255,
              "Construct a color from red, green, blue, alpha components (0-255 each).")
-        .def_static("from_value", &novasvg::color::Color::fromValue, "value"_a,
+        .def(nb::init<const std::string&>(), "value"_a,
+             "Construct a color from a CSS color name or hexadecimal string.")
+        .def_static("from_value", &novasvg::Color::fromValue, "value"_a,
                     "Construct a color from a packed 0xRRGGBBAA integer.")
-        .def("value", &novasvg::color::Color::value,
+        .def_static("from_hash", &novasvg::Color::fromHash, "value"_a)
+        .def_static("from_name", &novasvg::Color::fromName, "value"_a)
+        .def("value", &novasvg::Color::value,
              "Get the color packed as a 0xRRGGBBAA integer.")
-        .def_rw("r", &novasvg::color::Color::r)
-        .def_rw("g", &novasvg::color::Color::g)
-        .def_rw("b", &novasvg::color::Color::b)
-        .def_rw("a", &novasvg::color::Color::a);
+        .def("to_int", &novasvg::Color::value)
+        .def_static("rgba", [](uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+            return novasvg::Color(r, g, b, a);
+        }, "r"_a, "g"_a, "b"_a, "a"_a = 255)
+        .def_static("black", [] { return novasvg::Color::fromName("black"); })
+        .def_static("white", [] { return novasvg::Color::fromName("white"); })
+        .def_static("red", [] { return novasvg::Color::fromName("red"); })
+        .def_static("green", [] { return novasvg::Color::fromName("green"); })
+        .def_static("blue", [] { return novasvg::Color::fromName("blue"); })
+        .def_static("yellow", [] { return novasvg::Color::fromName("yellow"); })
+        .def_static("cyan", [] { return novasvg::Color::fromName("cyan"); })
+        .def_static("magenta", [] { return novasvg::Color::fromName("magenta"); })
+        .def_static("orange", [] { return novasvg::Color::fromName("orange"); })
+        .def_static("transparent", [] { return novasvg::Color(0, 0, 0, 0); })
+        .def_prop_rw("r", &novasvg::Color::getR, &novasvg::Color::setR)
+        .def_prop_rw("g", &novasvg::Color::getG, &novasvg::Color::setG)
+        .def_prop_rw("b", &novasvg::Color::getB, &novasvg::Color::setB)
+        .def_prop_rw("a", &novasvg::Color::getA, &novasvg::Color::setA)
+        .def("__str__", [](const novasvg::Color& color) {
+            return static_cast<std::string>(color);
+        })
+        .def("__eq__", [](const novasvg::Color& lhs, const novasvg::Color& rhs) {
+            return lhs == rhs;
+        });
 
     // --- Bind Matrix Class ---
     nb::class_<novasvg::Matrix>(m, "Matrix")
@@ -92,7 +116,10 @@ NB_MODULE(novasvg_py, m) {
         .def_prop_ro("height", &novasvg::Bitmap::height, "Get the height of the bitmap.")
         .def_prop_ro("stride", &novasvg::Bitmap::stride, "Get the stride (bytes per row) of the bitmap.")
         .def("is_null", &novasvg::Bitmap::isNull, "Check if the bitmap is null.")
-        .def("clear", &novasvg::Bitmap::clear, "value"_a, "Clear the bitmap with a specific color (0xRRGGBBAA).")
+        .def("clear", &novasvg::Bitmap::clear, "value"_a, "Clear the bitmap with a Color.")
+        .def("clear", [](novasvg::Bitmap& bitmap, uint32_t value) {
+            bitmap.clear(novasvg::Color::fromValue(value));
+        }, "value"_a, "Clear the bitmap with a packed 0xRRGGBBAA value.")
         .def("convert_to_rgba", &novasvg::Bitmap::convertToRGBA, "Convert pixel data from ARGB32 Premultiplied to RGBA Plain.")
         .def("write_to_png", [](const novasvg::Bitmap &bmp, const std::string &filename) {
             return bmp.writeToPng(filename);
@@ -124,8 +151,13 @@ NB_MODULE(novasvg_py, m) {
         .def("set_attribute", &novasvg::Element::setAttribute, "name"_a, "value"_a, "Set an attribute value.")
         .def("render", &novasvg::Element::render, "bitmap"_a, "matrix"_a = novasvg::Matrix(), "Render the element onto a bitmap.")
         .def("render_to_bitmap", &novasvg::Element::renderToBitmap, 
-             "width"_a = -1, "height"_a = -1, "backgroundColor"_a = 0x00000000,
+             "width"_a = -1, "height"_a = -1, "backgroundColor"_a = novasvg::Color(),
              "Render the element to a new Bitmap.")
+        .def("render_to_bitmap", [](const novasvg::Element& element, int width, int height,
+                                    uint32_t background_color) {
+            return element.renderToBitmap(width, height, novasvg::Color::fromValue(background_color));
+        }, "width"_a = -1, "height"_a = -1, "backgroundColor"_a = 0u,
+           "Render the element using a packed 0xRRGGBBAA background color.")
         .def("get_local_matrix", &novasvg::Element::getLocalMatrix, "Get the local transformation matrix.")
         .def("get_global_matrix", &novasvg::Element::getGlobalMatrix, "Get the global transformation matrix.")
         .def("get_local_bounding_box", &novasvg::Element::getLocalBoundingBox, "Get the local bounding box.")
@@ -153,8 +185,13 @@ NB_MODULE(novasvg_py, m) {
         .def("force_layout", &novasvg::Document::forceLayout, "Force an immediate layout update.")
         .def("render", &novasvg::Document::render, "bitmap"_a, "matrix"_a = novasvg::Matrix(), "Render the document onto a bitmap.")
         .def("render_to_bitmap", &novasvg::Document::renderToBitmap, 
-             "width"_a = -1, "height"_a = -1, "backgroundColor"_a = 0x00000000,
+             "width"_a = -1, "height"_a = -1, "backgroundColor"_a = novasvg::Color(),
              "Render the document to a new Bitmap.")
+        .def("render_to_bitmap", [](const novasvg::Document& document, int width, int height,
+                                    uint32_t background_color) {
+            return document.renderToBitmap(width, height, novasvg::Color::fromValue(background_color));
+        }, "width"_a = -1, "height"_a = -1, "backgroundColor"_a = 0u,
+           "Render the document using a packed 0xRRGGBBAA background color.")
         .def("element_from_point", &novasvg::Document::elementFromPoint, "x"_a, "y"_a, "Get the topmost element at a specific point.")
         .def("get_element_by_id", &novasvg::Document::getElementById, "id"_a, "Get an element by its ID.")
         .def("document_element", &novasvg::Document::documentElement, "Get the root element of the document.");

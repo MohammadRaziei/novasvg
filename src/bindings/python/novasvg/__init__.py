@@ -6,9 +6,11 @@ NovaSVG - A header-only SVG library with Python bindings
 from .novasvg_py import Document
 from .novasvg_py import Element
 from .novasvg_py import TextNode
+from .novasvg_py import Node
 from .novasvg_py import Matrix
 from .novasvg_py import Box
 from .novasvg_py import Bitmap
+from .novasvg_py import Color
 
 # Import utility functions
 from .novasvg_py import version_string
@@ -31,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 
-class Color:
+class _ColorUtilities:
     """
     Represents a color in ARGB format.
     Provides static factory methods to create color instances.
@@ -329,8 +331,8 @@ def svg2png(
     :raises ValueError: If the SVG content is invalid or cannot be rendered.
     :raises IOError: If the output file cannot be written.
     """
-    # Convert Color object to int if necessary
-    bg_int = background_color.to_int() if isinstance(background_color, Color) else background_color
+    if isinstance(background_color, int):
+        background_color = Color.from_value(background_color)
 
     # Load the document using the helper function
     doc = _handle_input_data(input_data)
@@ -344,7 +346,7 @@ def svg2png(
             # We don't raise here, as rendering might still work without CSS
 
     # Render to bitmap
-    bitmap = doc.render_to_bitmap(width, height, bg_int)
+    bitmap = doc.render_to_bitmap(width, height, background_color)
 
     if bitmap.is_null():
         raise ValueError("Failed to render bitmap (result is null).")
