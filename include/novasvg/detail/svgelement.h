@@ -934,10 +934,19 @@ public:
 
     void forceLayout();
 
+    // Raw <style> text collected while parsing, kept verbatim (not just
+    // the resolved SVG presentation properties applyStyleSheet() pulls
+    // out of it) so foreignObject content -- which sits outside the SVG
+    // element tree and so never goes through that resolver -- can still
+    // look up a class's declarations itself. See ForeignObjectSimple.
+    const std::string& styleSheetText() const { return m_styleSheetText; }
+    void setStyleSheetText(std::string text) { m_styleSheetText = std::move(text); }
+
 private:
     std::map<std::string, SVGElement*, std::less<>> m_idCache;
     float m_intrinsicWidth{-1.f};
     float m_intrinsicHeight{-1.f};
+    std::string m_styleSheetText;
 };
 
 class SVGUseElement final : public SVGGraphicsElement, public SVGURIReference {
@@ -5548,6 +5557,134 @@ inline std::u32string utf8ToU32(const std::string& text)
     return result;
 }
 
+// Pulls a "background-color: <value>" declaration's value out of a CSS
+// declaration block (the inside of a style="..." attribute, or the
+// inside of a rule's { ... }) and parses it. Not a general CSS-value
+// parser -- just enough to hand the value off to color_parse().
+inline std::optional<Color> parseBackgroundColorDeclaration(std::string_view block)
+{
+    static constexpr std::string_view property = "background-color";
+    size_t pos = 0;
+    while((pos = block.find(property, pos)) != std::string_view::npos) {
+        auto after = pos + property.size();
+        pos = after;
+        while(after < block.size() && IS_WS(block[after]))
+            ++after;
+        if(after >= block.size() || block[after] != ':')
+            continue;
+        ++after;
+        while(after < block.size() && IS_WS(block[after]))
+            ++after;
+        auto end = block.find_first_of(";}\"'", after);
+        auto value = block.substr(after, (end == std::string_view::npos ? block.size() : end) - after);
+        while(!value.empty() && IS_WS(value.back()))
+            value.remove_suffix(1);
+
+        color_t color;
+        int length = color_parse(&color, value.data(), (int)value.length());
+        if(length == 0)
+            continue;
+        auto argb = color_to_argb32(&color);
+        return Color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff);
+    }
+
+    return std::nullopt;
+}
+
+// Finds a bare ".className{ ... }" (or ".className , " / ".className\n{")
+// rule in a stylesheet and returns its background-color, if any.
+// Deliberately not a selector engine: skips any rule where the class
+// isn't immediately followed by whitespace-then-brace, so a compound
+// selector like ".edgeLabel p{...}" is correctly left alone rather than
+// mismatched.
+inline std::optional<Color> findClassBackgroundColor(std::string_view css, std::string_view className)
+{
+    std::string needle;
+    needle.reserve(className.size() + 1);
+    needle += '.';
+    needle.append(className);
+
+    size_t pos = 0;
+    while((pos = css.find(needle, pos)) != std::string_view::npos) {
+        auto after = pos + needle.size();
+        pos = after;
+        if(after < css.size() && (IS_ALPHA(css[after]) || IS_NUM(css[after]) || css[after] == '-' || css[after] == '_'))
+            continue; // matched a longer class name, e.g. ".edgeLabel2"
+
+        auto i = after;
+        while(i < css.size() && IS_WS(css[i]))
+            ++i;
+        if(i >= css.size() || css[i] != '{')
+            continue;
+
+        auto close = css.find('}', i);
+        if(close == std::string_view::npos)
+            return std::nullopt;
+        if(auto color = parseBackgroundColorDeclaration(css.substr(i, close - i)))
+            return color;
+    }
+
+    return std::nullopt;
+}
+
+// Recovers the background box Mermaid (and similar tools) paint behind
+// foreignObject text via CSS on the wrapping <div> -- either an inline
+// style="background-color:..." or a class="..." resolved against the
+// document's stylesheet text. ForeignObjectSimple only strips tags down
+// to plain text, so nothing paints that box otherwise; edge labels in
+// particular then sit directly on the connecting line with nothing
+// behind them to break it up.
+inline std::optional<Color> foreignObjectBackgroundColor(std::string_view rawHtml, const SVGRootElement* root)
+{
+    if(rawHtml.empty() || rawHtml.front() != '<')
+        return std::nullopt;
+    auto tagEnd = rawHtml.find('>');
+    if(tagEnd == std::string_view::npos)
+        return std::nullopt;
+    auto tag = rawHtml.substr(0, tagEnd);
+
+    auto attribute = [&](std::string_view name) -> std::optional<std::string_view> {
+        auto pos = tag.find(name);
+        if(pos == std::string_view::npos)
+            return std::nullopt;
+        auto valueStart = pos + name.size();
+        if(valueStart >= tag.size() || (tag[valueStart] != '"' && tag[valueStart] != '\''))
+            return std::nullopt;
+        auto quote = tag[valueStart];
+        ++valueStart;
+        auto valueEnd = tag.find(quote, valueStart);
+        if(valueEnd == std::string_view::npos)
+            return std::nullopt;
+        return tag.substr(valueStart, valueEnd - valueStart);
+    };
+
+    if(auto style = attribute("style=")) {
+        if(auto color = parseBackgroundColorDeclaration(*style))
+            return color;
+    }
+
+    if(root == nullptr)
+        return std::nullopt;
+    if(auto classes = attribute("class=")) {
+        std::string_view remaining = *classes;
+        while(!remaining.empty()) {
+            while(!remaining.empty() && IS_WS(remaining.front()))
+                remaining.remove_prefix(1);
+            auto end = remaining.find(' ');
+            auto className = remaining.substr(0, end);
+            if(!className.empty()) {
+                if(auto color = findClassBackgroundColor(root->styleSheetText(), className))
+                    return color;
+            }
+            if(end == std::string_view::npos)
+                break;
+            remaining.remove_prefix(end);
+        }
+    }
+
+    return std::nullopt;
+}
+
 } // namespace
 
 NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* element, SVGRenderState& state) const
@@ -5569,6 +5706,13 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
         box.x + (box.w - textWidth) / 2.f,
         box.y + (box.h + font.ascent() - font.descent()) / 2.f
     );
+
+    if(auto backgroundColor = foreignObjectBackgroundColor(element->rawContent(), element->rootElement())) {
+        state->setColor(*backgroundColor);
+        Path backgroundPath;
+        backgroundPath.addRect(box);
+        state->fillPath(backgroundPath, FillRule::NonZero, state.currentTransform());
+    }
 
     const auto& fill = element->fill();
     if(fill.applyPaint(state))

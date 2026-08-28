@@ -924,6 +924,7 @@ NOVASVG_INLINE bool Document::parse(const char* data, size_t length)
 
     if(m_rootElement == nullptr || ignoring > 0 || !input.empty())
         return false;
+    m_rootElement->setStyleSheetText(styleSheet);
     applyStyleSheet(styleSheet);
     m_rootElement->build();
     return true;
