@@ -200,46 +200,68 @@ NOVASVG_INLINE void surface_clear(surface_t* surface, const color_t* color)
     }
 }
 
-static void surface_write_begin(const surface_t* surface)
-{
-    convert_argb_to_rgba(surface->data, surface->data, surface->width, surface->height, surface->stride);
-}
+// A short-lived, unpremultiplied RGBA copy of a surface's pixels, used
+// only for encoding. `surface`'s own premultiplied-ARGB buffer is the
+// one every compositing operator in blend.h assumes, so encoding must
+// not touch it -- this makes surface_write_to_* true read-only
+// operations instead of the old convert -> encode -> convert-back
+// dance, which did two full unpremultiply-divide passes over every
+// pixel for a net no-op. One pass is the least this can cost: the
+// divide-by-alpha is unavoidable (PNG/JPEG want straight alpha, the
+// rasterizer needs premultiplied for `over` to be correct), so this
+// does it exactly once, into a buffer sized to match `surface` exactly
+// and freed as soon as encoding is done.
+class SurfaceRGBACopy {
+public:
+    explicit SurfaceRGBACopy(const surface_t* surface)
+        : m_data(static_cast<unsigned char*>(malloc(size_t(surface->stride) * size_t(surface->height))))
+    {
+        if(m_data != nullptr)
+            convert_argb_to_rgba(m_data, surface->data, surface->width, surface->height, surface->stride);
+    }
 
-static void surface_write_end(const surface_t* surface)
-{
-    convert_rgba_to_argb(surface->data, surface->data, surface->width, surface->height, surface->stride);
-}
+    ~SurfaceRGBACopy() { free(m_data); }
+
+    SurfaceRGBACopy(const SurfaceRGBACopy&) = delete;
+    SurfaceRGBACopy& operator=(const SurfaceRGBACopy&) = delete;
+
+    unsigned char* data() const { return m_data; }
+    explicit operator bool() const { return m_data != nullptr; }
+
+private:
+    unsigned char* m_data;
+};
 
 NOVASVG_INLINE bool surface_write_to_png(const surface_t* surface, const char* filename)
 {
-    surface_write_begin(surface);
-    int success = stbi_write_png(filename, surface->width, surface->height, 4, surface->data, surface->stride);
-    surface_write_end(surface);
-    return success;
+    SurfaceRGBACopy copy(surface);
+    if(!copy)
+        return false;
+    return stbi_write_png(filename, surface->width, surface->height, 4, copy.data(), surface->stride) != 0;
 }
 
 NOVASVG_INLINE bool surface_write_to_jpg(const surface_t* surface, const char* filename, int quality)
 {
-    surface_write_begin(surface);
-    int success = stbi_write_jpg(filename, surface->width, surface->height, 4, surface->data, quality);
-    surface_write_end(surface);
-    return success;
+    SurfaceRGBACopy copy(surface);
+    if(!copy)
+        return false;
+    return stbi_write_jpg(filename, surface->width, surface->height, 4, copy.data(), quality) != 0;
 }
 
 NOVASVG_INLINE bool surface_write_to_png_stream(const surface_t* surface, write_func_t write_func, void* closure)
 {
-    surface_write_begin(surface);
-    int success = stbi_write_png_to_func(write_func, closure, surface->width, surface->height, 4, surface->data, surface->stride);
-    surface_write_end(surface);
-    return success;
+    SurfaceRGBACopy copy(surface);
+    if(!copy)
+        return false;
+    return stbi_write_png_to_func(write_func, closure, surface->width, surface->height, 4, copy.data(), surface->stride) != 0;
 }
 
 NOVASVG_INLINE bool surface_write_to_jpg_stream(const surface_t* surface, write_func_t write_func, void* closure, int quality)
 {
-    surface_write_begin(surface);
-    int success = stbi_write_jpg_to_func(write_func, closure, surface->width, surface->height, 4, surface->data, quality);
-    surface_write_end(surface);
-    return success;
+    SurfaceRGBACopy copy(surface);
+    if(!copy)
+        return false;
+    return stbi_write_jpg_to_func(write_func, closure, surface->width, surface->height, 4, copy.data(), quality) != 0;
 }
 
 NOVASVG_INLINE void convert_argb_to_rgba(unsigned char* dst, const unsigned char* src, int width, int height, int stride)
