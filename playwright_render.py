@@ -58,10 +58,30 @@ async def get_svg_dimensions(page: Page) -> dict[str, int]:
         """() => {
         const svg = document.querySelector('svg');
         if (!svg) return { width: 800, height: 600 };
+
+        // 1. Try reading viewBox with Math.floor to match browser viewport rendering
+        if (svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.width > 0) {
+            return {
+                width: Math.floor(svg.viewBox.baseVal.width),
+                height: Math.floor(svg.viewBox.baseVal.height)
+            };
+        }
+
+        // 2. Try parsing width/height attributes if they are explicit numbers
+        const attrWidth = parseFloat(svg.getAttribute('width'));
+        const attrHeight = parseFloat(svg.getAttribute('height'));
+        if (!isNaN(attrWidth) && !isNaN(attrHeight)) {
+            return {
+                width: Math.floor(attrWidth),
+                height: Math.floor(attrHeight)
+            };
+        }
+
+        // 3. Fallback to bounding rect
         const rect = svg.getBoundingClientRect();
         return {
-            width: Math.ceil(rect.width) || 800,
-            height: Math.ceil(rect.height) || 600
+            width: Math.floor(rect.width) || 800,
+            height: Math.floor(rect.height) || 600
         };
     }"""
     )
