@@ -5627,45 +5627,35 @@ inline std::optional<Color> findClassBackgroundColor(std::string_view css, std::
     return std::nullopt;
 }
 
-// Recovers the background box Mermaid (and similar tools) paint behind
-// foreignObject text via CSS on the wrapping <div> -- either an inline
-// style="background-color:..." or a class="..." resolved against the
-// document's stylesheet text. ForeignObjectSimple only strips tags down
-// to plain text, so nothing paints that box otherwise; edge labels in
-// particular then sit directly on the connecting line with nothing
-// behind them to break it up.
-inline std::optional<Color> foreignObjectBackgroundColor(std::string_view rawHtml, const SVGRootElement* root)
+inline std::optional<std::string_view> htmlAttribute(std::string_view tag, std::string_view name)
 {
-    if(rawHtml.empty() || rawHtml.front() != '<')
+    auto pos = tag.find(name);
+    if(pos == std::string_view::npos)
         return std::nullopt;
-    auto tagEnd = rawHtml.find('>');
-    if(tagEnd == std::string_view::npos)
+    auto valueStart = pos + name.size();
+    if(valueStart >= tag.size() || (tag[valueStart] != '"' && tag[valueStart] != '\''))
         return std::nullopt;
-    auto tag = rawHtml.substr(0, tagEnd);
+    auto quote = tag[valueStart];
+    ++valueStart;
+    auto valueEnd = tag.find(quote, valueStart);
+    if(valueEnd == std::string_view::npos)
+        return std::nullopt;
+    return tag.substr(valueStart, valueEnd - valueStart);
+}
 
-    auto attribute = [&](std::string_view name) -> std::optional<std::string_view> {
-        auto pos = tag.find(name);
-        if(pos == std::string_view::npos)
-            return std::nullopt;
-        auto valueStart = pos + name.size();
-        if(valueStart >= tag.size() || (tag[valueStart] != '"' && tag[valueStart] != '\''))
-            return std::nullopt;
-        auto quote = tag[valueStart];
-        ++valueStart;
-        auto valueEnd = tag.find(quote, valueStart);
-        if(valueEnd == std::string_view::npos)
-            return std::nullopt;
-        return tag.substr(valueStart, valueEnd - valueStart);
-    };
-
-    if(auto style = attribute("style=")) {
+// Background color a single opening tag paints, from an inline
+// style="background-color:..." or from class="..." resolved against the
+// document's stylesheet text.
+inline std::optional<Color> tagBackgroundColor(std::string_view tag, const SVGRootElement* root)
+{
+    if(auto style = htmlAttribute(tag, "style=")) {
         if(auto color = parseBackgroundColorDeclaration(*style))
             return color;
     }
 
     if(root == nullptr)
         return std::nullopt;
-    if(auto classes = attribute("class=")) {
+    if(auto classes = htmlAttribute(tag, "class=")) {
         std::string_view remaining = *classes;
         while(!remaining.empty()) {
             while(!remaining.empty() && IS_WS(remaining.front()))
@@ -5685,6 +5675,44 @@ inline std::optional<Color> foreignObjectBackgroundColor(std::string_view rawHtm
     return std::nullopt;
 }
 
+// Recovers the background box Mermaid (and similar tools) paint behind
+// foreignObject text via CSS on the wrapping <div> and any element nested
+// inside it -- either an inline style="background-color:..." or a
+// class="..." resolved against the document's stylesheet text.
+// ForeignObjectSimple only strips tags down to plain text, so nothing
+// paints that box otherwise; edge labels in particular then sit directly
+// on the connecting line with nothing behind them to break it up.
+//
+// Checked against a real WebKit render: Mermaid's edge labels have an
+// opaque background on an inner <span> stacked on top of a translucent
+// one on the outer <div>, and the opaque one is what's actually visible
+// -- so this walks every opening tag in document order and keeps the
+// *last* match, mirroring normal paint order (later/nested elements
+// paint over earlier ones).
+inline std::optional<Color> foreignObjectBackgroundColor(std::string_view rawHtml, const SVGRootElement* root)
+{
+    std::optional<Color> result;
+    size_t pos = 0;
+    while(pos < rawHtml.size()) {
+        auto tagStart = rawHtml.find('<', pos);
+        if(tagStart == std::string_view::npos)
+            break;
+        if(tagStart + 1 < rawHtml.size() && rawHtml[tagStart + 1] == '/') {
+            pos = tagStart + 2;
+            continue;
+        }
+        auto tagEnd = rawHtml.find('>', tagStart);
+        if(tagEnd == std::string_view::npos)
+            break;
+        auto tag = rawHtml.substr(tagStart, tagEnd - tagStart);
+        if(auto color = tagBackgroundColor(tag, root))
+            result = color;
+        pos = tagEnd + 1;
+    }
+
+    return result;
+}
+
 } // namespace
 
 NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* element, SVGRenderState& state) const
@@ -5702,9 +5730,30 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
 
     auto box = element->fillBoundingBox();
     auto textWidth = font.measureText(textView);
+
+    // A real Trebuchet-MS-metrics render (Mermaid computed this box that
+    // way, and a Playwright/Chromium ground-truth render confirms it)
+    // always fits with room to spare -- so overflow here only ever means
+    // OUR substitute font is wider than the one the box was sized for
+    // (this environment lacks Trebuchet MS; whatever fontconfig hands
+    // back instead rarely matches its metrics). There's no reliable way
+    // to know how much wider without the real font, so rather than
+    // truncating the word (which we first tried, matching a PhantomJS
+    // reference -- turned out that reference itself doesn't match a real
+    // Chromium render either) we condense it horizontally to fit. Full,
+    // slightly narrower text reads better than a clipped word.
+    float scale = 1.f;
+    if(textWidth > box.w && textWidth > 0.f)
+        scale = box.w / textWidth;
     Point origin(
-        box.x + (box.w - textWidth) / 2.f,
-        box.y + (box.h + font.ascent() - font.descent()) / 2.f
+        box.x + (box.w - textWidth * scale) / 2.f,
+        // Vertical centering: baseline = box-center + (ascent+descent)/2,
+        // consistent with the AlignmentBaseline::Central case elsewhere
+        // in this file (descent() is negative, so this pulls the
+        // baseline UP from box-center by half the descent -- using minus
+        // here instead double-counts descent and sinks the text visibly
+        // below center).
+        box.y + (box.h + font.ascent() + font.descent()) / 2.f
     );
 
     if(auto backgroundColor = foreignObjectBackgroundColor(element->rawContent(), element->rootElement())) {
@@ -5715,8 +5764,16 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
     }
 
     const auto& fill = element->fill();
-    if(fill.applyPaint(state))
-        state->fillText(textView, font, origin, state.currentTransform());
+    if(fill.applyPaint(state)) {
+        auto textTransform = state.currentTransform();
+        if(scale < 1.f) {
+            // Condense horizontally about the text's own left edge so it
+            // still lands at `origin`; only x is scaled, so glyph height
+            // (and therefore vertical centering) is untouched.
+            textTransform = textTransform * Transform::translated(origin.x, 0.f) * Transform::scaled(scale, 1.f) * Transform::translated(-origin.x, 0.f);
+        }
+        state->fillText(textView, font, origin, textTransform);
+    }
 }
 
 NOVASVG_INLINE SVGSymbolElement::SVGSymbolElement(Document* document)
