@@ -1252,46 +1252,6 @@ NOVASVG_API int surface_get_stride(const surface_t* surface);
 NOVASVG_API void surface_clear(surface_t* surface, const color_t* color);
 
 /**
- * @brief Writes the surface to a PNG file.
- *
- * @param surface Pointer to the `surface_t` object.
- * @param filename Path to the output PNG file.
- * @return `true` if successful, `false` otherwise.
- */
-NOVASVG_API bool surface_write_to_png(const surface_t* surface, const char* filename);
-
-/**
- * @brief Writes the surface to a JPEG file.
- *
- * @param surface Pointer to the `surface_t` object.
- * @param filename Path to the output JPEG file.
- * @param quality JPEG quality (0 to 100).
- * @return `true` if successful, `false` otherwise.
- */
-NOVASVG_API bool surface_write_to_jpg(const surface_t* surface, const char* filename, int quality);
-
-/**
- * @brief Writes the surface to a PNG stream.
- *
- * @param surface Pointer to the `surface_t` object.
- * @param write_func Callback function for writing data.
- * @param closure User-defined data passed to the callback.
- * @return `true` if successful, `false` otherwise.
- */
-NOVASVG_API bool surface_write_to_png_stream(const surface_t* surface, write_func_t write_func, void* closure);
-
-/**
- * @brief Writes the surface to a JPEG stream.
- *
- * @param surface Pointer to the `surface_t` object.
- * @param write_func Callback function for writing data.
- * @param closure User-defined data passed to the callback.
- * @param quality JPEG quality (0 to 100).
- * @return `true` if successful, `false` otherwise.
- */
-NOVASVG_API bool surface_write_to_jpg_stream(const surface_t* surface, write_func_t write_func, void* closure, int quality);
-
-/**
  * @brief Converts pixel data from premultiplied ARGB to RGBA format.
  *
  * Transforms pixel data from native-endian 32-bit ARGB premultiplied format

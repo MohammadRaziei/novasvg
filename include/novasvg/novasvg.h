@@ -281,6 +281,38 @@ public:
     bool writeToPng(novasvg_write_func_t callback, void* closure) const;
 
     /**
+     * @brief Writes the bitmap to a BMP file.
+     */
+    bool writeToBmp(const std::string& filename) const;
+
+    /**
+     * @brief Writes the bitmap to a BMP stream.
+     */
+    bool writeToBmp(novasvg_write_func_t callback, void* closure) const;
+
+    /**
+     * @brief Writes the bitmap to a TGA file.
+     */
+    bool writeToTga(const std::string& filename) const;
+
+    /**
+     * @brief Writes the bitmap to a TGA stream.
+     */
+    bool writeToTga(novasvg_write_func_t callback, void* closure) const;
+
+    /**
+     * @brief Writes the bitmap to a JPEG file.
+     * @param quality JPEG quality, from 1 to 100.
+     */
+    bool writeToJpg(const std::string& filename, int quality = 80) const;
+
+    /**
+     * @brief Writes the bitmap to a JPEG stream.
+     * @param quality JPEG quality, from 1 to 100.
+     */
+    bool writeToJpg(novasvg_write_func_t callback, void* closure, int quality = 80) const;
+
+    /**
      * @internal
      */
     surface_t* surface() const { return m_surface; }
@@ -831,6 +863,12 @@ private:
 #include "detail/render/rasterize.h"
 #include "detail/render/surface.h"
 
+// Bitmap owns all image-writing (PNG/BMP/TGA/JPG) below; stb_image_write
+// is only ever touched from here.
+#define STB_IMAGE_WRITE_STATIC
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "detail/render/vendor/stb_image_write.h"
+
 #include "detail/graphics.h"
 #include "detail/svgelement.h"
 #include "detail/svgparser.hpp"
@@ -956,18 +994,114 @@ NOVASVG_INLINE Bitmap& Bitmap::operator=(Bitmap&& bitmap)
     return *this;
 }
 
+namespace {
+
+// One-pass, unpremultiplied RGBA copy of a Bitmap's pixels -- lives only
+// long enough to hand to stb_image_write. This is an implementation
+// detail of Bitmap's write*() methods below, not a type of its own: no
+// declaration in the class, nothing exported.
+//
+// Bitmap itself stays ARGB32-Premultiplied always -- it doubles as a
+// drawable surface (Canvas can render onto an existing Bitmap) and as a
+// texture source (canvas_set_texture reads bitmap.surface() directly for
+// <image>/pattern fills), both of which need premultiplied alpha for
+// `over`-compositing to be correct. Only encoding needs straight alpha,
+// so only encoding pays for the one unavoidable unpremultiply pass, via
+// this scratch buffer -- never a permanent, library-wide format change.
+class BitmapRgbaScratch {
+public:
+    explicit BitmapRgbaScratch(const Bitmap& bitmap)
+        : m_width(bitmap.width())
+        , m_height(bitmap.height())
+        , m_stride(m_width * 4)
+        , m_data(bitmap.isNull() ? nullptr : static_cast<uint8_t*>(malloc(size_t(m_stride) * size_t(m_height))))
+    {
+        if(m_data != nullptr)
+            convert_argb_to_rgba(m_data, bitmap.data(), m_width, m_height, bitmap.stride());
+    }
+
+    ~BitmapRgbaScratch() { free(m_data); }
+
+    BitmapRgbaScratch(const BitmapRgbaScratch&) = delete;
+    BitmapRgbaScratch& operator=(const BitmapRgbaScratch&) = delete;
+
+    explicit operator bool() const { return m_data != nullptr; }
+    uint8_t* data() const { return m_data; }
+    int width() const { return m_width; }
+    int height() const { return m_height; }
+    int stride() const { return m_stride; }
+
+private:
+    int m_width;
+    int m_height;
+    int m_stride;
+    uint8_t* m_data;
+};
+
+} // namespace
+
 NOVASVG_INLINE bool Bitmap::writeToPng(const std::string& filename) const
 {
-    if(m_surface)
-        return surface_write_to_png(m_surface, filename.data());
-    return false;
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return stbi_write_png(filename.data(), rgba.width(), rgba.height(), 4, rgba.data(), rgba.stride()) != 0;
 }
 
-NOVASVG_INLINE bool Bitmap::writeToPng(write_func_t callback, void* closure) const
+NOVASVG_INLINE bool Bitmap::writeToPng(novasvg_write_func_t callback, void* closure) const
 {
-    if(m_surface)
-        return surface_write_to_png_stream(m_surface, callback, closure);
-    return false;
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return stbi_write_png_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data(), rgba.stride()) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToBmp(const std::string& filename) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return stbi_write_bmp(filename.data(), rgba.width(), rgba.height(), 4, rgba.data()) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToBmp(novasvg_write_func_t callback, void* closure) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return stbi_write_bmp_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data()) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToTga(const std::string& filename) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return stbi_write_tga(filename.data(), rgba.width(), rgba.height(), 4, rgba.data()) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToTga(novasvg_write_func_t callback, void* closure) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return stbi_write_tga_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data()) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToJpg(const std::string& filename, int quality) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return stbi_write_jpg(filename.data(), rgba.width(), rgba.height(), 4, rgba.data(), quality) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToJpg(novasvg_write_func_t callback, void* closure, int quality) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return stbi_write_jpg_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data(), quality) != 0;
 }
 
 NOVASVG_INLINE surface_t* Bitmap::release()
