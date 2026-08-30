@@ -47,9 +47,9 @@ TEST_CASE("Bitmap advanced operations") {
     // Test convertToRGBA
     bitmap.convertToRGBA();
     
-    // Test writeToPng with callback (just test it doesn't crash)
+    // Test write() with callback (just test it doesn't crash)
     // Note: novasvg_write_func_t has signature: void (*)(void* closure, void* data, int size)
-    bool writeResult = bitmap.writeToPng([](void* closure, void* data, int size) {
+    bool writeResult = bitmap.write([](void* closure, void* data, int size) {
         // Do nothing, just accept the data
     }, nullptr);
     // Don't check result as it depends on PNG writer

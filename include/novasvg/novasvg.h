@@ -30,6 +30,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <cctype>
 #include <vector>
 
 // True header-only linkage: every function/method defined in the detail/
@@ -266,51 +267,37 @@ public:
     bool valid() const { return !isNull(); }
 
     /**
-     * @brief Writes the bitmap to a PNG file.
-     * @param filename The name of the file to write.
+     * @brief Image formats Bitmap can encode itself as.
+     */
+    enum class Format {
+        Auto,  ///< Detect from the filename's extension (write(filename, ...) only); Png if unrecognized or absent.
+        Png,
+        Bmp,
+        Tga,
+        Jpg
+    };
+
+    /**
+     * @brief Writes the bitmap to a file, encoding it as `format`.
+     * @param filename The name of the file to write. With `Format::Auto` (the
+     * default), the format is picked from this name's extension (.png/.bmp/.tga/.jpg/.jpeg),
+     * falling back to PNG if it's unrecognized or missing.
+     * @param format Which format to encode as, or `Format::Auto` to detect it from `filename`.
+     * @param jpgQuality JPEG quality (1-100), used only when writing as `Format::Jpg`.
      * @return True if the file was written successfully, false otherwise.
      */
-    bool writeToPng(const std::string& filename) const;
+    bool write(const std::string& filename, Format format = Format::Auto, int jpgQuality = 80) const;
 
     /**
-     * @brief Writes the bitmap to a PNG stream.
+     * @brief Writes the bitmap to a stream, encoding it as `format`.
      * @param callback Callback function for writing data.
      * @param closure User-defined data passed to the callback.
+     * @param format Which format to encode as. `Format::Auto` has nothing to detect
+     * from here, so it's treated the same as `Format::Png`.
+     * @param jpgQuality JPEG quality (1-100), used only when writing as `Format::Jpg`.
      * @return True if successful, false otherwise.
      */
-    bool writeToPng(novasvg_write_func_t callback, void* closure) const;
-
-    /**
-     * @brief Writes the bitmap to a BMP file.
-     */
-    bool writeToBmp(const std::string& filename) const;
-
-    /**
-     * @brief Writes the bitmap to a BMP stream.
-     */
-    bool writeToBmp(novasvg_write_func_t callback, void* closure) const;
-
-    /**
-     * @brief Writes the bitmap to a TGA file.
-     */
-    bool writeToTga(const std::string& filename) const;
-
-    /**
-     * @brief Writes the bitmap to a TGA stream.
-     */
-    bool writeToTga(novasvg_write_func_t callback, void* closure) const;
-
-    /**
-     * @brief Writes the bitmap to a JPEG file.
-     * @param quality JPEG quality, from 1 to 100.
-     */
-    bool writeToJpg(const std::string& filename, int quality = 80) const;
-
-    /**
-     * @brief Writes the bitmap to a JPEG stream.
-     * @param quality JPEG quality, from 1 to 100.
-     */
-    bool writeToJpg(novasvg_write_func_t callback, void* closure, int quality = 80) const;
+    bool write(novasvg_write_func_t callback, void* closure, Format format = Format::Png, int jpgQuality = 80) const;
 
     /**
      * @internal
@@ -867,210 +854,43 @@ private:
 // is only ever touched from here.
 #define STB_IMAGE_WRITE_STATIC
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-// ---- begin inlined stb_image_write (v1.16, public domain / MIT -- Sean Barrett) ----
-// Vendored in-place per project convention: no separate vendor/ file for this one,
-// since Bitmap (below) is its only user. Upstream: https://github.com/nothings/stb
-#pragma once
+// Image encoding (PNG, BMP, TGA, JPEG) for Bitmap::write(). Ported from
+// stb_image_write v1.16 (Sean Barrett, public domain / MIT) with every
+// identifier renamed to this project's naming and folded into
+// novasvg::render. The single-header config-switch (extern vs static
+// linkage) and standalone-include-guard machinery were dropped since this
+// now only ever exists inlined here, always fully built in; the several
+// `#ifndef NOVASVG_IW_NO_STDIO` blocks below are untouched from upstream
+// (NOVASVG_IW_NO_STDIO is just never defined, same as upstream's own
+// default) -- left alone deliberately rather than risk mismatching one of
+// several differently-spelled #endif comments while unwrapping them.
+// Upstream: https://github.com/nothings/stb
 
-/* stb_image_write - v1.16 - public domain - http://nothings.org/stb
-   writes out PNG/BMP/TGA/JPEG/HDR images to C stdio - Sean Barrett 2010-2015
-                                     no warranty implied; use at your own risk
-
-   Before #including,
-
-       #define STB_IMAGE_WRITE_IMPLEMENTATION
-
-   in the file that you want to have the implementation.
-
-   Will probably not work correctly with strict-aliasing optimizations.
-
-ABOUT:
-
-   This header file is a library for writing images to C stdio or a callback.
-
-   The PNG output is not optimal; it is 20-50% larger than the file
-   written by a decent optimizing implementation; though providing a custom
-   zlib compress function (see STBIW_ZLIB_COMPRESS) can mitigate that.
-   This library is designed for source code compactness and simplicity,
-   not optimal image file size or run-time performance.
-
-BUILDING:
-
-   You can #define STBIW_ASSERT(x) before the #include to avoid using assert.h.
-   You can #define STBIW_MALLOC(), STBIW_REALLOC(), and STBIW_FREE() to replace
-   malloc,realloc,free.
-   You can #define STBIW_MEMMOVE() to replace memmove()
-   You can #define STBIW_ZLIB_COMPRESS to use a custom zlib-style compress function
-   for PNG compression (instead of the builtin one), it must have the following signature:
-   unsigned char * my_compress(unsigned char *data, int data_len, int *out_len, int quality);
-   The returned data will be freed with STBIW_FREE() (free() by default),
-   so it must be heap allocated with STBIW_MALLOC() (malloc() by default),
-
-UNICODE:
-
-   If compiling for Windows and you wish to use Unicode filenames, compile
-   with
-       #define STBIW_WINDOWS_UTF8
-   and pass utf8-encoded filenames. Call stbiw_convert_wchar_to_utf8 to convert
-   Windows wchar_t filenames to utf8.
-
-USAGE:
-
-   There are five functions, one for each image file format:
-
-     int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-     int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
-     int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
-     int stbi_write_jpg(char const *filename, int w, int h, int comp, const void *data, int quality);
-     int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
-
-     void stbi_flip_vertically_on_write(int flag); // flag is non-zero to flip data vertically
-
-   There are also five equivalent functions that use an arbitrary write function. You are
-   expected to open/close your file-equivalent before and after calling these:
-
-     int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
-     int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
-     int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
-     int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
-     int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, int quality);
-
-   where the callback is:
-      void stbi_write_func(void *context, void *data, int size);
-
-   You can configure it with these global variables:
-      int stbi_write_tga_with_rle;             // defaults to true; set to 0 to disable RLE
-      int stbi_write_png_compression_level;    // defaults to 8; set to higher for more compression
-      int stbi_write_force_png_filter;         // defaults to -1; set to 0..5 to force a filter mode
-
-
-   You can define STBI_WRITE_NO_STDIO to disable the file variant of these
-   functions, so the library will not use stdio.h at all. However, this will
-   also disable HDR writing, because it requires stdio for formatted output.
-
-   Each function returns 0 on failure and non-0 on success.
-
-   The functions create an image file defined by the parameters. The image
-   is a rectangle of pixels stored from left-to-right, top-to-bottom.
-   Each pixel contains 'comp' channels of data stored interleaved with 8-bits
-   per channel, in the following order: 1=Y, 2=YA, 3=RGB, 4=RGBA. (Y is
-   monochrome color.) The rectangle is 'w' pixels wide and 'h' pixels tall.
-   The *data pointer points to the first byte of the top-left-most pixel.
-   For PNG, "stride_in_bytes" is the distance in bytes from the first byte of
-   a row of pixels to the first byte of the next row of pixels.
-
-   PNG creates output files with the same number of components as the input.
-   The BMP format expands Y to RGB in the file format and does not
-   output alpha.
-
-   PNG supports writing rectangles of data even when the bytes storing rows of
-   data are not consecutive in memory (e.g. sub-rectangles of a larger image),
-   by supplying the stride between the beginning of adjacent rows. The other
-   formats do not. (Thus you cannot write a native-format BMP through the BMP
-   writer, both because it is in BGR order and because it may have padding
-   at the end of the line.)
-
-   PNG allows you to set the deflate compression level by setting the global
-   variable 'stbi_write_png_compression_level' (it defaults to 8).
-
-   HDR expects linear float data. Since the format is always 32-bit rgb(e)
-   data, alpha (if provided) is discarded, and for monochrome data it is
-   replicated across all three channels.
-
-   TGA supports RLE or non-RLE compressed data. To use non-RLE-compressed
-   data, set the global variable 'stbi_write_tga_with_rle' to 0.
-
-   JPEG does ignore alpha channels in input data; quality is between 1 and 100.
-   Higher quality looks better but results in a bigger image.
-   JPEG baseline (no JPEG progressive).
-
-CREDITS:
-
-
-   Sean Barrett           -    PNG/BMP/TGA
-   Baldur Karlsson        -    HDR
-   Jean-Sebastien Guay    -    TGA monochrome
-   Tim Kelsey             -    misc enhancements
-   Alan Hickman           -    TGA RLE
-   Emmanuel Julien        -    initial file IO callback implementation
-   Jon Olick              -    original jo_jpeg.cpp code
-   Daniel Gibson          -    integrate JPEG, allow external zlib
-   Aarni Koskela          -    allow choosing PNG filter
-
-   bugfixes:
-      github:Chribba
-      Guillaume Chereau
-      github:jry2
-      github:romigrou
-      Sergio Gonzalez
-      Jonas Karlsson
-      Filip Wasil
-      Thatcher Ulrich
-      github:poppolopoppo
-      Patrick Boettcher
-      github:xeekworx
-      Cap Petschulat
-      Simon Rodriguez
-      Ivan Tikhonov
-      github:ignotion
-      Adam Schackart
-      Andrew Kensler
-
-LICENSE
-
-  See end of file for license information.
-
-*/
-
-#ifndef PLUTOVG_STB_IMAGE_WRITE_H
-#define PLUTOVG_STB_IMAGE_WRITE_H
+namespace novasvg {
+namespace render {
 
 #include <stdlib.h>
 
-// if STB_IMAGE_WRITE_STATIC causes problems, try defining STBIWDEF to 'inline' or 'static inline'
-#ifndef STBIWDEF
-#ifdef STB_IMAGE_WRITE_STATIC
-#define STBIWDEF  static
-#else
-#ifdef __cplusplus
-#define STBIWDEF  extern "C"
-#else
-#define STBIWDEF  extern
-#endif
-#endif
-#endif
+#ifndef NOVASVG_IW_NO_STDIO
+NOVASVG_INLINE int write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
+NOVASVG_INLINE int write_bmp(char const *filename, int w, int h, int comp, const void  *data);
+NOVASVG_INLINE int write_tga(char const *filename, int w, int h, int comp, const void  *data);
+NOVASVG_INLINE int write_hdr(char const *filename, int w, int h, int comp, const float *data);
+NOVASVG_INLINE int write_jpg(char const *filename, int x, int y, int comp, const void  *data, int quality);
 
-#ifndef STB_IMAGE_WRITE_STATIC  // C++ forbids static forward declarations
-STBIWDEF int stbi_write_tga_with_rle;
-STBIWDEF int stbi_write_png_compression_level;
-STBIWDEF int stbi_write_force_png_filter;
-#endif
-
-#ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
-STBIWDEF int stbi_write_bmp(char const *filename, int w, int h, int comp, const void  *data);
-STBIWDEF int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
-STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
-STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const void  *data, int quality);
-
-#ifdef STBIW_WINDOWS_UTF8
-STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input);
+#ifdef NOVASVG_IW_WINDOWS_UTF8
+NOVASVG_INLINE int convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input);
 #endif
 #endif
 
-typedef void stbi_write_func(void *context, void *data, int size);
+NOVASVG_INLINE int write_png_to_func(write_func_t func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
+NOVASVG_INLINE int write_bmp_to_func(write_func_t func, void *context, int w, int h, int comp, const void  *data);
+NOVASVG_INLINE int write_tga_to_func(write_func_t func, void *context, int w, int h, int comp, const void  *data);
+NOVASVG_INLINE int write_hdr_to_func(write_func_t func, void *context, int w, int h, int comp, const float *data);
+NOVASVG_INLINE int write_jpg_to_func(write_func_t func, void *context, int x, int y, int comp, const void  *data, int quality);
 
-STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
-STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
-STBIWDEF int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
-STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
-STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void  *data, int quality);
+NOVASVG_INLINE void set_flip_vertically_on_write(int flip_boolean);
 
-STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
-
-#endif//PLUTOVG_STB_IMAGE_WRITE_H
-
-#ifdef STB_IMAGE_WRITE_IMPLEMENTATION
 
 #ifdef _WIN32
    #ifndef _CRT_SECURE_NO_WARNINGS
@@ -1081,104 +901,98 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
    #endif
 #endif
 
-#ifndef STBI_WRITE_NO_STDIO
+#ifndef NOVASVG_IW_NO_STDIO
 #include <stdio.h>
-#endif // STBI_WRITE_NO_STDIO
+#endif // NOVASVG_IW_NO_STDIO
 
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
-#if defined(STBIW_MALLOC) && defined(STBIW_FREE) && (defined(STBIW_REALLOC) || defined(STBIW_REALLOC_SIZED))
+#if defined(NOVASVG_IW_MALLOC) && defined(NOVASVG_IW_FREE) && (defined(NOVASVG_IW_REALLOC) || defined(NOVASVG_IW_REALLOC_SIZED))
 // ok
-#elif !defined(STBIW_MALLOC) && !defined(STBIW_FREE) && !defined(STBIW_REALLOC) && !defined(STBIW_REALLOC_SIZED)
+#elif !defined(NOVASVG_IW_MALLOC) && !defined(NOVASVG_IW_FREE) && !defined(NOVASVG_IW_REALLOC) && !defined(NOVASVG_IW_REALLOC_SIZED)
 // ok
 #else
-#error "Must define all or none of STBIW_MALLOC, STBIW_FREE, and STBIW_REALLOC (or STBIW_REALLOC_SIZED)."
+#error "Must define all or none of NOVASVG_IW_MALLOC, NOVASVG_IW_FREE, and NOVASVG_IW_REALLOC (or NOVASVG_IW_REALLOC_SIZED)."
 #endif
 
-#ifndef STBIW_MALLOC
-#define STBIW_MALLOC(sz)        malloc(sz)
-#define STBIW_REALLOC(p,newsz)  realloc(p,newsz)
-#define STBIW_FREE(p)           free(p)
+#ifndef NOVASVG_IW_MALLOC
+#define NOVASVG_IW_MALLOC(sz)        malloc(sz)
+#define NOVASVG_IW_REALLOC(p,newsz)  realloc(p,newsz)
+#define NOVASVG_IW_FREE(p)           free(p)
 #endif
 
-#ifndef STBIW_REALLOC_SIZED
-#define STBIW_REALLOC_SIZED(p,oldsz,newsz) STBIW_REALLOC(p,newsz)
-#endif
-
-
-#ifndef STBIW_MEMMOVE
-#define STBIW_MEMMOVE(a,b,sz) memmove(a,b,sz)
+#ifndef NOVASVG_IW_REALLOC_SIZED
+#define NOVASVG_IW_REALLOC_SIZED(p,oldsz,newsz) NOVASVG_IW_REALLOC(p,newsz)
 #endif
 
 
-#ifndef STBIW_ASSERT
+#ifndef NOVASVG_IW_MEMMOVE
+#define NOVASVG_IW_MEMMOVE(a,b,sz) memmove(a,b,sz)
+#endif
+
+
+#ifndef NOVASVG_IW_ASSERT
 #include <assert.h>
-#define STBIW_ASSERT(x) assert(x)
+#define NOVASVG_IW_ASSERT(x) assert(x)
 #endif
 
-#define STBIW_UCHAR(x) (unsigned char) ((x) & 0xff)
+#define NOVASVG_IW_UCHAR(x) (unsigned char) ((x) & 0xff)
 
-#ifdef STB_IMAGE_WRITE_STATIC
-static int stbi_write_png_compression_level = 8;
-static int stbi_write_tga_with_rle = 1;
-static int stbi_write_force_png_filter = -1;
-#else
-int stbi_write_png_compression_level = 8;
-int stbi_write_tga_with_rle = 1;
-int stbi_write_force_png_filter = -1;
-#endif
+static int g_png_compression_level = 8;
+static int g_tga_with_rle = 1;
+static int g_png_force_filter = -1;
 
-static int stbi__flip_vertically_on_write = 0;
+static int g_flip_vertically_on_write = 0;
 
-STBIWDEF void stbi_flip_vertically_on_write(int flag)
+NOVASVG_INLINE void set_flip_vertically_on_write(int flag)
 {
-   stbi__flip_vertically_on_write = flag;
+   g_flip_vertically_on_write = flag;
 }
 
 typedef struct
 {
-   stbi_write_func *func;
+   write_func_t func;
    void *context;
    unsigned char buffer[64];
    int buf_used;
-} stbi__write_context;
+} write_context;
 
 // initialize a callback-based context
-static void stbi__start_write_callbacks(stbi__write_context *s, stbi_write_func *c, void *context)
+static void write_start_callbacks(write_context *s, write_func_t c, void *context)
 {
    s->func    = c;
    s->context = context;
 }
 
-#ifndef STBI_WRITE_NO_STDIO
+#ifndef NOVASVG_IW_NO_STDIO
 
-static void stbi__stdio_write(void *context, void *data, int size)
+static void write_stdio_callback(void *context, void *data, int size)
 {
    fwrite(data,1,size,(FILE*) context);
 }
 
-#if defined(_WIN32) && defined(STBIW_WINDOWS_UTF8)
+#if defined(_WIN32) && defined(NOVASVG_IW_WINDOWS_UTF8)
 #ifdef __cplusplus
-#define STBIW_EXTERN extern "C"
+#define NOVASVG_IW_EXTERN extern "C"
 #else
-#define STBIW_EXTERN extern
+#define NOVASVG_IW_EXTERN extern
 #endif
-STBIW_EXTERN __declspec(dllimport) int __stdcall MultiByteToWideChar(unsigned int cp, unsigned long flags, const char *str, int cbmb, wchar_t *widestr, int cchwide);
-STBIW_EXTERN __declspec(dllimport) int __stdcall WideCharToMultiByte(unsigned int cp, unsigned long flags, const wchar_t *widestr, int cchwide, char *str, int cbmb, const char *defchar, int *used_default);
+NOVASVG_IW_EXTERN __declspec(dllimport) int __stdcall MultiByteToWideChar(unsigned int cp, unsigned long flags, const char *str, int cbmb, wchar_t *widestr, int cchwide);
+NOVASVG_IW_EXTERN __declspec(dllimport) int __stdcall WideCharToMultiByte(unsigned int cp, unsigned long flags, const wchar_t *widestr, int cchwide, char *str, int cbmb, const char *defchar, int *used_default);
 
-STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input)
+NOVASVG_INLINE int convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input)
 {
    return WideCharToMultiByte(65001 /* UTF8 */, 0, input, -1, buffer, (int) bufferlen, NULL, NULL);
 }
 #endif
 
-static FILE *stbiw__fopen(char const *filename, char const *mode)
+static FILE *open_file(char const *filename, char const *mode)
 {
    FILE *f;
-#if defined(_WIN32) && defined(STBIW_WINDOWS_UTF8)
+#if defined(_WIN32) && defined(NOVASVG_IW_WINDOWS_UTF8)
    wchar_t wMode[64];
    wchar_t wFilename[1024];
    if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, filename, -1, wFilename, sizeof(wFilename)/sizeof(*wFilename)))
@@ -1203,61 +1017,61 @@ static FILE *stbiw__fopen(char const *filename, char const *mode)
    return f;
 }
 
-static int stbi__start_write_file(stbi__write_context *s, const char *filename)
+static int write_start_file(write_context *s, const char *filename)
 {
-   FILE *f = stbiw__fopen(filename, "wb");
-   stbi__start_write_callbacks(s, stbi__stdio_write, (void *) f);
+   FILE *f = open_file(filename, "wb");
+   write_start_callbacks(s, write_stdio_callback, (void *) f);
    return f != NULL;
 }
 
-static void stbi__end_write_file(stbi__write_context *s)
+static void write_end_file(write_context *s)
 {
    fclose((FILE *)s->context);
 }
 
-#endif // !STBI_WRITE_NO_STDIO
+#endif // !NOVASVG_IW_NO_STDIO
 
-typedef unsigned int stbiw_uint32;
-typedef int stb_image_write_test[sizeof(stbiw_uint32)==4 ? 1 : -1];
+typedef unsigned int iw_uint32;
+typedef int iw_uint32_size_check[sizeof(iw_uint32) == 4 ? 1 : -1];
 
-static void stbiw__writefv(stbi__write_context *s, const char *fmt, va_list v)
+static void write_formatted_v(write_context *s, const char *fmt, va_list v)
 {
    while (*fmt) {
       switch (*fmt++) {
          case ' ': break;
-         case '1': { unsigned char x = STBIW_UCHAR(va_arg(v, int));
+         case '1': { unsigned char x = NOVASVG_IW_UCHAR(va_arg(v, int));
                      s->func(s->context,&x,1);
                      break; }
          case '2': { int x = va_arg(v,int);
                      unsigned char b[2];
-                     b[0] = STBIW_UCHAR(x);
-                     b[1] = STBIW_UCHAR(x>>8);
+                     b[0] = NOVASVG_IW_UCHAR(x);
+                     b[1] = NOVASVG_IW_UCHAR(x>>8);
                      s->func(s->context,b,2);
                      break; }
-         case '4': { stbiw_uint32 x = va_arg(v,int);
+         case '4': { iw_uint32 x = va_arg(v,int);
                      unsigned char b[4];
-                     b[0]=STBIW_UCHAR(x);
-                     b[1]=STBIW_UCHAR(x>>8);
-                     b[2]=STBIW_UCHAR(x>>16);
-                     b[3]=STBIW_UCHAR(x>>24);
+                     b[0]=NOVASVG_IW_UCHAR(x);
+                     b[1]=NOVASVG_IW_UCHAR(x>>8);
+                     b[2]=NOVASVG_IW_UCHAR(x>>16);
+                     b[3]=NOVASVG_IW_UCHAR(x>>24);
                      s->func(s->context,b,4);
                      break; }
          default:
-            STBIW_ASSERT(0);
+            NOVASVG_IW_ASSERT(0);
             return;
       }
    }
 }
 
-static void stbiw__writef(stbi__write_context *s, const char *fmt, ...)
+static void write_formatted(write_context *s, const char *fmt, ...)
 {
    va_list v;
    va_start(v, fmt);
-   stbiw__writefv(s, fmt, v);
+   write_formatted_v(s, fmt, v);
    va_end(v);
 }
 
-static void stbiw__write_flush(stbi__write_context *s)
+static void write_flush(write_context *s)
 {
    if (s->buf_used) {
       s->func(s->context, &s->buffer, s->buf_used);
@@ -1265,23 +1079,23 @@ static void stbiw__write_flush(stbi__write_context *s)
    }
 }
 
-static void stbiw__putc(stbi__write_context *s, unsigned char c)
+static void write_putc(write_context *s, unsigned char c)
 {
    s->func(s->context, &c, 1);
 }
 
-static void stbiw__write1(stbi__write_context *s, unsigned char a)
+static void write_u8(write_context *s, unsigned char a)
 {
    if ((size_t)s->buf_used + 1 > sizeof(s->buffer))
-      stbiw__write_flush(s);
+      write_flush(s);
    s->buffer[s->buf_used++] = a;
 }
 
-static void stbiw__write3(stbi__write_context *s, unsigned char a, unsigned char b, unsigned char c)
+static void write_u8x3(write_context *s, unsigned char a, unsigned char b, unsigned char c)
 {
    int n;
    if ((size_t)s->buf_used + 3 > sizeof(s->buffer))
-      stbiw__write_flush(s);
+      write_flush(s);
    n = s->buf_used;
    s->buf_used = n+3;
    s->buffer[n+0] = a;
@@ -1289,48 +1103,48 @@ static void stbiw__write3(stbi__write_context *s, unsigned char a, unsigned char
    s->buffer[n+2] = c;
 }
 
-static void stbiw__write_pixel(stbi__write_context *s, int rgb_dir, int comp, int write_alpha, int expand_mono, unsigned char *d)
+static void write_pixel(write_context *s, int rgb_dir, int comp, int write_alpha, int expand_mono, unsigned char *d)
 {
    unsigned char bg[3] = { 255, 0, 255}, px[3];
    int k;
 
    if (write_alpha < 0)
-      stbiw__write1(s, d[comp - 1]);
+      write_u8(s, d[comp - 1]);
 
    switch (comp) {
       case 2: // 2 pixels = mono + alpha, alpha is written separately, so same as 1-channel case
       case 1:
          if (expand_mono)
-            stbiw__write3(s, d[0], d[0], d[0]); // monochrome bmp
+            write_u8x3(s, d[0], d[0], d[0]); // monochrome bmp
          else
-            stbiw__write1(s, d[0]);  // monochrome TGA
+            write_u8(s, d[0]);  // monochrome TGA
          break;
       case 4:
          if (!write_alpha) {
             // composite against pink background
             for (k = 0; k < 3; ++k)
                px[k] = bg[k] + ((d[k] - bg[k]) * d[3]) / 255;
-            stbiw__write3(s, px[1 - rgb_dir], px[1], px[1 + rgb_dir]);
+            write_u8x3(s, px[1 - rgb_dir], px[1], px[1 + rgb_dir]);
             break;
          }
          /* FALLTHROUGH */
       case 3:
-         stbiw__write3(s, d[1 - rgb_dir], d[1], d[1 + rgb_dir]);
+         write_u8x3(s, d[1 - rgb_dir], d[1], d[1 + rgb_dir]);
          break;
    }
    if (write_alpha > 0)
-      stbiw__write1(s, d[comp - 1]);
+      write_u8(s, d[comp - 1]);
 }
 
-static void stbiw__write_pixels(stbi__write_context *s, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad, int expand_mono)
+static void write_pixels(write_context *s, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad, int expand_mono)
 {
-   stbiw_uint32 zero = 0;
+   iw_uint32 zero = 0;
    int i,j, j_end;
 
    if (y <= 0)
       return;
 
-   if (stbi__flip_vertically_on_write)
+   if (g_flip_vertically_on_write)
       vdir *= -1;
 
    if (vdir < 0) {
@@ -1342,33 +1156,33 @@ static void stbiw__write_pixels(stbi__write_context *s, int rgb_dir, int vdir, i
    for (; j != j_end; j += vdir) {
       for (i=0; i < x; ++i) {
          unsigned char *d = (unsigned char *) data + (j*x+i)*comp;
-         stbiw__write_pixel(s, rgb_dir, comp, write_alpha, expand_mono, d);
+         write_pixel(s, rgb_dir, comp, write_alpha, expand_mono, d);
       }
-      stbiw__write_flush(s);
+      write_flush(s);
       s->func(s->context, &zero, scanline_pad);
    }
 }
 
-static int stbiw__outfile(stbi__write_context *s, int rgb_dir, int vdir, int x, int y, int comp, int expand_mono, void *data, int alpha, int pad, const char *fmt, ...)
+static int outfile(write_context *s, int rgb_dir, int vdir, int x, int y, int comp, int expand_mono, void *data, int alpha, int pad, const char *fmt, ...)
 {
    if (y < 0 || x < 0) {
       return 0;
    } else {
       va_list v;
       va_start(v, fmt);
-      stbiw__writefv(s, fmt, v);
+      write_formatted_v(s, fmt, v);
       va_end(v);
-      stbiw__write_pixels(s,rgb_dir,vdir,x,y,comp,data,alpha,pad, expand_mono);
+      write_pixels(s,rgb_dir,vdir,x,y,comp,data,alpha,pad, expand_mono);
       return 1;
    }
 }
 
-static int stbi_write_bmp_core(stbi__write_context *s, int x, int y, int comp, const void *data)
+static int write_bmp_core(write_context *s, int x, int y, int comp, const void *data)
 {
    if (comp != 4) {
       // write RGB bitmap
       int pad = (-x*3) & 3;
-      return stbiw__outfile(s,-1,-1,x,y,comp,1,(void *) data,0,pad,
+      return outfile(s,-1,-1,x,y,comp,1,(void *) data,0,pad,
               "11 4 22 4" "4 44 22 444444",
               'B', 'M', 14+40+(x*3+pad)*y, 0,0, 14+40,  // file header
                40, x,y, 1,24, 0,0,0,0,0,0);             // bitmap header
@@ -1376,34 +1190,34 @@ static int stbi_write_bmp_core(stbi__write_context *s, int x, int y, int comp, c
       // RGBA bitmaps need a v4 header
       // use BI_BITFIELDS mode with 32bpp and alpha mask
       // (straight BI_RGB with alpha mask doesn't work in most readers)
-      return stbiw__outfile(s,-1,-1,x,y,comp,1,(void *)data,1,0,
+      return outfile(s,-1,-1,x,y,comp,1,(void *)data,1,0,
          "11 4 22 4" "4 44 22 444444 4444 4 444 444 444 444",
          'B', 'M', 14+108+x*y*4, 0, 0, 14+108, // file header
          108, x,y, 1,32, 3,0,0,0,0,0, 0xff0000,0xff00,0xff,0xff000000u, 0, 0,0,0, 0,0,0, 0,0,0, 0,0,0); // bitmap V4 header
    }
 }
 
-STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data)
+NOVASVG_INLINE int write_bmp_to_func(write_func_t func, void *context, int x, int y, int comp, const void *data)
 {
-   stbi__write_context s = { 0 };
-   stbi__start_write_callbacks(&s, func, context);
-   return stbi_write_bmp_core(&s, x, y, comp, data);
+   write_context s = { 0 };
+   write_start_callbacks(&s, func, context);
+   return write_bmp_core(&s, x, y, comp, data);
 }
 
-#ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *data)
+#ifndef NOVASVG_IW_NO_STDIO
+NOVASVG_INLINE int write_bmp(char const *filename, int x, int y, int comp, const void *data)
 {
-   stbi__write_context s = { 0 };
-   if (stbi__start_write_file(&s,filename)) {
-      int r = stbi_write_bmp_core(&s, x, y, comp, data);
-      stbi__end_write_file(&s);
+   write_context s = { 0 };
+   if (write_start_file(&s,filename)) {
+      int r = write_bmp_core(&s, x, y, comp, data);
+      write_end_file(&s);
       return r;
    } else
       return 0;
 }
-#endif //!STBI_WRITE_NO_STDIO
+#endif //!NOVASVG_IW_NO_STDIO
 
-static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, void *data)
+static int write_tga_core(write_context *s, int x, int y, int comp, void *data)
 {
    int has_alpha = (comp == 2 || comp == 4);
    int colorbytes = has_alpha ? comp-1 : comp;
@@ -1412,16 +1226,16 @@ static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, v
    if (y < 0 || x < 0)
       return 0;
 
-   if (!stbi_write_tga_with_rle) {
-      return stbiw__outfile(s, -1, -1, x, y, comp, 0, (void *) data, has_alpha, 0,
+   if (!g_tga_with_rle) {
+      return outfile(s, -1, -1, x, y, comp, 0, (void *) data, has_alpha, 0,
          "111 221 2222 11", 0, 0, format, 0, 0, 0, 0, 0, x, y, (colorbytes + has_alpha) * 8, has_alpha * 8);
    } else {
       int i,j,k;
       int jend, jdir;
 
-      stbiw__writef(s, "111 221 2222 11", 0,0,format+8, 0,0,0, 0,0,x,y, (colorbytes + has_alpha) * 8, has_alpha * 8);
+      write_formatted(s, "111 221 2222 11", 0,0,format+8, 0,0,0, 0,0,x,y, (colorbytes + has_alpha) * 8, has_alpha * 8);
 
-      if (stbi__flip_vertically_on_write) {
+      if (g_flip_vertically_on_write) {
          j = 0;
          jend = y;
          jdir = 1;
@@ -1465,37 +1279,37 @@ static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, v
             }
 
             if (diff) {
-               unsigned char header = STBIW_UCHAR(len - 1);
-               stbiw__write1(s, header);
+               unsigned char header = NOVASVG_IW_UCHAR(len - 1);
+               write_u8(s, header);
                for (k = 0; k < len; ++k) {
-                  stbiw__write_pixel(s, -1, comp, has_alpha, 0, begin + k * comp);
+                  write_pixel(s, -1, comp, has_alpha, 0, begin + k * comp);
                }
             } else {
-               unsigned char header = STBIW_UCHAR(len - 129);
-               stbiw__write1(s, header);
-               stbiw__write_pixel(s, -1, comp, has_alpha, 0, begin);
+               unsigned char header = NOVASVG_IW_UCHAR(len - 129);
+               write_u8(s, header);
+               write_pixel(s, -1, comp, has_alpha, 0, begin);
             }
          }
       }
-      stbiw__write_flush(s);
+      write_flush(s);
    }
    return 1;
 }
 
-STBIWDEF int stbi_write_tga_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data)
+NOVASVG_INLINE int write_tga_to_func(write_func_t func, void *context, int x, int y, int comp, const void *data)
 {
-   stbi__write_context s = { 0 };
-   stbi__start_write_callbacks(&s, func, context);
-   return stbi_write_tga_core(&s, x, y, comp, (void *) data);
+   write_context s = { 0 };
+   write_start_callbacks(&s, func, context);
+   return write_tga_core(&s, x, y, comp, (void *) data);
 }
 
-#ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const void *data)
+#ifndef NOVASVG_IW_NO_STDIO
+NOVASVG_INLINE int write_tga(char const *filename, int x, int y, int comp, const void *data)
 {
-   stbi__write_context s = { 0 };
-   if (stbi__start_write_file(&s,filename)) {
-      int r = stbi_write_tga_core(&s, x, y, comp, (void *) data);
-      stbi__end_write_file(&s);
+   write_context s = { 0 };
+   if (write_start_file(&s,filename)) {
+      int r = write_tga_core(&s, x, y, comp, (void *) data);
+      write_end_file(&s);
       return r;
    } else
       return 0;
@@ -1506,14 +1320,14 @@ STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const 
 // Radiance RGBE HDR writer
 // by Baldur Karlsson
 
-#define stbiw__max(a, b)  ((a) > (b) ? (a) : (b))
+#define iw_max(a, b)  ((a) > (b) ? (a) : (b))
 
-#ifndef STBI_WRITE_NO_STDIO
+#ifndef NOVASVG_IW_NO_STDIO
 
-static void stbiw__linear_to_rgbe(unsigned char *rgbe, float *linear)
+static void hdr_linear_to_rgbe(unsigned char *rgbe, float *linear)
 {
    int exponent;
-   float maxcomp = stbiw__max(linear[0], stbiw__max(linear[1], linear[2]));
+   float maxcomp = iw_max(linear[0], iw_max(linear[1], linear[2]));
 
    if (maxcomp < 1e-32f) {
       rgbe[0] = rgbe[1] = rgbe[2] = rgbe[3] = 0;
@@ -1527,23 +1341,23 @@ static void stbiw__linear_to_rgbe(unsigned char *rgbe, float *linear)
    }
 }
 
-static void stbiw__write_run_data(stbi__write_context *s, int length, unsigned char databyte)
+static void hdr_write_run_data(write_context *s, int length, unsigned char databyte)
 {
-   unsigned char lengthbyte = STBIW_UCHAR(length+128);
-   STBIW_ASSERT(length+128 <= 255);
+   unsigned char lengthbyte = NOVASVG_IW_UCHAR(length+128);
+   NOVASVG_IW_ASSERT(length+128 <= 255);
    s->func(s->context, &lengthbyte, 1);
    s->func(s->context, &databyte, 1);
 }
 
-static void stbiw__write_dump_data(stbi__write_context *s, int length, unsigned char *data)
+static void hdr_write_dump_data(write_context *s, int length, unsigned char *data)
 {
-   unsigned char lengthbyte = STBIW_UCHAR(length);
-   STBIW_ASSERT(length <= 128); // inconsistent with spec but consistent with official code
+   unsigned char lengthbyte = NOVASVG_IW_UCHAR(length);
+   NOVASVG_IW_ASSERT(length <= 128); // inconsistent with spec but consistent with official code
    s->func(s->context, &lengthbyte, 1);
    s->func(s->context, data, length);
 }
 
-static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int ncomp, unsigned char *scratch, float *scanline)
+static void hdr_write_scanline(write_context *s, int width, int ncomp, unsigned char *scratch, float *scanline)
 {
    unsigned char scanlineheader[4] = { 2, 2, 0, 0 };
    unsigned char rgbe[4];
@@ -1566,7 +1380,7 @@ static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int nco
                     linear[0] = linear[1] = linear[2] = scanline[x*ncomp + 0];
                     break;
          }
-         stbiw__linear_to_rgbe(rgbe, linear);
+         hdr_linear_to_rgbe(rgbe, linear);
          s->func(s->context, rgbe, 4);
       }
    } else {
@@ -1583,7 +1397,7 @@ static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int nco
                     linear[0] = linear[1] = linear[2] = scanline[x*ncomp + 0];
                     break;
          }
-         stbiw__linear_to_rgbe(rgbe, linear);
+         hdr_linear_to_rgbe(rgbe, linear);
          scratch[x + width*0] = rgbe[0];
          scratch[x + width*1] = rgbe[1];
          scratch[x + width*2] = rgbe[2];
@@ -1611,7 +1425,7 @@ static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int nco
             while (x < r) {
                int len = r-x;
                if (len > 128) len = 128;
-               stbiw__write_dump_data(s, len, &comp[x]);
+               hdr_write_dump_data(s, len, &comp[x]);
                x += len;
             }
             // if there's a run, output it
@@ -1623,7 +1437,7 @@ static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int nco
                while (x < r) {
                   int len = r-x;
                   if (len > 127) len = 127;
-                  stbiw__write_run_data(s, len, comp[x]);
+                  hdr_write_run_data(s, len, comp[x]);
                   x += len;
                }
             }
@@ -1632,16 +1446,16 @@ static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int nco
    }
 }
 
-static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, float *data)
+static int write_hdr_core(write_context *s, int x, int y, int comp, float *data)
 {
    if (y <= 0 || x <= 0 || data == NULL)
       return 0;
    else {
       // Each component is stored separately. Allocate scratch space for full output scanline.
-      unsigned char *scratch = (unsigned char *) STBIW_MALLOC(x*4);
+      unsigned char *scratch = (unsigned char *) NOVASVG_IW_MALLOC(x*4);
       int i, len;
       char buffer[128];
-      char header[] = "#?RADIANCE\n# Written by stb_image_write.h\nFORMAT=32-bit_rle_rgbe\n";
+      char header[] = "#?RADIANCE\n# Written by novasvg\nFORMAT=32-bit_rle_rgbe\n";
       s->func(s->context, header, sizeof(header)-1);
 
 #ifdef __STDC_LIB_EXT1__
@@ -1652,30 +1466,30 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
       s->func(s->context, buffer, len);
 
       for(i=0; i < y; i++)
-         stbiw__write_hdr_scanline(s, x, comp, scratch, data + comp*x*(stbi__flip_vertically_on_write ? y-1-i : i));
-      STBIW_FREE(scratch);
+         hdr_write_scanline(s, x, comp, scratch, data + comp*x*(g_flip_vertically_on_write ? y-1-i : i));
+      NOVASVG_IW_FREE(scratch);
       return 1;
    }
 }
 
-STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const float *data)
+NOVASVG_INLINE int write_hdr_to_func(write_func_t func, void *context, int x, int y, int comp, const float *data)
 {
-   stbi__write_context s = { 0 };
-   stbi__start_write_callbacks(&s, func, context);
-   return stbi_write_hdr_core(&s, x, y, comp, (float *) data);
+   write_context s = { 0 };
+   write_start_callbacks(&s, func, context);
+   return write_hdr_core(&s, x, y, comp, (float *) data);
 }
 
-STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *data)
+NOVASVG_INLINE int write_hdr(char const *filename, int x, int y, int comp, const float *data)
 {
-   stbi__write_context s = { 0 };
-   if (stbi__start_write_file(&s,filename)) {
-      int r = stbi_write_hdr_core(&s, x, y, comp, (float *) data);
-      stbi__end_write_file(&s);
+   write_context s = { 0 };
+   if (write_start_file(&s,filename)) {
+      int r = write_hdr_core(&s, x, y, comp, (float *) data);
+      write_end_file(&s);
       return r;
    } else
       return 0;
 }
-#endif // STBI_WRITE_NO_STDIO
+#endif // NOVASVG_IW_NO_STDIO
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1683,44 +1497,44 @@ STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const 
 // PNG writer
 //
 
-#ifndef STBIW_ZLIB_COMPRESS
-// stretchy buffer; stbiw__sbpush() == vector<>::push_back() -- stbiw__sbcount() == vector<>::size()
-#define stbiw__sbraw(a) ((int *) (void *) (a) - 2)
-#define stbiw__sbm(a)   stbiw__sbraw(a)[0]
-#define stbiw__sbn(a)   stbiw__sbraw(a)[1]
+#ifndef NOVASVG_IW_ZLIB_COMPRESS
+// stretchy buffer; sb_push() == vector<>::push_back() -- sb_count() == vector<>::size()
+#define sb_raw(a) ((int *) (void *) (a) - 2)
+#define sb_m(a)   sb_raw(a)[0]
+#define sb_n(a)   sb_raw(a)[1]
 
-#define stbiw__sbneedgrow(a,n)  ((a)==0 || stbiw__sbn(a)+n >= stbiw__sbm(a))
-#define stbiw__sbmaybegrow(a,n) (stbiw__sbneedgrow(a,(n)) ? stbiw__sbgrow(a,n) : 0)
-#define stbiw__sbgrow(a,n)  stbiw__sbgrowf((void **) &(a), (n), sizeof(*(a)))
+#define sb_needgrow(a,n)  ((a)==0 || sb_n(a)+n >= sb_m(a))
+#define sb_maybegrow(a,n) (sb_needgrow(a,(n)) ? sb_grow(a,n) : 0)
+#define sb_grow(a,n)  sb_growf((void **) &(a), (n), sizeof(*(a)))
 
-#define stbiw__sbpush(a, v)      (stbiw__sbmaybegrow(a,1), (a)[stbiw__sbn(a)++] = (v))
-#define stbiw__sbcount(a)        ((a) ? stbiw__sbn(a) : 0)
-#define stbiw__sbfree(a)         ((a) ? STBIW_FREE(stbiw__sbraw(a)),0 : 0)
+#define sb_push(a, v)      (sb_maybegrow(a,1), (a)[sb_n(a)++] = (v))
+#define sb_count(a)        ((a) ? sb_n(a) : 0)
+#define sb_free(a)         ((a) ? NOVASVG_IW_FREE(sb_raw(a)),0 : 0)
 
-static void *stbiw__sbgrowf(void **arr, int increment, int itemsize)
+static void *sb_growf(void **arr, int increment, int itemsize)
 {
-   int m = *arr ? 2*stbiw__sbm(*arr)+increment : increment+1;
-   void *p = STBIW_REALLOC_SIZED(*arr ? stbiw__sbraw(*arr) : 0, *arr ? (stbiw__sbm(*arr)*itemsize + sizeof(int)*2) : 0, itemsize * m + sizeof(int)*2);
-   STBIW_ASSERT(p);
+   int m = *arr ? 2*sb_m(*arr)+increment : increment+1;
+   void *p = NOVASVG_IW_REALLOC_SIZED(*arr ? sb_raw(*arr) : 0, *arr ? (sb_m(*arr)*itemsize + sizeof(int)*2) : 0, itemsize * m + sizeof(int)*2);
+   NOVASVG_IW_ASSERT(p);
    if (p) {
       if (!*arr) ((int *) p)[1] = 0;
       *arr = (void *) ((int *) p + 2);
-      stbiw__sbm(*arr) = m;
+      sb_m(*arr) = m;
    }
    return *arr;
 }
 
-static unsigned char *stbiw__zlib_flushf(unsigned char *data, unsigned int *bitbuffer, int *bitcount)
+static unsigned char *zlib_flushf(unsigned char *data, unsigned int *bitbuffer, int *bitcount)
 {
    while (*bitcount >= 8) {
-      stbiw__sbpush(data, STBIW_UCHAR(*bitbuffer));
+      sb_push(data, NOVASVG_IW_UCHAR(*bitbuffer));
       *bitbuffer >>= 8;
       *bitcount -= 8;
    }
    return data;
 }
 
-static int stbiw__zlib_bitrev(int code, int codebits)
+static int zlib_bitrev(int code, int codebits)
 {
    int res=0;
    while (codebits--) {
@@ -1730,7 +1544,7 @@ static int stbiw__zlib_bitrev(int code, int codebits)
    return res;
 }
 
-static unsigned int stbiw__zlib_countm(unsigned char *a, unsigned char *b, int limit)
+static unsigned int zlib_countm(unsigned char *a, unsigned char *b, int limit)
 {
    int i;
    for (i=0; i < limit && i < 258; ++i)
@@ -1738,9 +1552,9 @@ static unsigned int stbiw__zlib_countm(unsigned char *a, unsigned char *b, int l
    return i;
 }
 
-static unsigned int stbiw__zhash(unsigned char *data)
+static unsigned int g_zlib_hash_table(unsigned char *data)
 {
-   stbiw_uint32 hash = data[0] + (data[1] << 8) + (data[2] << 16);
+   iw_uint32 hash = data[0] + (data[1] << 8) + (data[2] << 16);
    hash ^= hash << 3;
    hash += hash >> 5;
    hash ^= hash << 4;
@@ -1750,27 +1564,27 @@ static unsigned int stbiw__zhash(unsigned char *data)
    return hash;
 }
 
-#define stbiw__zlib_flush() (out = stbiw__zlib_flushf(out, &bitbuf, &bitcount))
-#define stbiw__zlib_add(code,codebits) \
-      (bitbuf |= (code) << bitcount, bitcount += (codebits), stbiw__zlib_flush())
-#define stbiw__zlib_huffa(b,c)  stbiw__zlib_add(stbiw__zlib_bitrev(b,c),c)
+#define zlib_flush() (out = zlib_flushf(out, &bitbuf, &bitcount))
+#define zlib_add(code,codebits) \
+      (bitbuf |= (code) << bitcount, bitcount += (codebits), zlib_flush())
+#define zlib_huffa(b,c)  zlib_add(zlib_bitrev(b,c),c)
 // default huffman tables
-#define stbiw__zlib_huff1(n)  stbiw__zlib_huffa(0x30 + (n), 8)
-#define stbiw__zlib_huff2(n)  stbiw__zlib_huffa(0x190 + (n)-144, 9)
-#define stbiw__zlib_huff3(n)  stbiw__zlib_huffa(0 + (n)-256,7)
-#define stbiw__zlib_huff4(n)  stbiw__zlib_huffa(0xc0 + (n)-280,8)
-#define stbiw__zlib_huff(n)  ((n) <= 143 ? stbiw__zlib_huff1(n) : (n) <= 255 ? stbiw__zlib_huff2(n) : (n) <= 279 ? stbiw__zlib_huff3(n) : stbiw__zlib_huff4(n))
-#define stbiw__zlib_huffb(n) ((n) <= 143 ? stbiw__zlib_huff1(n) : stbiw__zlib_huff2(n))
+#define zlib_huff1(n)  zlib_huffa(0x30 + (n), 8)
+#define zlib_huff2(n)  zlib_huffa(0x190 + (n)-144, 9)
+#define zlib_huff3(n)  zlib_huffa(0 + (n)-256,7)
+#define zlib_huff4(n)  zlib_huffa(0xc0 + (n)-280,8)
+#define zlib_huff(n)  ((n) <= 143 ? zlib_huff1(n) : (n) <= 255 ? zlib_huff2(n) : (n) <= 279 ? zlib_huff3(n) : zlib_huff4(n))
+#define zlib_huffb(n) ((n) <= 143 ? zlib_huff1(n) : zlib_huff2(n))
 
-#define stbiw__ZHASH   16384
+#define ZLIB_HASH   16384
 
-#endif // STBIW_ZLIB_COMPRESS
+#endif // NOVASVG_IW_ZLIB_COMPRESS
 
-STBIWDEF unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_len, int quality)
+NOVASVG_INLINE unsigned char * zlib_compress(unsigned char *data, int data_len, int *out_len, int quality)
 {
-#ifdef STBIW_ZLIB_COMPRESS
+#ifdef NOVASVG_IW_ZLIB_COMPRESS
    // user provided a zlib compress implementation, use that
-   return STBIW_ZLIB_COMPRESS(data, data_len, out_len, quality);
+   return NOVASVG_IW_ZLIB_COMPRESS(data, data_len, out_len, quality);
 #else // use builtin
    static unsigned short lengthc[] = { 3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258, 259 };
    static unsigned char  lengtheb[]= { 0,0,0,0,0,0,0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4,  4,  5,  5,  5,  5,  0 };
@@ -1779,47 +1593,47 @@ STBIWDEF unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, i
    unsigned int bitbuf=0;
    int i,j, bitcount=0;
    unsigned char *out = NULL;
-   unsigned char ***hash_table = (unsigned char***) STBIW_MALLOC(stbiw__ZHASH * sizeof(unsigned char**));
+   unsigned char ***hash_table = (unsigned char***) NOVASVG_IW_MALLOC(ZLIB_HASH * sizeof(unsigned char**));
    if (hash_table == NULL)
       return NULL;
    if (quality < 5) quality = 5;
 
-   stbiw__sbpush(out, 0x78);   // DEFLATE 32K window
-   stbiw__sbpush(out, 0x5e);   // FLEVEL = 1
-   stbiw__zlib_add(1,1);  // BFINAL = 1
-   stbiw__zlib_add(1,2);  // BTYPE = 1 -- fixed huffman
+   sb_push(out, 0x78);   // DEFLATE 32K window
+   sb_push(out, 0x5e);   // FLEVEL = 1
+   zlib_add(1,1);  // BFINAL = 1
+   zlib_add(1,2);  // BTYPE = 1 -- fixed huffman
 
-   for (i=0; i < stbiw__ZHASH; ++i)
+   for (i=0; i < ZLIB_HASH; ++i)
       hash_table[i] = NULL;
 
    i=0;
    while (i < data_len-3) {
       // hash next 3 bytes of data to be compressed
-      int h = stbiw__zhash(data+i)&(stbiw__ZHASH-1), best=3;
+      int h = g_zlib_hash_table(data+i)&(ZLIB_HASH-1), best=3;
       unsigned char *bestloc = 0;
       unsigned char **hlist = hash_table[h];
-      int n = stbiw__sbcount(hlist);
+      int n = sb_count(hlist);
       for (j=0; j < n; ++j) {
          if (hlist[j]-data > i-32768) { // if entry lies within window
-            int d = stbiw__zlib_countm(hlist[j], data+i, data_len-i);
+            int d = zlib_countm(hlist[j], data+i, data_len-i);
             if (d >= best) { best=d; bestloc=hlist[j]; }
          }
       }
       // when hash table entry is too long, delete half the entries
-      if (hash_table[h] && stbiw__sbn(hash_table[h]) == 2*quality) {
-         STBIW_MEMMOVE(hash_table[h], hash_table[h]+quality, sizeof(hash_table[h][0])*quality);
-         stbiw__sbn(hash_table[h]) = quality;
+      if (hash_table[h] && sb_n(hash_table[h]) == 2*quality) {
+         NOVASVG_IW_MEMMOVE(hash_table[h], hash_table[h]+quality, sizeof(hash_table[h][0])*quality);
+         sb_n(hash_table[h]) = quality;
       }
-      stbiw__sbpush(hash_table[h],data+i);
+      sb_push(hash_table[h],data+i);
 
       if (bestloc) {
          // "lazy matching" - check match at *next* byte, and if it's better, do cur byte as literal
-         h = stbiw__zhash(data+i+1)&(stbiw__ZHASH-1);
+         h = g_zlib_hash_table(data+i+1)&(ZLIB_HASH-1);
          hlist = hash_table[h];
-         n = stbiw__sbcount(hlist);
+         n = sb_count(hlist);
          for (j=0; j < n; ++j) {
             if (hlist[j]-data > i-32767) {
-               int e = stbiw__zlib_countm(hlist[j], data+i+1, data_len-i-1);
+               int e = zlib_countm(hlist[j], data+i+1, data_len-i-1);
                if (e > best) { // if next match is better, bail on current match
                   bestloc = NULL;
                   break;
@@ -1830,44 +1644,44 @@ STBIWDEF unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, i
 
       if (bestloc) {
          int d = (int) (data+i - bestloc); // distance back
-         STBIW_ASSERT(d <= 32767 && best <= 258);
+         NOVASVG_IW_ASSERT(d <= 32767 && best <= 258);
          for (j=0; best > lengthc[j+1]-1; ++j);
-         stbiw__zlib_huff(j+257);
-         if (lengtheb[j]) stbiw__zlib_add(best - lengthc[j], lengtheb[j]);
+         zlib_huff(j+257);
+         if (lengtheb[j]) zlib_add(best - lengthc[j], lengtheb[j]);
          for (j=0; d > distc[j+1]-1; ++j);
-         stbiw__zlib_add(stbiw__zlib_bitrev(j,5),5);
-         if (disteb[j]) stbiw__zlib_add(d - distc[j], disteb[j]);
+         zlib_add(zlib_bitrev(j,5),5);
+         if (disteb[j]) zlib_add(d - distc[j], disteb[j]);
          i += best;
       } else {
-         stbiw__zlib_huffb(data[i]);
+         zlib_huffb(data[i]);
          ++i;
       }
    }
    // write out final bytes
    for (;i < data_len; ++i)
-      stbiw__zlib_huffb(data[i]);
-   stbiw__zlib_huff(256); // end of block
+      zlib_huffb(data[i]);
+   zlib_huff(256); // end of block
    // pad with 0 bits to byte boundary
    while (bitcount)
-      stbiw__zlib_add(0,1);
+      zlib_add(0,1);
 
-   for (i=0; i < stbiw__ZHASH; ++i)
-      (void) stbiw__sbfree(hash_table[i]);
-   STBIW_FREE(hash_table);
+   for (i=0; i < ZLIB_HASH; ++i)
+      (void) sb_free(hash_table[i]);
+   NOVASVG_IW_FREE(hash_table);
 
    // store uncompressed instead if compression was worse
-   if (stbiw__sbn(out) > data_len + 2 + ((data_len+32766)/32767)*5) {
-      stbiw__sbn(out) = 2;  // truncate to DEFLATE 32K window and FLEVEL = 1
+   if (sb_n(out) > data_len + 2 + ((data_len+32766)/32767)*5) {
+      sb_n(out) = 2;  // truncate to DEFLATE 32K window and FLEVEL = 1
       for (j = 0; j < data_len;) {
          int blocklen = data_len - j;
          if (blocklen > 32767) blocklen = 32767;
-         stbiw__sbpush(out, data_len - j == blocklen); // BFINAL = ?, BTYPE = 0 -- no compression
-         stbiw__sbpush(out, STBIW_UCHAR(blocklen)); // LEN
-         stbiw__sbpush(out, STBIW_UCHAR(blocklen >> 8));
-         stbiw__sbpush(out, STBIW_UCHAR(~blocklen)); // NLEN
-         stbiw__sbpush(out, STBIW_UCHAR(~blocklen >> 8));
-         memcpy(out+stbiw__sbn(out), data+j, blocklen);
-         stbiw__sbn(out) += blocklen;
+         sb_push(out, data_len - j == blocklen); // BFINAL = ?, BTYPE = 0 -- no compression
+         sb_push(out, NOVASVG_IW_UCHAR(blocklen)); // LEN
+         sb_push(out, NOVASVG_IW_UCHAR(blocklen >> 8));
+         sb_push(out, NOVASVG_IW_UCHAR(~blocklen)); // NLEN
+         sb_push(out, NOVASVG_IW_UCHAR(~blocklen >> 8));
+         memcpy(out+sb_n(out), data+j, blocklen);
+         sb_n(out) += blocklen;
          j += blocklen;
       }
    }
@@ -1883,22 +1697,22 @@ STBIWDEF unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, i
          j += blocklen;
          blocklen = 5552;
       }
-      stbiw__sbpush(out, STBIW_UCHAR(s2 >> 8));
-      stbiw__sbpush(out, STBIW_UCHAR(s2));
-      stbiw__sbpush(out, STBIW_UCHAR(s1 >> 8));
-      stbiw__sbpush(out, STBIW_UCHAR(s1));
+      sb_push(out, NOVASVG_IW_UCHAR(s2 >> 8));
+      sb_push(out, NOVASVG_IW_UCHAR(s2));
+      sb_push(out, NOVASVG_IW_UCHAR(s1 >> 8));
+      sb_push(out, NOVASVG_IW_UCHAR(s1));
    }
-   *out_len = stbiw__sbn(out);
+   *out_len = sb_n(out);
    // make returned pointer freeable
-   STBIW_MEMMOVE(stbiw__sbraw(out), out, *out_len);
-   return (unsigned char *) stbiw__sbraw(out);
-#endif // STBIW_ZLIB_COMPRESS
+   NOVASVG_IW_MEMMOVE(sb_raw(out), out, *out_len);
+   return (unsigned char *) sb_raw(out);
+#endif // NOVASVG_IW_ZLIB_COMPRESS
 }
 
-static unsigned int stbiw__crc32(unsigned char *buffer, int len)
+static unsigned int png_crc32(unsigned char *buffer, int len)
 {
-#ifdef STBIW_CRC32
-    return STBIW_CRC32(buffer, len);
+#ifdef NOVASVG_IW_CRC32
+    return NOVASVG_IW_CRC32(buffer, len);
 #else
    static unsigned int crc_table[256] =
    {
@@ -1944,34 +1758,34 @@ static unsigned int stbiw__crc32(unsigned char *buffer, int len)
 #endif
 }
 
-#define stbiw__wpng4(o,a,b,c,d) ((o)[0]=STBIW_UCHAR(a),(o)[1]=STBIW_UCHAR(b),(o)[2]=STBIW_UCHAR(c),(o)[3]=STBIW_UCHAR(d),(o)+=4)
-#define stbiw__wp32(data,v) stbiw__wpng4(data, (v)>>24,(v)>>16,(v)>>8,(v));
-#define stbiw__wptag(data,s) stbiw__wpng4(data, s[0],s[1],s[2],s[3])
+#define png_write_u32x4(o,a,b,c,d) ((o)[0]=NOVASVG_IW_UCHAR(a),(o)[1]=NOVASVG_IW_UCHAR(b),(o)[2]=NOVASVG_IW_UCHAR(c),(o)[3]=NOVASVG_IW_UCHAR(d),(o)+=4)
+#define zlib_write_u32(data,v) png_write_u32x4(data, (v)>>24,(v)>>16,(v)>>8,(v));
+#define png_write_tag(data,s) png_write_u32x4(data, s[0],s[1],s[2],s[3])
 
-static void stbiw__wpcrc(unsigned char **data, int len)
+static void png_write_crc(unsigned char **data, int len)
 {
-   unsigned int crc = stbiw__crc32(*data - len - 4, len+4);
-   stbiw__wp32(*data, crc);
+   unsigned int crc = png_crc32(*data - len - 4, len+4);
+   zlib_write_u32(*data, crc);
 }
 
-static unsigned char stbiw__paeth(int a, int b, int c)
+static unsigned char png_paeth_predictor(int a, int b, int c)
 {
    int p = a + b - c, pa = abs(p-a), pb = abs(p-b), pc = abs(p-c);
-   if (pa <= pb && pa <= pc) return STBIW_UCHAR(a);
-   if (pb <= pc) return STBIW_UCHAR(b);
-   return STBIW_UCHAR(c);
+   if (pa <= pb && pa <= pc) return NOVASVG_IW_UCHAR(a);
+   if (pb <= pc) return NOVASVG_IW_UCHAR(b);
+   return NOVASVG_IW_UCHAR(c);
 }
 
 // @OPTIMIZE: provide an option that always forces left-predict or paeth predict
-static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int width, int height, int y, int n, int filter_type, signed char *line_buffer)
+static void png_encode_line(unsigned char *pixels, int stride_bytes, int width, int height, int y, int n, int filter_type, signed char *line_buffer)
 {
    static int mapping[] = { 0,1,2,3,4 };
    static int firstmap[] = { 0,1,0,5,6 };
    int *mymap = (y != 0) ? mapping : firstmap;
    int i;
    int type = mymap[filter_type];
-   unsigned char *z = pixels + stride_bytes * (stbi__flip_vertically_on_write ? height-1-y : y);
-   int signed_stride = stbi__flip_vertically_on_write ? -stride_bytes : stride_bytes;
+   unsigned char *z = pixels + stride_bytes * (g_flip_vertically_on_write ? height-1-y : y);
+   int signed_stride = g_flip_vertically_on_write ? -stride_bytes : stride_bytes;
 
    if (type==0) {
       memcpy(line_buffer, z, width*n);
@@ -1984,7 +1798,7 @@ static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int 
          case 1: line_buffer[i] = z[i]; break;
          case 2: line_buffer[i] = z[i] - z[i-signed_stride]; break;
          case 3: line_buffer[i] = z[i] - (z[i-signed_stride]>>1); break;
-         case 4: line_buffer[i] = (signed char) (z[i] - stbiw__paeth(0,z[i-signed_stride],0)); break;
+         case 4: line_buffer[i] = (signed char) (z[i] - png_paeth_predictor(0,z[i-signed_stride],0)); break;
          case 5: line_buffer[i] = z[i]; break;
          case 6: line_buffer[i] = z[i]; break;
       }
@@ -1993,15 +1807,15 @@ static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int 
       case 1: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - z[i-n]; break;
       case 2: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - z[i-signed_stride]; break;
       case 3: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - ((z[i-n] + z[i-signed_stride])>>1); break;
-      case 4: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - stbiw__paeth(z[i-n], z[i-signed_stride], z[i-signed_stride-n]); break;
+      case 4: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - png_paeth_predictor(z[i-n], z[i-signed_stride], z[i-signed_stride-n]); break;
       case 5: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - (z[i-n]>>1); break;
-      case 6: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - stbiw__paeth(z[i-n], 0,0); break;
+      case 6: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - png_paeth_predictor(z[i-n], 0,0); break;
    }
 }
 
-STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
+NOVASVG_INLINE unsigned char *write_png_to_mem(const unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
 {
-   int force_filter = stbi_write_force_png_filter;
+   int force_filter = g_png_force_filter;
    int ctype[5] = { -1, 0, 4, 2, 6 };
    unsigned char sig[8] = { 137,80,78,71,13,10,26,10 };
    unsigned char *out,*o, *filt, *zlib;
@@ -2015,17 +1829,17 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
       force_filter = -1;
    }
 
-   filt = (unsigned char *) STBIW_MALLOC((x*n+1) * y); if (!filt) return 0;
-   line_buffer = (signed char *) STBIW_MALLOC(x * n); if (!line_buffer) { STBIW_FREE(filt); return 0; }
+   filt = (unsigned char *) NOVASVG_IW_MALLOC((x*n+1) * y); if (!filt) return 0;
+   line_buffer = (signed char *) NOVASVG_IW_MALLOC(x * n); if (!line_buffer) { NOVASVG_IW_FREE(filt); return 0; }
    for (j=0; j < y; ++j) {
       int filter_type;
       if (force_filter > -1) {
          filter_type = force_filter;
-         stbiw__encode_png_line((unsigned char*)(pixels), stride_bytes, x, y, j, n, force_filter, line_buffer);
+         png_encode_line((unsigned char*)(pixels), stride_bytes, x, y, j, n, force_filter, line_buffer);
       } else { // Estimate the best filter by running through all of them:
          int best_filter = 0, best_filter_val = 0x7fffffff, est, i;
          for (filter_type = 0; filter_type < 5; filter_type++) {
-            stbiw__encode_png_line((unsigned char*)(pixels), stride_bytes, x, y, j, n, filter_type, line_buffer);
+            png_encode_line((unsigned char*)(pixels), stride_bytes, x, y, j, n, filter_type, line_buffer);
 
             // Estimate the entropy of the line using this filter; the less, the better.
             est = 0;
@@ -2038,77 +1852,77 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
             }
          }
          if (filter_type != best_filter) {  // If the last iteration already got us the best filter, don't redo it
-            stbiw__encode_png_line((unsigned char*)(pixels), stride_bytes, x, y, j, n, best_filter, line_buffer);
+            png_encode_line((unsigned char*)(pixels), stride_bytes, x, y, j, n, best_filter, line_buffer);
             filter_type = best_filter;
          }
       }
       // when we get here, filter_type contains the filter type, and line_buffer contains the data
       filt[j*(x*n+1)] = (unsigned char) filter_type;
-      STBIW_MEMMOVE(filt+j*(x*n+1)+1, line_buffer, x*n);
+      NOVASVG_IW_MEMMOVE(filt+j*(x*n+1)+1, line_buffer, x*n);
    }
-   STBIW_FREE(line_buffer);
-   zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, stbi_write_png_compression_level);
-   STBIW_FREE(filt);
+   NOVASVG_IW_FREE(line_buffer);
+   zlib = zlib_compress(filt, y*( x*n+1), &zlen, g_png_compression_level);
+   NOVASVG_IW_FREE(filt);
    if (!zlib) return 0;
 
    // each tag requires 12 bytes of overhead
-   out = (unsigned char *) STBIW_MALLOC(8 + 12+13 + 12+zlen + 12);
+   out = (unsigned char *) NOVASVG_IW_MALLOC(8 + 12+13 + 12+zlen + 12);
    if (!out) return 0;
    *out_len = 8 + 12+13 + 12+zlen + 12;
 
    o=out;
-   STBIW_MEMMOVE(o,sig,8); o+= 8;
-   stbiw__wp32(o, 13); // header length
-   stbiw__wptag(o, "IHDR");
-   stbiw__wp32(o, x);
-   stbiw__wp32(o, y);
+   NOVASVG_IW_MEMMOVE(o,sig,8); o+= 8;
+   zlib_write_u32(o, 13); // header length
+   png_write_tag(o, "IHDR");
+   zlib_write_u32(o, x);
+   zlib_write_u32(o, y);
    *o++ = 8;
-   *o++ = STBIW_UCHAR(ctype[n]);
+   *o++ = NOVASVG_IW_UCHAR(ctype[n]);
    *o++ = 0;
    *o++ = 0;
    *o++ = 0;
-   stbiw__wpcrc(&o,13);
+   png_write_crc(&o,13);
 
-   stbiw__wp32(o, zlen);
-   stbiw__wptag(o, "IDAT");
-   STBIW_MEMMOVE(o, zlib, zlen);
+   zlib_write_u32(o, zlen);
+   png_write_tag(o, "IDAT");
+   NOVASVG_IW_MEMMOVE(o, zlib, zlen);
    o += zlen;
-   STBIW_FREE(zlib);
-   stbiw__wpcrc(&o, zlen);
+   NOVASVG_IW_FREE(zlib);
+   png_write_crc(&o, zlen);
 
-   stbiw__wp32(o,0);
-   stbiw__wptag(o, "IEND");
-   stbiw__wpcrc(&o,0);
+   zlib_write_u32(o,0);
+   png_write_tag(o, "IEND");
+   png_write_crc(&o,0);
 
-   STBIW_ASSERT(o == out + *out_len);
+   NOVASVG_IW_ASSERT(o == out + *out_len);
 
    return out;
 }
 
-#ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
+#ifndef NOVASVG_IW_NO_STDIO
+NOVASVG_INLINE int write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
 {
    FILE *f;
    int len;
-   unsigned char *png = stbi_write_png_to_mem((const unsigned char *) data, stride_bytes, x, y, comp, &len);
+   unsigned char *png = write_png_to_mem((const unsigned char *) data, stride_bytes, x, y, comp, &len);
    if (png == NULL) return 0;
 
-   f = stbiw__fopen(filename, "wb");
-   if (!f) { STBIW_FREE(png); return 0; }
+   f = open_file(filename, "wb");
+   if (!f) { NOVASVG_IW_FREE(png); return 0; }
    fwrite(png, 1, len, f);
    fclose(f);
-   STBIW_FREE(png);
+   NOVASVG_IW_FREE(png);
    return 1;
 }
 #endif
 
-STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, int stride_bytes)
+NOVASVG_INLINE int write_png_to_func(write_func_t func, void *context, int x, int y, int comp, const void *data, int stride_bytes)
 {
    int len;
-   unsigned char *png = stbi_write_png_to_mem((const unsigned char *) data, stride_bytes, x, y, comp, &len);
+   unsigned char *png = write_png_to_mem((const unsigned char *) data, stride_bytes, x, y, comp, &len);
    if (png == NULL) return 0;
    func(context, png, len);
-   STBIW_FREE(png);
+   NOVASVG_IW_FREE(png);
    return 1;
 }
 
@@ -2121,18 +1935,18 @@ STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x,
  * public domain Simple, Minimalistic JPEG writer - http://www.jonolick.com/code.html
  */
 
-static const unsigned char stbiw__jpg_ZigZag[] = { 0,1,5,6,14,15,27,28,2,4,7,13,16,26,29,42,3,8,12,17,25,30,41,43,9,11,18,
+static const unsigned char jpg_zig_zag[] = { 0,1,5,6,14,15,27,28,2,4,7,13,16,26,29,42,3,8,12,17,25,30,41,43,9,11,18,
       24,31,40,44,53,10,19,23,32,39,45,52,54,20,22,33,38,46,51,55,60,21,34,37,47,50,56,59,61,35,36,48,49,57,58,62,63 };
 
-static void stbiw__jpg_writeBits(stbi__write_context *s, int *bitBufP, int *bitCntP, const unsigned short *bs) {
+static void jpg_write_bits(write_context *s, int *bitBufP, int *bitCntP, const unsigned short *bs) {
    int bitBuf = *bitBufP, bitCnt = *bitCntP;
    bitCnt += bs[1];
    bitBuf |= bs[0] << (24 - bitCnt);
    while(bitCnt >= 8) {
       unsigned char c = (bitBuf >> 16) & 255;
-      stbiw__putc(s, c);
+      write_putc(s, c);
       if(c == 255) {
-         stbiw__putc(s, 0);
+         write_putc(s, 0);
       }
       bitBuf <<= 8;
       bitCnt -= 8;
@@ -2141,7 +1955,7 @@ static void stbiw__jpg_writeBits(stbi__write_context *s, int *bitBufP, int *bitC
    *bitCntP = bitCnt;
 }
 
-static void stbiw__jpg_DCT(float *d0p, float *d1p, float *d2p, float *d3p, float *d4p, float *d5p, float *d6p, float *d7p) {
+static void jpg_dct(float *d0p, float *d1p, float *d2p, float *d3p, float *d4p, float *d5p, float *d6p, float *d7p) {
    float d0 = *d0p, d1 = *d1p, d2 = *d2p, d3 = *d3p, d4 = *d4p, d5 = *d5p, d6 = *d6p, d7 = *d7p;
    float z1, z2, z3, z4, z5, z11, z13;
 
@@ -2189,7 +2003,7 @@ static void stbiw__jpg_DCT(float *d0p, float *d1p, float *d2p, float *d3p, float
    *d0p = d0;  *d2p = d2;  *d4p = d4;  *d6p = d6;
 }
 
-static void stbiw__jpg_calcBits(int val, unsigned short bits[2]) {
+static void jpg_calc_bits(int val, unsigned short bits[2]) {
    int tmp1 = val < 0 ? -val : val;
    val = val < 0 ? val-1 : val;
    bits[1] = 1;
@@ -2199,7 +2013,7 @@ static void stbiw__jpg_calcBits(int val, unsigned short bits[2]) {
    bits[0] = val & ((1<<bits[1])-1);
 }
 
-static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt, float *CDU, int du_stride, float *fdtbl, int DC, const unsigned short HTDC[256][2], const unsigned short HTAC[256][2]) {
+static int jpg_process_du(write_context *s, int *bitBuf, int *bitCnt, float *CDU, int du_stride, float *fdtbl, int DC, const unsigned short HTDC[256][2], const unsigned short HTAC[256][2]) {
    const unsigned short EOB[2] = { HTAC[0x00][0], HTAC[0x00][1] };
    const unsigned short M16zeroes[2] = { HTAC[0xF0][0], HTAC[0xF0][1] };
    int dataOff, i, j, n, diff, end0pos, x, y;
@@ -2207,11 +2021,11 @@ static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt
 
    // DCT rows
    for(dataOff=0, n=du_stride*8; dataOff<n; dataOff+=du_stride) {
-      stbiw__jpg_DCT(&CDU[dataOff], &CDU[dataOff+1], &CDU[dataOff+2], &CDU[dataOff+3], &CDU[dataOff+4], &CDU[dataOff+5], &CDU[dataOff+6], &CDU[dataOff+7]);
+      jpg_dct(&CDU[dataOff], &CDU[dataOff+1], &CDU[dataOff+2], &CDU[dataOff+3], &CDU[dataOff+4], &CDU[dataOff+5], &CDU[dataOff+6], &CDU[dataOff+7]);
    }
    // DCT columns
    for(dataOff=0; dataOff<8; ++dataOff) {
-      stbiw__jpg_DCT(&CDU[dataOff], &CDU[dataOff+du_stride], &CDU[dataOff+du_stride*2], &CDU[dataOff+du_stride*3], &CDU[dataOff+du_stride*4],
+      jpg_dct(&CDU[dataOff], &CDU[dataOff+du_stride], &CDU[dataOff+du_stride*2], &CDU[dataOff+du_stride*3], &CDU[dataOff+du_stride*4],
                      &CDU[dataOff+du_stride*5], &CDU[dataOff+du_stride*6], &CDU[dataOff+du_stride*7]);
    }
    // Quantize/descale/zigzag the coefficients
@@ -2220,21 +2034,21 @@ static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt
          float v;
          i = y*du_stride+x;
          v = CDU[i]*fdtbl[j];
-         // DU[stbiw__jpg_ZigZag[j]] = (int)(v < 0 ? ceilf(v - 0.5f) : floorf(v + 0.5f));
+         // DU[jpg_zig_zag[j]] = (int)(v < 0 ? ceilf(v - 0.5f) : floorf(v + 0.5f));
          // ceilf() and floorf() are C99, not C89, but I /think/ they're not needed here anyway?
-         DU[stbiw__jpg_ZigZag[j]] = (int)(v < 0 ? v - 0.5f : v + 0.5f);
+         DU[jpg_zig_zag[j]] = (int)(v < 0 ? v - 0.5f : v + 0.5f);
       }
    }
 
    // Encode DC
    diff = DU[0] - DC;
    if (diff == 0) {
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, HTDC[0]);
+      jpg_write_bits(s, bitBuf, bitCnt, HTDC[0]);
    } else {
       unsigned short bits[2];
-      stbiw__jpg_calcBits(diff, bits);
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, HTDC[bits[1]]);
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, bits);
+      jpg_calc_bits(diff, bits);
+      jpg_write_bits(s, bitBuf, bitCnt, HTDC[bits[1]]);
+      jpg_write_bits(s, bitBuf, bitCnt, bits);
    }
    // Encode ACs
    end0pos = 63;
@@ -2242,7 +2056,7 @@ static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt
    }
    // end0pos = first element in reverse order !=0
    if(end0pos == 0) {
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, EOB);
+      jpg_write_bits(s, bitBuf, bitCnt, EOB);
       return DU[0];
    }
    for(i = 1; i <= end0pos; ++i) {
@@ -2256,20 +2070,20 @@ static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt
          int lng = nrzeroes>>4;
          int nrmarker;
          for (nrmarker=1; nrmarker <= lng; ++nrmarker)
-            stbiw__jpg_writeBits(s, bitBuf, bitCnt, M16zeroes);
+            jpg_write_bits(s, bitBuf, bitCnt, M16zeroes);
          nrzeroes &= 15;
       }
-      stbiw__jpg_calcBits(DU[i], bits);
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, HTAC[(nrzeroes<<4)+bits[1]]);
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, bits);
+      jpg_calc_bits(DU[i], bits);
+      jpg_write_bits(s, bitBuf, bitCnt, HTAC[(nrzeroes<<4)+bits[1]]);
+      jpg_write_bits(s, bitBuf, bitCnt, bits);
    }
    if(end0pos != 63) {
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, EOB);
+      jpg_write_bits(s, bitBuf, bitCnt, EOB);
    }
    return DU[0];
 }
 
-static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, int comp, const void* data, int quality) {
+static int write_jpg_core(write_context *s, int width, int height, int comp, const void* data, int quality) {
    // Constants that don't pollute global namespace
    static const unsigned char std_dc_luminance_nrcodes[] = {0,0,1,5,1,1,1,1,1,1,0,0,0,0,0,0,0};
    static const unsigned char std_dc_luminance_values[] = {0,1,2,3,4,5,6,7,8,9,10,11};
@@ -2356,15 +2170,15 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
 
    for(i = 0; i < 64; ++i) {
       int uvti, yti = (YQT[i]*quality+50)/100;
-      YTable[stbiw__jpg_ZigZag[i]] = (unsigned char) (yti < 1 ? 1 : yti > 255 ? 255 : yti);
+      YTable[jpg_zig_zag[i]] = (unsigned char) (yti < 1 ? 1 : yti > 255 ? 255 : yti);
       uvti = (UVQT[i]*quality+50)/100;
-      UVTable[stbiw__jpg_ZigZag[i]] = (unsigned char) (uvti < 1 ? 1 : uvti > 255 ? 255 : uvti);
+      UVTable[jpg_zig_zag[i]] = (unsigned char) (uvti < 1 ? 1 : uvti > 255 ? 255 : uvti);
    }
 
    for(row = 0, k = 0; row < 8; ++row) {
       for(col = 0; col < 8; ++col, ++k) {
-         fdtbl_Y[k]  = 1 / (YTable [stbiw__jpg_ZigZag[k]] * aasf[row] * aasf[col]);
-         fdtbl_UV[k] = 1 / (UVTable[stbiw__jpg_ZigZag[k]] * aasf[row] * aasf[col]);
+         fdtbl_Y[k]  = 1 / (YTable [jpg_zig_zag[k]] * aasf[row] * aasf[col]);
+         fdtbl_UV[k] = 1 / (UVTable[jpg_zig_zag[k]] * aasf[row] * aasf[col]);
       }
    }
 
@@ -2372,22 +2186,22 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
    {
       static const unsigned char head0[] = { 0xFF,0xD8,0xFF,0xE0,0,0x10,'J','F','I','F',0,1,1,0,0,1,0,1,0,0,0xFF,0xDB,0,0x84,0 };
       static const unsigned char head2[] = { 0xFF,0xDA,0,0xC,3,1,0,2,0x11,3,0x11,0,0x3F,0 };
-      const unsigned char head1[] = { 0xFF,0xC0,0,0x11,8,(unsigned char)(height>>8),STBIW_UCHAR(height),(unsigned char)(width>>8),STBIW_UCHAR(width),
+      const unsigned char head1[] = { 0xFF,0xC0,0,0x11,8,(unsigned char)(height>>8),NOVASVG_IW_UCHAR(height),(unsigned char)(width>>8),NOVASVG_IW_UCHAR(width),
                                       3,1,(unsigned char)(subsample?0x22:0x11),0,2,0x11,1,3,0x11,1,0xFF,0xC4,0x01,0xA2,0 };
       s->func(s->context, (void*)head0, sizeof(head0));
       s->func(s->context, (void*)YTable, sizeof(YTable));
-      stbiw__putc(s, 1);
+      write_putc(s, 1);
       s->func(s->context, UVTable, sizeof(UVTable));
       s->func(s->context, (void*)head1, sizeof(head1));
       s->func(s->context, (void*)(std_dc_luminance_nrcodes+1), sizeof(std_dc_luminance_nrcodes)-1);
       s->func(s->context, (void*)std_dc_luminance_values, sizeof(std_dc_luminance_values));
-      stbiw__putc(s, 0x10); // HTYACinfo
+      write_putc(s, 0x10); // HTYACinfo
       s->func(s->context, (void*)(std_ac_luminance_nrcodes+1), sizeof(std_ac_luminance_nrcodes)-1);
       s->func(s->context, (void*)std_ac_luminance_values, sizeof(std_ac_luminance_values));
-      stbiw__putc(s, 1); // HTUDCinfo
+      write_putc(s, 1); // HTUDCinfo
       s->func(s->context, (void*)(std_dc_chrominance_nrcodes+1), sizeof(std_dc_chrominance_nrcodes)-1);
       s->func(s->context, (void*)std_dc_chrominance_values, sizeof(std_dc_chrominance_values));
-      stbiw__putc(s, 0x11); // HTUACinfo
+      write_putc(s, 0x11); // HTUACinfo
       s->func(s->context, (void*)(std_ac_chrominance_nrcodes+1), sizeof(std_ac_chrominance_nrcodes)-1);
       s->func(s->context, (void*)std_ac_chrominance_values, sizeof(std_ac_chrominance_values));
       s->func(s->context, (void*)head2, sizeof(head2));
@@ -2411,7 +2225,7 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
                for(row = y, pos = 0; row < y+16; ++row) {
                   // row >= height => use last input row
                   int clamped_row = (row < height) ? row : height - 1;
-                  int base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*width*comp;
+                  int base_p = (g_flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*width*comp;
                   for(col = x; col < x+16; ++col, ++pos) {
                      // if col >= width => use pixel from last input column
                      int p = base_p + ((col < width) ? col : (width-1))*comp;
@@ -2421,10 +2235,10 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
                      V[pos]= +0.50000f*r - 0.41869f*g - 0.08131f*b;
                   }
                }
-               DCY = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, Y+0,   16, fdtbl_Y, DCY, YDC_HT, YAC_HT);
-               DCY = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, Y+8,   16, fdtbl_Y, DCY, YDC_HT, YAC_HT);
-               DCY = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, Y+128, 16, fdtbl_Y, DCY, YDC_HT, YAC_HT);
-               DCY = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, Y+136, 16, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+               DCY = jpg_process_du(s, &bitBuf, &bitCnt, Y+0,   16, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+               DCY = jpg_process_du(s, &bitBuf, &bitCnt, Y+8,   16, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+               DCY = jpg_process_du(s, &bitBuf, &bitCnt, Y+128, 16, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+               DCY = jpg_process_du(s, &bitBuf, &bitCnt, Y+136, 16, fdtbl_Y, DCY, YDC_HT, YAC_HT);
 
                // subsample U,V
                {
@@ -2437,8 +2251,8 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
                         subV[pos] = (V[j+0] + V[j+1] + V[j+16] + V[j+17]) * 0.25f;
                      }
                   }
-                  DCU = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, subU, 8, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
-                  DCV = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, subV, 8, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+                  DCU = jpg_process_du(s, &bitBuf, &bitCnt, subU, 8, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
+                  DCV = jpg_process_du(s, &bitBuf, &bitCnt, subV, 8, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
                }
             }
          }
@@ -2449,7 +2263,7 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
                for(row = y, pos = 0; row < y+8; ++row) {
                   // row >= height => use last input row
                   int clamped_row = (row < height) ? row : height - 1;
-                  int base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*width*comp;
+                  int base_p = (g_flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*width*comp;
                   for(col = x; col < x+8; ++col, ++pos) {
                      // if col >= width => use pixel from last input column
                      int p = base_p + ((col < width) ? col : (width-1))*comp;
@@ -2460,143 +2274,47 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
                   }
                }
 
-               DCY = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, Y, 8, fdtbl_Y,  DCY, YDC_HT, YAC_HT);
-               DCU = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, U, 8, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
-               DCV = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, V, 8, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+               DCY = jpg_process_du(s, &bitBuf, &bitCnt, Y, 8, fdtbl_Y,  DCY, YDC_HT, YAC_HT);
+               DCU = jpg_process_du(s, &bitBuf, &bitCnt, U, 8, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
+               DCV = jpg_process_du(s, &bitBuf, &bitCnt, V, 8, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
             }
          }
       }
 
       // Do the bit alignment of the EOI marker
-      stbiw__jpg_writeBits(s, &bitBuf, &bitCnt, fillBits);
+      jpg_write_bits(s, &bitBuf, &bitCnt, fillBits);
    }
 
    // EOI
-   stbiw__putc(s, 0xFF);
-   stbiw__putc(s, 0xD9);
+   write_putc(s, 0xFF);
+   write_putc(s, 0xD9);
 
    return 1;
 }
 
-STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, int quality)
+NOVASVG_INLINE int write_jpg_to_func(write_func_t func, void *context, int x, int y, int comp, const void *data, int quality)
 {
-   stbi__write_context s = { 0 };
-   stbi__start_write_callbacks(&s, func, context);
-   return stbi_write_jpg_core(&s, x, y, comp, (void *) data, quality);
+   write_context s = { 0 };
+   write_start_callbacks(&s, func, context);
+   return write_jpg_core(&s, x, y, comp, (void *) data, quality);
 }
 
 
-#ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const void *data, int quality)
+#ifndef NOVASVG_IW_NO_STDIO
+NOVASVG_INLINE int write_jpg(char const *filename, int x, int y, int comp, const void *data, int quality)
 {
-   stbi__write_context s = { 0 };
-   if (stbi__start_write_file(&s,filename)) {
-      int r = stbi_write_jpg_core(&s, x, y, comp, data, quality);
-      stbi__end_write_file(&s);
+   write_context s = { 0 };
+   if (write_start_file(&s,filename)) {
+      int r = write_jpg_core(&s, x, y, comp, data, quality);
+      write_end_file(&s);
       return r;
    } else
       return 0;
 }
 #endif
 
-#endif // STB_IMAGE_WRITE_IMPLEMENTATION
-
-/* Revision history
-      1.16  (2021-07-11)
-             make Deflate code emit uncompressed blocks when it would otherwise expand
-             support writing BMPs with alpha channel
-      1.15  (2020-07-13) unknown
-      1.14  (2020-02-02) updated JPEG writer to downsample chroma channels
-      1.13
-      1.12
-      1.11  (2019-08-11)
-
-      1.10  (2019-02-07)
-             support utf8 filenames in Windows; fix warnings and platform ifdefs
-      1.09  (2018-02-11)
-             fix typo in zlib quality API, improve STB_I_W_STATIC in C++
-      1.08  (2018-01-29)
-             add stbi__flip_vertically_on_write, external zlib, zlib quality, choose PNG filter
-      1.07  (2017-07-24)
-             doc fix
-      1.06 (2017-07-23)
-             writing JPEG (using Jon Olick's code)
-      1.05   ???
-      1.04 (2017-03-03)
-             monochrome BMP expansion
-      1.03   ???
-      1.02 (2016-04-02)
-             avoid allocating large structures on the stack
-      1.01 (2016-01-16)
-             STBIW_REALLOC_SIZED: support allocators with no realloc support
-             avoid race-condition in crc initialization
-             minor compile issues
-      1.00 (2015-09-14)
-             installable file IO function
-      0.99 (2015-09-13)
-             warning fixes; TGA rle support
-      0.98 (2015-04-08)
-             added STBIW_MALLOC, STBIW_ASSERT etc
-      0.97 (2015-01-18)
-             fixed HDR asserts, rewrote HDR rle logic
-      0.96 (2015-01-17)
-             add HDR output
-             fix monochrome BMP
-      0.95 (2014-08-17)
-             add monochrome TGA output
-      0.94 (2014-05-31)
-             rename private functions to avoid conflicts with stb_image.h
-      0.93 (2014-05-27)
-             warning fixes
-      0.92 (2010-08-01)
-             casts to unsigned char to fix warnings
-      0.91 (2010-07-17)
-             first public release
-      0.90   first internal release
-*/
-
-/*
-------------------------------------------------------------------------------
-This software is available under 2 licenses -- choose whichever you prefer.
-------------------------------------------------------------------------------
-ALTERNATIVE A - MIT License
-Copyright (c) 2017 Sean Barrett
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-------------------------------------------------------------------------------
-ALTERNATIVE B - Public Domain (www.unlicense.org)
-This is free and unencumbered software released into the public domain.
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
-software, either in source code form or as a compiled binary, for any purpose,
-commercial or non-commercial, and by any means.
-In jurisdictions that recognize copyright laws, the author or authors of this
-software dedicate any and all copyright interest in the software to the public
-domain. We make this dedication for the benefit of the public at large and to
-the detriment of our heirs and successors. We intend this dedication to be an
-overt act of relinquishment in perpetuity of all present and future rights to
-this software under copyright law.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-------------------------------------------------------------------------------
-*/
-// ---- end inlined stb_image_write ----
+} // namespace render
+} // namespace novasvg
 
 #include "detail/graphics.h"
 #include "detail/svgelement.h"
@@ -2726,9 +2444,9 @@ NOVASVG_INLINE Bitmap& Bitmap::operator=(Bitmap&& bitmap)
 namespace {
 
 // One-pass, unpremultiplied RGBA copy of a Bitmap's pixels -- lives only
-// long enough to hand to stb_image_write. This is an implementation
-// detail of Bitmap's write*() methods below, not a type of its own: no
-// declaration in the class, nothing exported.
+// long enough to hand to the encoders in render:: (below, in this same
+// file). This is an implementation detail of Bitmap::write(), not a type
+// of its own: no declaration in the class, nothing exported.
 //
 // Bitmap itself stays ARGB32-Premultiplied always -- it doubles as a
 // drawable surface (Canvas can render onto an existing Bitmap) and as a
@@ -2767,70 +2485,71 @@ private:
     uint8_t* m_data;
 };
 
+// Format::Auto, resolved from a filename's extension. Unrecognized or
+// missing extensions fall back to Png -- write() always succeeds or
+// fails on I/O/encoding grounds, never on "couldn't guess a format".
+Bitmap::Format formatFromFilename(const std::string& filename)
+{
+    auto dot = filename.find_last_of('.');
+    if(dot == std::string::npos)
+        return Bitmap::Format::Png;
+
+    auto ext = filename.substr(dot + 1);
+    for(auto& c : ext)
+        c = char(std::tolower(static_cast<unsigned char>(c)));
+
+    if(ext == "bmp")
+        return Bitmap::Format::Bmp;
+    if(ext == "tga")
+        return Bitmap::Format::Tga;
+    if(ext == "jpg" || ext == "jpeg")
+        return Bitmap::Format::Jpg;
+    return Bitmap::Format::Png;
+}
+
 } // namespace
 
-NOVASVG_INLINE bool Bitmap::writeToPng(const std::string& filename) const
+NOVASVG_INLINE bool Bitmap::write(const std::string& filename, Format format, int jpgQuality) const
 {
+    if(format == Format::Auto)
+        format = formatFromFilename(filename);
+
     BitmapRgbaScratch rgba(*this);
     if(!rgba)
         return false;
-    return stbi_write_png(filename.data(), rgba.width(), rgba.height(), 4, rgba.data(), rgba.stride()) != 0;
+
+    switch(format) {
+    case Format::Bmp:
+        return write_bmp(filename.data(), rgba.width(), rgba.height(), 4, rgba.data()) != 0;
+    case Format::Tga:
+        return write_tga(filename.data(), rgba.width(), rgba.height(), 4, rgba.data()) != 0;
+    case Format::Jpg:
+        return write_jpg(filename.data(), rgba.width(), rgba.height(), 4, rgba.data(), jpgQuality) != 0;
+    case Format::Auto:
+    case Format::Png:
+    default:
+        return write_png(filename.data(), rgba.width(), rgba.height(), 4, rgba.data(), rgba.stride()) != 0;
+    }
 }
 
-NOVASVG_INLINE bool Bitmap::writeToPng(novasvg_write_func_t callback, void* closure) const
+NOVASVG_INLINE bool Bitmap::write(novasvg_write_func_t callback, void* closure, Format format, int jpgQuality) const
 {
     BitmapRgbaScratch rgba(*this);
     if(!rgba)
         return false;
-    return stbi_write_png_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data(), rgba.stride()) != 0;
-}
 
-NOVASVG_INLINE bool Bitmap::writeToBmp(const std::string& filename) const
-{
-    BitmapRgbaScratch rgba(*this);
-    if(!rgba)
-        return false;
-    return stbi_write_bmp(filename.data(), rgba.width(), rgba.height(), 4, rgba.data()) != 0;
-}
-
-NOVASVG_INLINE bool Bitmap::writeToBmp(novasvg_write_func_t callback, void* closure) const
-{
-    BitmapRgbaScratch rgba(*this);
-    if(!rgba)
-        return false;
-    return stbi_write_bmp_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data()) != 0;
-}
-
-NOVASVG_INLINE bool Bitmap::writeToTga(const std::string& filename) const
-{
-    BitmapRgbaScratch rgba(*this);
-    if(!rgba)
-        return false;
-    return stbi_write_tga(filename.data(), rgba.width(), rgba.height(), 4, rgba.data()) != 0;
-}
-
-NOVASVG_INLINE bool Bitmap::writeToTga(novasvg_write_func_t callback, void* closure) const
-{
-    BitmapRgbaScratch rgba(*this);
-    if(!rgba)
-        return false;
-    return stbi_write_tga_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data()) != 0;
-}
-
-NOVASVG_INLINE bool Bitmap::writeToJpg(const std::string& filename, int quality) const
-{
-    BitmapRgbaScratch rgba(*this);
-    if(!rgba)
-        return false;
-    return stbi_write_jpg(filename.data(), rgba.width(), rgba.height(), 4, rgba.data(), quality) != 0;
-}
-
-NOVASVG_INLINE bool Bitmap::writeToJpg(novasvg_write_func_t callback, void* closure, int quality) const
-{
-    BitmapRgbaScratch rgba(*this);
-    if(!rgba)
-        return false;
-    return stbi_write_jpg_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data(), quality) != 0;
+    switch(format) {
+    case Format::Bmp:
+        return write_bmp_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data()) != 0;
+    case Format::Tga:
+        return write_tga_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data()) != 0;
+    case Format::Jpg:
+        return write_jpg_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data(), jpgQuality) != 0;
+    case Format::Auto:
+    case Format::Png:
+    default:
+        return write_png_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data(), rgba.stride()) != 0;
+    }
 }
 
 NOVASVG_INLINE surface_t* Bitmap::release()

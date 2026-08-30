@@ -88,22 +88,6 @@ int cmd_convert(const std::string& input,
         output_path.replace_extension(".png");
     }
 
-    // Handle Background Color
-    uint32_t bg_color = 0x00000000; // Default transparent
-    if (!bg_color_str.empty()) {
-        std::string color_str = bg_color_str;
-        // Remove leading '#' if present
-        if (color_str[0] == '#') {
-            color_str = color_str.substr(1);
-        }
-        try {
-            bg_color = std::stoul(color_str, nullptr, 16);
-        } catch (...) {
-            std::cerr << "Error: Invalid background color format. Use RRGGBB or RRGGBBAA.\n";
-            return 1;
-        }
-    }
-
     std::cout << "Converting: " << input << " -> " << output_path.string() << "\n";
     std::cout << "Original size: " << doc->width() << "x" << doc->height() << "px\n";
     
@@ -122,13 +106,13 @@ int cmd_convert(const std::string& input,
     }
     
     // Render
-    auto bitmap = doc->renderToBitmap(width, height, novasvg::Color::fromValue(bg_color));
+    auto bitmap = doc->renderToBitmap(width, height, novasvg::Color(bg_color_str));
     if (bitmap.isNull()) {
         std::cerr << "Error: Failed to render SVG\n";
         return 1;
     }
     
-    if (!bitmap.writeToPng(output_path.string())) {
+    if (!bitmap.write(output_path.string())) {
         std::cerr << "Error: Failed to save PNG file: " << output_path.string() << "\n";
         return 1;
     }
@@ -317,7 +301,7 @@ int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
         auto bitmap = doc->renderToBitmap();
         if (bitmap.isNull()) { std::cerr << "  Failed to render\n"; failed++; continue; }
         
-        if (!bitmap.writeToPng(output_file)) { std::cerr << "  Failed to save\n"; failed++; continue; }
+        if (!bitmap.write(output_file)) { std::cerr << "  Failed to save\n"; failed++; continue; }
         
         success++;
     }

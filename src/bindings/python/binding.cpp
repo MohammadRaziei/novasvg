@@ -122,7 +122,7 @@ NB_MODULE(novasvg_py, m) {
         }, "value"_a, "Clear the bitmap with a packed 0xRRGGBBAA value.")
         .def("convert_to_rgba", &novasvg::Bitmap::convertToRGBA, "Convert pixel data from ARGB32 Premultiplied to RGBA Plain.")
         .def("write_to_png", [](const novasvg::Bitmap &bmp, const std::string &filename) {
-            return bmp.writeToPng(filename);
+            return bmp.write(filename, novasvg::Bitmap::Format::Png);
         }, "filename"_a, "Write the bitmap to a PNG file.");
 
     // --- Bind Node Class ---

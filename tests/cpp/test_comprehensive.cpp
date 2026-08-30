@@ -154,7 +154,7 @@ TEST_CASE("Bitmap operations") {
     CHECK(bitmap2.isNull()); // Should be null after move
     
     // Test write to PNG (will fail if file can't be written, but that's OK)
-    bool writeResult = bitmap3.writeToPng("/tmp/test_novasvg.png");
+    bool writeResult = bitmap3.write("/tmp/test_novasvg.png");
     // We don't check the result as it depends on filesystem permissions
 }
 
