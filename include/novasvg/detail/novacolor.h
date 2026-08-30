@@ -507,7 +507,8 @@ public:
         if (str.empty()) {
             throw std::invalid_argument("Empty string provided");
         }
-        return (str[0] == '#') ? fromHash(str) : fromName(str);
+        bool is_hex = std::all_of(str.begin(), str.end(), [](unsigned char c) { return std::isxdigit(c); });
+        return (str[0] == '#') ? fromHash(str) : ( is_hex ? fromHash("#" + str) : fromName(str));
     }
 
     /**
