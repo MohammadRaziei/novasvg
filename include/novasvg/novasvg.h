@@ -267,37 +267,62 @@ public:
     bool valid() const { return !isNull(); }
 
     /**
-     * @brief Image formats Bitmap can encode itself as.
-     */
-    enum class Format {
-        Auto,  ///< Detect from the filename's extension (write(filename, ...) only); Png if unrecognized or absent.
-        Png,
-        Bmp,
-        Tga,
-        Jpg
-    };
-
-    /**
-     * @brief Writes the bitmap to a file, encoding it as `format`.
-     * @param filename The name of the file to write. With `Format::Auto` (the
-     * default), the format is picked from this name's extension (.png/.bmp/.tga/.jpg/.jpeg),
-     * falling back to PNG if it's unrecognized or missing.
-     * @param format Which format to encode as, or `Format::Auto` to detect it from `filename`.
-     * @param jpgQuality JPEG quality (1-100), used only when writing as `Format::Jpg`.
+     * @brief Writes the bitmap to a PNG file.
+     * @param filename The name of the file to write.
      * @return True if the file was written successfully, false otherwise.
      */
-    bool write(const std::string& filename, Format format = Format::Auto, int jpgQuality = 80) const;
+    bool writeToPng(const std::string& filename) const;
 
     /**
-     * @brief Writes the bitmap to a stream, encoding it as `format`.
+     * @brief Writes the bitmap to a PNG stream.
      * @param callback Callback function for writing data.
      * @param closure User-defined data passed to the callback.
-     * @param format Which format to encode as. `Format::Auto` has nothing to detect
-     * from here, so it's treated the same as `Format::Png`.
-     * @param jpgQuality JPEG quality (1-100), used only when writing as `Format::Jpg`.
      * @return True if successful, false otherwise.
      */
-    bool write(novasvg_write_func_t callback, void* closure, Format format = Format::Png, int jpgQuality = 80) const;
+    bool writeToPng(novasvg_write_func_t callback, void* closure) const;
+
+    /**
+     * @brief Writes the bitmap to a BMP file.
+     */
+    bool writeToBmp(const std::string& filename) const;
+
+    /**
+     * @brief Writes the bitmap to a BMP stream.
+     */
+    bool writeToBmp(novasvg_write_func_t callback, void* closure) const;
+
+    /**
+     * @brief Writes the bitmap to a TGA file.
+     */
+    bool writeToTga(const std::string& filename) const;
+
+    /**
+     * @brief Writes the bitmap to a TGA stream.
+     */
+    bool writeToTga(novasvg_write_func_t callback, void* closure) const;
+
+    /**
+     * @brief Writes the bitmap to a JPEG file.
+     * @param quality JPEG quality, from 1 to 100.
+     */
+    bool writeToJpg(const std::string& filename, int quality = 80) const;
+
+    /**
+     * @brief Writes the bitmap to a JPEG stream.
+     * @param quality JPEG quality, from 1 to 100.
+     */
+    bool writeToJpg(novasvg_write_func_t callback, void* closure, int quality = 80) const;
+
+    /**
+     * @brief Writes the bitmap to a file, picking PNG/BMP/TGA/JPEG from
+     * `filename`'s extension (.png/.bmp/.tga/.jpg/.jpeg; PNG if unrecognized
+     * or missing). A convenience over calling writeToPng()/writeToBmp()/etc
+     * yourself when the format doesn't need to be pinned down explicitly.
+     * @param filename The name of the file to write.
+     * @param jpgQuality JPEG quality (1-100), used only when the extension picks JPEG.
+     * @return True if the file was written successfully, false otherwise.
+     */
+    bool write(const std::string& filename, int jpgQuality = 80) const;
 
     /**
      * @internal
@@ -854,43 +879,30 @@ private:
 // is only ever touched from here.
 #define STB_IMAGE_WRITE_STATIC
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-// Image encoding (PNG, BMP, TGA, JPEG) for Bitmap::write(). Ported from
-// stb_image_write v1.16 (Sean Barrett, public domain / MIT) with every
-// identifier renamed to this project's naming and folded into
-// novasvg::render. The single-header config-switch (extern vs static
-// linkage) and standalone-include-guard machinery were dropped since this
-// now only ever exists inlined here, always fully built in; the several
-// `#ifndef NOVASVG_IW_NO_STDIO` blocks below are untouched from upstream
-// (NOVASVG_IW_NO_STDIO is just never defined, same as upstream's own
-// default) -- left alone deliberately rather than risk mismatching one of
-// several differently-spelled #endif comments while unwrapping them.
+namespace novasvg {
+
+// Image encoding (PNG, BMP, TGA, JPEG) for Bitmap::write()/writeToPng()/etc,
+// ported from stb_image_write v1.16 (Sean Barrett, public domain / MIT):
+// every identifier renamed to this project's naming, and every function
+// turned into a static method of BitmapCodec (Bitmap's own encoder,
+// declared right where the rest of Bitmap lives) instead of a free
+// function in a generic namespace. The single-header config-switch
+// (extern vs static linkage) and standalone-include-guard machinery were
+// dropped since this now only ever exists inlined here, always fully
+// built in; the several '#ifndef NOVASVG_IW_NO_STDIO' blocks below are
+// otherwise untouched from upstream (that macro is just never defined,
+// same as upstream's own default).
 // Upstream: https://github.com/nothings/stb
 
-namespace novasvg {
-namespace render {
-
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
 
-#ifndef NOVASVG_IW_NO_STDIO
-NOVASVG_INLINE int write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
-NOVASVG_INLINE int write_bmp(char const *filename, int w, int h, int comp, const void  *data);
-NOVASVG_INLINE int write_tga(char const *filename, int w, int h, int comp, const void  *data);
-NOVASVG_INLINE int write_hdr(char const *filename, int w, int h, int comp, const float *data);
-NOVASVG_INLINE int write_jpg(char const *filename, int x, int y, int comp, const void  *data, int quality);
-
-#ifdef NOVASVG_IW_WINDOWS_UTF8
-NOVASVG_INLINE int convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input);
-#endif
-#endif
-
-NOVASVG_INLINE int write_png_to_func(write_func_t func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
-NOVASVG_INLINE int write_bmp_to_func(write_func_t func, void *context, int w, int h, int comp, const void  *data);
-NOVASVG_INLINE int write_tga_to_func(write_func_t func, void *context, int w, int h, int comp, const void  *data);
-NOVASVG_INLINE int write_hdr_to_func(write_func_t func, void *context, int w, int h, int comp, const float *data);
-NOVASVG_INLINE int write_jpg_to_func(write_func_t func, void *context, int x, int y, int comp, const void  *data, int quality);
-
-NOVASVG_INLINE void set_flip_vertically_on_write(int flip_boolean);
-
+class BitmapCodec {
+public:
 
 #ifdef _WIN32
    #ifndef _CRT_SECURE_NO_WARNINGS
@@ -902,13 +914,8 @@ NOVASVG_INLINE void set_flip_vertically_on_write(int flip_boolean);
 #endif
 
 #ifndef NOVASVG_IW_NO_STDIO
-#include <stdio.h>
 #endif // NOVASVG_IW_NO_STDIO
 
-#include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
 
 #if defined(NOVASVG_IW_MALLOC) && defined(NOVASVG_IW_FREE) && (defined(NOVASVG_IW_REALLOC) || defined(NOVASVG_IW_REALLOC_SIZED))
 // ok
@@ -935,19 +942,24 @@ NOVASVG_INLINE void set_flip_vertically_on_write(int flip_boolean);
 
 
 #ifndef NOVASVG_IW_ASSERT
-#include <assert.h>
 #define NOVASVG_IW_ASSERT(x) assert(x)
 #endif
 
 #define NOVASVG_IW_UCHAR(x) (unsigned char) ((x) & 0xff)
 
-static int g_png_compression_level = 8;
-static int g_tga_with_rle = 1;
-static int g_png_force_filter = -1;
+#ifdef STB_IMAGE_WRITE_STATIC
+inline static int g_png_compression_level = 8;
+inline static int g_tga_with_rle = 1;
+inline static int g_png_force_filter = -1;
+#else
+int g_png_compression_level = 8;
+int g_tga_with_rle = 1;
+int g_png_force_filter = -1;
+#endif
 
-static int g_flip_vertically_on_write = 0;
+inline static int g_flip_vertically_on_write = 0;
 
-NOVASVG_INLINE void set_flip_vertically_on_write(int flag)
+static void set_flip_vertically_on_write(int flag)
 {
    g_flip_vertically_on_write = flag;
 }
@@ -983,7 +995,7 @@ static void write_stdio_callback(void *context, void *data, int size)
 NOVASVG_IW_EXTERN __declspec(dllimport) int __stdcall MultiByteToWideChar(unsigned int cp, unsigned long flags, const char *str, int cbmb, wchar_t *widestr, int cchwide);
 NOVASVG_IW_EXTERN __declspec(dllimport) int __stdcall WideCharToMultiByte(unsigned int cp, unsigned long flags, const wchar_t *widestr, int cchwide, char *str, int cbmb, const char *defchar, int *used_default);
 
-NOVASVG_INLINE int convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input)
+static int convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input)
 {
    return WideCharToMultiByte(65001 /* UTF8 */, 0, input, -1, buffer, (int) bufferlen, NULL, NULL);
 }
@@ -1032,7 +1044,7 @@ static void write_end_file(write_context *s)
 #endif // !NOVASVG_IW_NO_STDIO
 
 typedef unsigned int iw_uint32;
-typedef int iw_uint32_size_check[sizeof(iw_uint32) == 4 ? 1 : -1];
+typedef int stb_image_write_test[sizeof(iw_uint32)==4 ? 1 : -1];
 
 static void write_formatted_v(write_context *s, const char *fmt, va_list v)
 {
@@ -1197,7 +1209,7 @@ static int write_bmp_core(write_context *s, int x, int y, int comp, const void *
    }
 }
 
-NOVASVG_INLINE int write_bmp_to_func(write_func_t func, void *context, int x, int y, int comp, const void *data)
+static int write_bmp_to_func(write_func_t func, void *context, int x, int y, int comp, const void *data)
 {
    write_context s = { 0 };
    write_start_callbacks(&s, func, context);
@@ -1205,7 +1217,7 @@ NOVASVG_INLINE int write_bmp_to_func(write_func_t func, void *context, int x, in
 }
 
 #ifndef NOVASVG_IW_NO_STDIO
-NOVASVG_INLINE int write_bmp(char const *filename, int x, int y, int comp, const void *data)
+static int write_bmp(char const *filename, int x, int y, int comp, const void *data)
 {
    write_context s = { 0 };
    if (write_start_file(&s,filename)) {
@@ -1296,7 +1308,7 @@ static int write_tga_core(write_context *s, int x, int y, int comp, void *data)
    return 1;
 }
 
-NOVASVG_INLINE int write_tga_to_func(write_func_t func, void *context, int x, int y, int comp, const void *data)
+static int write_tga_to_func(write_func_t func, void *context, int x, int y, int comp, const void *data)
 {
    write_context s = { 0 };
    write_start_callbacks(&s, func, context);
@@ -1304,7 +1316,7 @@ NOVASVG_INLINE int write_tga_to_func(write_func_t func, void *context, int x, in
 }
 
 #ifndef NOVASVG_IW_NO_STDIO
-NOVASVG_INLINE int write_tga(char const *filename, int x, int y, int comp, const void *data)
+static int write_tga(char const *filename, int x, int y, int comp, const void *data)
 {
    write_context s = { 0 };
    if (write_start_file(&s,filename)) {
@@ -1455,7 +1467,7 @@ static int write_hdr_core(write_context *s, int x, int y, int comp, float *data)
       unsigned char *scratch = (unsigned char *) NOVASVG_IW_MALLOC(x*4);
       int i, len;
       char buffer[128];
-      char header[] = "#?RADIANCE\n# Written by novasvg\nFORMAT=32-bit_rle_rgbe\n";
+      char header[] = "#?RADIANCE\n# Written by stb_image_write.h\nFORMAT=32-bit_rle_rgbe\n";
       s->func(s->context, header, sizeof(header)-1);
 
 #ifdef __STDC_LIB_EXT1__
@@ -1472,14 +1484,14 @@ static int write_hdr_core(write_context *s, int x, int y, int comp, float *data)
    }
 }
 
-NOVASVG_INLINE int write_hdr_to_func(write_func_t func, void *context, int x, int y, int comp, const float *data)
+static int write_hdr_to_func(write_func_t func, void *context, int x, int y, int comp, const float *data)
 {
    write_context s = { 0 };
    write_start_callbacks(&s, func, context);
    return write_hdr_core(&s, x, y, comp, (float *) data);
 }
 
-NOVASVG_INLINE int write_hdr(char const *filename, int x, int y, int comp, const float *data)
+static int write_hdr(char const *filename, int x, int y, int comp, const float *data)
 {
    write_context s = { 0 };
    if (write_start_file(&s,filename)) {
@@ -1580,7 +1592,7 @@ static unsigned int g_zlib_hash_table(unsigned char *data)
 
 #endif // NOVASVG_IW_ZLIB_COMPRESS
 
-NOVASVG_INLINE unsigned char * zlib_compress(unsigned char *data, int data_len, int *out_len, int quality)
+static unsigned char * zlib_compress(unsigned char *data, int data_len, int *out_len, int quality)
 {
 #ifdef NOVASVG_IW_ZLIB_COMPRESS
    // user provided a zlib compress implementation, use that
@@ -1813,7 +1825,7 @@ static void png_encode_line(unsigned char *pixels, int stride_bytes, int width, 
    }
 }
 
-NOVASVG_INLINE unsigned char *write_png_to_mem(const unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
+static unsigned char *write_png_to_mem(const unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
 {
    int force_filter = g_png_force_filter;
    int ctype[5] = { -1, 0, 4, 2, 6 };
@@ -1900,7 +1912,7 @@ NOVASVG_INLINE unsigned char *write_png_to_mem(const unsigned char *pixels, int 
 }
 
 #ifndef NOVASVG_IW_NO_STDIO
-NOVASVG_INLINE int write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
+static int write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
 {
    FILE *f;
    int len;
@@ -1916,7 +1928,7 @@ NOVASVG_INLINE int write_png(char const *filename, int x, int y, int comp, const
 }
 #endif
 
-NOVASVG_INLINE int write_png_to_func(write_func_t func, void *context, int x, int y, int comp, const void *data, int stride_bytes)
+static int write_png_to_func(write_func_t func, void *context, int x, int y, int comp, const void *data, int stride_bytes)
 {
    int len;
    unsigned char *png = write_png_to_mem((const unsigned char *) data, stride_bytes, x, y, comp, &len);
@@ -1935,7 +1947,7 @@ NOVASVG_INLINE int write_png_to_func(write_func_t func, void *context, int x, in
  * public domain Simple, Minimalistic JPEG writer - http://www.jonolick.com/code.html
  */
 
-static const unsigned char jpg_zig_zag[] = { 0,1,5,6,14,15,27,28,2,4,7,13,16,26,29,42,3,8,12,17,25,30,41,43,9,11,18,
+inline static const unsigned char jpg_zig_zag[] = { 0,1,5,6,14,15,27,28,2,4,7,13,16,26,29,42,3,8,12,17,25,30,41,43,9,11,18,
       24,31,40,44,53,10,19,23,32,39,45,52,54,20,22,33,38,46,51,55,60,21,34,37,47,50,56,59,61,35,36,48,49,57,58,62,63 };
 
 static void jpg_write_bits(write_context *s, int *bitBufP, int *bitCntP, const unsigned short *bs) {
@@ -2292,7 +2304,7 @@ static int write_jpg_core(write_context *s, int width, int height, int comp, con
    return 1;
 }
 
-NOVASVG_INLINE int write_jpg_to_func(write_func_t func, void *context, int x, int y, int comp, const void *data, int quality)
+static int write_jpg_to_func(write_func_t func, void *context, int x, int y, int comp, const void *data, int quality)
 {
    write_context s = { 0 };
    write_start_callbacks(&s, func, context);
@@ -2301,7 +2313,7 @@ NOVASVG_INLINE int write_jpg_to_func(write_func_t func, void *context, int x, in
 
 
 #ifndef NOVASVG_IW_NO_STDIO
-NOVASVG_INLINE int write_jpg(char const *filename, int x, int y, int comp, const void *data, int quality)
+static int write_jpg(char const *filename, int x, int y, int comp, const void *data, int quality)
 {
    write_context s = { 0 };
    if (write_start_file(&s,filename)) {
@@ -2313,7 +2325,9 @@ NOVASVG_INLINE int write_jpg(char const *filename, int x, int y, int comp, const
 }
 #endif
 
-} // namespace render
+};
+
+
 } // namespace novasvg
 
 #include "detail/graphics.h"
@@ -2444,9 +2458,9 @@ NOVASVG_INLINE Bitmap& Bitmap::operator=(Bitmap&& bitmap)
 namespace {
 
 // One-pass, unpremultiplied RGBA copy of a Bitmap's pixels -- lives only
-// long enough to hand to the encoders in render:: (below, in this same
-// file). This is an implementation detail of Bitmap::write(), not a type
-// of its own: no declaration in the class, nothing exported.
+// long enough to hand to BitmapCodec. This is an implementation detail of
+// Bitmap's writeTo*() methods below, not a type of its own: no
+// declaration in the class, nothing exported.
 //
 // Bitmap itself stays ARGB32-Premultiplied always -- it doubles as a
 // drawable surface (Canvas can render onto an existing Bitmap) and as a
@@ -2485,71 +2499,89 @@ private:
     uint8_t* m_data;
 };
 
-// Format::Auto, resolved from a filename's extension. Unrecognized or
-// missing extensions fall back to Png -- write() always succeeds or
-// fails on I/O/encoding grounds, never on "couldn't guess a format".
-Bitmap::Format formatFromFilename(const std::string& filename)
-{
-    auto dot = filename.find_last_of('.');
-    if(dot == std::string::npos)
-        return Bitmap::Format::Png;
+} // namespace
 
-    auto ext = filename.substr(dot + 1);
+NOVASVG_INLINE bool Bitmap::writeToPng(const std::string& filename) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return BitmapCodec::write_png(filename.data(), rgba.width(), rgba.height(), 4, rgba.data(), rgba.stride()) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToPng(novasvg_write_func_t callback, void* closure) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return BitmapCodec::write_png_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data(), rgba.stride()) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToBmp(const std::string& filename) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return BitmapCodec::write_bmp(filename.data(), rgba.width(), rgba.height(), 4, rgba.data()) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToBmp(novasvg_write_func_t callback, void* closure) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return BitmapCodec::write_bmp_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data()) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToTga(const std::string& filename) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return BitmapCodec::write_tga(filename.data(), rgba.width(), rgba.height(), 4, rgba.data()) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToTga(novasvg_write_func_t callback, void* closure) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return BitmapCodec::write_tga_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data()) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToJpg(const std::string& filename, int quality) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return BitmapCodec::write_jpg(filename.data(), rgba.width(), rgba.height(), 4, rgba.data(), quality) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::writeToJpg(novasvg_write_func_t callback, void* closure, int quality) const
+{
+    BitmapRgbaScratch rgba(*this);
+    if(!rgba)
+        return false;
+    return BitmapCodec::write_jpg_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data(), quality) != 0;
+}
+
+NOVASVG_INLINE bool Bitmap::write(const std::string& filename, int jpgQuality) const
+{
+    // write() *is* the auto-detecting entry point -- it just delegates to
+    // whichever writeTo*() the extension picks, rather than duplicating
+    // their bodies.
+    auto dot = filename.find_last_of('.');
+    std::string ext = dot == std::string::npos ? std::string() : filename.substr(dot + 1);
     for(auto& c : ext)
         c = char(std::tolower(static_cast<unsigned char>(c)));
 
     if(ext == "bmp")
-        return Bitmap::Format::Bmp;
+        return writeToBmp(filename);
     if(ext == "tga")
-        return Bitmap::Format::Tga;
+        return writeToTga(filename);
     if(ext == "jpg" || ext == "jpeg")
-        return Bitmap::Format::Jpg;
-    return Bitmap::Format::Png;
-}
-
-} // namespace
-
-NOVASVG_INLINE bool Bitmap::write(const std::string& filename, Format format, int jpgQuality) const
-{
-    if(format == Format::Auto)
-        format = formatFromFilename(filename);
-
-    BitmapRgbaScratch rgba(*this);
-    if(!rgba)
-        return false;
-
-    switch(format) {
-    case Format::Bmp:
-        return write_bmp(filename.data(), rgba.width(), rgba.height(), 4, rgba.data()) != 0;
-    case Format::Tga:
-        return write_tga(filename.data(), rgba.width(), rgba.height(), 4, rgba.data()) != 0;
-    case Format::Jpg:
-        return write_jpg(filename.data(), rgba.width(), rgba.height(), 4, rgba.data(), jpgQuality) != 0;
-    case Format::Auto:
-    case Format::Png:
-    default:
-        return write_png(filename.data(), rgba.width(), rgba.height(), 4, rgba.data(), rgba.stride()) != 0;
-    }
-}
-
-NOVASVG_INLINE bool Bitmap::write(novasvg_write_func_t callback, void* closure, Format format, int jpgQuality) const
-{
-    BitmapRgbaScratch rgba(*this);
-    if(!rgba)
-        return false;
-
-    switch(format) {
-    case Format::Bmp:
-        return write_bmp_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data()) != 0;
-    case Format::Tga:
-        return write_tga_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data()) != 0;
-    case Format::Jpg:
-        return write_jpg_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data(), jpgQuality) != 0;
-    case Format::Auto:
-    case Format::Png:
-    default:
-        return write_png_to_func(callback, closure, rgba.width(), rgba.height(), 4, rgba.data(), rgba.stride()) != 0;
-    }
+        return writeToJpg(filename, jpgQuality);
+    return writeToPng(filename);
 }
 
 NOVASVG_INLINE surface_t* Bitmap::release()
