@@ -70,7 +70,7 @@ namespace render {
 #define novasvg_array_clear(array) ((array).size = 0)
 #define novasvg_array_destroy(array) free((array).data)
 
-static inline uint32_t premultiply_argb(uint32_t color)
+NOVASVG_INLINE uint32_t premultiply_argb(uint32_t color)
 {
     uint32_t a = novasvg_alpha(color);
     uint32_t r = novasvg_red(color);
@@ -85,7 +85,7 @@ static inline uint32_t premultiply_argb(uint32_t color)
     return (a << 24) | (r << 16) | (g << 8) | (b);
 }
 
-static inline bool parse_number(const char** begin, const char* end, float* number)
+NOVASVG_INLINE bool parse_number(const char** begin, const char* end, float* number)
 {
     const char* it = *begin;
     float integer = 0;
@@ -144,7 +144,7 @@ static inline bool parse_number(const char** begin, const char* end, float* numb
     return *number >= -FLT_MAX && *number <= FLT_MAX;
 }
 
-static inline bool skip_delim(const char** begin, const char* end, const char delim)
+NOVASVG_INLINE bool skip_delim(const char** begin, const char* end, const char delim)
 {
     const char* it = *begin;
     if(it < end && *it == delim) {
@@ -155,7 +155,7 @@ static inline bool skip_delim(const char** begin, const char* end, const char de
     return false;
 }
 
-static inline bool skip_string(const char** begin, const char* end, const char* data)
+NOVASVG_INLINE bool skip_string(const char** begin, const char* end, const char* data)
 {
     const char* it = *begin;
     while(it < end && *data && *it == *data) {
@@ -171,7 +171,7 @@ static inline bool skip_string(const char** begin, const char* end, const char* 
     return false;
 }
 
-static inline bool skip_ws(const char** begin, const char* end)
+NOVASVG_INLINE bool skip_ws(const char** begin, const char* end)
 {
     const char* it = *begin;
     while(it < end && NOVASVG_IS_WS(*it))
@@ -180,7 +180,7 @@ static inline bool skip_ws(const char** begin, const char* end)
     return it < end;
 }
 
-static inline bool skip_ws_and_delim(const char** begin, const char* end, char delim)
+NOVASVG_INLINE bool skip_ws_and_delim(const char** begin, const char* end, char delim)
 {
     const char* it = *begin;
     if(skip_ws(&it, end)) {
@@ -195,12 +195,12 @@ static inline bool skip_ws_and_delim(const char** begin, const char* end, char d
     return it < end;
 }
 
-static inline bool skip_ws_and_comma(const char** begin, const char* end)
+NOVASVG_INLINE bool skip_ws_and_comma(const char** begin, const char* end)
 {
     return skip_ws_and_delim(begin, end, ',');
 }
 
-static inline bool skip_ws_or_delim(const char** begin, const char* end, char delim, bool* has_delim)
+NOVASVG_INLINE bool skip_ws_or_delim(const char** begin, const char* end, char delim, bool* has_delim)
 {
     const char* it = *begin;
     if(has_delim)
@@ -219,7 +219,7 @@ static inline bool skip_ws_or_delim(const char** begin, const char* end, char de
     return it < end;
 }
 
-static inline bool skip_ws_or_comma(const char** begin, const char* end, bool* has_comma)
+NOVASVG_INLINE bool skip_ws_or_comma(const char** begin, const char* end, bool* has_comma)
 {
     return skip_ws_or_delim(begin, end, ',', has_comma);
 }

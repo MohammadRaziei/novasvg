@@ -2763,7 +2763,7 @@ NOVASVG_INLINE SVGLinearGradientAttributes SVGLinearGradientElement::collectGrad
     return attributes;
 }
 
-static GradientStops buildGradientStops(const SVGGradientElement* element, float opacity)
+NOVASVG_INLINE GradientStops buildGradientStops(const SVGGradientElement* element, float opacity)
 {
     GradientStops gradientStops;
 
@@ -3344,7 +3344,7 @@ inline const SVGTextPositioningElement* toSVGTextPositioningElement(const SVGNod
     return static_cast<const SVGTextPositioningElement*>(node);
 }
 
-static AlignmentBaseline resolveDominantBaseline(const SVGTextPositioningElement* element)
+NOVASVG_INLINE AlignmentBaseline resolveDominantBaseline(const SVGTextPositioningElement* element)
 {
     switch(element->dominant_baseline()) {
     case DominantBaseline::Auto:
@@ -3378,7 +3378,7 @@ static AlignmentBaseline resolveDominantBaseline(const SVGTextPositioningElement
     return AlignmentBaseline::Auto;
 }
 
-static float calculateBaselineOffset(const SVGTextPositioningElement* element)
+NOVASVG_INLINE float calculateBaselineOffset(const SVGTextPositioningElement* element)
 {
     auto offset = element->baseline_offset();
     auto parent = element->parentElement();
@@ -3422,7 +3422,7 @@ static float calculateBaselineOffset(const SVGTextPositioningElement* element)
     return offset;
 }
 
-static bool needsTextAnchorAdjustment(const SVGTextPositioningElement* element)
+NOVASVG_INLINE bool needsTextAnchorAdjustment(const SVGTextPositioningElement* element)
 {
     auto direction = element->direction();
     switch(element->text_anchor()) {
@@ -3439,7 +3439,7 @@ static bool needsTextAnchorAdjustment(const SVGTextPositioningElement* element)
     return false;
 }
 
-static float calculateTextAnchorOffset(const SVGTextPositioningElement* element, float width)
+NOVASVG_INLINE float calculateTextAnchorOffset(const SVGTextPositioningElement* element, float width)
 {
     auto direction = element->direction();
     switch(element->text_anchor()) {
@@ -3462,7 +3462,7 @@ static float calculateTextAnchorOffset(const SVGTextPositioningElement* element,
 
 using SVGTextFragmentIterator = SVGTextFragmentList::iterator;
 
-static float calculateTextChunkLength(SVGTextFragmentIterator begin, SVGTextFragmentIterator end, bool isVerticalText)
+NOVASVG_INLINE float calculateTextChunkLength(SVGTextFragmentIterator begin, SVGTextFragmentIterator end, bool isVerticalText)
 {
     float chunkLength = 0;
     const SVGTextFragment* lastFragment = nullptr;
@@ -3486,7 +3486,7 @@ static float calculateTextChunkLength(SVGTextFragmentIterator begin, SVGTextFrag
     return chunkLength;
 }
 
-static void handleTextChunk(SVGTextFragmentIterator begin, SVGTextFragmentIterator end)
+NOVASVG_INLINE void handleTextChunk(SVGTextFragmentIterator begin, SVGTextFragmentIterator end)
 {
     const SVGTextFragment& firstFragment = *begin;
     const auto isVerticalText = firstFragment.element->isVerticalWritingMode();
@@ -3905,7 +3905,7 @@ NOVASVG_INLINE Rect SVGTextElement::boundingBox(bool includeStroke) const
 // ---- svglayoutstate (impl) ----
 using namespace render; // render/ layer (novasvg::render), the former plutovg
 
-static std::optional<Color> parseColorValue(std::string_view& input, const SVGLayoutState* state)
+NOVASVG_INLINE std::optional<Color> parseColorValue(std::string_view& input, const SVGLayoutState* state)
 {
     if(skipString(input, "currentColor")) {
         return state->color();
@@ -3923,7 +3923,7 @@ static std::optional<Color> parseColorValue(std::string_view& input, const SVGLa
     return Color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff);
 }
 
-static Color parseColor(std::string_view input, const SVGLayoutState* state, const Color& defaultValue)
+NOVASVG_INLINE Color parseColor(std::string_view input, const SVGLayoutState* state, const Color& defaultValue)
 {
     auto color = parseColorValue(input, state);
     if(!color || !input.empty())
@@ -3931,14 +3931,14 @@ static Color parseColor(std::string_view input, const SVGLayoutState* state, con
     return color.value();
 }
 
-static Color parseColorOrNone(std::string_view input, const SVGLayoutState* state, const Color& defaultValue)
+NOVASVG_INLINE Color parseColorOrNone(std::string_view input, const SVGLayoutState* state, const Color& defaultValue)
 {
     if(input.compare("none") == 0)
         return Color::Transparent;
     return parseColor(input, state, defaultValue);
 }
 
-static bool parseUrlValue(std::string_view& input, std::string& value)
+NOVASVG_INLINE bool parseUrlValue(std::string_view& input, std::string& value)
 {
     if(!skipString(input, "url")
         || !skipOptionalSpaces(input)
@@ -3979,7 +3979,7 @@ static bool parseUrlValue(std::string_view& input, std::string& value)
     return skipOptionalSpaces(input) && skipDelimiter(input, ')');
 }
 
-static std::string parseUrl(std::string_view input)
+NOVASVG_INLINE std::string parseUrl(std::string_view input)
 {
     std::string value;
     if(!parseUrlValue(input, value) || !input.empty())
@@ -3987,7 +3987,7 @@ static std::string parseUrl(std::string_view input)
     return value;
 }
 
-static Paint parsePaint(std::string_view input, const SVGLayoutState* state, const Color& defaultValue)
+NOVASVG_INLINE Paint parsePaint(std::string_view input, const SVGLayoutState* state, const Color& defaultValue)
 {
     std::string id;
     if(!parseUrlValue(input, id))
@@ -3997,7 +3997,7 @@ static Paint parsePaint(std::string_view input, const SVGLayoutState* state, con
     return Paint(id, Color::Transparent);
 }
 
-static float parseNumberOrPercentage(std::string_view input, bool allowPercentage, float defaultValue)
+NOVASVG_INLINE float parseNumberOrPercentage(std::string_view input, bool allowPercentage, float defaultValue)
 {
     float value;
     if(!parseNumber(input, value))
@@ -4013,7 +4013,7 @@ static float parseNumberOrPercentage(std::string_view input, bool allowPercentag
     return value;
 }
 
-static Length parseLength(std::string_view input, LengthNegativeMode mode, const Length& defaultValue)
+NOVASVG_INLINE Length parseLength(std::string_view input, LengthNegativeMode mode, const Length& defaultValue)
 {
     Length value;
     if(!value.parse(input, mode))
@@ -4021,7 +4021,7 @@ static Length parseLength(std::string_view input, LengthNegativeMode mode, const
     return value;
 }
 
-static BaselineShift parseBaselineShift(std::string_view input)
+NOVASVG_INLINE BaselineShift parseBaselineShift(std::string_view input)
 {
     if(input.compare("baseline") == 0)
         return BaselineShift::Type::Baseline;
@@ -4032,7 +4032,7 @@ static BaselineShift parseBaselineShift(std::string_view input)
     return parseLength(input, LengthNegativeMode::Allow, Length(0.f, LengthUnits::None));
 }
 
-static LengthList parseDashArray(std::string_view input)
+NOVASVG_INLINE LengthList parseDashArray(std::string_view input)
 {
     if(input.compare("none") == 0)
         return LengthList();
@@ -4050,14 +4050,14 @@ static LengthList parseDashArray(std::string_view input)
     return values;
 }
 
-static Length parseLengthOrNormal(std::string_view input)
+NOVASVG_INLINE Length parseLengthOrNormal(std::string_view input)
 {
     if(input.compare("normal") == 0)
         return Length(0, LengthUnits::None);
     return parseLength(input, LengthNegativeMode::Allow, Length(0, LengthUnits::None));
 }
 
-static float parseFontSize(std::string_view input, const SVGLayoutState* state)
+NOVASVG_INLINE float parseFontSize(std::string_view input, const SVGLayoutState* state)
 {
     auto length = parseLength(input, LengthNegativeMode::Forbid, Length(12, LengthUnits::None));
     if(length.units() == LengthUnits::Percent)
@@ -4070,7 +4070,7 @@ static float parseFontSize(std::string_view input, const SVGLayoutState* state)
 }
 
 template<typename Enum, unsigned int N>
-static Enum parseEnumValue(std::string_view input, const SVGEnumerationEntry<Enum>(&entries)[N], Enum defaultValue)
+NOVASVG_INLINE Enum parseEnumValue(std::string_view input, const SVGEnumerationEntry<Enum>(&entries)[N], Enum defaultValue)
 {
     for(const auto& entry : entries) {
         if(input == entry.second) {
@@ -4081,7 +4081,7 @@ static Enum parseEnumValue(std::string_view input, const SVGEnumerationEntry<Enu
     return defaultValue;
 }
 
-static Display parseDisplay(std::string_view input)
+NOVASVG_INLINE Display parseDisplay(std::string_view input)
 {
     static const SVGEnumerationEntry<Display> entries[] = {
         {Display::Inline, "inline"},
@@ -4091,7 +4091,7 @@ static Display parseDisplay(std::string_view input)
     return parseEnumValue(input, entries, Display::Inline);
 }
 
-static Visibility parseVisibility(std::string_view input)
+NOVASVG_INLINE Visibility parseVisibility(std::string_view input)
 {
     static const SVGEnumerationEntry<Visibility> entries[] = {
         {Visibility::Visible, "visible"},
@@ -4102,7 +4102,7 @@ static Visibility parseVisibility(std::string_view input)
     return parseEnumValue(input, entries, Visibility::Visible);
 }
 
-static Overflow parseOverflow(std::string_view input)
+NOVASVG_INLINE Overflow parseOverflow(std::string_view input)
 {
     static const SVGEnumerationEntry<Overflow> entries[] = {
         {Overflow::Visible, "visible"},
@@ -4112,7 +4112,7 @@ static Overflow parseOverflow(std::string_view input)
     return parseEnumValue(input, entries, Overflow::Visible);
 }
 
-static PointerEvents parsePointerEvents(std::string_view input)
+NOVASVG_INLINE PointerEvents parsePointerEvents(std::string_view input)
 {
     static const SVGEnumerationEntry<PointerEvents> entries[] = {
         {PointerEvents::None,"none"},
@@ -4131,7 +4131,7 @@ static PointerEvents parsePointerEvents(std::string_view input)
     return parseEnumValue(input, entries, PointerEvents::Auto);
 }
 
-static FontWeight parseFontWeight(std::string_view input)
+NOVASVG_INLINE FontWeight parseFontWeight(std::string_view input)
 {
     static const SVGEnumerationEntry<FontWeight> entries[] = {
         {FontWeight::Normal, "normal"},
@@ -4152,7 +4152,7 @@ static FontWeight parseFontWeight(std::string_view input)
     return parseEnumValue(input, entries, FontWeight::Normal);
 }
 
-static FontStyle parseFontStyle(std::string_view input)
+NOVASVG_INLINE FontStyle parseFontStyle(std::string_view input)
 {
     static const SVGEnumerationEntry<FontStyle> entries[] = {
         {FontStyle::Normal, "normal"},
@@ -4163,7 +4163,7 @@ static FontStyle parseFontStyle(std::string_view input)
     return parseEnumValue(input, entries, FontStyle::Normal);
 }
 
-static AlignmentBaseline parseAlignmentBaseline(std::string_view input)
+NOVASVG_INLINE AlignmentBaseline parseAlignmentBaseline(std::string_view input)
 {
     static const SVGEnumerationEntry<AlignmentBaseline> entries[] = {
         {AlignmentBaseline::Auto, "auto"},
@@ -4183,7 +4183,7 @@ static AlignmentBaseline parseAlignmentBaseline(std::string_view input)
     return parseEnumValue(input, entries, AlignmentBaseline::Auto);
 }
 
-static DominantBaseline parseDominantBaseline(std::string_view input)
+NOVASVG_INLINE DominantBaseline parseDominantBaseline(std::string_view input)
 {
     static const SVGEnumerationEntry<DominantBaseline> entries[] = {
         {DominantBaseline::Auto, "auto"},
@@ -4203,7 +4203,7 @@ static DominantBaseline parseDominantBaseline(std::string_view input)
     return parseEnumValue(input, entries, DominantBaseline::Auto);
 }
 
-static Direction parseDirection(std::string_view input)
+NOVASVG_INLINE Direction parseDirection(std::string_view input)
 {
     static const SVGEnumerationEntry<Direction> entries[] = {
         {Direction::Ltr, "ltr"},
@@ -4213,7 +4213,7 @@ static Direction parseDirection(std::string_view input)
     return parseEnumValue(input, entries, Direction::Ltr);
 }
 
-static WritingMode parseWritingMode(std::string_view input)
+NOVASVG_INLINE WritingMode parseWritingMode(std::string_view input)
 {
     static const SVGEnumerationEntry<WritingMode> entries[] = {
         {WritingMode::Horizontal, "horizontal-tb"},
@@ -4230,7 +4230,7 @@ static WritingMode parseWritingMode(std::string_view input)
     return parseEnumValue(input, entries, WritingMode::Horizontal);
 }
 
-static TextOrientation parseTextOrientation(std::string_view input)
+NOVASVG_INLINE TextOrientation parseTextOrientation(std::string_view input)
 {
     static const SVGEnumerationEntry<TextOrientation> entries[] = {
         {TextOrientation::Mixed, "mixed"},
@@ -4240,7 +4240,7 @@ static TextOrientation parseTextOrientation(std::string_view input)
     return parseEnumValue(input, entries, TextOrientation::Mixed);
 }
 
-static TextAnchor parseTextAnchor(std::string_view input)
+NOVASVG_INLINE TextAnchor parseTextAnchor(std::string_view input)
 {
     static const SVGEnumerationEntry<TextAnchor> entries[] = {
         {TextAnchor::Start, "start"},
@@ -4251,7 +4251,7 @@ static TextAnchor parseTextAnchor(std::string_view input)
     return parseEnumValue(input, entries, TextAnchor::Start);
 }
 
-static WhiteSpace parseWhiteSpace(std::string_view input)
+NOVASVG_INLINE WhiteSpace parseWhiteSpace(std::string_view input)
 {
     static const SVGEnumerationEntry<WhiteSpace> entries[] = {
         {WhiteSpace::Default, "default"},
@@ -4266,7 +4266,7 @@ static WhiteSpace parseWhiteSpace(std::string_view input)
     return parseEnumValue(input, entries, WhiteSpace::Default);
 }
 
-static MaskType parseMaskType(std::string_view input)
+NOVASVG_INLINE MaskType parseMaskType(std::string_view input)
 {
     static const SVGEnumerationEntry<MaskType> entries[] = {
         {MaskType::Luminance, "luminance"},
@@ -4276,7 +4276,7 @@ static MaskType parseMaskType(std::string_view input)
     return parseEnumValue(input, entries, MaskType::Luminance);
 }
 
-static FillRule parseFillRule(std::string_view input)
+NOVASVG_INLINE FillRule parseFillRule(std::string_view input)
 {
     static const SVGEnumerationEntry<FillRule> entries[] = {
         {FillRule::NonZero, "nonzero"},
@@ -4286,7 +4286,7 @@ static FillRule parseFillRule(std::string_view input)
     return parseEnumValue(input, entries, FillRule::NonZero);
 }
 
-static LineCap parseLineCap(std::string_view input)
+NOVASVG_INLINE LineCap parseLineCap(std::string_view input)
 {
     static const SVGEnumerationEntry<LineCap> entries[] = {
         {LineCap::Butt, "butt"},
@@ -4297,7 +4297,7 @@ static LineCap parseLineCap(std::string_view input)
     return parseEnumValue(input, entries, LineCap::Butt);
 }
 
-static LineJoin parseLineJoin(std::string_view input)
+NOVASVG_INLINE LineJoin parseLineJoin(std::string_view input)
 {
     static const SVGEnumerationEntry<LineJoin> entries[] = {
         {LineJoin::Miter, "miter"},
@@ -5402,7 +5402,7 @@ NOVASVG_INLINE void SVGImageElement::render(SVGRenderState& state) const
     newState.endGroup(blendInfo);
 }
 
-static Bitmap loadImageResource(const std::string& href)
+NOVASVG_INLINE Bitmap loadImageResource(const std::string& href)
 {
     if(href.compare(0, 5, "data:") == 0) {
         std::string_view input(href);

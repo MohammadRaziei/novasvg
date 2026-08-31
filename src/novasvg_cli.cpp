@@ -105,8 +105,13 @@ int cmd_convert(const std::string& input,
         std::cout << "px\n";
     }
     
-    // Render
-    auto bitmap = doc->renderToBitmap(width, height, novasvg::Color(bg_color_str));
+    // Render. An empty bg_color_str means -b/--background-color wasn't
+    // given (see its default in the CLI11 option below) -- that's this
+    // command's own "use transparent" convention, not something
+    // novasvg::Color should have an opinion about, so it's resolved
+    // here rather than by asking Color to treat "" as a color.
+    auto bg_color = bg_color_str.empty() ? novasvg::Color::Transparent : novasvg::Color(bg_color_str);
+    auto bitmap = doc->renderToBitmap(width, height, bg_color);
     if (bitmap.isNull()) {
         std::cerr << "Error: Failed to render SVG\n";
         return 1;

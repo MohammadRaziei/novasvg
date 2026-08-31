@@ -78,7 +78,7 @@ NOVASVG_INLINE int path_get_elements(const path_t* path, const path_element_t** 
     return path->elements.size;
 }
 
-static path_element_t* path_add_command(path_t* path, path_command_t command, int npoints)
+NOVASVG_INLINE path_element_t* path_add_command(path_t* path, path_command_t command, int npoints)
 {
     const int length = npoints + 1;
     novasvg_array_ensure(path->elements, length);
@@ -445,7 +445,7 @@ typedef struct {
     float x4; float y4;
 } bezier_t;
 
-static inline void split_bezier(const bezier_t* b, bezier_t* first, bezier_t* second)
+NOVASVG_INLINE void split_bezier(const bezier_t* b, bezier_t* first, bezier_t* second)
 {
     float c = (b->x2 + b->x3) * 0.5f;
     first->x2 = (b->x1 + b->x2) * 0.5f;
@@ -538,7 +538,7 @@ typedef struct {
     void* closure;
 } dasher_t;
 
-static void dash_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
+NOVASVG_INLINE void dash_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
 {
     dasher_t* dasher = (dasher_t*)(closure);
     if(command == NOVASVG_PATH_COMMAND_MOVE_TO) {
@@ -627,7 +627,7 @@ NOVASVG_INLINE path_t* path_clone(const path_t* path)
     return clone;
 }
 
-static void clone_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
+NOVASVG_INLINE void clone_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
 {
     path_t* path = (path_t*)(closure);
     switch(command) {
@@ -672,7 +672,7 @@ typedef struct {
     float y2;
 } extents_calculator_t;
 
-static void extents_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
+NOVASVG_INLINE void extents_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
 {
     extents_calculator_t* calculator = (extents_calculator_t*)(closure);
     if(calculator->is_first_point) {
@@ -722,7 +722,7 @@ NOVASVG_INLINE float path_length(const path_t* path)
     return path_extents(path, NULL, true);
 }
 
-static inline bool parse_arc_flag(const char** begin, const char* end, bool* flag)
+NOVASVG_INLINE bool parse_arc_flag(const char** begin, const char* end, bool* flag)
 {
     if(skip_delim(begin, end, '0'))
         *flag = 0;
@@ -734,7 +734,7 @@ static inline bool parse_arc_flag(const char** begin, const char* end, bool* fla
     return true;
 }
 
-static inline bool parse_path_coordinates(const char** begin, const char* end, float values[6], int offset, int count)
+NOVASVG_INLINE bool parse_path_coordinates(const char** begin, const char* end, float values[6], int offset, int count)
 {
     for(int i = 0; i < count; i++) {
         if(!parse_number(begin, end, values + offset + i))

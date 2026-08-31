@@ -51,7 +51,7 @@ typedef struct {
     bool extended;
 } radial_gradient_values_t;
 
-static inline uint32_t premultiply_color_with_opacity(const color_t* color, float opacity)
+NOVASVG_INLINE uint32_t premultiply_color_with_opacity(const color_t* color, float opacity)
 {
     uint32_t alpha = lroundf(color->a * opacity * 255);
     uint32_t pr = lroundf(color->r * alpha);
@@ -60,7 +60,7 @@ static inline uint32_t premultiply_color_with_opacity(const color_t* color, floa
     return (alpha << 24) | (pr << 16) | (pg << 8) | (pb);
 }
 
-static inline uint32_t INTERPOLATE_PIXEL_255(uint32_t x, uint32_t a, uint32_t y, uint32_t b)
+NOVASVG_INLINE uint32_t INTERPOLATE_PIXEL_255(uint32_t x, uint32_t a, uint32_t y, uint32_t b)
 {
     uint32_t t = (x & 0xff00ff) * a + (y & 0xff00ff) * b;
     t = (t + ((t >> 8) & 0xff00ff) + 0x800080) >> 8;
@@ -73,7 +73,7 @@ static inline uint32_t INTERPOLATE_PIXEL_255(uint32_t x, uint32_t a, uint32_t y,
     return x;
 }
 
-static inline uint32_t INTERPOLATE_PIXEL_256(uint32_t x, uint32_t a, uint32_t y, uint32_t b)
+NOVASVG_INLINE uint32_t INTERPOLATE_PIXEL_256(uint32_t x, uint32_t a, uint32_t y, uint32_t b)
 {
     uint32_t t = (x & 0xff00ff) * a + (y & 0xff00ff) * b;
     t >>= 8;
@@ -85,7 +85,7 @@ static inline uint32_t INTERPOLATE_PIXEL_256(uint32_t x, uint32_t a, uint32_t y,
     return x;
 }
 
-static inline uint32_t BYTE_MUL(uint32_t x, uint32_t a)
+NOVASVG_INLINE uint32_t BYTE_MUL(uint32_t x, uint32_t a)
 {
     uint32_t t = (x & 0xff00ff) * a;
     t = (t + ((t >> 8) & 0xff00ff) + 0x800080) >> 8;
@@ -170,7 +170,7 @@ NOVASVG_INLINE void memfill32(unsigned int* dest, int length, unsigned int value
 
 #endif // __SSE2__
 
-static inline int gradient_clamp(const gradient_data_t* gradient, int ipos)
+NOVASVG_INLINE int gradient_clamp(const gradient_data_t* gradient, int ipos)
 {
     if(gradient->spread == NOVASVG_SPREAD_METHOD_REPEAT) {
         ipos = ipos % COLOR_TABLE_SIZE;
@@ -193,19 +193,19 @@ static inline int gradient_clamp(const gradient_data_t* gradient, int ipos)
 
 #define FIXPT_BITS 8
 #define FIXPT_SIZE (1 << FIXPT_BITS)
-static inline uint32_t gradient_pixel_fixed(const gradient_data_t* gradient, int fixed_pos)
+NOVASVG_INLINE uint32_t gradient_pixel_fixed(const gradient_data_t* gradient, int fixed_pos)
 {
     int ipos = (fixed_pos + (FIXPT_SIZE / 2)) >> FIXPT_BITS;
     return gradient->colortable[gradient_clamp(gradient, ipos)];
 }
 
-static inline uint32_t gradient_pixel(const gradient_data_t* gradient, float pos)
+NOVASVG_INLINE uint32_t gradient_pixel(const gradient_data_t* gradient, float pos)
 {
     int ipos = (int)(pos * (COLOR_TABLE_SIZE - 1) + 0.5f);
     return gradient->colortable[gradient_clamp(gradient, ipos)];
 }
 
-static void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length)
+NOVASVG_INLINE void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length)
 {
     float t, inc;
     float rx = 0, ry = 0;
@@ -243,7 +243,7 @@ static void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values
     }
 }
 
-static void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length)
+NOVASVG_INLINE void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length)
 {
     if(v->a == 0.f) {
         memfill32(buffer, length, 0);
@@ -309,7 +309,7 @@ static void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values
     }
 }
 
-static void composition_solid_clear(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+NOVASVG_INLINE void composition_solid_clear(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         memfill32(dest, length, 0);
@@ -321,7 +321,7 @@ static void composition_solid_clear(uint32_t* dest, int length, uint32_t color, 
     }
 }
 
-static void composition_solid_source(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+NOVASVG_INLINE void composition_solid_source(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         memfill32(dest, length, color);
@@ -334,11 +334,11 @@ static void composition_solid_source(uint32_t* dest, int length, uint32_t color,
     }
 }
 
-static void composition_solid_destination(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+NOVASVG_INLINE void composition_solid_destination(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
 }
 
-static void composition_solid_source_over(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+NOVASVG_INLINE void composition_solid_source_over(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     if(const_alpha != 255)
         color = BYTE_MUL(color, const_alpha);
@@ -348,7 +348,7 @@ static void composition_solid_source_over(uint32_t* dest, int length, uint32_t c
     }
 }
 
-static void composition_solid_destination_over(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+NOVASVG_INLINE void composition_solid_destination_over(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     if(const_alpha != 255)
         color = BYTE_MUL(color, const_alpha);
@@ -358,7 +358,7 @@ static void composition_solid_destination_over(uint32_t* dest, int length, uint3
     }
 }
 
-static void composition_solid_source_in(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+NOVASVG_INLINE void composition_solid_source_in(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         for(int i = 0; i < length; i++) {
@@ -374,7 +374,7 @@ static void composition_solid_source_in(uint32_t* dest, int length, uint32_t col
     }
 }
 
-static void composition_solid_destination_in(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+NOVASVG_INLINE void composition_solid_destination_in(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     uint32_t a = novasvg_alpha(color);
     if(const_alpha != 255)
@@ -384,7 +384,7 @@ static void composition_solid_destination_in(uint32_t* dest, int length, uint32_
     }
 }
 
-static void composition_solid_source_out(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+NOVASVG_INLINE void composition_solid_source_out(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         for(int i = 0; i < length; i++) {
@@ -400,7 +400,7 @@ static void composition_solid_source_out(uint32_t* dest, int length, uint32_t co
     }
 }
 
-static void composition_solid_destination_out(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+NOVASVG_INLINE void composition_solid_destination_out(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     uint32_t a = novasvg_alpha(~color);
     if(const_alpha != 255)
@@ -410,7 +410,7 @@ static void composition_solid_destination_out(uint32_t* dest, int length, uint32
     }
 }
 
-static void composition_solid_source_atop(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+NOVASVG_INLINE void composition_solid_source_atop(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     if(const_alpha != 255)
         color = BYTE_MUL(color, const_alpha);
@@ -421,7 +421,7 @@ static void composition_solid_source_atop(uint32_t* dest, int length, uint32_t c
     }
 }
 
-static void composition_solid_destination_atop(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+NOVASVG_INLINE void composition_solid_destination_atop(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     uint32_t a = novasvg_alpha(color);
     if(const_alpha != 255) {
@@ -435,7 +435,7 @@ static void composition_solid_destination_atop(uint32_t* dest, int length, uint3
     }
 }
 
-static void composition_solid_xor(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+NOVASVG_INLINE void composition_solid_xor(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
 {
     if(const_alpha != 255)
         color = BYTE_MUL(color, const_alpha);
@@ -448,7 +448,7 @@ static void composition_solid_xor(uint32_t* dest, int length, uint32_t color, ui
 
 typedef void(*composition_solid_function_t)(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
 
-static const composition_solid_function_t composition_solid_table[] = {
+NOVASVG_INLINE const composition_solid_function_t composition_solid_table[] = {
     composition_solid_clear,
     composition_solid_source,
     composition_solid_destination,
@@ -463,7 +463,7 @@ static const composition_solid_function_t composition_solid_table[] = {
     composition_solid_xor
 };
 
-static void composition_clear(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+NOVASVG_INLINE void composition_clear(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         memfill32(dest, length, 0);
@@ -475,7 +475,7 @@ static void composition_clear(uint32_t* dest, int length, const uint32_t* src, u
     }
 }
 
-static void composition_source(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+NOVASVG_INLINE void composition_source(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         memcpy(dest, src, length * sizeof(uint32_t));
@@ -487,11 +487,11 @@ static void composition_source(uint32_t* dest, int length, const uint32_t* src, 
     }
 }
 
-static void composition_destination(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+NOVASVG_INLINE void composition_destination(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
 }
 
-static void composition_source_over(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+NOVASVG_INLINE void composition_source_over(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         for(int i = 0; i < length; i++) {
@@ -510,7 +510,7 @@ static void composition_source_over(uint32_t* dest, int length, const uint32_t* 
     }
 }
 
-static void composition_destination_over(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+NOVASVG_INLINE void composition_destination_over(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         for(int i = 0; i < length; i++) {
@@ -526,7 +526,7 @@ static void composition_destination_over(uint32_t* dest, int length, const uint3
     }
 }
 
-static void composition_source_in(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+NOVASVG_INLINE void composition_source_in(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         for(int i = 0; i < length; i++) {
@@ -542,7 +542,7 @@ static void composition_source_in(uint32_t* dest, int length, const uint32_t* sr
     }
 }
 
-static void composition_destination_in(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+NOVASVG_INLINE void composition_destination_in(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         for(int i = 0; i < length; i++) {
@@ -557,7 +557,7 @@ static void composition_destination_in(uint32_t* dest, int length, const uint32_
     }
 }
 
-static void composition_source_out(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+NOVASVG_INLINE void composition_source_out(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         for(int i = 0; i < length; i++) {
@@ -573,7 +573,7 @@ static void composition_source_out(uint32_t* dest, int length, const uint32_t* s
     }
 }
 
-static void composition_destination_out(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+NOVASVG_INLINE void composition_destination_out(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         for(int i = 0; i < length; i++) {
@@ -588,7 +588,7 @@ static void composition_destination_out(uint32_t* dest, int length, const uint32
     }
 }
 
-static void composition_source_atop(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+NOVASVG_INLINE void composition_source_atop(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         for(int i = 0; i < length; i++) {
@@ -605,7 +605,7 @@ static void composition_source_atop(uint32_t* dest, int length, const uint32_t* 
     }
 }
 
-static void composition_destination_atop(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+NOVASVG_INLINE void composition_destination_atop(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         for(int i = 0; i < length; i++) {
@@ -624,7 +624,7 @@ static void composition_destination_atop(uint32_t* dest, int length, const uint3
     }
 }
 
-static void composition_xor(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+NOVASVG_INLINE void composition_xor(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
         for(int i = 0; i < length; i++) {
@@ -643,7 +643,7 @@ static void composition_xor(uint32_t* dest, int length, const uint32_t* src, uin
 
 typedef void(*composition_function_t)(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
 
-static const composition_function_t composition_table[] = {
+NOVASVG_INLINE const composition_function_t composition_table[] = {
     composition_clear,
     composition_source,
     composition_destination,
@@ -658,7 +658,7 @@ static const composition_function_t composition_table[] = {
     composition_xor
 };
 
-static void blend_solid(surface_t* surface, operator_t op, uint32_t solid, const span_buffer_t* span_buffer)
+NOVASVG_INLINE void blend_solid(surface_t* surface, operator_t op, uint32_t solid, const span_buffer_t* span_buffer)
 {
     composition_solid_function_t func = composition_solid_table[op];
     int count = span_buffer->spans.size;
@@ -671,7 +671,7 @@ static void blend_solid(surface_t* surface, operator_t op, uint32_t solid, const
 }
 
 #define BUFFER_SIZE 1024
-static void blend_linear_gradient(surface_t* surface, operator_t op, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
+NOVASVG_INLINE void blend_linear_gradient(surface_t* surface, operator_t op, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
     unsigned int buffer[BUFFER_SIZE];
@@ -705,7 +705,7 @@ static void blend_linear_gradient(surface_t* surface, operator_t op, const gradi
     }
 }
 
-static void blend_radial_gradient(surface_t* surface, operator_t op, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
+NOVASVG_INLINE void blend_radial_gradient(surface_t* surface, operator_t op, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
     unsigned int buffer[BUFFER_SIZE];
@@ -736,7 +736,7 @@ static void blend_radial_gradient(surface_t* surface, operator_t op, const gradi
     }
 }
 
-static void blend_untransformed_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+NOVASVG_INLINE void blend_untransformed_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
 
@@ -775,7 +775,7 @@ static void blend_untransformed_argb(surface_t* surface, operator_t op, const te
 }
 
 #define FIXED_SCALE (1 << 16)
-static void blend_transformed_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+NOVASVG_INLINE void blend_transformed_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
     uint32_t buffer[BUFFER_SIZE];
@@ -826,7 +826,7 @@ static void blend_transformed_argb(surface_t* surface, operator_t op, const text
     }
 }
 
-static void blend_untransformed_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+NOVASVG_INLINE void blend_untransformed_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
 
@@ -875,7 +875,7 @@ static void blend_untransformed_tiled_argb(surface_t* surface, operator_t op, co
     }
 }
 
-static void blend_transformed_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+NOVASVG_INLINE void blend_transformed_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
     uint32_t buffer[BUFFER_SIZE];
@@ -932,7 +932,7 @@ static void blend_transformed_tiled_argb(surface_t* surface, operator_t op, cons
     }
 }
 
-static inline uint32_t interpolate_4_pixels(uint32_t tl, uint32_t tr, uint32_t bl, uint32_t br, uint32_t distx, uint32_t disty)
+NOVASVG_INLINE uint32_t interpolate_4_pixels(uint32_t tl, uint32_t tr, uint32_t bl, uint32_t br, uint32_t distx, uint32_t disty)
 {
     uint32_t idistx = 256 - distx;
     uint32_t idisty = 256 - disty;
@@ -942,7 +942,7 @@ static inline uint32_t interpolate_4_pixels(uint32_t tl, uint32_t tr, uint32_t b
 }
 
 #define HALF_POINT (1 << 15)
-static void blend_transformed_bilinear_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+NOVASVG_INLINE void blend_transformed_bilinear_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
     composition_function_t func = composition_table[op];
     uint32_t buffer[BUFFER_SIZE];
@@ -1009,7 +1009,7 @@ static void blend_transformed_bilinear_tiled_argb(surface_t* surface, operator_t
     }
 }
 
-static void blend_color(canvas_t* canvas, const color_t* color, const span_buffer_t* span_buffer)
+NOVASVG_INLINE void blend_color(canvas_t* canvas, const color_t* color, const span_buffer_t* span_buffer)
 {
     state_t* state = canvas->state;
     uint32_t solid = premultiply_color_with_opacity(color, state->opacity);
@@ -1022,7 +1022,7 @@ static void blend_color(canvas_t* canvas, const color_t* color, const span_buffe
     }
 }
 
-static void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const span_buffer_t* span_buffer)
+NOVASVG_INLINE void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const span_buffer_t* span_buffer)
 {
     if(gradient->nstops == 0)
         return;
@@ -1096,7 +1096,7 @@ static void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, c
     }
 }
 
-static void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_buffer_t* span_buffer)
+NOVASVG_INLINE void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_buffer_t* span_buffer)
 {
     if(texture->surface == NULL)
         return;

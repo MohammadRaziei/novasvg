@@ -146,7 +146,7 @@ NOVASVG_INLINE void matrix_map_rect(const matrix_t* matrix, const rect_t* src, r
     dst->h = b - t;
 }
 
-static int parse_matrix_parameters(const char** begin, const char* end, float values[6], int required, int optional)
+NOVASVG_INLINE int parse_matrix_parameters(const char** begin, const char* end, float values[6], int required, int optional)
 {
     if(!skip_ws_and_delim(begin, end, '('))
         return 0;

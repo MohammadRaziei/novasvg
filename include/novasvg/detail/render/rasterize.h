@@ -77,7 +77,7 @@ NOVASVG_INLINE bool span_buffer_contains(const span_buffer_t* span_buffer, float
     return false;
 }
 
-static void span_buffer_update_extents(span_buffer_t* span_buffer)
+NOVASVG_INLINE void span_buffer_update_extents(span_buffer_t* span_buffer)
 {
     if(span_buffer->w != -1 && span_buffer->h != -1)
         return;
@@ -170,7 +170,7 @@ NOVASVG_INLINE void span_buffer_intersect(span_buffer_t* span_buffer, const span
 }
 
 #define ALIGN_SIZE(size) (((size) + 7ul) & ~7ul)
-static PVG_FT_Outline* ft_outline_create(int points, int contours)
+NOVASVG_INLINE PVG_FT_Outline* ft_outline_create(int points, int contours)
 {
     size_t points_size = ALIGN_SIZE((points + contours) * sizeof(PVG_FT_Vector));
     size_t tags_size = ALIGN_SIZE((points + contours) * sizeof(char));
@@ -189,13 +189,13 @@ static PVG_FT_Outline* ft_outline_create(int points, int contours)
     return outline;
 }
 
-static void ft_outline_destroy(PVG_FT_Outline* outline)
+NOVASVG_INLINE void ft_outline_destroy(PVG_FT_Outline* outline)
 {
     free(outline);
 }
 
 #define FT_COORD(x) (PVG_FT_Pos)(roundf(x * 64))
-static void ft_outline_move_to(PVG_FT_Outline* ft, float x, float y)
+NOVASVG_INLINE void ft_outline_move_to(PVG_FT_Outline* ft, float x, float y)
 {
     ft->points[ft->n_points].x = FT_COORD(x);
     ft->points[ft->n_points].y = FT_COORD(y);
@@ -209,7 +209,7 @@ static void ft_outline_move_to(PVG_FT_Outline* ft, float x, float y)
     ft->n_points++;
 }
 
-static void ft_outline_line_to(PVG_FT_Outline* ft, float x, float y)
+NOVASVG_INLINE void ft_outline_line_to(PVG_FT_Outline* ft, float x, float y)
 {
     ft->points[ft->n_points].x = FT_COORD(x);
     ft->points[ft->n_points].y = FT_COORD(y);
@@ -217,7 +217,7 @@ static void ft_outline_line_to(PVG_FT_Outline* ft, float x, float y)
     ft->n_points++;
 }
 
-static void ft_outline_cubic_to(PVG_FT_Outline* ft, float x1, float y1, float x2, float y2, float x3, float y3)
+NOVASVG_INLINE void ft_outline_cubic_to(PVG_FT_Outline* ft, float x1, float y1, float x2, float y2, float x3, float y3)
 {
     ft->points[ft->n_points].x = FT_COORD(x1);
     ft->points[ft->n_points].y = FT_COORD(y1);
@@ -235,7 +235,7 @@ static void ft_outline_cubic_to(PVG_FT_Outline* ft, float x1, float y1, float x2
     ft->n_points++;
 }
 
-static void ft_outline_close(PVG_FT_Outline* ft)
+NOVASVG_INLINE void ft_outline_close(PVG_FT_Outline* ft)
 {
     ft->contours_flag[ft->n_contours] = 0;
     int index = ft->n_contours ? ft->contours[ft->n_contours - 1] + 1 : 0;
@@ -247,7 +247,7 @@ static void ft_outline_close(PVG_FT_Outline* ft)
     ft->n_points++;
 }
 
-static void ft_outline_end(PVG_FT_Outline* ft)
+NOVASVG_INLINE void ft_outline_end(PVG_FT_Outline* ft)
 {
     if(ft->n_points) {
         ft->contours[ft->n_contours] = ft->n_points - 1;
@@ -255,9 +255,9 @@ static void ft_outline_end(PVG_FT_Outline* ft)
     }
 }
 
-static PVG_FT_Outline* ft_outline_convert_stroke(const path_t* path, const matrix_t* matrix, const stroke_data_t* stroke_data);
+NOVASVG_INLINE PVG_FT_Outline* ft_outline_convert_stroke(const path_t* path, const matrix_t* matrix, const stroke_data_t* stroke_data);
 
-static PVG_FT_Outline* ft_outline_convert(const path_t* path, const matrix_t* matrix, const stroke_data_t* stroke_data)
+NOVASVG_INLINE PVG_FT_Outline* ft_outline_convert(const path_t* path, const matrix_t* matrix, const stroke_data_t* stroke_data)
 {
     if(stroke_data) {
         return ft_outline_convert_stroke(path, matrix, stroke_data);
@@ -292,7 +292,7 @@ static PVG_FT_Outline* ft_outline_convert(const path_t* path, const matrix_t* ma
     return outline;
 }
 
-static PVG_FT_Outline* ft_outline_convert_dash(const path_t* path, const matrix_t* matrix, const stroke_dash_t* stroke_dash)
+NOVASVG_INLINE PVG_FT_Outline* ft_outline_convert_dash(const path_t* path, const matrix_t* matrix, const stroke_dash_t* stroke_dash)
 {
     if(stroke_dash->array.size == 0)
         return ft_outline_convert(path, matrix, NULL);
@@ -302,7 +302,7 @@ static PVG_FT_Outline* ft_outline_convert_dash(const path_t* path, const matrix_
     return outline;
 }
 
-static PVG_FT_Outline* ft_outline_convert_stroke(const path_t* path, const matrix_t* matrix, const stroke_data_t* stroke_data)
+NOVASVG_INLINE PVG_FT_Outline* ft_outline_convert_stroke(const path_t* path, const matrix_t* matrix, const stroke_data_t* stroke_data)
 {
     double scale_x = sqrt(matrix->a * matrix->a + matrix->b * matrix->b);
     double scale_y = sqrt(matrix->c * matrix->c + matrix->d * matrix->d);
@@ -358,7 +358,7 @@ static PVG_FT_Outline* ft_outline_convert_stroke(const path_t* path, const matri
     return stroke_outline;
 }
 
-static void spans_generation_callback(int count, const PVG_FT_Span* spans, void* user)
+NOVASVG_INLINE void spans_generation_callback(int count, const PVG_FT_Span* spans, void* user)
 {
     span_buffer_t* span_buffer = (span_buffer_t*)(user);
     novasvg_array_append_data(span_buffer->spans, spans, count);

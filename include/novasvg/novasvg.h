@@ -875,10 +875,7 @@ private:
 #include "detail/render/rasterize.h"
 #include "detail/render/surface.h"
 
-// Bitmap owns all image-writing (PNG/BMP/TGA/JPG) below; stb_image_write
-// is only ever touched from here.
-#define STB_IMAGE_WRITE_STATIC
-#define STB_IMAGE_WRITE_IMPLEMENTATION
+// Bitmap owns all image-writing (PNG/BMP/TGA/JPG) below.
 namespace novasvg {
 
 // Image encoding (PNG, BMP, TGA, JPEG) for Bitmap::write()/writeToPng()/etc,
@@ -947,15 +944,9 @@ public:
 
 #define NOVASVG_IW_UCHAR(x) (unsigned char) ((x) & 0xff)
 
-#ifdef STB_IMAGE_WRITE_STATIC
 inline static int g_png_compression_level = 8;
 inline static int g_tga_with_rle = 1;
 inline static int g_png_force_filter = -1;
-#else
-int g_png_compression_level = 8;
-int g_tga_with_rle = 1;
-int g_png_force_filter = -1;
-#endif
 
 inline static int g_flip_vertically_on_write = 0;
 
@@ -1044,7 +1035,7 @@ static void write_end_file(write_context *s)
 #endif // !NOVASVG_IW_NO_STDIO
 
 typedef unsigned int iw_uint32;
-typedef int stb_image_write_test[sizeof(iw_uint32)==4 ? 1 : -1];
+typedef int iw_uint32_size_check[sizeof(iw_uint32) == 4 ? 1 : -1];
 
 static void write_formatted_v(write_context *s, const char *fmt, va_list v)
 {
@@ -1467,7 +1458,7 @@ static int write_hdr_core(write_context *s, int x, int y, int comp, float *data)
       unsigned char *scratch = (unsigned char *) NOVASVG_IW_MALLOC(x*4);
       int i, len;
       char buffer[128];
-      char header[] = "#?RADIANCE\n# Written by stb_image_write.h\nFORMAT=32-bit_rle_rgbe\n";
+      char header[] = "#?RADIANCE\n# Written by novasvg\nFORMAT=32-bit_rle_rgbe\n";
       s->func(s->context, header, sizeof(header)-1);
 
 #ifdef __STDC_LIB_EXT1__

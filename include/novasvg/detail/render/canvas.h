@@ -18,7 +18,7 @@ NOVASVG_INLINE const char* render_version_string(void)
 
 #define NOVASVG_DEFAULT_STROKE_STYLE ((stroke_style_t){1.f, NOVASVG_LINE_CAP_BUTT, NOVASVG_LINE_JOIN_MITER, 10.f})
 
-static state_t* state_create(void)
+NOVASVG_INLINE state_t* state_create(void)
 {
     state_t* state = static_cast<state_t*>(malloc(sizeof(state_t)));
     state->paint = NULL;
@@ -38,7 +38,7 @@ static state_t* state_create(void)
     return state;
 }
 
-static void state_reset(state_t* state)
+NOVASVG_INLINE void state_reset(state_t* state)
 {
     paint_destroy(state->paint);
     font_face_destroy(state->font_face);
@@ -57,7 +57,7 @@ static void state_reset(state_t* state)
     state->clipping = false;
 }
 
-static void state_copy(state_t* state, const state_t* source)
+NOVASVG_INLINE void state_copy(state_t* state, const state_t* source)
 {
     state->paint = paint_reference(source->paint);
     state->font_face = font_face_reference(source->font_face);
@@ -75,7 +75,7 @@ static void state_copy(state_t* state, const state_t* source)
     state->clipping = source->clipping;
 }
 
-static void state_destroy(state_t* state)
+NOVASVG_INLINE void state_destroy(state_t* state)
 {
     paint_destroy(state->paint);
     font_face_destroy(state->font_face);
