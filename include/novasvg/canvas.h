@@ -1,5 +1,5 @@
-#ifndef NOVASVG_GRAPHICS_H
-#define NOVASVG_GRAPHICS_H
+#ifndef NOVASVG_CANVAS_H
+#define NOVASVG_CANVAS_H
 
 #include <cstdint>
 #include <algorithm>
@@ -9,7 +9,21 @@
 #include <array>
 #include <string>
 
-#include "novacolor.h"
+// Canvas: novasvg's 2D drawing surface (paths, fills, strokes, gradients,
+// text, blending), plus the Path/Rect/Transform/Point primitives that go
+// with it. Self-contained -- pulls in exactly the render:: engine pieces
+// it needs plus Font (for fillText/strokeText) -- so it's usable without
+// the SVG/parsing layer, e.g. to draw directly onto a Bitmap.
+#include "color.h"
+#include "font.h"
+#include "bitmap.h"
+#include "detail/render/blend.h"
+#include "detail/render/matrix.h"
+#include "detail/render/paint.h"
+#include "detail/render/path.h"
+#include "detail/render/rasterize.h"
+#include "detail/render/surface.h"
+#include "detail/render/canvas.h"
 
 namespace novasvg {
 using namespace render; // render/ layer (novasvg::render), the former plutovg
@@ -37,7 +51,7 @@ enum class SpreadMethod : uint8_t {
     Repeat = NOVASVG_SPREAD_METHOD_REPEAT
 };
 
-// `Color` now lives in novacolor.h (a single merged class covering both
+// `Color` now lives in color.h (a single merged class covering both
 // this engine's needs and the richer string-parsing/blending API) --
 // no separate definition here anymore.
 
@@ -360,67 +374,10 @@ private:
     int m_index;
 };
 
-class FontFace {
-public:
-    FontFace() = default;
-    explicit FontFace(font_face_t* face);
-    FontFace(const void* data, size_t length, destroy_func_t destroy_func, void* closure);
-    FontFace(const char* filename);
-    FontFace(const FontFace& face);
-    FontFace(FontFace&& face);
-    ~FontFace();
+} // namespace novasvg
 
-    FontFace& operator=(const FontFace& face);
-    FontFace& operator=(FontFace&& face);
-
-    void swap(FontFace& face);
-
-    bool isNull() const { return m_face == nullptr; }
-    font_face_t* get() const { return m_face; }
-
-private:
-    font_face_t* release();
-    font_face_t* m_face = nullptr;
-};
-
-class FontFaceCache {
-public:
-    bool addFontFace(const std::string& family, bool bold, bool italic, const FontFace& face);
-    FontFace getFontFace(const std::string& family, bool bold, bool italic) const;
-
-private:
-    FontFaceCache();
-    font_face_cache_t* m_cache;
-    friend FontFaceCache* fontFaceCache();
-};
-
-FontFaceCache* fontFaceCache();
-
-class Font {
-public:
-    Font() = default;
-    Font(const FontFace& face, float size);
-
-    float ascent() const { return m_ascent; }
-    float descent() const { return m_descent; }
-    float height() const { return m_ascent - m_descent; }
-    float lineGap() const { return m_lineGap; }
-    float xHeight() const;
-
-    float measureText(const std::u32string_view& text) const;
-
-    const FontFace& face() const { return m_face; }
-    float size() const { return m_size; }
-
-    bool isNull() const { return m_size <= 0.f || m_face.isNull(); }
-
-private:
-    FontFace m_face;
-    float m_size = 0.f;
-    float m_ascent = 0.f;
-    float m_descent = 0.f;
-    float m_lineGap = 0.f;
-};
+namespace novasvg {
+using namespace render;
 
 enum class TextureType {
     Plain = NOVASVG_TEXTURE_TYPE_PLAIN,
@@ -533,16 +490,16 @@ private:
 // ---------------------------------------------------------------
 using namespace render; // render/ layer (novasvg::render), the former plutovg
 
-// Color::Black/White/Transparent are defined once, in novacolor.h.
+// Color::Black/White/Transparent are defined once, in color.h.
 
 NOVASVG_INLINE const Rect Rect::Empty(0, 0, 0, 0);
 NOVASVG_INLINE const Rect Rect::Invalid(0, 0, -1, -1);
 NOVASVG_INLINE const Rect Rect::Infinite(-FLT_MAX / 2.f, -FLT_MAX / 2.f, FLT_MAX, FLT_MAX);
 
-NOVASVG_INLINE Rect::Rect(const Box& box)
-    : x(box.x), y(box.y), w(box.w), h(box.h)
-{
-}
+// Rect::Rect(const Box&) is defined in novasvg.h, right after Box itself --
+// Box belongs to the SVG/Document layer, not here, so this file (which
+// stays usable without that layer) only declares the conversion, it
+// doesn't define it.
 
 NOVASVG_INLINE const Transform Transform::Identity(1, 0, 0, 1, 0, 0);
 
@@ -556,10 +513,10 @@ NOVASVG_INLINE Transform::Transform(float a, float b, float c, float d, float e,
     matrix_init(&m_matrix, a, b, c, d, e, f);
 }
 
-NOVASVG_INLINE Transform::Transform(const Matrix& matrix)
-    : Transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f)
-{
-}
+// Transform::Transform(const Matrix&) is defined in novasvg.h, right after
+// Matrix itself -- Matrix belongs to the SVG/Document layer, not here, so
+// this file (which stays usable without that layer) only declares the
+// conversion, it doesn't define it.
 
 NOVASVG_INLINE Transform Transform::operator*(const Transform& transform) const
 {
@@ -885,133 +842,6 @@ NOVASVG_INLINE void PathIterator::next()
     m_index += m_elements[m_index].header.length;
 }
 
-NOVASVG_INLINE FontFace::FontFace(font_face_t* face)
-    : m_face(font_face_reference(face))
-{
-}
-
-NOVASVG_INLINE FontFace::FontFace(const void* data, size_t length, destroy_func_t destroy_func, void* closure)
-    : m_face(font_face_load_from_data(data, length, 0, destroy_func, closure))
-{
-}
-
-NOVASVG_INLINE FontFace::FontFace(const char* filename)
-    : m_face(font_face_load_from_file(filename, 0))
-{
-}
-
-NOVASVG_INLINE FontFace::FontFace(const FontFace& face)
-    : m_face(font_face_reference(face.get()))
-{
-}
-
-NOVASVG_INLINE FontFace::FontFace(FontFace&& face)
-    : m_face(face.release())
-{
-}
-
-NOVASVG_INLINE FontFace::~FontFace()
-{
-    font_face_destroy(m_face);
-}
-
-NOVASVG_INLINE FontFace& FontFace::operator=(const FontFace& face)
-{
-    FontFace(face).swap(*this);
-    return *this;
-}
-
-NOVASVG_INLINE FontFace& FontFace::operator=(FontFace&& face)
-{
-    FontFace(std::move(face)).swap(*this);
-    return *this;
-}
-
-NOVASVG_INLINE void FontFace::swap(FontFace& face)
-{
-    std::swap(m_face, face.m_face);
-}
-
-NOVASVG_INLINE font_face_t* FontFace::release()
-{
-    return std::exchange(m_face, nullptr);
-}
-
-NOVASVG_INLINE bool FontFaceCache::addFontFace(const std::string& family, bool bold, bool italic, const FontFace& face)
-{
-    if(!face.isNull())
-        font_face_cache_add(m_cache, family.data(), bold, italic, face.get());
-    return !face.isNull();
-}
-
-NOVASVG_INLINE FontFace FontFaceCache::getFontFace(const std::string& family, bool bold, bool italic) const
-{
-    if(auto face = font_face_cache_get(m_cache, family.data(), bold, italic)) {
-        return FontFace(face);
-    }
-
-    static const struct {
-        const char* generic;
-        const char* fallback;
-    } generic_fallbacks[] = {
-#if defined(__linux__)
-        {"sans-serif", "DejaVu Sans"},
-        {"serif", "DejaVu Serif"},
-        {"monospace", "DejaVu Sans Mono"},
-#else
-        {"sans-serif", "Arial"},
-        {"serif", "Times New Roman"},
-        {"monospace", "Courier New"},
-#endif
-        {"cursive", "Comic Sans MS"},
-        {"fantasy", "Impact"}
-    };
-
-    for(auto value : generic_fallbacks) {
-        if(value.generic == family || family.empty()) {
-            return FontFace(font_face_cache_get(m_cache, value.fallback, bold, italic));
-        }
-    }
-
-    return FontFace();
-}
-
-NOVASVG_INLINE FontFaceCache::FontFaceCache()
-    : m_cache(font_face_cache_create())
-{
-#ifndef NOVASVG_DISABLE_LOAD_SYSTEM_FONTS
-    font_face_cache_load_sys(m_cache);
-#endif
-}
-
-NOVASVG_INLINE FontFaceCache* fontFaceCache()
-{
-    static FontFaceCache cache;
-    return &cache;
-}
-
-NOVASVG_INLINE Font::Font(const FontFace& face, float size)
-    : m_face(face), m_size(size)
-{
-    if(m_size > 0.f && !m_face.isNull()) {
-        font_face_get_metrics(m_face.get(), m_size, &m_ascent, &m_descent, &m_lineGap, nullptr);
-    }
-}
-
-NOVASVG_INLINE float Font::xHeight() const
-{
-    rect_t extents = {0};
-    if(m_size > 0.f && !m_face.isNull())
-        font_face_get_glyph_metrics(m_face.get(), m_size, 'x', nullptr, nullptr, &extents);
-    return extents.h;
-}
-
-NOVASVG_INLINE float Font::measureText(const std::u32string_view& text) const
-{
-    if(m_size > 0.f && !m_face.isNull())
-        return font_face_text_extents(m_face.get(), m_size, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF32, nullptr);
-    return 0;
-}
 
 NOVASVG_INLINE std::shared_ptr<Canvas> Canvas::create(const Bitmap& bitmap)
 {
@@ -1217,4 +1047,4 @@ NOVASVG_INLINE Canvas::Canvas(int x, int y, int width, int height)
 
 } // namespace novasvg
 
-#endif // NOVASVG_GRAPHICS_H
+#endif // NOVASVG_CANVAS_H
