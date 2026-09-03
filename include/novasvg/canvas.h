@@ -2,6 +2,9 @@
 #define NOVASVG_CANVAS_H
 
 #include <cstdint>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
 #include <algorithm>
 #include <utility>
 #include <memory>
@@ -457,6 +460,26 @@ public:
     void restore();
 
     void convertToLuminanceMask();
+    // standard "fast almost-gaussian" trick browsers/thorvg also use)
+    // rather than a true gaussian convolution kernel -- visually
+    // indistinguishable for the stdDeviation ranges SVG content actually
+    // uses, and O(w*h) instead of O(w*h*kernel). Upgrade path: replace the
+    // naive per-pixel box blur loop with a moving-sum/summed-area version
+    // if profiling ever shows this mattering for very large canvases.
+    void boxBlur(float stdDeviationX, float stdDeviationY);
+
+    // Composites `this` (already blurred, tinted to floodColor/floodOpacity
+    // by the caller) as a drop shadow: offsets by (dx, dy) and draws
+    // `original` on top of it, replacing this canvas's contents in place.
+    void compositeDropShadowUnder(const Canvas& original, float dx, float dy);
+
+    // Recolors every pixel to floodColor while preserving its alpha
+    // (scaled by floodOpacity), for feDropShadow/feFlood.
+    void tintToFloodColor(const Color& floodColor, float floodOpacity);
+
+    // Raw memcpy of `other`'s pixel buffer into this one -- both must be
+    // the same width/height/stride (caller's responsibility).
+    void copyPixelsFrom(const Canvas& other);
 
     int x() const { return m_x; }
     int y() const { return m_y; }
@@ -1021,6 +1044,171 @@ NOVASVG_INLINE void Canvas::convertToLuminanceMask()
             pixels[x] = static_cast<uint32_t>(l * (a / 255.0)) << 24;
         }
     }
+}
+
+// ponytail: single-axis box blur pass, edge-extended, operating in place
+// on premultiplied ARGB. Blurring premultiplied channels directly (rather
+// than un-premultiplying first) is correct and is what real
+// implementations do too.
+static void boxBlurPass(unsigned char* data, int width, int height, int stride, int radius, bool horizontal)
+{
+    if(radius <= 0)
+        return;
+    auto* scratch = static_cast<unsigned char*>(malloc(size_t(stride) * size_t(height)));
+    if(!scratch)
+        return;
+    memcpy(scratch, data, size_t(stride) * size_t(height));
+
+    auto sampleAt = [&](int x, int y) -> uint32_t* {
+        return reinterpret_cast<uint32_t*>(scratch + y * stride) + x;
+    };
+
+    auto iarr = 1.f / float(radius * 2 + 1);
+    if(horizontal) {
+        for(int y = 0; y < height; ++y) {
+            auto* out = reinterpret_cast<uint32_t*>(data + y * stride);
+            for(int x = 0; x < width; ++x) {
+                float sum[4] = {0, 0, 0, 0};
+                for(int k = -radius; k <= radius; ++k) {
+                    int sx = x + k;
+                    if(sx < 0) sx = 0;
+                    if(sx >= width) sx = width - 1;
+                    auto pixel = *sampleAt(sx, y);
+                    sum[0] += (pixel >> 24) & 0xFF;
+                    sum[1] += (pixel >> 16) & 0xFF;
+                    sum[2] += (pixel >> 8) & 0xFF;
+                    sum[3] += pixel & 0xFF;
+                }
+                out[x] = (uint32_t(sum[0] * iarr) << 24) | (uint32_t(sum[1] * iarr) << 16) | (uint32_t(sum[2] * iarr) << 8) | uint32_t(sum[3] * iarr);
+            }
+        }
+    } else {
+        for(int x = 0; x < width; ++x) {
+            for(int y = 0; y < height; ++y) {
+                float sum[4] = {0, 0, 0, 0};
+                for(int k = -radius; k <= radius; ++k) {
+                    int sy = y + k;
+                    if(sy < 0) sy = 0;
+                    if(sy >= height) sy = height - 1;
+                    auto pixel = *sampleAt(x, sy);
+                    sum[0] += (pixel >> 24) & 0xFF;
+                    sum[1] += (pixel >> 16) & 0xFF;
+                    sum[2] += (pixel >> 8) & 0xFF;
+                    sum[3] += pixel & 0xFF;
+                }
+                auto* out = reinterpret_cast<uint32_t*>(data + y * stride) + x;
+                *out = (uint32_t(sum[0] * iarr) << 24) | (uint32_t(sum[1] * iarr) << 16) | (uint32_t(sum[2] * iarr) << 8) | uint32_t(sum[3] * iarr);
+            }
+        }
+    }
+
+    free(scratch);
+}
+
+// Converts a true gaussian stdDeviation to an equivalent box-blur radius
+// (the well-known 3-box approximation formula), then runs 3 passes.
+static int gaussianRadiusForSigma(float sigma)
+{
+    if(sigma <= 0.f)
+        return 0;
+    return std::max(1, int(sigma * 3.f * std::sqrt(2.f * 3.14159265f) / 4.f + 0.5f));
+}
+
+NOVASVG_INLINE void Canvas::boxBlur(float stdDeviationX, float stdDeviationY)
+{
+    auto width = surface_get_width(m_surface);
+    auto height = surface_get_height(m_surface);
+    auto stride = surface_get_stride(m_surface);
+    auto data = surface_get_data(m_surface);
+
+    auto rx = gaussianRadiusForSigma(stdDeviationX);
+    auto ry = gaussianRadiusForSigma(stdDeviationY);
+    for(int pass = 0; pass < 3; ++pass) {
+        if(rx > 0) boxBlurPass(data, width, height, stride, rx, true);
+        if(ry > 0) boxBlurPass(data, width, height, stride, ry, false);
+    }
+}
+
+NOVASVG_INLINE void Canvas::tintToFloodColor(const Color& floodColor, float floodOpacity)
+{
+    auto width = surface_get_width(m_surface);
+    auto height = surface_get_height(m_surface);
+    auto stride = surface_get_stride(m_surface);
+    auto data = surface_get_data(m_surface);
+
+    auto r = uint32_t(floodColor.getR());
+    auto g = uint32_t(floodColor.getG());
+    auto b = uint32_t(floodColor.getB());
+    for(int y = 0; y < height; ++y) {
+        auto* pixels = reinterpret_cast<uint32_t*>(data + stride * y);
+        for(int x = 0; x < width; ++x) {
+            auto srcAlpha = (pixels[x] >> 24) & 0xFF;
+            auto alpha = uint32_t(srcAlpha * floodOpacity);
+            // premultiplied: scale color channels by (alpha / 255)
+            pixels[x] = (alpha << 24) | (((r * alpha) / 255) << 16) | (((g * alpha) / 255) << 8) | ((b * alpha) / 255);
+        }
+    }
+}
+
+NOVASVG_INLINE void Canvas::compositeDropShadowUnder(const Canvas& original, float dx, float dy)
+{
+    auto width = surface_get_width(m_surface);
+    auto height = surface_get_height(m_surface);
+    auto stride = surface_get_stride(m_surface);
+    auto data = surface_get_data(m_surface);
+    auto idx = int(dx);
+    auto idy = int(dy);
+
+    // shift this (shadow) buffer by (dx, dy) in place, edge outside -> transparent
+    auto* scratch = static_cast<unsigned char*>(malloc(size_t(stride) * size_t(height)));
+    if(scratch) {
+        memset(scratch, 0, size_t(stride) * size_t(height));
+        for(int y = 0; y < height; ++y) {
+            auto sy = y - idy;
+            if(sy < 0 || sy >= height) continue;
+            auto* src = reinterpret_cast<uint32_t*>(data + sy * stride);
+            auto* dst = reinterpret_cast<uint32_t*>(scratch + y * stride);
+            for(int x = 0; x < width; ++x) {
+                auto sx = x - idx;
+                if(sx < 0 || sx >= width) continue;
+                dst[x] = src[sx];
+            }
+        }
+        memcpy(data, scratch, size_t(stride) * size_t(height));
+        free(scratch);
+    }
+
+    // draw original on top (simple src-over, premultiplied)
+    auto oWidth = surface_get_width(original.m_surface);
+    auto oHeight = surface_get_height(original.m_surface);
+    auto oStride = surface_get_stride(original.m_surface);
+    auto oData = surface_get_data(original.m_surface);
+    for(int y = 0; y < height && y < oHeight; ++y) {
+        auto* dst = reinterpret_cast<uint32_t*>(data + y * stride);
+        auto* src = reinterpret_cast<uint32_t*>(oData + y * oStride);
+        for(int x = 0; x < width && x < oWidth; ++x) {
+            auto s = src[x];
+            auto sa = (s >> 24) & 0xFF;
+            if(sa == 255) { dst[x] = s; continue; }
+            if(sa == 0) continue;
+            auto d = dst[x];
+            auto inv = 255 - sa;
+            auto sr = (s >> 16) & 0xFF, sg = (s >> 8) & 0xFF, sb = s & 0xFF, sA = sa;
+            auto dr = (d >> 16) & 0xFF, dg = (d >> 8) & 0xFF, db = d & 0xFF, dA = (d >> 24) & 0xFF;
+            auto outA = sA + (dA * inv) / 255;
+            auto outR = sr + (dr * inv) / 255;
+            auto outG = sg + (dg * inv) / 255;
+            auto outB = sb + (db * inv) / 255;
+            dst[x] = (outA << 24) | (outR << 16) | (outG << 8) | outB;
+        }
+    }
+}
+
+NOVASVG_INLINE void Canvas::copyPixelsFrom(const Canvas& other)
+{
+    auto stride = surface_get_stride(m_surface);
+    auto height = surface_get_height(m_surface);
+    memcpy(surface_get_data(m_surface), surface_get_data(other.m_surface), size_t(stride) * size_t(height));
 }
 
 NOVASVG_INLINE Canvas::~Canvas()

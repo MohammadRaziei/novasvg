@@ -50,6 +50,9 @@ enum class PropertyID : uint8_t {
     Fill,
     Fill_Opacity,
     Fill_Rule,
+    Filter,
+    Flood_Color,
+    Flood_Opacity,
     Font_Family,
     Font_Size,
     Font_Style,
@@ -90,6 +93,7 @@ enum class PropertyID : uint8_t {
     Rx,
     Ry,
     SpreadMethod,
+    StdDeviation,
     Stop_Color,
     Stop_Opacity,
     Stroke,
@@ -668,6 +672,9 @@ enum class ElementID : uint8_t {
     ClipPath,
     Defs,
     Ellipse,
+    FeDropShadow,
+    FeGaussianBlur,
+    Filter,
     ForeignObject,
     G,
     Image,
@@ -698,6 +705,7 @@ using SVGPropertyList = std::forward_list<SVGProperty*>;
 class SVGMarkerElement;
 class SVGClipPathElement;
 class SVGMaskElement;
+class SVGFilterElement;
 class SVGPaintElement;
 class SVGLayoutState;
 class SVGRenderState;
@@ -744,6 +752,7 @@ public:
     SVGMarkerElement* getMarker(std::string_view id) const;
     SVGClipPathElement* getClipper(std::string_view id) const;
     SVGMaskElement* getMasker(std::string_view id) const;
+    SVGFilterElement* getFilterElement(std::string_view id) const;
     SVGPaintElement* getPainter(std::string_view id) const;
 
     SVGElement* elementFromPoint(float x, float y);
@@ -777,6 +786,7 @@ public:
 
     const SVGClipPathElement* clipper() const { return m_clipper; }
     const SVGMaskElement* masker() const { return m_masker; }
+    const SVGFilterElement* filterElement() const { return m_filter; }
     float opacity() const { return m_opacity; }
 
     bool isElement() const final { return true; }
@@ -785,6 +795,7 @@ private:
     mutable Rect m_paintBoundingBox = Rect::Invalid;
     const SVGClipPathElement* m_clipper = nullptr;
     const SVGMaskElement* m_masker = nullptr;
+    const SVGFilterElement* m_filter = nullptr;
     float m_opacity = 1.f;
 
     float m_font_size = 12.f;
@@ -1158,6 +1169,32 @@ private:
     MaskType m_mask_type = MaskType::Luminance;
 };
 
+// ---- svgfilterelement ----
+// ponytail: minimal SVG <filter> support -- only feGaussianBlur and
+// feDropShadow are interpreted (the only primitives this codebase's own
+// comparison against resvg/thorvg found missing), each primitive applied
+// directly to the already-rendered element buffer in isolation. No
+// in/result graph, no other primitives (feOffset/feFlood/feComposite/
+// feMerge/...), no filter region (x/y/width/height) -- the offscreen
+// canvas is just the element's bounding box inflated by pixelMargin().
+// Upgrade path: a real primitive chain reading `in`/`result` would be
+// needed to support multi-step filters or reference other primitives'
+// output.
+class SVGFilterElement final : public SVGElement {
+public:
+    SVGFilterElement(Document* document);
+
+    // Extra space (in the *filtered element's own* user-space units,
+    // unscaled) the offscreen buffer needs so blur/shadow spread doesn't
+    // get clipped at the element's plain bounding box.
+    float pixelMargin() const;
+
+    // Applies every recognized child primitive to `state`'s current
+    // (already-rendered) canvas in place. `scale` converts user-space
+    // stdDeviation/dx/dy to device pixels for the canvas actually in use.
+    void applyFilter(SVGRenderState& state, float scale) const;
+};
+
 // ---- svgrenderstate ----
 enum class SVGRenderMode {
     Painting,
@@ -1167,18 +1204,20 @@ enum class SVGRenderMode {
 class SVGBlendInfo {
 public:
     explicit SVGBlendInfo(const SVGElement* element);
-    SVGBlendInfo(const SVGClipPathElement* clipper, const SVGMaskElement* masker, float opacity)
-        : m_clipper(clipper), m_masker(masker), m_opacity(opacity)
+    SVGBlendInfo(const SVGClipPathElement* clipper, const SVGMaskElement* masker, const SVGFilterElement* filter, float opacity)
+        : m_clipper(clipper), m_masker(masker), m_filter(filter), m_opacity(opacity)
     {}
 
     bool requiresCompositing(SVGRenderMode mode) const;
     const SVGClipPathElement* clipper() const { return m_clipper; }
     const SVGMaskElement* masker() const { return m_masker; }
+    const SVGFilterElement* filterElement() const { return m_filter; }
     float opacity() const { return m_opacity; }
 
 private:
     const SVGClipPathElement* m_clipper;
     const SVGMaskElement* m_masker;
+    const SVGFilterElement* m_filter;
     const float m_opacity;
 };
 
@@ -1831,6 +1870,7 @@ public:
 
     const std::string& mask() const { return m_mask; }
     const std::string& clip_path() const { return m_clip_path; }
+    const std::string& filter() const { return m_filter; }
     const std::string& marker_start() const { return m_marker_start; }
     const std::string& marker_mid() const { return m_marker_mid; }
     const std::string& marker_end() const { return m_marker_end; }
@@ -1889,6 +1929,7 @@ private:
 
     std::string m_mask;
     std::string m_clip_path;
+    std::string m_filter;
     std::string m_marker_start;
     std::string m_marker_mid;
     std::string m_marker_end;
@@ -1942,6 +1983,7 @@ NOVASVG_INLINE PropertyID propertyid(std::string_view name)
         {"rx", PropertyID::Rx},
         {"ry", PropertyID::Ry},
         {"spreadMethod", PropertyID::SpreadMethod},
+        {"stdDeviation", PropertyID::StdDeviation},
         {"style", PropertyID::Style},
         {"textLength", PropertyID::TextLength},
         {"transform", PropertyID::Transform},
@@ -1980,6 +2022,9 @@ NOVASVG_INLINE PropertyID csspropertyid(std::string_view name)
         {"fill", PropertyID::Fill},
         {"fill-opacity", PropertyID::Fill_Opacity},
         {"fill-rule", PropertyID::Fill_Rule},
+        {"filter", PropertyID::Filter},
+        {"flood-color", PropertyID::Flood_Color},
+        {"flood-opacity", PropertyID::Flood_Opacity},
         {"font-family", PropertyID::Font_Family},
         {"font-size", PropertyID::Font_Size},
         {"font-style", PropertyID::Font_Style},
@@ -2602,13 +2647,14 @@ NOVASVG_INLINE void SVGPreserveAspectRatio::transformRect(Rect& dstRect, Rect& s
 NOVASVG_INLINE SVGBlendInfo::SVGBlendInfo(const SVGElement* element)
     : m_clipper(element->clipper())
     , m_masker(element->masker())
+    , m_filter(element->filterElement())
     , m_opacity(element->opacity())
 {
 }
 
 NOVASVG_INLINE bool SVGBlendInfo::requiresCompositing(SVGRenderMode mode) const
 {
-    return (m_clipper && m_clipper->requiresMasking()) || (mode == SVGRenderMode::Painting && (m_masker || m_opacity < 1.f));
+    return (m_clipper && m_clipper->requiresMasking()) || (mode == SVGRenderMode::Painting && (m_masker || m_filter || m_opacity < 1.f));
 }
 
 NOVASVG_INLINE bool SVGRenderState::hasCycleReference(const SVGElement* element) const
@@ -2627,6 +2673,9 @@ NOVASVG_INLINE void SVGRenderState::beginGroup(const SVGBlendInfo& blendInfo)
     auto requiresCompositing = blendInfo.requiresCompositing(m_mode);
     if(requiresCompositing) {
         auto boundingBox = m_currentTransform.mapRect(m_element->paintBoundingBox());
+        if(m_mode == SVGRenderMode::Painting && blendInfo.filterElement()) {
+            boundingBox.inflate(blendInfo.filterElement()->pixelMargin() * m_currentTransform.xScale());
+        }
         boundingBox.intersect(m_canvas->extents());
         m_canvas = Canvas::create(boundingBox);
     } else {
@@ -2650,6 +2699,9 @@ NOVASVG_INLINE void SVGRenderState::endGroup(const SVGBlendInfo& blendInfo)
         blendInfo.clipper()->applyClipMask(*this);
     if(m_mode == SVGRenderMode::Painting && blendInfo.masker()) {
         blendInfo.masker()->applyMask(*this);
+    }
+    if(m_mode == SVGRenderMode::Painting && blendInfo.filterElement()) {
+        blendInfo.filterElement()->applyFilter(*this, m_currentTransform.xScale());
     }
 
     m_parent->m_canvas->blendCanvas(*m_canvas, BlendMode::Src_Over, opacity);
@@ -4457,6 +4509,9 @@ NOVASVG_INLINE SVGLayoutState::SVGLayoutState(const SVGLayoutState& parent, cons
         case PropertyID::Clip_Path:
             m_clip_path = parseUrl(input);
             break;
+        case PropertyID::Filter:
+            m_filter = parseUrl(input);
+            break;
         case PropertyID::Marker_Start:
             m_marker_start = parseUrl(input);
             break;
@@ -4521,6 +4576,9 @@ NOVASVG_INLINE ElementID elementid(std::string_view name)
         {"clipPath", ElementID::ClipPath},
         {"defs", ElementID::Defs},
         {"ellipse", ElementID::Ellipse},
+        {"feDropShadow", ElementID::FeDropShadow},
+        {"feGaussianBlur", ElementID::FeGaussianBlur},
+        {"filter", ElementID::Filter},
         {"foreignObject", ElementID::ForeignObject},
         {"g", ElementID::G},
         {"image", ElementID::Image},
@@ -4607,6 +4665,11 @@ NOVASVG_INLINE std::unique_ptr<SVGElement> SVGElement::create(Document* document
         return std::make_unique<SVGMaskElement>(document);
     case ElementID::ClipPath:
         return std::make_unique<SVGClipPathElement>(document);
+    case ElementID::Filter:
+        return std::make_unique<SVGFilterElement>(document);
+    case ElementID::FeGaussianBlur:
+    case ElementID::FeDropShadow:
+        return std::make_unique<SVGElement>(document, id);
     case ElementID::Marker:
         return std::make_unique<SVGMarkerElement>(document);
     case ElementID::Image:
@@ -4853,6 +4916,14 @@ NOVASVG_INLINE SVGMaskElement* SVGElement::getMasker(std::string_view id) const
     return nullptr;
 }
 
+NOVASVG_INLINE SVGFilterElement* SVGElement::getFilterElement(std::string_view id) const
+{
+    auto element = rootElement()->getElementById(id);
+    if(element && element->id() == ElementID::Filter)
+        return static_cast<SVGFilterElement*>(element);
+    return nullptr;
+}
+
 NOVASVG_INLINE SVGPaintElement* SVGElement::getPainter(std::string_view id) const
 {
     auto element = rootElement()->getElementById(id);
@@ -4957,6 +5028,7 @@ NOVASVG_INLINE void SVGElement::layoutElement(const SVGLayoutState& state)
     m_paintBoundingBox = Rect::Invalid;
     m_clipper = getClipper(state.clip_path());
     m_masker = getMasker(state.mask());
+    m_filter = getFilterElement(state.filter());
     m_opacity = state.opacity();
 
     m_font_size = state.font_size();
@@ -5005,6 +5077,9 @@ NOVASVG_INLINE bool SVGElement::isHiddenElement() const
     case ElementID::Marker:
     case ElementID::ClipPath:
     case ElementID::Mask:
+    case ElementID::Filter:
+    case ElementID::FeGaussianBlur:
+    case ElementID::FeDropShadow:
     case ElementID::LinearGradient:
     case ElementID::RadialGradient:
     case ElementID::Pattern:
@@ -6070,6 +6145,68 @@ NOVASVG_INLINE void SVGMaskElement::applyMask(SVGRenderState& state) const
     if(m_mask_type == MaskType::Luminance)
         maskImage->convertToLuminanceMask();
     state->blendCanvas(*maskImage, BlendMode::Dst_In, 1.f);
+}
+
+// ---- svgfilterelement (impl) ----
+NOVASVG_INLINE SVGFilterElement::SVGFilterElement(Document* document)
+    : SVGElement(document, ElementID::Filter)
+{
+}
+
+static float parseFirstFloat(std::string_view input, float fallback)
+{
+    if(input.empty())
+        return fallback;
+    return std::strtof(std::string(input).c_str(), nullptr);
+}
+
+NOVASVG_INLINE float SVGFilterElement::pixelMargin() const
+{
+    float margin = 0.f;
+    for(const auto& child : children()) {
+        auto element = toSVGElement(child);
+        if(!element)
+            continue;
+        if(element->id() == ElementID::FeGaussianBlur) {
+            auto sigma = parseFirstFloat(element->getAttribute(PropertyID::StdDeviation), 0.f);
+            margin = std::max(margin, sigma * 3.f);
+        } else if(element->id() == ElementID::FeDropShadow) {
+            auto sigma = parseFirstFloat(element->getAttribute(PropertyID::StdDeviation), 2.f);
+            auto dx = parseFirstFloat(element->getAttribute(PropertyID::Dx), 2.f);
+            auto dy = parseFirstFloat(element->getAttribute(PropertyID::Dy), 2.f);
+            margin = std::max(margin, sigma * 3.f + std::max(std::abs(dx), std::abs(dy)));
+        }
+    }
+
+    return margin;
+}
+
+NOVASVG_INLINE void SVGFilterElement::applyFilter(SVGRenderState& state, float scale) const
+{
+    for(const auto& child : children()) {
+        auto element = toSVGElement(child);
+        if(!element)
+            continue;
+        if(element->id() == ElementID::FeGaussianBlur) {
+            auto sigma = parseFirstFloat(element->getAttribute(PropertyID::StdDeviation), 0.f) * scale;
+            state->boxBlur(sigma, sigma);
+        } else if(element->id() == ElementID::FeDropShadow) {
+            auto sigma = parseFirstFloat(element->getAttribute(PropertyID::StdDeviation), 2.f) * scale;
+            auto dx = parseFirstFloat(element->getAttribute(PropertyID::Dx), 2.f) * scale;
+            auto dy = parseFirstFloat(element->getAttribute(PropertyID::Dy), 2.f) * scale;
+            auto floodColorAttr = element->getAttribute(PropertyID::Flood_Color);
+            Color floodColor = floodColorAttr.empty() ? Color(0, 0, 0) : Color(floodColorAttr);
+            auto floodOpacity = parseFirstFloat(element->getAttribute(PropertyID::Flood_Opacity), 1.f);
+
+            auto original = state.canvas();
+            auto shadow = Canvas::create(float(original->x()), float(original->y()), float(original->width()), float(original->height()));
+            shadow->blendCanvas(*original, BlendMode::Src_Over, 1.f);
+            shadow->tintToFloodColor(floodColor, floodOpacity);
+            shadow->boxBlur(sigma, sigma);
+            shadow->compositeDropShadowUnder(*original, dx, dy);
+            original->copyPixelsFrom(*shadow);
+        }
+    }
 }
 
 NOVASVG_INLINE void SVGMaskElement::layoutElement(const SVGLayoutState& state)
