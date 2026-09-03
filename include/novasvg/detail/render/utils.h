@@ -224,6 +224,41 @@ NOVASVG_INLINE bool skip_ws_or_comma(const char** begin, const char* end, bool* 
     return skip_ws_or_delim(begin, end, ',', has_comma);
 }
 
+// ponytail: CSS transform values (e.g. `rotate(15deg)`, set via a CSS
+// class/style rather than the plain SVG presentation attribute) carry a
+// unit immediately after the number, which the SVG attribute grammar
+// above doesn't expect. Rather than reject the whole transform list on
+// the first such token (the previous behavior), convert angle units to
+// degrees in place and just skip length units (px and friends -- treating
+// them as raw user-units is an acceptable simplification for translate).
+// Upgrade path: consult the target element's viewport/font-size for true
+// unit conversion (%, em, ...) if that ever matters in practice.
+NOVASVG_INLINE void skip_css_unit(const char** begin, const char* end, float* number)
+{
+    const char* it = *begin;
+    const char* unitStart = it;
+    while(it < end && ((*it >= 'a' && *it <= 'z') || (*it >= 'A' && *it <= 'Z') || *it == '%'))
+        ++it;
+    if(it == unitStart)
+        return;
+
+    auto length = size_t(it - unitStart);
+    auto matches = [&](const char* unit) {
+        auto unitLength = strlen(unit);
+        return length == unitLength && strncmp(unitStart, unit, unitLength) == 0;
+    };
+
+    if(matches("rad"))
+        *number *= 180.f / 3.14159265f;
+    else if(matches("grad"))
+        *number *= 0.9f;
+    else if(matches("turn"))
+        *number *= 360.f;
+    // "deg", "px", "pt", "%", and anything else: value already usable as-is.
+
+    *begin = it;
+}
+
 } // namespace render
 } // namespace novasvg
 

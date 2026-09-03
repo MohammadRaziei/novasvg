@@ -511,7 +511,7 @@ static bool parseDeclarations(std::string_view& input, DeclarationList& declarat
 
         Declaration declaration;
         declaration.specificity = 0x10;
-        declaration.id = csspropertyid(name);
+        declaration.id = propertyid(name);
         declaration.value.assign(value);
         if(skipDelimiter(input, '!')) {
             skipOptionalSpaces(input);

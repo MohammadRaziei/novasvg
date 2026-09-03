@@ -477,6 +477,20 @@ public:
     // (scaled by floodOpacity), for feDropShadow/feFlood.
     void tintToFloodColor(const Color& floodColor, float floodOpacity);
 
+    // Fills every pixel fully opaque white; paired with tintToFloodColor()
+    // this gives feFlood's "solid flood-color rectangle" result.
+    void fillOpaqueWhite();
+
+    // Shifts this canvas's pixels by (dx, dy) in place; area exposed at
+    // the edges becomes transparent.
+    void shift(float dx, float dy);
+
+    // Porter-Duff compositing operators needed by feComposite/feMerge.
+    // (arithmetic is intentionally not offered -- see SVGFECompositeElement)
+    enum class PorterDuff { Over, In, Out, Atop, Xor };
+    void compositeWith(const Canvas& src, PorterDuff mode);
+    void compositeOver(const Canvas& src) ;
+
     // Raw memcpy of `other`'s pixel buffer into this one -- both must be
     // the same width/height/stride (caller's responsibility).
     void copyPixelsFrom(const Canvas& other);
@@ -1129,6 +1143,19 @@ NOVASVG_INLINE void Canvas::boxBlur(float stdDeviationX, float stdDeviationY)
     }
 }
 
+NOVASVG_INLINE void Canvas::fillOpaqueWhite()
+{
+    auto width = surface_get_width(m_surface);
+    auto height = surface_get_height(m_surface);
+    auto stride = surface_get_stride(m_surface);
+    auto data = surface_get_data(m_surface);
+    for(int y = 0; y < height; ++y) {
+        auto* pixels = reinterpret_cast<uint32_t*>(data + stride * y);
+        for(int x = 0; x < width; ++x)
+            pixels[x] = 0xFFFFFFFFu;
+    }
+}
+
 NOVASVG_INLINE void Canvas::tintToFloodColor(const Color& floodColor, float floodOpacity)
 {
     auto width = surface_get_width(m_surface);
@@ -1150,7 +1177,7 @@ NOVASVG_INLINE void Canvas::tintToFloodColor(const Color& floodColor, float floo
     }
 }
 
-NOVASVG_INLINE void Canvas::compositeDropShadowUnder(const Canvas& original, float dx, float dy)
+NOVASVG_INLINE void Canvas::shift(float dx, float dy)
 {
     auto width = surface_get_width(m_surface);
     auto height = surface_get_height(m_surface);
@@ -1158,50 +1185,79 @@ NOVASVG_INLINE void Canvas::compositeDropShadowUnder(const Canvas& original, flo
     auto data = surface_get_data(m_surface);
     auto idx = int(dx);
     auto idy = int(dy);
+    if(idx == 0 && idy == 0)
+        return;
 
-    // shift this (shadow) buffer by (dx, dy) in place, edge outside -> transparent
     auto* scratch = static_cast<unsigned char*>(malloc(size_t(stride) * size_t(height)));
-    if(scratch) {
-        memset(scratch, 0, size_t(stride) * size_t(height));
-        for(int y = 0; y < height; ++y) {
-            auto sy = y - idy;
-            if(sy < 0 || sy >= height) continue;
-            auto* src = reinterpret_cast<uint32_t*>(data + sy * stride);
-            auto* dst = reinterpret_cast<uint32_t*>(scratch + y * stride);
-            for(int x = 0; x < width; ++x) {
-                auto sx = x - idx;
-                if(sx < 0 || sx >= width) continue;
-                dst[x] = src[sx];
-            }
+    if(!scratch)
+        return;
+    memset(scratch, 0, size_t(stride) * size_t(height));
+    for(int y = 0; y < height; ++y) {
+        auto sy = y - idy;
+        if(sy < 0 || sy >= height) continue;
+        auto* src = reinterpret_cast<uint32_t*>(data + sy * stride);
+        auto* dst = reinterpret_cast<uint32_t*>(scratch + y * stride);
+        for(int x = 0; x < width; ++x) {
+            auto sx = x - idx;
+            if(sx < 0 || sx >= width) continue;
+            dst[x] = src[sx];
         }
-        memcpy(data, scratch, size_t(stride) * size_t(height));
-        free(scratch);
     }
+    memcpy(data, scratch, size_t(stride) * size_t(height));
+    free(scratch);
+}
 
-    // draw original on top (simple src-over, premultiplied)
-    auto oWidth = surface_get_width(original.m_surface);
-    auto oHeight = surface_get_height(original.m_surface);
-    auto oStride = surface_get_stride(original.m_surface);
-    auto oData = surface_get_data(original.m_surface);
-    for(int y = 0; y < height && y < oHeight; ++y) {
+NOVASVG_INLINE void Canvas::compositeWith(const Canvas& src, PorterDuff mode)
+{
+    auto width = surface_get_width(m_surface);
+    auto height = surface_get_height(m_surface);
+    auto stride = surface_get_stride(m_surface);
+    auto data = surface_get_data(m_surface);
+
+    auto sWidth = surface_get_width(src.m_surface);
+    auto sHeight = surface_get_height(src.m_surface);
+    auto sStride = surface_get_stride(src.m_surface);
+    auto sData = surface_get_data(src.m_surface);
+
+    for(int y = 0; y < height && y < sHeight; ++y) {
         auto* dst = reinterpret_cast<uint32_t*>(data + y * stride);
-        auto* src = reinterpret_cast<uint32_t*>(oData + y * oStride);
-        for(int x = 0; x < width && x < oWidth; ++x) {
-            auto s = src[x];
-            auto sa = (s >> 24) & 0xFF;
-            if(sa == 255) { dst[x] = s; continue; }
-            if(sa == 0) continue;
+        auto* srcRow = reinterpret_cast<uint32_t*>(sData + y * sStride);
+        for(int x = 0; x < width && x < sWidth; ++x) {
+            auto s = srcRow[x];
             auto d = dst[x];
-            auto inv = 255 - sa;
-            auto sr = (s >> 16) & 0xFF, sg = (s >> 8) & 0xFF, sb = s & 0xFF, sA = sa;
-            auto dr = (d >> 16) & 0xFF, dg = (d >> 8) & 0xFF, db = d & 0xFF, dA = (d >> 24) & 0xFF;
-            auto outA = sA + (dA * inv) / 255;
-            auto outR = sr + (dr * inv) / 255;
-            auto outG = sg + (dg * inv) / 255;
-            auto outB = sb + (db * inv) / 255;
-            dst[x] = (outA << 24) | (outR << 16) | (outG << 8) | outB;
+            auto sA = (s >> 24) & 0xFF;
+            auto dA = (d >> 24) & 0xFF;
+
+            // Porter-Duff coefficients (premultiplied): result = s*Fs + d*Fd
+            int Fs, Fd;
+            switch(mode) {
+            case PorterDuff::In:   Fs = dA;       Fd = 0;             break;
+            case PorterDuff::Out:  Fs = 255 - dA; Fd = 0;             break;
+            case PorterDuff::Atop: Fs = dA;       Fd = 255 - sA;      break;
+            case PorterDuff::Xor:  Fs = 255 - dA; Fd = 255 - sA;      break;
+            case PorterDuff::Over: default:       Fs = 255;          Fd = 255 - sA; break;
+            }
+
+            auto sr = (s >> 16) & 0xFF, sg = (s >> 8) & 0xFF, sb = s & 0xFF;
+            auto dr = (d >> 16) & 0xFF, dg = (d >> 8) & 0xFF, db = d & 0xFF;
+            auto outA = std::min(255, int(sA * Fs + dA * Fd) / 255);
+            auto outR = std::min(255, int(sr * Fs + dr * Fd) / 255);
+            auto outG = std::min(255, int(sg * Fs + dg * Fd) / 255);
+            auto outB = std::min(255, int(sb * Fs + db * Fd) / 255);
+            dst[x] = (uint32_t(outA) << 24) | (uint32_t(outR) << 16) | (uint32_t(outG) << 8) | uint32_t(outB);
         }
     }
+}
+
+NOVASVG_INLINE void Canvas::compositeOver(const Canvas& src)
+{
+    compositeWith(src, PorterDuff::Over);
+}
+
+NOVASVG_INLINE void Canvas::compositeDropShadowUnder(const Canvas& original, float dx, float dy)
+{
+    shift(dx, dy);
+    compositeOver(original);
 }
 
 NOVASVG_INLINE void Canvas::copyPixelsFrom(const Canvas& other)

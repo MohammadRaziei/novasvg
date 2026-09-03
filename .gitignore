@@ -150,3 +150,7 @@ Icon?
 fseventsd
  Spotlight-V100
 tests/corpus/
+
+# Generated test-render outputs (regenerate via data/mermaid/COVERAGE.md workflow)
+data/*.png
+data/mermaid/*.png

@@ -1,0 +1,155 @@
+# SVG renderer comparison: novasvg vs resvg vs lunasvg vs cairosvg vs thorvg
+
+All five actually built/installed and run on the same 8 files (not guessed):
+
+- **novasvg** — this repo, built from source (`build/novasvg-cli`)
+- **resvg** — via `resvg_py` (Rust; the same engine mermaidx itself uses)
+- **lunasvg** 3.5 — built from source, official `svg2png` example
+- **cairosvg** 2.9 — Python/Cairo, `pip install cairosvg`
+- **thorvg** 1.1.3 — via `thorvg-python` (ctypes bindings), software canvas
+
+Ground truth for the 4 mermaid samples (from mermaidx issues #35, #17, #23, #20 —
+see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
+4 more files probe specific SVG features directly (`data/feature-*.svg`).
+
+## Results
+
+| Test | novasvg | resvg | lunasvg | cairosvg | thorvg |
+|---|---|---|---|---|---|
+| venn — plain shapes/text | match | match | match | match | **text missing entirely** (shapes fine) |
+| block — plain shapes/text | match | match | match | match | text missing, **CSS-class fills render solid black** |
+| flowchart — `<br/>`/text inside `<foreignObject>`, CSS classDef fills | text now correctly space-separated (`<br>`/tag-boundary fix); 1 label still dropped (separate CSS-inheritance bug, not yet fixed — see Still Open below) | blank (no foreignObject text) | blank | blank | text missing entirely; subgraph bg and several classDef-filled shapes render **solid black**; edges render as thick black wedges |
+| zenuml — nested HTML+CSS inside `<foreignObject>` (Vue-rendered) | raw concatenated text only, no layout | blank canvas | **fails to parse the file** (hard error) | **hard crash**: `ValueError: could not convert string to float: 'calc(100'` | only a stray inline `<svg>` icon fragment renders, wrong scale/position; everything else (boxes, text, lifelines) missing |
+| base64 `<image>` (href/xlink:href) | ok | ok | ok | ok | ok (image fine, caption **text missing**) |
+| linear/radial gradient | ok | ok | ok | ok | ok |
+| `feGaussianBlur` filter | **applied** (added; see Fixes below) | applied | not applied | not applied | applied |
+| `feDropShadow` filter | **applied** (added; see Fixes below) | applied | not applied | not applied | not applied |
+| `clip-path` | ok | ok | ok | ok | ok |
+| `mask` (luminance) | ok | ok | ok | ok | ok |
+| CSS class fill/stroke (simple stylesheet) + `<use>`/`<symbol>` | ok | ok | ok | ok | ok |
+| CSS `transform:` property | **applied** (added; see Fixes below) | not applied | not applied | not applied | not tested |
+
+## Reading it
+
+- **Plain vector SVG** (shapes, gradients, clip, mask, use/symbol, raster
+  embeds, *simple* CSS classes): novasvg, resvg, lunasvg and cairosvg are
+  all equivalent. Expected — novasvg is a from-scratch header-only
+  restructure of lunasvg's own architecture (same plutovg/FreeType-derived
+  rasterizer, see `docs/about.md`), so parity with lunasvg specifically is
+  by design, not coincidence.
+- **thorvg is the outlier, in both directions.** Its SVG loader doesn't
+  render `<text>` at all in any of the 8 files — that's a hard gap none of
+  the other four have. It also fails to resolve CSS-class fills once the
+  stylesheet gets non-trivial (mermaid's classDef output), painting those
+  shapes solid black instead. But it's the *only* engine of the five that
+  applies `feGaussianBlur` correctly — resvg is the only other one that
+  does any filter, and only resvg gets both blur and drop-shadow.
+- **`<foreignObject>` (what mermaid.js uses for every text label):**
+  novasvg is the strongest of the five — the only one that extracts any
+  text from it, even if line-wrapping is broken and one label got dropped.
+  resvg and lunasvg render empty boxes; cairosvg crashes on `calc()`;
+  thorvg ignores it beyond a stray nested icon.
+- **zenuml specifically** breaks all five to some degree: 2 of 5 (novasvg,
+  thorvg-partial) draw *something*, 2 of 5 (resvg, thorvg-mostly) draw a
+  blank/near-blank canvas, and 2 of 5 (lunasvg, cairosvg) fail outright
+  before producing any image.
+- Nothing here applies the CSS `transform:` *property* (as opposed to the
+  SVG `transform=` attribute) — shared limitation across this whole class
+  of SVG-only, no-HTML-box-model renderers, not a novasvg-specific gap.
+
+## Fixes applied to novasvg since the table above was first generated
+
+- **`feGaussianBlur` / `feDropShadow` support added.** Was previously
+  unimplemented (`<filter>` and its children weren't even in the element
+  parser, silently dropped as unknown). Added:
+  - `Canvas::boxBlur()` — 3-pass box blur approximating a true Gaussian
+    (the same "fast almost-gaussian" trick thorvg and browsers use),
+    operating directly on the premultiplied ARGB surface buffer.
+  - `Canvas::tintToFloodColor()` / `Canvas::compositeDropShadowUnder()` —
+    recolor-to-flood-color + offset + composite-behind, for feDropShadow.
+  - `<filter>`, `<feGaussianBlur>`, `<feDropShadow>` now parse as real
+    elements; a graphics element's `filter="url(#id)"` now triggers
+    offscreen-buffer compositing (reusing the exact mechanism `mask`
+    already used) with the buffer inflated by a blur-radius-aware margin
+    so blur/shadow spread isn't clipped at the element's plain bbox.
+  - Deliberately NOT implemented (ponytail-scoped): a generic filter
+    primitive graph (`feOffset`, `feFlood`, `feComposite`, `feMerge`,
+    `in`/`result` chaining), filter regions (`x`/`y`/width/height` on
+    `<filter>`), or any primitive beyond these two — only what the
+    comparison above actually exercises. Upgrade path noted in the code
+    (`svgelement.h`, `SVGFilterElement`) if more primitives are needed
+    later.
+  - This closes novasvg's only remaining gap against resvg found in this
+    comparison (drop-shadow/blur were resvg's one advantage; novasvg now
+    matches it there while still leading on foreignObject text).
+  - **In progress:** replacing this special-cased pair with a proper
+    filter-primitive pipeline (`feOffset`, `feFlood`, `feComposite`,
+    `feMerge`, `in`/`result` chaining) using a Template Method pattern —
+    `SVGElement::applyFilterPrimitive()` virtual, overridden per
+    primitive class, executed in sequence by `SVGFilterElement`. Canvas
+    building blocks (`shift()`, `compositeWith()` with full Porter-Duff
+    Over/In/Out/Atop/Xor, `fillOpaqueWhite()`) are done; the primitive
+    element classes and the pipeline executor itself are not wired up
+    yet, so `feOffset`/`feFlood`/`feComposite`/`feMerge` are registered
+    as element names but not yet functional. Existing tests (blur,
+    drop-shadow, everything else in this doc) are unaffected and pass.
+
+- **CSS `transform:` property support added.** Two independent bugs, both
+  root-caused and fixed:
+  1. `matrix.h`'s attribute-grammar parser rejected any unit suffix
+     (`deg`, `rad`, ...) on a transform function's number, silently
+     dropping the *entire* transform list on the first such token. Fixed
+     via a new `skip_css_unit()` helper (`utils.h`) that also converts
+     rad/grad/turn to degrees.
+  2. CSS `<style>` block declarations were resolved through the
+     hyphenated-only property table (`csspropertyid()`), not the
+     combined table that also covers camelCase names like `transform`
+     — so `transform` set via a CSS class was invisible to the style
+     cascade regardless of the parser fix above. Fixed the lookup call
+     in `svgparser.hpp` to use the combined `propertyid()`.
+  - Verified: `.class { transform: rotate(15deg); }` now rotates the
+    element correctly (`data/feature-css-use-symbol.svg`).
+
+- **`<br>`/tag-boundary word-gluing in `<foreignObject>` text fixed.**
+  `foreignObjectPlainText()` now emits a space at every tag boundary
+  (not just recognized block-level tags — simpler, and over-inserting is
+  harmless since whitespace collapses afterward, while under-inserting
+  glues words together). "Two line edge comment", "Rounded square
+  shape", and "linebreak in an Odd shape" in the flowchart sample all
+  space correctly now; previously read "Two lineedge comment" etc.
+
+## Still open
+
+- The one flowchart label that renders as an empty (green-on-green)
+  circle — root-caused (mermaid's `classDef green` compiles to
+  `.green>*{fill:#9f6 !important}`, which correctly matches the label's
+  `<g>` too since it's also a direct child of the same green-classed
+  ancestor; because `fill` is an inherited SVG property, and this
+  codebase's foreignObject text color currently reads that same
+  inherited `fill` rather than treating the HTML content as its own
+  independent `color` cascade, the text ends up the same green as its
+  background) — not yet fixed.
+- zenuml (nested HTML+CSS inside `<foreignObject>`) — still only raw
+  text, no layout. Out of scope for a "fix", this needs an actual HTML
+  layout engine.
+- The full filter-primitive graph mentioned above.
+
+## Bottom line
+
+No single winner — pick by what you're rendering:
+
+- Need mermaid-style diagrams with foreignObject text labels → **novasvg**
+  is the strongest of the five tested here (still incomplete).
+- Need correct filter effects (blur/shadow) → **novasvg** or **resvg**,
+  now tied (novasvg added feGaussianBlur/feDropShadow support — see Fixes
+  section above).
+- Need a battle-tested, spec-heavy general SVG renderer and don't need
+  foreignObject → **resvg** or **lunasvg**, roughly tied.
+- **thorvg** is built for Lottie/vector-animation workloads first; as a
+  static-SVG renderer specifically it's currently the weakest of the five
+  tested here (no text, black-fill CSS bug) — not a fair fight for what
+  it's actually designed for, but that's what static-SVG testing shows.
+
+Full per-file renders and the underlying test scripts are in `data/mermaid/`
+and `data/feature-*.png` (also `.resvg.png`, `.lunasvg.png`, `.cairosvg.png`,
+`.thorvg.png` siblings per file).

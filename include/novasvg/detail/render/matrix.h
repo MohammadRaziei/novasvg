@@ -156,6 +156,7 @@ NOVASVG_INLINE int parse_matrix_parameters(const char** begin, const char* end, 
     for(; count < max_count; ++count) {
         if(!parse_number(begin, end, values + count))
             break;
+        skip_css_unit(begin, end, values + count);
         skip_ws_or_comma(begin, end, &has_trailing_comma);
     }
 

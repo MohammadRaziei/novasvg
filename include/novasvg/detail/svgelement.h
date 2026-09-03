@@ -64,6 +64,8 @@ enum class PropertyID : uint8_t {
     Height,
     Href,
     Id,
+    In,
+    In2,
     LengthAdjust,
     Letter_Spacing,
     Marker_End,
@@ -78,6 +80,7 @@ enum class PropertyID : uint8_t {
     MaskUnits,
     Offset,
     Opacity,
+    Operator,
     Orient,
     Overflow,
     PatternContentUnits,
@@ -89,6 +92,7 @@ enum class PropertyID : uint8_t {
     R,
     RefX,
     RefY,
+    Result,
     Rotate,
     Rx,
     Ry,
@@ -672,8 +676,13 @@ enum class ElementID : uint8_t {
     ClipPath,
     Defs,
     Ellipse,
+    FeComposite,
     FeDropShadow,
+    FeFlood,
     FeGaussianBlur,
+    FeMerge,
+    FeMergeNode,
+    FeOffset,
     Filter,
     ForeignObject,
     G,
@@ -706,6 +715,7 @@ class SVGMarkerElement;
 class SVGClipPathElement;
 class SVGMaskElement;
 class SVGFilterElement;
+class SVGFilterContext;
 class SVGPaintElement;
 class SVGLayoutState;
 class SVGRenderState;
@@ -776,6 +786,15 @@ public:
 
     void renderChildren(SVGRenderState& state) const;
     virtual void render(SVGRenderState& state) const;
+
+    // Template Method hook for filter-primitive elements (feGaussianBlur,
+    // feOffset, feFlood, feComposite, feMerge, feDropShadow, ...): given
+    // the running filter pipeline context, compute and return this
+    // primitive's output. Default (every non-primitive element,
+    // including feMergeNode which only makes sense as feMerge's child)
+    // is "not a primitive" -- returns nullptr, which SVGFilterElement's
+    // pipeline simply skips over.
+    virtual std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const { return nullptr; }
 
     bool isDisplayNone() const { return m_display == Display::None; }
     bool isOverflowHidden() const { return m_overflow == Overflow::Hidden; }
@@ -1963,6 +1982,8 @@ NOVASVG_INLINE PropertyID propertyid(std::string_view name)
         {"height", PropertyID::Height},
         {"href", PropertyID::Href},
         {"id", PropertyID::Id},
+        {"in", PropertyID::In},
+        {"in2", PropertyID::In2},
         {"lengthAdjust", PropertyID::LengthAdjust},
         {"markerHeight", PropertyID::MarkerHeight},
         {"markerUnits", PropertyID::MarkerUnits},
@@ -1970,6 +1991,7 @@ NOVASVG_INLINE PropertyID propertyid(std::string_view name)
         {"maskContentUnits", PropertyID::MaskContentUnits},
         {"maskUnits", PropertyID::MaskUnits},
         {"offset", PropertyID::Offset},
+        {"operator", PropertyID::Operator},
         {"orient", PropertyID::Orient},
         {"patternContentUnits", PropertyID::PatternContentUnits},
         {"patternTransform", PropertyID::PatternTransform},
@@ -1979,6 +2001,7 @@ NOVASVG_INLINE PropertyID propertyid(std::string_view name)
         {"r", PropertyID::R},
         {"refX", PropertyID::RefX},
         {"refY", PropertyID::RefY},
+        {"result", PropertyID::Result},
         {"rotate", PropertyID::Rotate},
         {"rx", PropertyID::Rx},
         {"ry", PropertyID::Ry},
@@ -4576,8 +4599,13 @@ NOVASVG_INLINE ElementID elementid(std::string_view name)
         {"clipPath", ElementID::ClipPath},
         {"defs", ElementID::Defs},
         {"ellipse", ElementID::Ellipse},
+        {"feComposite", ElementID::FeComposite},
         {"feDropShadow", ElementID::FeDropShadow},
+        {"feFlood", ElementID::FeFlood},
         {"feGaussianBlur", ElementID::FeGaussianBlur},
+        {"feMerge", ElementID::FeMerge},
+        {"feMergeNode", ElementID::FeMergeNode},
+        {"feOffset", ElementID::FeOffset},
         {"filter", ElementID::Filter},
         {"foreignObject", ElementID::ForeignObject},
         {"g", ElementID::G},
@@ -5583,6 +5611,14 @@ inline std::string foreignObjectPlainText(std::string_view html)
         }
 
         if(c == '<') {
+            // ponytail: treat every tag boundary as a potential word
+            // separator (real browsers only do this for block-level
+            // tags like <br>/<p>/<div>, not inline ones like <span>) --
+            // consecutive/leading/trailing spaces are collapsed below, so
+            // over-inserting here is harmless, while under-inserting
+            // glues adjacent words together (e.g. "line" + "<br/>" +
+            // "edge" -> "lineedge"), which is the worse failure mode.
+            out += ' ';
             inTag = true;
             ++i;
             continue;

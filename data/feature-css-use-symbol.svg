@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150">
+  <style>
+    .box { fill: #7c3aed; stroke: #111; stroke-width: 2; }
+    .rot { transform-box: fill-box; transform-origin: center; transform: rotate(15deg); }
+  </style>
+  <defs>
+    <symbol id="star" viewBox="0 0 24 24">
+      <path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.9-6.2 3.9 1.6-7L2 9.5l7.1-.6z" fill="gold" stroke="#333"/>
+    </symbol>
+  </defs>
+  <rect class="box rot" x="20" y="40" width="80" height="60"/>
+  <use href="#star" x="140" y="30" width="60" height="60"/>
+  <use href="#star" x="210" y="30" width="60" height="60"/>
+</svg>
