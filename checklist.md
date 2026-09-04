@@ -67,6 +67,15 @@
       می‌کردن، پس `transform` (camelCase) اصلاً دیده نمی‌شد.
 - [x] **چسبیدن کلمات به هم توی متن foreignObject** (مثل `<br/>`) — `foreignObjectPlainText()`
       الان سر هر مرز تگ یه space می‌ذاره.
+- [x] **باگ ارث‌بری رنگ متن foreignObject (green-on-green)** — ریشه‌یابی و فیکس شد: `classDef green`
+      مرمید به `.green>*{fill:#9f6 !important}` تبدیل می‌شه که به‌درستی `<g class="label">` رو هم
+      می‌گیره (چون اونم فرزند مستقیم همون g سبزه)، و چون `fill` توی SVG ارث‌بری می‌شه، متن هم سبز
+      می‌شد و روی پس‌زمینه‌ی سبز نامرئی می‌شد. فیکس: یه تابع جدید `foreignObjectTextColor()` اضافه
+      شد که دقیقاً مثل `foreignObjectBackgroundColor()` عمل می‌کنه ولی برای CSS property `color`
+      (نه `fill`) — یعنی رنگ متن از خودِ استایل/کلاسِ HTML میاد، نه از زنجیره‌ی SVG. helperهای
+      مشترک (`findTagColor`/`tagColor`/`findClassColor`/`parseColorDeclaration`) هم عمومی شدن تا
+      بین background-color و color به اشتراک گذاشته بشن. تست شد: لیبل "Inner / circle..." الان
+      مشکی دیده می‌شه، و لیبل‌های رنگی venn (Backend سبز، Frontend آبی) هم بدون رگرشن درستن.
 - [x] **نکته‌ی مهم پردازشی**: جدول‌های lookup (`propertyid`/`csspropertyid`/`elementid`) با
       `std::lower_bound` (باینری سرچ) کار می‌کنن، پس باید همیشه sorted بمونن. اضافه‌کردن یه entry
       خارج از ترتیب الفبایی خطای build نمی‌ده، فقط silently لوکاپ رو برای یه بازه از کلیدها خراب
@@ -81,11 +90,6 @@
       `feDiffuseLighting`/`feSpecularLighting`, `feConvolveMatrix`, `feMorphology`,
       `feComponentTransfer`, `feBlend` — پیاده نشدن، به عنوان element ثبت نشدن، پس مثل قبل
       silently نادیده گرفته می‌شن (نه crash).
-- [ ] **باگ ارث‌بری رنگ متن foreignObject** — ریشه‌یابی شده، فیکس نشده: `classDef green` مرمید به
-      `.green>*{fill:#9f6 !important}` تبدیل می‌شه که به‌درستی `<g class="label">` رو هم می‌گیره
-      (چون اونم فرزند مستقیم همون g سبزه)، و چون `fill` توی SVG ارث‌بری می‌شه، متن هم سبز می‌شه و
-      روی پس‌زمینه‌ی سبز نامرئی می‌شه. محل فیکس: `ForeignObjectSimple::render` — رنگ متن نباید از
-      `element->fill()` (زنجیره‌ی SVG) بیاد، باید پیش‌فرض مشکی باشه مگه خودِ HTML چیز دیگه‌ای گفته باشه.
 - [ ] wrap واقعیِ چندخطی توی foreignObject — نیاز به یه لایه‌ی layout واقعی داره، نه یه پچ کوچیک.
 - [ ] zenuml (HTML/CSS تودرتوی سنگین) — از scope "فیکس" خارجه، به یه HTML/CSS layout engine واقعی نیاز داره.
 

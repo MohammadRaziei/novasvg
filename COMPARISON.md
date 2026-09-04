@@ -18,7 +18,7 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
 |---|---|---|---|---|---|
 | venn — plain shapes/text | match | match | match | match | **text missing entirely** (shapes fine) |
 | block — plain shapes/text | match | match | match | match | text missing, **CSS-class fills render solid black** |
-| flowchart — `<br/>`/text inside `<foreignObject>`, CSS classDef fills | text now correctly space-separated (`<br>`/tag-boundary fix); 1 label still dropped (separate CSS-inheritance bug, not yet fixed — see Still Open below) | blank (no foreignObject text) | blank | blank | text missing entirely; subgraph bg and several classDef-filled shapes render **solid black**; edges render as thick black wedges |
+| flowchart — `<br/>`/text inside `<foreignObject>`, CSS classDef fills | text now correctly space-separated and colored; **the "Inner / circle..." label that was previously invisible now renders in black** (text-color-inheritance fix — see Fixes below). Only remaining gap: no real multi-line wrapping (still one condensed line) | blank (no foreignObject text) | blank | blank | text missing entirely; subgraph bg and several classDef-filled shapes render **solid black**; edges render as thick black wedges |
 | zenuml — nested HTML+CSS inside `<foreignObject>` (Vue-rendered) | raw concatenated text only, no layout | blank canvas | **fails to parse the file** (hard error) | **hard crash**: `ValueError: could not convert string to float: 'calc(100'` | only a stray inline `<svg>` icon fragment renders, wrong scale/position; everything else (boxes, text, lifelines) missing |
 | base64 `<image>` (href/xlink:href) | ok | ok | ok | ok | ok (image fine, caption **text missing**) |
 | linear/radial gradient | ok | ok | ok | ok | ok |
@@ -114,17 +114,31 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
   shape", and "linebreak in an Odd shape" in the flowchart sample all
   space correctly now; previously read "Two lineedge comment" etc.
 
+- **foreignObject text-color inheritance bug fixed** (the green-on-green
+  invisible label). Root cause: mermaid's `classDef green` compiles to
+  `.green>*{fill:#9f6 !important}`, which correctly matches the label's
+  `<g>` too (it's a direct child of the same green-classed ancestor);
+  since `fill` is an inherited SVG property, and `ForeignObjectSimple`
+  was reading that inherited `fill` for the text color, the label ended
+  up the same green as its background. Fixed by adding
+  `foreignObjectTextColor()` — reads CSS `color` from the HTML content's
+  own `style=`/`class=` (mirroring the existing `foreignObjectBackgroundColor`
+  pattern exactly, generalized into a shared `findTagColor`/`tagColor`/
+  `findClassColor`/`parseColorDeclaration` parameterized on property
+  name), defaulting to black, independent of the SVG `fill` cascade —
+  matching how a real browser treats a foreignObject's HTML content as
+  its own formatting context. Verified: the "Inner / circle and some odd
+  special characters" label now renders in black
+  (`data/mermaid/02-flowchart-issue17.mmdc.svg`); the venn diagram's
+  `color`-styled labels ("Backend" green, "Frontend" blue) still resolve
+  correctly, confirming no regression on the working case.
+
 ## Still open
 
-- The one flowchart label that renders as an empty (green-on-green)
-  circle — root-caused (mermaid's `classDef green` compiles to
-  `.green>*{fill:#9f6 !important}`, which correctly matches the label's
-  `<g>` too since it's also a direct child of the same green-classed
-  ancestor; because `fill` is an inherited SVG property, and this
-  codebase's foreignObject text color currently reads that same
-  inherited `fill` rather than treating the HTML content as its own
-  independent `color` cascade, the text ends up the same green as its
-  background) — not yet fixed.
+- foreignObject real multi-line text wrapping — still one condensed
+  line rather than actual word-wrap (documented as intentional in
+  `ForeignObjectSimple`'s own comment; needs real text-layout code, not
+  a small patch — see `checklist.md`).
 - zenuml (nested HTML+CSS inside `<foreignObject>`) — still only raw
   text, no layout. Out of scope for a "fix", this needs an actual HTML
   layout engine.

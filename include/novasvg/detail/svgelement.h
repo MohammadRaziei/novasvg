@@ -5868,14 +5868,23 @@ inline std::u32string utf8ToU32(const std::string& text)
 // Pulls a "background-color: <value>" declaration's value out of a CSS
 // declaration block (the inside of a style="..." attribute, or the
 // inside of a rule's { ... }) and parses it. Not a general CSS-value
-// parser -- just enough to hand the value off to color_parse().
-inline std::optional<Color> parseBackgroundColorDeclaration(std::string_view block)
+// parser -- just enough to hand the value off to color_parse(). `property`
+// match is boundary-checked (not preceded/followed by identifier
+// characters) so searching for "color" doesn't false-match inside
+// "background-color" or similar.
+inline std::optional<Color> parseColorDeclaration(std::string_view block, std::string_view property)
 {
-    static constexpr std::string_view property = "background-color";
     size_t pos = 0;
     while((pos = block.find(property, pos)) != std::string_view::npos) {
+        auto matchStart = pos;
         auto after = pos + property.size();
         pos = after;
+        if(matchStart > 0) {
+            auto prev = block[matchStart - 1];
+            if(IS_ALPHA(prev) || IS_NUM(prev) || prev == '-' || prev == '_')
+                continue; // part of a longer property name, e.g. "background-color"
+        }
+
         while(after < block.size() && IS_WS(block[after]))
             ++after;
         if(after >= block.size() || block[after] != ':')
@@ -5899,13 +5908,18 @@ inline std::optional<Color> parseBackgroundColorDeclaration(std::string_view blo
     return std::nullopt;
 }
 
+inline std::optional<Color> parseBackgroundColorDeclaration(std::string_view block)
+{
+    return parseColorDeclaration(block, "background-color");
+}
+
 // Finds a bare ".className{ ... }" (or ".className , " / ".className\n{")
-// rule in a stylesheet and returns its background-color, if any.
+// rule in a stylesheet and returns its `property` color, if any.
 // Deliberately not a selector engine: skips any rule where the class
 // isn't immediately followed by whitespace-then-brace, so a compound
 // selector like ".edgeLabel p{...}" is correctly left alone rather than
 // mismatched.
-inline std::optional<Color> findClassBackgroundColor(std::string_view css, std::string_view className)
+inline std::optional<Color> findClassColor(std::string_view css, std::string_view className, std::string_view property)
 {
     std::string needle;
     needle.reserve(className.size() + 1);
@@ -5928,11 +5942,16 @@ inline std::optional<Color> findClassBackgroundColor(std::string_view css, std::
         auto close = css.find('}', i);
         if(close == std::string_view::npos)
             return std::nullopt;
-        if(auto color = parseBackgroundColorDeclaration(css.substr(i, close - i)))
+        if(auto color = parseColorDeclaration(css.substr(i, close - i), property))
             return color;
     }
 
     return std::nullopt;
+}
+
+inline std::optional<Color> findClassBackgroundColor(std::string_view css, std::string_view className)
+{
+    return findClassColor(css, className, "background-color");
 }
 
 inline std::optional<std::string_view> htmlAttribute(std::string_view tag, std::string_view name)
@@ -5951,13 +5970,13 @@ inline std::optional<std::string_view> htmlAttribute(std::string_view tag, std::
     return tag.substr(valueStart, valueEnd - valueStart);
 }
 
-// Background color a single opening tag paints, from an inline
-// style="background-color:..." or from class="..." resolved against the
+// Color a single opening tag declares for `property`, from an inline
+// style="property:..." or from class="..." resolved against the
 // document's stylesheet text.
-inline std::optional<Color> tagBackgroundColor(std::string_view tag, const SVGRootElement* root)
+inline std::optional<Color> tagColor(std::string_view tag, const SVGRootElement* root, std::string_view property)
 {
     if(auto style = htmlAttribute(tag, "style=")) {
-        if(auto color = parseBackgroundColorDeclaration(*style))
+        if(auto color = parseColorDeclaration(*style, property))
             return color;
     }
 
@@ -5971,7 +5990,7 @@ inline std::optional<Color> tagBackgroundColor(std::string_view tag, const SVGRo
             auto end = remaining.find(' ');
             auto className = remaining.substr(0, end);
             if(!className.empty()) {
-                if(auto color = findClassBackgroundColor(root->styleSheetText(), className))
+                if(auto color = findClassColor(root->styleSheetText(), className, property))
                     return color;
             }
             if(end == std::string_view::npos)
@@ -5981,6 +6000,11 @@ inline std::optional<Color> tagBackgroundColor(std::string_view tag, const SVGRo
     }
 
     return std::nullopt;
+}
+
+inline std::optional<Color> tagBackgroundColor(std::string_view tag, const SVGRootElement* root)
+{
+    return tagColor(tag, root, "background-color");
 }
 
 // Recovers the background box Mermaid (and similar tools) paint behind
@@ -5997,7 +6021,11 @@ inline std::optional<Color> tagBackgroundColor(std::string_view tag, const SVGRo
 // -- so this walks every opening tag in document order and keeps the
 // *last* match, mirroring normal paint order (later/nested elements
 // paint over earlier ones).
-inline std::optional<Color> foreignObjectBackgroundColor(std::string_view rawHtml, const SVGRootElement* root)
+//
+// findTagColor() is the shared walk used for both background-color and
+// (see below) text color -- same document-order/"last match wins" logic,
+// parameterized on which CSS property to look for.
+inline std::optional<Color> findTagColor(std::string_view rawHtml, const SVGRootElement* root, std::string_view property)
 {
     std::optional<Color> result;
     size_t pos = 0;
@@ -6013,12 +6041,35 @@ inline std::optional<Color> foreignObjectBackgroundColor(std::string_view rawHtm
         if(tagEnd == std::string_view::npos)
             break;
         auto tag = rawHtml.substr(tagStart, tagEnd - tagStart);
-        if(auto color = tagBackgroundColor(tag, root))
+        if(auto color = tagColor(tag, root, property))
             result = color;
         pos = tagEnd + 1;
     }
 
     return result;
+}
+
+inline std::optional<Color> foreignObjectBackgroundColor(std::string_view rawHtml, const SVGRootElement* root)
+{
+    return findTagColor(rawHtml, root, "background-color");
+}
+
+// Text color for foreignObject content, read from the HTML's own CSS
+// (inline style="color:..." or a class="..." rule) exactly like
+// foreignObjectBackgroundColor -- deliberately NOT the ambient SVG
+// `fill` property. foreignObject opens a fresh HTML formatting context:
+// a real browser colors this text via CSS `color` (defaulting to black),
+// which is independent of whatever `fill` the SVG ancestor chain
+// resolves to. Reading `element->fill()` here instead (the previous
+// behavior) means a mermaid classDef like `.green>*{fill:#9f6}` --
+// which legitimately also matches this label's ancestor <g>, since it's
+// a direct child of the same green-classed node -- leaks into the text
+// color via SVG's normal fill inheritance, silently turning label text
+// the same shade as its background. Falls back to black, matching a
+// plain HTML default and every reference render checked against.
+inline Color foreignObjectTextColor(std::string_view rawHtml, const SVGRootElement* root)
+{
+    return findTagColor(rawHtml, root, "color").value_or(Color(0, 0, 0));
 }
 
 } // namespace
@@ -6071,8 +6122,9 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
         state->fillPath(backgroundPath, FillRule::NonZero, state.currentTransform());
     }
 
-    const auto& fill = element->fill();
-    if(fill.applyPaint(state)) {
+    const auto textColor = foreignObjectTextColor(element->rawContent(), element->rootElement());
+    state->setColor(textColor);
+    {
         auto textTransform = state.currentTransform();
         if(scale < 1.f) {
             // Condense horizontally about the text's own left edge so it
