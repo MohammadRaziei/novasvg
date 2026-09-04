@@ -46,6 +46,26 @@ The library also offers a **command-line interface** for batch processing and au
 - **Style application** – Apply CSS stylesheets to SVG documents
 - **Font management** – Add and manage fonts for rendering
 
+### SVG Filters
+- **Full filter-primitive pipeline** – `feGaussianBlur`, `feOffset`, `feFlood`,
+  `feComposite` (Over/In/Out/Atop/Xor), `feMerge`/`feMergeNode`, and the
+  `feDropShadow` shorthand, with real `in`/`in2`/`result` chaining
+  (`SourceGraphic`/`SourceAlpha` included) — chain primitives together to
+  build custom effects, not just apply one at a time
+- **CSS `transform:` property** – both the SVG `transform=` attribute and
+  the CSS `transform:` property (set via `style=`/a stylesheet class,
+  including `deg`/`rad`/`grad`/`turn` units) are supported
+
+### `<foreignObject>` / HTML-in-SVG text
+- **Plain-text extraction** – renders the text content of HTML embedded in
+  `<foreignObject>` (tags stripped, CSS `color`/`background-color` from
+  the HTML's own `style=`/`class=` respected) rather than skipping it
+  entirely. This is what diagram tools like Mermaid.js rely on for every
+  node/edge label; most other lightweight SVG renderers (resvg, lunasvg,
+  cairosvg) currently render these as blank boxes — see `COMPARISON.md`
+  for a from-scratch, empirical comparison. Full HTML/CSS layout (line
+  wrapping, nested block layout) is out of scope; see `checklist.md`.
+
 ## 🚀 Quick Start
 
 ### C++ Usage
@@ -78,21 +98,25 @@ int main() {
 ### Command-Line Usage
 
 ```bash
-# Convert SVG to PNG
-novasvg convert input.svg output.png
+# Convert SVG to PNG (defaults to input name with .png extension)
+novasvg-cli convert input.svg
 
-# Convert with specific dimensions
-novasvg convert -w 800 -H 600 input.svg output.png
+# Convert to a specific output file and dimensions
+novasvg-cli convert input.svg -o output.png -w 800 -H 600
 
 # Get SVG information
-novasvg info document.svg
+novasvg-cli info document.svg
 
 # Find all circles
-novasvg query "circle" shapes.svg
+novasvg-cli query "circle" shapes.svg
 
-# Apply CSS styles
-novasvg apply-css styles.css input.svg styled.png
+# Apply CSS styles while converting
+novasvg-cli convert input.svg -o styled.png --style "rect { fill: red; }"
+novasvg-cli convert input.svg -o styled.png --css-file styles.css
 ```
+
+Run `novasvg-cli --help` or `novasvg-cli <subcommand> --help` for the full
+option list (`convert`, `info`, `query`, `batch`).
 
 ## 📦 Installation
 
@@ -106,15 +130,15 @@ Simply copy `include/novasvg/novasvg.h` and `include/novasvg/detail/novasvg_impl
 git clone https://github.com/MohammadRaziei/novasvg.git
 cd novasvg
 mkdir build && cd build
-cmake .. -DNOVASVG_BUILD_EXAMPLES=ON -DNOVASVG_BUILD_CLI=ON
+cmake .. -DNOVASVG_BUILD_EXAMPLES=ON
 make -j4
 ```
 
 ### Command-Line Tool
-Build with CLI enabled:
+The `novasvg-cli` target builds automatically as part of the project (no
+separate flag needed) — after the build above, the binary is at
+`build/novasvg-cli`:
 ```bash
-cmake .. -DNOVASVG_BUILD_CLI=ON
-make -j4
 sudo make install  # Optional: install system-wide
 ```
 
@@ -153,9 +177,12 @@ sudo make install  # Optional: install system-wide
 |--------|-------------|---------|
 | `NOVASVG_BUILD_EXAMPLES` | Build C++ examples | `PROJECT_IS_TOP_LEVEL` |
 | `NOVASVG_BUILD_TESTS` | Build unit tests | `PROJECT_IS_TOP_LEVEL` |
-| `NOVASVG_BUILD_CLI` | Build command-line interface | `PROJECT_IS_TOP_LEVEL` |
+| `NOVASVG_BUILD_PYTHON` | Build Python bindings | `PROJECT_IS_TOP_LEVEL` |
 | `NOVASVG_BUILD_DOCS` | Build documentation with Doxygen | `OFF` |
 | `NOVASVG_DIST_DIR` | Generate single-header distribution | Not defined |
+
+The `novasvg-cli` command-line tool itself has no build flag — it's built
+unconditionally alongside the library.
 
 ## 🧪 Examples
 
@@ -200,12 +227,18 @@ NovaSVG is distributed under the **MIT License**. See [LICENSE.txt](LICENSE.txt)
 - **Online Documentation**: https://mohammadraziei.github.io/novasvg
 - **Examples**: See `examples/` directory
 - **CLI Documentation**: See `README_CLI.md`
+- **Renderer comparison**: `COMPARISON.md` — an empirical, same-input
+  comparison against resvg/lunasvg/cairosvg/thorvg (filters, CSS
+  transforms, foreignObject text handling)
+- **Known gaps / roadmap**: `checklist.md` — what's fixed, what's
+  intentionally out of scope and why, and optimization notes for
+  anything that's currently correct-but-not-fast
 
-## � Acknowledgments
+## 🙏 Acknowledgments
 
 NovaSVG builds upon ideas from existing SVG libraries while maintaining a distinct architectural philosophy focused on minimalism and header-only design.
 
-## �📞 Support
+## 📞 Support
 
 - **GitHub Issues**: https://github.com/MohammadRaziei/novasvg/issues
 - **Documentation**: https://mohammadraziei.github.io/novasvg
