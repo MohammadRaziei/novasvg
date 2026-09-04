@@ -43,3 +43,84 @@
 - [ ] `phasma` (پکیج pip خودِ mohammadraziei، رندرر PhantomJS-based) به‌عنوان مرجع تست استفاده شد
       ولی معلوم شد فونت‌های قدیمیِ PhantomJS گمراه‌کننده‌ست — مرجع نهایی Playwright/Chromium واقعی بود.
       اگه دوباره خواستی مقایسه‌ی خودکار بگیری، از Playwright استفاده کن نه phasma.
+
+## کارهای این نشست — فیلترها و فیکس‌های SVG/CSS
+
+> کانتکست: این بخش مربوط به یه نشست جدیده که novasvg رو در مقابل resvg/lunasvg/cairosvg/thorvg
+> تست کردیم (`COMPARISON.md` رو ببین). موارد زیر توی همین نشست پیاده و تست شدن.
+
+### انجام‌شده
+
+- [x] **فیلترهای `feGaussianBlur` / `feDropShadow`** — `Canvas::boxBlur()` (تقریب box-blur سه‌پاسه)،
+      با استفاده از همون مکانیزم offscreen-canvas/blendCanvas که mask ازش استفاده می‌کرد.
+- [x] **گراف کامل filter primitives** — `feOffset`, `feFlood`, `feComposite` (با همه‌ی حالت‌های
+      Porter-Duff: Over/In/Out/Atop/Xor)، `feMerge`/`feMergeNode`، زنجیره‌ی واقعیِ `in`/`in2`/`result`
+      (شامل `SourceGraphic`/`SourceAlpha`). با Template Method پیاده شد:
+      `SVGElement::applyFilterPrimitive()` مجازیه، هر primitive یه کلاس کوچیک جداست، و
+      `SVGFilterElement` فقط اجراکننده‌ی pipeline هست (بدون switch روی نوع) — اضافه‌کردن primitive
+      جدید بعداً یعنی فقط یه کلاس جدید، نه دست‌زدن به اجراکننده. تست شد: یه drop-shadow کامل که
+      فقط از ۵ تا primitive زنجیره شده ساخته شد (`data/feature-filter-primitives.svg`) دقیقاً
+      همون خروجیِ shorthand `feDropShadow` رو داد.
+- [x] **CSS `transform:` property** — دو باگ مستقل، هر دو ریشه‌یابی و فیکس شدن:
+      ۱) پارسر `matrix.h` واحدهای CSS (`deg`/`rad`/...) رو قبول نمی‌کرد و کل transform رو حذف
+      می‌کرد. ۲) دیکلریشن‌های داخل `<style>` از جدول lookup اشتباه (فقط hyphenated) استفاده
+      می‌کردن، پس `transform` (camelCase) اصلاً دیده نمی‌شد.
+- [x] **چسبیدن کلمات به هم توی متن foreignObject** (مثل `<br/>`) — `foreignObjectPlainText()`
+      الان سر هر مرز تگ یه space می‌ذاره.
+- [x] **نکته‌ی مهم پردازشی**: جدول‌های lookup (`propertyid`/`csspropertyid`/`elementid`) با
+      `std::lower_bound` (باینری سرچ) کار می‌کنن، پس باید همیشه sorted بمونن. اضافه‌کردن یه entry
+      خارج از ترتیب الفبایی خطای build نمی‌ده، فقط silently لوکاپ رو برای یه بازه از کلیدها خراب
+      می‌کنه. (یه بار روی `stdDeviation` گرفتارش شدیم.)
+
+### عمداً پیاده نشده (scope کوچیک نگه داشته شد)
+
+- [ ] `feComposite operator="arithmetic"` — به ۴ ضریب k1..k4 نیاز داره؛ فعلاً fallback به `over`.
+- [ ] filter region جدا برای هر primitive (`x`/`y`/`width`/`height` روی `<filter>` یا خود primitive) —
+      الان همه‌ی زنجیره یه ناحیه‌ی offscreen مشترک دارن (بر اساس bbox المان + margin).
+- [ ] `feColorMatrix`, `feTurbulence`, `feDisplacementMap`, `feTile`, `feImage`,
+      `feDiffuseLighting`/`feSpecularLighting`, `feConvolveMatrix`, `feMorphology`,
+      `feComponentTransfer`, `feBlend` — پیاده نشدن، به عنوان element ثبت نشدن، پس مثل قبل
+      silently نادیده گرفته می‌شن (نه crash).
+- [ ] **باگ ارث‌بری رنگ متن foreignObject** — ریشه‌یابی شده، فیکس نشده: `classDef green` مرمید به
+      `.green>*{fill:#9f6 !important}` تبدیل می‌شه که به‌درستی `<g class="label">` رو هم می‌گیره
+      (چون اونم فرزند مستقیم همون g سبزه)، و چون `fill` توی SVG ارث‌بری می‌شه، متن هم سبز می‌شه و
+      روی پس‌زمینه‌ی سبز نامرئی می‌شه. محل فیکس: `ForeignObjectSimple::render` — رنگ متن نباید از
+      `element->fill()` (زنجیره‌ی SVG) بیاد، باید پیش‌فرض مشکی باشه مگه خودِ HTML چیز دیگه‌ای گفته باشه.
+- [ ] wrap واقعیِ چندخطی توی foreignObject — نیاز به یه لایه‌ی layout واقعی داره، نه یه پچ کوچیک.
+- [ ] zenuml (HTML/CSS تودرتوی سنگین) — از scope "فیکس" خارجه، به یه HTML/CSS layout engine واقعی نیاز داره.
+
+### نکات بهینه‌سازی (باگ نیستن، فقط برای بعداً یادداشت شدن)
+
+> همه‌ی موارد زیر الان اسکالر (غیر-SIMD) هستن و درست کار می‌کنن، فقط سریع‌ترین حالت ممکن نیستن.
+> فیلترها روی هر پیکسل از bbox (بزرگ‌شده‌ی) المان اجرا می‌شن، پس اگه یه جای پروژه قراره کند باشه
+> احتمالاً همینجاست.
+
+- **`Canvas::boxBlur()` / `boxBlurPass()` (`canvas.h`)** — مهم‌ترین مورد. الان هر پیکسل خروجی کل
+  پنجره‌ی `2*radius+1` رو از صفر جمع می‌زنه یعنی `O(width*height*radius)` هر پاس. دو بهینه‌سازیِ
+  مستقل، هرکدوم به تنهایی مهمن:
+  - **moving-sum به‌جای جمع دوباره**: یه پنجره‌ی لغزنده (پیکسلی که از پنجره خارج می‌شه رو کم کن،
+    پیکسل جدید رو اضافه کن) هر پاس رو به `O(width*height)` می‌رسونه، مستقل از radius — برای
+    stdDeviation‌های معمولِ محتوای SVG (اغلب radius=۵ تا ۲۰+) این بیشترین تاثیر رو داره.
+  - **SIMD روی ۴ کانال با هم**: هر پیکسل از یه `uint32_t` با شیفت جدا می‌شه و توی `float sum[4]`
+    اسکالر جمع می‌شه. چون از قبل ۴ بایت پک‌شده‌ست، مستقیم روی SSE2/NEON می‌شه سوارش کرد: ۴ پیکسل
+    (۱۶ بایت) با هم لود، widen به ۱۶/۳۲ بیت، جمع، narrow برگردون — یعنی هر instruction چند پیکسل
+    با هر ۴ کانال رو با هم پردازش می‌کنه به‌جای یه کانال از یه پیکسل در هر iteration. یا با یه
+    کرنل دستی SSE2/NEON، یا حتی فقط با بازنویسیِ حلقه به شکلی که autovectorization راحت‌تر باشه
+    (branch مربوط به edge-clamp رو از داخل hot loop خارج کن، به‌جاش scratch buffer رو padding کن) —
+    `-O3` باید بتونه بیشترش رو خودش vectorize کنه.
+  - ترکیب هر دو (moving-sum + SIMD) بیشترین سود رو می‌ده اگه یه‌روز واقعاً مهم شد.
+- **`Canvas::compositeWith()` (`canvas.h`)** — یه `switch` روی `mode` *داخل* حلقه‌ی per-pixel هست.
+  بردنش بیرون از حلقه (یا با template parameter روی mode، یا انتخاب یه تابع/لامبدا یه‌بار قبل حلقه)
+  یه branch رو از هر پیکسل حذف می‌کنه و شانس auto-vectorization رو هم بیشتر می‌کنه. همین برای
+  `tintToFloodColor()`/`shift()` هم صادقه، ولی اونا از قبل branch کمتری دارن.
+- **الگوی "clone بعد mutate" توی `SVGFilterContext::cloneCanvas()`** — هر primitive که نیاز به
+  کپیِ خودش داره (`feGaussianBlur`, `feOffset`, `feDropShadow`, `in2` توی `feComposite`) یه
+  Canvas کامل جدید می‌سازه و یه `compositeOver` کامل می‌زنه فقط برای کپی ۱-به-۱ پیکسل‌ها، درحالی
+  که هیچ blend واقعی‌ای لازم نیست. یه `Canvas::clone()` مخصوص (فقط `memcpy`، بدون ریاضیِ آلفا)
+  هم ساده‌تره هم سریع‌تر از رد کردنِ یه کپیِ ساده از مسیر عمومیِ Porter-Duff.
+- **`gaussianRadiusForSigma()`** — `sqrt`/ضرب رو هر بار از نو حساب می‌کنه؛ کوچیکه، ولی اگه
+  `boxBlur` توی یه حلقه‌ی داغ صدا زده بشه (مثلاً فیلتر انیمیشنی)، memoize کردن بر اساس مقدار
+  `stdDeviation` از تکرار محاسبات float بی‌فایده جلوگیری می‌کنه.
+
+هیچ‌کدوم از اینا برای درستیِ کد لازم نیستن — همه‌چی الان به شکل اسکالر تست‌هاش رو پاس می‌کنه.
+اینجا نوشته شدن که یه پاس بعدی نقطه‌ی شروع مشخص داشته باشه به‌جای "profile کن و ببین".

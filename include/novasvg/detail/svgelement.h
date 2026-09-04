@@ -5,6 +5,7 @@
 #include <forward_list>
 #include <list>
 #include <map>
+#include <unordered_map>
 #include <optional>
 #include <cmath>
 #include <set>
@@ -1189,16 +1190,195 @@ private:
 };
 
 // ---- svgfilterelement ----
-// ponytail: minimal SVG <filter> support -- only feGaussianBlur and
-// feDropShadow are interpreted (the only primitives this codebase's own
-// comparison against resvg/thorvg found missing), each primitive applied
-// directly to the already-rendered element buffer in isolation. No
-// in/result graph, no other primitives (feOffset/feFlood/feComposite/
-// feMerge/...), no filter region (x/y/width/height) -- the offscreen
-// canvas is just the element's bounding box inflated by pixelMargin().
-// Upgrade path: a real primitive chain reading `in`/`result` would be
-// needed to support multi-step filters or reference other primitives'
-// output.
+// Real SVG filter-primitive pipeline: SVGFilterContext carries the
+// running state (SourceGraphic, named `result=` buffers, implicit
+// chaining, device scale); each primitive is its own SVGElement subclass
+// overriding the applyFilterPrimitive() Template Method; SVGFilterElement
+// itself is just a pipeline executor with no per-type switch statement --
+// it asks each child to compute its own output and threads the result
+// through. Adding a new primitive later means adding one small class, not
+// touching the executor.
+static float parseFirstFloat(std::string_view input, float fallback)
+{
+    if(input.empty())
+        return fallback;
+    return std::strtof(std::string(input).c_str(), nullptr);
+}
+
+class SVGFilterContext {
+public:
+    SVGFilterContext(const std::shared_ptr<Canvas>& sourceGraphic, float scale)
+        : m_sourceGraphic(sourceGraphic), m_lastResult(sourceGraphic), m_scale(scale)
+    {}
+
+    float scale() const { return m_scale; }
+
+    // A blank transparent canvas matching SourceGraphic's position/size --
+    // every primitive's output shares this geometry (ponytail: real UAs
+    // allow per-primitive filter regions; one shared region for the whole
+    // chain is a deliberate simplification, see checklist.md).
+    std::shared_ptr<Canvas> newCanvas() const
+    {
+        return Canvas::create(float(m_sourceGraphic->x()), float(m_sourceGraphic->y()), float(m_sourceGraphic->width()), float(m_sourceGraphic->height()));
+    }
+
+    std::shared_ptr<Canvas> cloneCanvas(const Canvas& source) const
+    {
+        auto canvas = newCanvas();
+        canvas->compositeOver(source);
+        return canvas;
+    }
+
+    // Resolves an `in=`/`in2=` reference: empty -> implicit chain (result
+    // of the previous primitive, or SourceGraphic for the first one);
+    // "SourceGraphic"/"SourceAlpha" -> the original rendered element (full
+    // or alpha-only); otherwise a named `result=` from an earlier
+    // primitive, falling back to the implicit chain if the name is
+    // unresolvable (spec says this is undefined behavior; failing soft
+    // beats crashing).
+    std::shared_ptr<Canvas> resolveInput(std::string_view in) const
+    {
+        if(in.empty())
+            return m_lastResult;
+        if(in == "SourceGraphic")
+            return m_sourceGraphic;
+        if(in == "SourceAlpha") {
+            auto alpha = cloneCanvas(*m_sourceGraphic);
+            alpha->tintToFloodColor(Color(0, 0, 0), 1.f);
+            return alpha;
+        }
+        auto it = m_namedResults.find(std::string(in));
+        if(it != m_namedResults.end())
+            return it->second;
+        return m_lastResult;
+    }
+
+    // Records a primitive's output as the new implicit chain head, and
+    // additionally under `name` if it declared `result=`.
+    void setResult(std::string_view name, std::shared_ptr<Canvas> canvas)
+    {
+        if(!name.empty())
+            m_namedResults.emplace(std::string(name), canvas);
+        m_lastResult = std::move(canvas);
+    }
+
+    const std::shared_ptr<Canvas>& lastResult() const { return m_lastResult; }
+
+private:
+    std::shared_ptr<Canvas> m_sourceGraphic;
+    std::shared_ptr<Canvas> m_lastResult;
+    std::unordered_map<std::string, std::shared_ptr<Canvas>> m_namedResults;
+    float m_scale;
+};
+
+class SVGFEGaussianBlurElement final : public SVGElement {
+public:
+    SVGFEGaussianBlurElement(Document* document) : SVGElement(document, ElementID::FeGaussianBlur) {}
+
+    std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
+    {
+        auto sigma = parseFirstFloat(getAttribute(PropertyID::StdDeviation), 0.f) * context.scale();
+        auto output = context.cloneCanvas(*context.resolveInput(getAttribute(PropertyID::In)));
+        output->boxBlur(sigma, sigma);
+        return output;
+    }
+};
+
+class SVGFEOffsetElement final : public SVGElement {
+public:
+    SVGFEOffsetElement(Document* document) : SVGElement(document, ElementID::FeOffset) {}
+
+    std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
+    {
+        auto dx = parseFirstFloat(getAttribute(PropertyID::Dx), 0.f) * context.scale();
+        auto dy = parseFirstFloat(getAttribute(PropertyID::Dy), 0.f) * context.scale();
+        auto output = context.cloneCanvas(*context.resolveInput(getAttribute(PropertyID::In)));
+        output->shift(dx, dy);
+        return output;
+    }
+};
+
+class SVGFEFloodElement final : public SVGElement {
+public:
+    SVGFEFloodElement(Document* document) : SVGElement(document, ElementID::FeFlood) {}
+
+    std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
+    {
+        auto floodColorAttr = getAttribute(PropertyID::Flood_Color);
+        Color floodColor = floodColorAttr.empty() ? Color(0, 0, 0) : Color(floodColorAttr);
+        auto floodOpacity = parseFirstFloat(getAttribute(PropertyID::Flood_Opacity), 1.f);
+
+        auto output = context.newCanvas();
+        output->fillOpaqueWhite();
+        output->tintToFloodColor(floodColor, floodOpacity);
+        return output;
+    }
+};
+
+class SVGFEMergeElement final : public SVGElement {
+public:
+    SVGFEMergeElement(Document* document) : SVGElement(document, ElementID::FeMerge) {}
+
+    std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
+    {
+        auto output = context.newCanvas();
+        for(const auto& child : children()) {
+            auto element = toSVGElement(child);
+            if(element && element->id() == ElementID::FeMergeNode)
+                output->compositeOver(*context.resolveInput(element->getAttribute(PropertyID::In)));
+        }
+
+        return output;
+    }
+};
+
+class SVGFECompositeElement final : public SVGElement {
+public:
+    SVGFECompositeElement(Document* document) : SVGElement(document, ElementID::FeComposite) {}
+
+    std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
+    {
+        auto input = context.resolveInput(getAttribute(PropertyID::In));
+        auto input2 = context.resolveInput(getAttribute(PropertyID::In2));
+        auto output = context.cloneCanvas(*input2);
+
+        auto op = getAttribute(PropertyID::Operator);
+        auto mode = Canvas::PorterDuff::Over;
+        if(op == "in") mode = Canvas::PorterDuff::In;
+        else if(op == "out") mode = Canvas::PorterDuff::Out;
+        else if(op == "atop") mode = Canvas::PorterDuff::Atop;
+        else if(op == "xor") mode = Canvas::PorterDuff::Xor;
+        // "arithmetic" (k1..k4 coefficients) is deliberately not
+        // implemented -- falls back to "over". See checklist.md.
+
+        output->compositeWith(*input, mode);
+        return output;
+    }
+};
+
+class SVGFEDropShadowElement final : public SVGElement {
+public:
+    SVGFEDropShadowElement(Document* document) : SVGElement(document, ElementID::FeDropShadow) {}
+
+    std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
+    {
+        auto sigma = parseFirstFloat(getAttribute(PropertyID::StdDeviation), 2.f) * context.scale();
+        auto dx = parseFirstFloat(getAttribute(PropertyID::Dx), 2.f) * context.scale();
+        auto dy = parseFirstFloat(getAttribute(PropertyID::Dy), 2.f) * context.scale();
+        auto floodColorAttr = getAttribute(PropertyID::Flood_Color);
+        Color floodColor = floodColorAttr.empty() ? Color(0, 0, 0) : Color(floodColorAttr);
+        auto floodOpacity = parseFirstFloat(getAttribute(PropertyID::Flood_Opacity), 1.f);
+
+        auto input = context.resolveInput(getAttribute(PropertyID::In));
+        auto shadow = context.cloneCanvas(*input);
+        shadow->tintToFloodColor(floodColor, floodOpacity);
+        shadow->boxBlur(sigma, sigma);
+        shadow->shift(dx, dy);
+        shadow->compositeOver(*input);
+        return shadow;
+    }
+};
+
 class SVGFilterElement final : public SVGElement {
 public:
     SVGFilterElement(Document* document);
@@ -1208,9 +1388,10 @@ public:
     // get clipped at the element's plain bounding box.
     float pixelMargin() const;
 
-    // Applies every recognized child primitive to `state`'s current
-    // (already-rendered) canvas in place. `scale` converts user-space
-    // stdDeviation/dx/dy to device pixels for the canvas actually in use.
+    // Runs every child primitive in document order, threading each
+    // result through SVGFilterContext, then writes the final result back
+    // into `state`'s current (already-rendered) canvas. `scale` converts
+    // user-space stdDeviation/dx/dy to device pixels.
     void applyFilter(SVGRenderState& state, float scale) const;
 };
 
@@ -4696,7 +4877,18 @@ NOVASVG_INLINE std::unique_ptr<SVGElement> SVGElement::create(Document* document
     case ElementID::Filter:
         return std::make_unique<SVGFilterElement>(document);
     case ElementID::FeGaussianBlur:
+        return std::make_unique<SVGFEGaussianBlurElement>(document);
     case ElementID::FeDropShadow:
+        return std::make_unique<SVGFEDropShadowElement>(document);
+    case ElementID::FeOffset:
+        return std::make_unique<SVGFEOffsetElement>(document);
+    case ElementID::FeFlood:
+        return std::make_unique<SVGFEFloodElement>(document);
+    case ElementID::FeComposite:
+        return std::make_unique<SVGFECompositeElement>(document);
+    case ElementID::FeMerge:
+        return std::make_unique<SVGFEMergeElement>(document);
+    case ElementID::FeMergeNode:
         return std::make_unique<SVGElement>(document, id);
     case ElementID::Marker:
         return std::make_unique<SVGMarkerElement>(document);
@@ -5108,6 +5300,11 @@ NOVASVG_INLINE bool SVGElement::isHiddenElement() const
     case ElementID::Filter:
     case ElementID::FeGaussianBlur:
     case ElementID::FeDropShadow:
+    case ElementID::FeOffset:
+    case ElementID::FeFlood:
+    case ElementID::FeComposite:
+    case ElementID::FeMerge:
+    case ElementID::FeMergeNode:
     case ElementID::LinearGradient:
     case ElementID::RadialGradient:
     case ElementID::Pattern:
@@ -6189,13 +6386,6 @@ NOVASVG_INLINE SVGFilterElement::SVGFilterElement(Document* document)
 {
 }
 
-static float parseFirstFloat(std::string_view input, float fallback)
-{
-    if(input.empty())
-        return fallback;
-    return std::strtof(std::string(input).c_str(), nullptr);
-}
-
 NOVASVG_INLINE float SVGFilterElement::pixelMargin() const
 {
     float margin = 0.f;
@@ -6211,7 +6401,14 @@ NOVASVG_INLINE float SVGFilterElement::pixelMargin() const
             auto dx = parseFirstFloat(element->getAttribute(PropertyID::Dx), 2.f);
             auto dy = parseFirstFloat(element->getAttribute(PropertyID::Dy), 2.f);
             margin = std::max(margin, sigma * 3.f + std::max(std::abs(dx), std::abs(dy)));
+        } else if(element->id() == ElementID::FeOffset) {
+            auto dx = parseFirstFloat(element->getAttribute(PropertyID::Dx), 0.f);
+            auto dy = parseFirstFloat(element->getAttribute(PropertyID::Dy), 0.f);
+            margin = std::max(margin, std::max(std::abs(dx), std::abs(dy)));
         }
+        // feFlood/feComposite/feMerge don't themselves need extra margin;
+        // if they combine an already-blurred/offset named result, that
+        // primitive already grew the margin.
     }
 
     return margin;
@@ -6219,30 +6416,18 @@ NOVASVG_INLINE float SVGFilterElement::pixelMargin() const
 
 NOVASVG_INLINE void SVGFilterElement::applyFilter(SVGRenderState& state, float scale) const
 {
+    SVGFilterContext context(state.canvas(), scale);
     for(const auto& child : children()) {
         auto element = toSVGElement(child);
         if(!element)
             continue;
-        if(element->id() == ElementID::FeGaussianBlur) {
-            auto sigma = parseFirstFloat(element->getAttribute(PropertyID::StdDeviation), 0.f) * scale;
-            state->boxBlur(sigma, sigma);
-        } else if(element->id() == ElementID::FeDropShadow) {
-            auto sigma = parseFirstFloat(element->getAttribute(PropertyID::StdDeviation), 2.f) * scale;
-            auto dx = parseFirstFloat(element->getAttribute(PropertyID::Dx), 2.f) * scale;
-            auto dy = parseFirstFloat(element->getAttribute(PropertyID::Dy), 2.f) * scale;
-            auto floodColorAttr = element->getAttribute(PropertyID::Flood_Color);
-            Color floodColor = floodColorAttr.empty() ? Color(0, 0, 0) : Color(floodColorAttr);
-            auto floodOpacity = parseFirstFloat(element->getAttribute(PropertyID::Flood_Opacity), 1.f);
-
-            auto original = state.canvas();
-            auto shadow = Canvas::create(float(original->x()), float(original->y()), float(original->width()), float(original->height()));
-            shadow->blendCanvas(*original, BlendMode::Src_Over, 1.f);
-            shadow->tintToFloodColor(floodColor, floodOpacity);
-            shadow->boxBlur(sigma, sigma);
-            shadow->compositeDropShadowUnder(*original, dx, dy);
-            original->copyPixelsFrom(*shadow);
-        }
+        auto output = element->applyFilterPrimitive(context);
+        if(!output)
+            continue; // not a primitive (e.g. a stray feMergeNode outside feMerge)
+        context.setResult(element->getAttribute(PropertyID::Result), std::move(output));
     }
+
+    state.canvas()->copyPixelsFrom(*context.lastResult());
 }
 
 NOVASVG_INLINE void SVGMaskElement::layoutElement(const SVGLayoutState& state)

@@ -53,49 +53,45 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
   thorvg-partial) draw *something*, 2 of 5 (resvg, thorvg-mostly) draw a
   blank/near-blank canvas, and 2 of 5 (lunasvg, cairosvg) fail outright
   before producing any image.
-- Nothing here applies the CSS `transform:` *property* (as opposed to the
-  SVG `transform=` attribute) — shared limitation across this whole class
-  of SVG-only, no-HTML-box-model renderers, not a novasvg-specific gap.
+- Nothing here applied the CSS `transform:` *property* (as opposed to the
+  SVG `transform=` attribute) at the time this comparison table was first
+  generated — novasvg has since fixed this (see Fixes below); resvg,
+  lunasvg, and cairosvg still don't.
 
 ## Fixes applied to novasvg since the table above was first generated
 
-- **`feGaussianBlur` / `feDropShadow` support added.** Was previously
-  unimplemented (`<filter>` and its children weren't even in the element
-  parser, silently dropped as unknown). Added:
-  - `Canvas::boxBlur()` — 3-pass box blur approximating a true Gaussian
-    (the same "fast almost-gaussian" trick thorvg and browsers use),
-    operating directly on the premultiplied ARGB surface buffer.
-  - `Canvas::tintToFloodColor()` / `Canvas::compositeDropShadowUnder()` —
-    recolor-to-flood-color + offset + composite-behind, for feDropShadow.
-  - `<filter>`, `<feGaussianBlur>`, `<feDropShadow>` now parse as real
-    elements; a graphics element's `filter="url(#id)"` now triggers
-    offscreen-buffer compositing (reusing the exact mechanism `mask`
-    already used) with the buffer inflated by a blur-radius-aware margin
-    so blur/shadow spread isn't clipped at the element's plain bbox.
-  - Deliberately NOT implemented (ponytail-scoped): a generic filter
-    primitive graph (`feOffset`, `feFlood`, `feComposite`, `feMerge`,
-    `in`/`result` chaining), filter regions (`x`/`y`/width/height` on
-    `<filter>`), or any primitive beyond these two — only what the
-    comparison above actually exercises. Upgrade path noted in the code
-    (`svgelement.h`, `SVGFilterElement`) if more primitives are needed
-    later.
-  - This closes novasvg's only remaining gap against resvg found in this
-    comparison (drop-shadow/blur were resvg's one advantage; novasvg now
-    matches it there while still leading on foreignObject text).
-  - **In progress:** replacing this special-cased pair with a proper
-    filter-primitive pipeline (`feOffset`, `feFlood`, `feComposite`,
-    `feMerge`, `in`/`result` chaining) using a Template Method pattern —
-    `SVGElement::applyFilterPrimitive()` virtual, overridden per
-    primitive class, executed in sequence by `SVGFilterElement`. Canvas
-    building blocks (`shift()`, `compositeWith()` with full Porter-Duff
-    Over/In/Out/Atop/Xor, `fillOpaqueWhite()`) are done; the primitive
-    element classes and the pipeline executor itself are not wired up
-    yet, so `feOffset`/`feFlood`/`feComposite`/`feMerge` are registered
-    as element names but not yet functional. Existing tests (blur,
-    drop-shadow, everything else in this doc) are unaffected and pass.
+- **Full filter-primitive pipeline added**: `feGaussianBlur`, `feOffset`,
+  `feFlood`, `feComposite` (Over/In/Out/Atop/Xor), `feMerge`/`feMergeNode`,
+  and `feDropShadow`, with real `in`/`in2`/`result` chaining
+  (`SourceGraphic`/`SourceAlpha` included). Built as a proper pipeline:
+  `SVGElement::applyFilterPrimitive()` is a Template Method virtual,
+  overridden by one small class per primitive; `SVGFilterElement` is just
+  an executor that calls it on each child in document order and threads
+  the result through `SVGFilterContext` — no per-type switch statement,
+  adding a primitive later means adding one class. Canvas-level building
+  blocks (`boxBlur`, `shift`, `tintToFloodColor`, `fillOpaqueWhite`,
+  `compositeWith` with full Porter-Duff math) are shared by all of them.
+  Verified with a from-scratch drop shadow built purely from 5 chained
+  primitives (`data/feature-filter-primitives.svg`) matching the
+  dedicated `feDropShadow` shorthand's output.
+  - Not implemented (ponytail-scoped, noted in code): `feComposite`'s
+    `arithmetic` operator (falls back to `over`), per-primitive filter
+    regions (`x`/`y`/width/height` on `<filter>` or individual
+    primitives — the whole chain currently shares one region sized off
+    the filtered element's bbox), and primitives with no test coverage
+    yet (`feColorMatrix`, `feTurbulence`, `feDisplacementMap`, ...).
+  - This closes novasvg's only remaining gap against resvg found in
+    this comparison (drop-shadow/blur were resvg's one advantage;
+    novasvg now matches it there while still leading on foreignObject
+    text) — and goes further than any of the other four on filters,
+    since none of them expose a working primitive chain either.
+  - **Possible speed-up, not yet done:** `Canvas::boxBlur`'s per-pixel
+    loop (`Canvas::compositeWith` too) is scalar and branch-y; see
+    `checklist.md` for concrete SIMD/algorithmic notes if this ever
+    shows up as a bottleneck.
 
-- **CSS `transform:` property support added.** Two independent bugs, both
-  root-caused and fixed:
+- **CSS `transform:` property support added.** Two independent bugs,
+  both root-caused and fixed:
   1. `matrix.h`'s attribute-grammar parser rejected any unit suffix
      (`deg`, `rad`, ...) on a transform function's number, silently
      dropping the *entire* transform list on the first such token. Fixed
@@ -132,7 +128,6 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
 - zenuml (nested HTML+CSS inside `<foreignObject>`) — still only raw
   text, no layout. Out of scope for a "fix", this needs an actual HTML
   layout engine.
-- The full filter-primitive graph mentioned above.
 
 ## Bottom line
 
@@ -140,9 +135,10 @@ No single winner — pick by what you're rendering:
 
 - Need mermaid-style diagrams with foreignObject text labels → **novasvg**
   is the strongest of the five tested here (still incomplete).
-- Need correct filter effects (blur/shadow) → **novasvg** or **resvg**,
-  now tied (novasvg added feGaussianBlur/feDropShadow support — see Fixes
-  section above).
+- Need correct filter effects → **novasvg**, now the most complete of
+  the five: a real primitive pipeline (blur/offset/flood/composite/merge/
+  drop-shadow with `in`/`result` chaining), not just the two primitives
+  resvg alone previously covered.
 - Need a battle-tested, spec-heavy general SVG renderer and don't need
   foreignObject → **resvg** or **lunasvg**, roughly tied.
 - **thorvg** is built for Lottie/vector-animation workloads first; as a
