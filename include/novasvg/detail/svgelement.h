@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <optional>
 #include <cmath>
+#include <cctype>
 #include <set>
 #include <cassert>
 #include "svgparserutils.h"
@@ -5810,6 +5811,18 @@ namespace {
 // non-wrapping, already-pre-laid-out text run.
 inline std::string foreignObjectPlainText(std::string_view html)
 {
+    // Tag names that force a line break, matching their real-browser
+    // default of `display: block` (so a `<br>`/`<p>`/`<div>` boundary
+    // becomes '\n', preserved through the whitespace-collapse pass below,
+    // instead of collapsing into an ordinary space like inline tags do).
+    // Mermaid's own labels are `white-space: nowrap` by design (each is
+    // laid out to fit on one line at the font it expects) and only ever
+    // span multiple lines where it inserted an explicit `<br>` itself at
+    // a deliberate break point -- so honoring just these forced breaks
+    // reproduces real multi-line labels without needing general
+    // width-based word-wrap.
+    static const std::set<std::string_view> block_tags = {"br", "p", "div", "tr", "li"};
+
     std::string out;
     out.reserve(html.size());
     bool inTag = false;
@@ -5823,14 +5836,20 @@ inline std::string foreignObjectPlainText(std::string_view html)
         }
 
         if(c == '<') {
-            // ponytail: treat every tag boundary as a potential word
-            // separator (real browsers only do this for block-level
-            // tags like <br>/<p>/<div>, not inline ones like <span>) --
-            // consecutive/leading/trailing spaces are collapsed below, so
-            // over-inserting here is harmless, while under-inserting
-            // glues adjacent words together (e.g. "line" + "<br/>" +
-            // "edge" -> "lineedge"), which is the worse failure mode.
-            out += ' ';
+            auto nameStart = i + 1;
+            if(nameStart < html.size() && html[nameStart] == '/')
+                ++nameStart;
+            auto nameEnd = nameStart;
+            while(nameEnd < html.size() && ((html[nameEnd] >= 'a' && html[nameEnd] <= 'z') || (html[nameEnd] >= 'A' && html[nameEnd] <= 'Z')))
+                ++nameEnd;
+            std::string tagName(html.substr(nameStart, nameEnd - nameStart));
+            for(auto& ch : tagName)
+                ch = char(std::tolower(static_cast<unsigned char>(ch)));
+
+            // ponytail: every OTHER tag boundary still becomes a plain
+            // space (over-inserting there is harmless, see below), only
+            // this small block-level set forces an actual line break.
+            out += block_tags.count(tagName) ? '\n' : ' ';
             inTag = true;
             ++i;
             continue;
@@ -5849,12 +5868,24 @@ inline std::string foreignObjectPlainText(std::string_view html)
         ++i;
     }
 
+    // Collapse runs of ordinary whitespace into a single space (trimming
+    // leading/trailing), same as before -- but '\n' is preserved as its
+    // own line-break marker rather than being folded into that, and
+    // spaces immediately touching a '\n' are dropped rather than kept as
+    // a redundant space before/after the break.
     std::string collapsed;
     collapsed.reserve(out.size());
     bool lastWasSpace = true; // trims leading whitespace too
     for(char c : out) {
-        if(c == '\t' || c == '\n' || c == '\r')
+        if(c == '\t' || c == '\r')
             c = ' ';
+        if(c == '\n') {
+            while(!collapsed.empty() && collapsed.back() == ' ')
+                collapsed.pop_back();
+            collapsed += '\n';
+            lastWasSpace = true;
+            continue;
+        }
         if(c == ' ') {
             if(lastWasSpace)
                 continue;
@@ -5864,7 +5895,7 @@ inline std::string foreignObjectPlainText(std::string_view html)
         }
         collapsed += c;
     }
-    while(!collapsed.empty() && collapsed.back() == ' ')
+    while(!collapsed.empty() && (collapsed.back() == ' ' || collapsed.back() == '\n'))
         collapsed.pop_back();
     return collapsed;
 }
@@ -6087,6 +6118,54 @@ inline Color foreignObjectTextColor(std::string_view rawHtml, const SVGRootEleme
     return findTagColor(rawHtml, root, "color").value_or(Color(0, 0, 0));
 }
 
+// Greedy word-wrap: splits `text` (already using '\n' for the forced
+// breaks foreignObjectPlainText() inserts at <br>/<p>/<div> boundaries)
+// into as many paragraphs as it has explicit breaks, then further
+// wraps each paragraph's words into as many lines as needed to fit
+// `maxWidth` at `font`'s metrics -- reusing the same measureText() the
+// single-line path already depended on. An unbreakable single word
+// wider than maxWidth on its own is still returned as its own
+// (overflowing) line; the caller falls back to the same horizontal
+// condense trick per-line for that rare case, exactly as the old
+// single-line code did for the whole string.
+inline std::vector<std::u32string> wrapForeignObjectText(const std::string& text, const Font& font, float maxWidth)
+{
+    std::vector<std::u32string> lines;
+    size_t pos = 0;
+    while(pos <= text.size()) {
+        auto nl = text.find('\n', pos);
+        auto paragraph = text.substr(pos, nl == std::string::npos ? std::string::npos : nl - pos);
+        pos = (nl == std::string::npos) ? text.size() + 1 : nl + 1;
+        if(paragraph.empty())
+            continue;
+
+        std::u32string currentLine;
+        size_t wordStart = 0;
+        while(wordStart <= paragraph.size()) {
+            auto wordEnd = paragraph.find(' ', wordStart);
+            auto word = paragraph.substr(wordStart, wordEnd == std::string::npos ? std::string::npos : wordEnd - wordStart);
+            wordStart = (wordEnd == std::string::npos) ? paragraph.size() + 1 : wordEnd + 1;
+            if(word.empty())
+                continue;
+
+            auto u32word = utf8ToU32(word);
+            auto candidate = currentLine.empty() ? u32word : currentLine + U" " + u32word;
+            if(!currentLine.empty() && font.measureText(candidate) > maxWidth) {
+                lines.push_back(currentLine);
+                currentLine = std::move(u32word);
+            } else {
+                currentLine = std::move(candidate);
+            }
+        }
+        if(!currentLine.empty())
+            lines.push_back(currentLine);
+    }
+
+    if(lines.empty())
+        lines.emplace_back();
+    return lines;
+}
+
 } // namespace
 
 NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* element, SVGRenderState& state) const
@@ -6099,36 +6178,20 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
     if(font.isNull())
         return;
 
-    auto u32text = utf8ToU32(text);
-    std::u32string_view textView(u32text);
-
     auto box = element->fillBoundingBox();
-    auto textWidth = font.measureText(textView);
+    auto lines = wrapForeignObjectText(text, font, box.w);
 
-    // A real Trebuchet-MS-metrics render (Mermaid computed this box that
-    // way, and a Playwright/Chromium ground-truth render confirms it)
-    // always fits with room to spare -- so overflow here only ever means
-    // OUR substitute font is wider than the one the box was sized for
-    // (this environment lacks Trebuchet MS; whatever fontconfig hands
-    // back instead rarely matches its metrics). There's no reliable way
-    // to know how much wider without the real font, so rather than
-    // truncating the word (which we first tried, matching a PhantomJS
-    // reference -- turned out that reference itself doesn't match a real
-    // Chromium render either) we condense it horizontally to fit. Full,
-    // slightly narrower text reads better than a clipped word.
-    float scale = 1.f;
-    if(textWidth > box.w && textWidth > 0.f)
-        scale = box.w / textWidth;
-    Point origin(
-        box.x + (box.w - textWidth * scale) / 2.f,
-        // Vertical centering: baseline = box-center + (ascent+descent)/2,
-        // consistent with the AlignmentBaseline::Central case elsewhere
-        // in this file (descent() is negative, so this pulls the
-        // baseline UP from box-center by half the descent -- using minus
-        // here instead double-counts descent and sinks the text visibly
-        // below center).
-        box.y + (box.h + font.ascent() + font.descent()) / 2.f
-    );
+    // ponytail: fixed 1.2x line-height rather than reading the HTML's
+    // own `line-height` CSS value (mermaid's own content usually says
+    // 1.5) -- close enough for readability, and every line is still
+    // independently centered/condensed below regardless of the exact
+    // spacing between them. Upgrade path: extend the existing
+    // `parseColorDeclaration`-style generic value scanner to pull a
+    // numeric `line-height` the same way color/background-color already
+    // are, if tighter fidelity is ever needed.
+    auto lineHeight = font.height() * 1.2f;
+    auto totalHeight = lineHeight * float(lines.size());
+    auto topY = box.y + (box.h - totalHeight) / 2.f;
 
     if(auto backgroundColor = foreignObjectBackgroundColor(element->rawContent(), element->rootElement())) {
         state->setColor(*backgroundColor);
@@ -6139,15 +6202,37 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
 
     const auto textColor = foreignObjectTextColor(element->rawContent(), element->rootElement());
     state->setColor(textColor);
-    {
+
+    for(size_t i = 0; i < lines.size(); ++i) {
+        std::u32string_view lineView(lines[i]);
+        auto lineWidth = font.measureText(lineView);
+
+        // A real Trebuchet-MS-metrics render always fits each wrapped
+        // line with room to spare -- so overflow here only ever means
+        // OUR substitute font is wider than the one mermaid measured
+        // with (this environment lacks Trebuchet MS). There's no
+        // reliable way to know how much wider without the real font, so
+        // rather than truncating (tried before, still didn't match a
+        // real Chromium render) we condense that one line horizontally.
+        float scale = 1.f;
+        if(lineWidth > box.w && lineWidth > 0.f)
+            scale = box.w / lineWidth;
+
+        Point origin(
+            box.x + (box.w - lineWidth * scale) / 2.f,
+            // Baseline for this line = top of the text block + however
+            // many line-heights precede it + this font's ascent.
+            topY + float(i) * lineHeight + font.ascent()
+        );
+
         auto textTransform = state.currentTransform();
         if(scale < 1.f) {
-            // Condense horizontally about the text's own left edge so it
+            // Condense horizontally about the line's own left edge so it
             // still lands at `origin`; only x is scaled, so glyph height
-            // (and therefore vertical centering) is untouched.
+            // (and therefore this line's vertical position) is untouched.
             textTransform = textTransform * Transform::translated(origin.x, 0.f) * Transform::scaled(scale, 1.f) * Transform::translated(-origin.x, 0.f);
         }
-        state->fillText(textView, font, origin, textTransform);
+        state->fillText(lineView, font, origin, textTransform);
     }
 }
 

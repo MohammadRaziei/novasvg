@@ -18,7 +18,7 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
 |---|---|---|---|---|---|
 | venn — plain shapes/text | match | match | match | match | **text missing entirely** (shapes fine) |
 | block — plain shapes/text | match | match | match | match | text missing, **CSS-class fills render solid black** |
-| flowchart — `<br/>`/text inside `<foreignObject>`, CSS classDef fills | text now correctly space-separated and colored; **the "Inner / circle..." label that was previously invisible now renders in black** (text-color-inheritance fix — see Fixes below). Only remaining gap: no real multi-line wrapping (still one condensed line) | blank (no foreignObject text) | blank | blank | text missing entirely; subgraph bg and several classDef-filled shapes render **solid black**; edges render as thick black wedges |
+| flowchart — `<br/>`/text inside `<foreignObject>`, CSS classDef fills | text now correctly space-separated, colored, and **genuinely multi-line** (real greedy word-wrap, not a single condensed line — see Fixes below); the "Inner / circle..." label renders in black across properly wrapped lines | blank (no foreignObject text) | blank | blank | text missing entirely; subgraph bg and several classDef-filled shapes render **solid black**; edges render as thick black wedges |
 | zenuml — nested HTML+CSS inside `<foreignObject>` (Vue-rendered) | raw concatenated text only, no layout | blank canvas | **fails to parse the file** (hard error) | **hard crash**: `ValueError: could not convert string to float: 'calc(100'` | only a stray inline `<svg>` icon fragment renders, wrong scale/position; everything else (boxes, text, lifelines) missing |
 | base64 `<image>` (href/xlink:href) | ok | ok | ok | ok | ok (image fine, caption **text missing**) |
 | linear/radial gradient | ok | ok | ok | ok | ok |
@@ -137,12 +137,35 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
   `color`-styled labels ("Backend" green, "Frontend" blue) still resolve
   correctly, confirming no regression on the working case.
 
+- **foreignObject real multi-line text wrapping added.** Previously a
+  single horizontally-condensed line no matter what; now genuine
+  greedy word-wrap. Two mechanisms, combined:
+  1. `foreignObjectPlainText()` now inserts an actual `'\n'` break at
+     `<br>`/`<p>`/`<div>`/`<tr>`/`<li>` tag boundaries (previously
+     collapsed to a plain space like every other tag, which is why
+     `<br/>`-separated text used to glue into one run).
+  2. A new `wrapForeignObjectText()` further greedy-wraps each of those
+     break-delimited segments by width, using the same `font.measureText()`
+     the old single-line condense logic already relied on — reusing it
+     per-candidate-line instead of once for the whole string. Each line
+     gets the same per-line horizontal-condense fallback the old code
+     applied to the whole block, for the rare case of a single
+     unbreakable word wider than the box.
+  - Verified against the real mmdc/Chrome reference
+    (`data/mermaid/02-flowchart-issue17.mmdc.png`): line *content* and
+    break points now match closely. Line *count* can still run one or
+    two lines higher than Chrome's for borderline-width labels — that
+    residual gap is the substitute-font-metrics issue this file's
+    comments already flagged (no Trebuchet MS in this environment),
+    not a wrapping-logic bug; every line still fits its box cleanly
+    rather than being squished, which reads better than the old
+    condense-the-whole-block behavior even when the line count differs.
+  - Line-height is a fixed 1.2× multiplier rather than reading the
+    HTML's own `line-height` (mermaid's content usually says `1.5`) —
+    noted as an upgrade path in `checklist.md`.
+
 ## Still open
 
-- foreignObject real multi-line text wrapping — still one condensed
-  line rather than actual word-wrap (documented as intentional in
-  `ForeignObjectSimple`'s own comment; needs real text-layout code, not
-  a small patch — see `checklist.md`).
 - zenuml (nested HTML+CSS inside `<foreignObject>`) — still only raw
   text, no layout. Out of scope for a "fix", this needs an actual HTML
   layout engine.
