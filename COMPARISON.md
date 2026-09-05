@@ -74,8 +74,12 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
   Verified with a from-scratch drop shadow built purely from 5 chained
   primitives (`data/feature-filter-primitives.svg`) matching the
   dedicated `feDropShadow` shorthand's output.
-  - Not implemented (ponytail-scoped, noted in code): `feComposite`'s
-    `arithmetic` operator (falls back to `over`), per-primitive filter
+  - **`feComposite operator="arithmetic"` added** (`Canvas::compositeArithmetic`,
+    the `result = k1*i1*i2 + k2*i1 + k3*i2 + k4` per-channel formula on
+    normalized premultiplied values). Verified against resvg with a
+    multiply-blend chain (`data/feature-filter-arithmetic.svg`,
+    `k1=1,k2=k3=k4=0`) — pixel-identical output.
+  - Not implemented (ponytail-scoped, noted in code): per-primitive filter
     regions (`x`/`y`/width/height` on `<filter>` or individual
     primitives — the whole chain currently shares one region sized off
     the filtered element's bbox), and primitives with no test coverage

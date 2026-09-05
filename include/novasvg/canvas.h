@@ -491,6 +491,12 @@ public:
     void compositeWith(const Canvas& src, PorterDuff mode);
     void compositeOver(const Canvas& src) ;
 
+    // feComposite operator="arithmetic": result = k1*i1*i2 + k2*i1 + k3*i2 + k4
+    // per channel, in normalized [0,1] premultiplied space, clamped back to
+    // [0,1]. `src` is i1, `this` (already holding in2's pixels) is i2 --
+    // the result replaces `this` in place.
+    void compositeArithmetic(const Canvas& src, float k1, float k2, float k3, float k4);
+
     // Raw memcpy of `other`'s pixel buffer into this one -- both must be
     // the same width/height/stride (caller's responsibility).
     void copyPixelsFrom(const Canvas& other);
@@ -1252,6 +1258,40 @@ NOVASVG_INLINE void Canvas::compositeWith(const Canvas& src, PorterDuff mode)
 NOVASVG_INLINE void Canvas::compositeOver(const Canvas& src)
 {
     compositeWith(src, PorterDuff::Over);
+}
+
+NOVASVG_INLINE void Canvas::compositeArithmetic(const Canvas& src, float k1, float k2, float k3, float k4)
+{
+    auto width = surface_get_width(m_surface);
+    auto height = surface_get_height(m_surface);
+    auto stride = surface_get_stride(m_surface);
+    auto data = surface_get_data(m_surface);
+
+    auto sWidth = surface_get_width(src.m_surface);
+    auto sHeight = surface_get_height(src.m_surface);
+    auto sStride = surface_get_stride(src.m_surface);
+    auto sData = surface_get_data(src.m_surface);
+
+    auto solve = [&](int i1, int i2) -> int {
+        auto f1 = float(i1) / 255.f;
+        auto f2 = float(i2) / 255.f;
+        auto result = k1 * f1 * f2 + k2 * f1 + k3 * f2 + k4;
+        return int(std::clamp(result, 0.f, 1.f) * 255.f + 0.5f);
+    };
+
+    for(int y = 0; y < height; ++y) {
+        auto* dst = reinterpret_cast<uint32_t*>(data + y * stride);
+        auto* srcRow = y < sHeight ? reinterpret_cast<uint32_t*>(sData + y * sStride) : nullptr;
+        for(int x = 0; x < width; ++x) {
+            auto s = (srcRow && x < sWidth) ? srcRow[x] : 0u;
+            auto d = dst[x];
+            auto outA = solve((s >> 24) & 0xFF, (d >> 24) & 0xFF);
+            auto outR = solve((s >> 16) & 0xFF, (d >> 16) & 0xFF);
+            auto outG = solve((s >> 8) & 0xFF, (d >> 8) & 0xFF);
+            auto outB = solve(s & 0xFF, d & 0xFF);
+            dst[x] = (uint32_t(outA) << 24) | (uint32_t(outR) << 16) | (uint32_t(outG) << 8) | uint32_t(outB);
+        }
+    }
 }
 
 NOVASVG_INLINE void Canvas::compositeDropShadowUnder(const Canvas& original, float dx, float dy)

@@ -67,6 +67,10 @@ enum class PropertyID : uint8_t {
     Id,
     In,
     In2,
+    K1,
+    K2,
+    K3,
+    K4,
     LengthAdjust,
     Letter_Spacing,
     Marker_End,
@@ -1343,13 +1347,20 @@ public:
         auto output = context.cloneCanvas(*input2);
 
         auto op = getAttribute(PropertyID::Operator);
+        if(op == "arithmetic") {
+            auto k1 = parseFirstFloat(getAttribute(PropertyID::K1), 0.f);
+            auto k2 = parseFirstFloat(getAttribute(PropertyID::K2), 0.f);
+            auto k3 = parseFirstFloat(getAttribute(PropertyID::K3), 0.f);
+            auto k4 = parseFirstFloat(getAttribute(PropertyID::K4), 0.f);
+            output->compositeArithmetic(*input, k1, k2, k3, k4);
+            return output;
+        }
+
         auto mode = Canvas::PorterDuff::Over;
         if(op == "in") mode = Canvas::PorterDuff::In;
         else if(op == "out") mode = Canvas::PorterDuff::Out;
         else if(op == "atop") mode = Canvas::PorterDuff::Atop;
         else if(op == "xor") mode = Canvas::PorterDuff::Xor;
-        // "arithmetic" (k1..k4 coefficients) is deliberately not
-        // implemented -- falls back to "over". See checklist.md.
 
         output->compositeWith(*input, mode);
         return output;
@@ -2165,6 +2176,10 @@ NOVASVG_INLINE PropertyID propertyid(std::string_view name)
         {"id", PropertyID::Id},
         {"in", PropertyID::In},
         {"in2", PropertyID::In2},
+        {"k1", PropertyID::K1},
+        {"k2", PropertyID::K2},
+        {"k3", PropertyID::K3},
+        {"k4", PropertyID::K4},
         {"lengthAdjust", PropertyID::LengthAdjust},
         {"markerHeight", PropertyID::MarkerHeight},
         {"markerUnits", PropertyID::MarkerUnits},

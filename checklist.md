@@ -80,10 +80,13 @@
       `std::lower_bound` (باینری سرچ) کار می‌کنن، پس باید همیشه sorted بمونن. اضافه‌کردن یه entry
       خارج از ترتیب الفبایی خطای build نمی‌ده، فقط silently لوکاپ رو برای یه بازه از کلیدها خراب
       می‌کنه. (یه بار روی `stdDeviation` گرفتارش شدیم.)
+- [x] **`feComposite operator="arithmetic"`** — فرمول `result = k1*i1*i2 + k2*i1 + k3*i2 + k4`
+      روی هر کانال (در فضای premultiplied نرمال‌شده)، به‌عنوان `Canvas::compositeArithmetic`.
+      تست شد: یه زنجیره‌ی multiply-blend واقعی (`k1=1`, بقیه صفر) روی
+      `data/feature-filter-arithmetic.svg` ساختم و با resvg مقایسه کردم — خروجی pixel-identical بود.
 
 ### عمداً پیاده نشده (scope کوچیک نگه داشته شد)
 
-- [ ] `feComposite operator="arithmetic"` — به ۴ ضریب k1..k4 نیاز داره؛ فعلاً fallback به `over`.
 - [ ] filter region جدا برای هر primitive (`x`/`y`/`width`/`height` روی `<filter>` یا خود primitive) —
       الان همه‌ی زنجیره یه ناحیه‌ی offscreen مشترک دارن (بر اساس bbox المان + margin).
 - [ ] `feColorMatrix`, `feTurbulence`, `feDisplacementMap`, `feTile`, `feImage`,
