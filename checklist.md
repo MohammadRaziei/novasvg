@@ -128,3 +128,73 @@
 
 هیچ‌کدوم از اینا برای درستیِ کد لازم نیستن — همه‌چی الان به شکل اسکالر تست‌هاش رو پاس می‌کنه.
 اینجا نوشته شدن که یه پاس بعدی نقطه‌ی شروع مشخص داشته باشه به‌جای "profile کن و ببین".
+
+## کارهای این نشست — CLI
+
+- [x] **اسم باینری از `novasvg-cli` به `novasvg` عوض شد** — هم توی `CMakeLists.txt`
+      (`OUTPUT_NAME`) هم توی خودِ `src/novasvg_cli.cpp` (`app.name()`, تیتر، همه‌ی
+      متن‌های help/footer). جالبه که `README_CLI.md` از قبل با فرض اسم `novasvg` نوشته
+      شده بود — یعنی این تغییر باگ ناهماهنگیِ قدیمی بین کد و مستندات رو هم حل کرد.
+- [x] **`convert` دیگه لازم نیست نوشته بشه** — اگه اولین آرگومان یه subcommand شناخته‌شده
+      (`convert`/`info`/`query`/`batch`) یا یه فلگ top-level نباشه، خودش `convert` رو قبلش
+      inject می‌کنه. یعنی `novasvg input.svg -o out.png` دقیقاً همون `novasvg convert
+      input.svg -o out.png` رو انجام می‌ده. پیاده‌سازی: پیش‌پردازش argv قبل از `app.parse`،
+      نه دستکاری خودِ CLI11.
+- [x] **`README.md` و `README_CLI.md` هر دو آپدیت شدن** — `README_CLI.md` واقعاً خیلی
+      قدیمی‌تر از چیزی بود که فکر می‌کردم: subcommandهایی مثل `font add/list/clear` و
+      `apply-css` رو مستند کرده بود که اصلاً توی کد وجود نداشتن. کامل بازنویسی شد تا
+      دقیقاً با رفتار واقعیِ CLI (که با `--help` هر subcommand چک شد) یکی باشه.
+
+### تصمیمی که نگرفتم — نظرت رو بگو
+
+- [ ] گفتی "بقیه کامندهاش چرت هست" — من `info`/`query`/`batch` رو **حذف نکردم**، فقط
+      دیگه لازم نیست صداشون بزنی چون `convert` پیش‌فرضه. اگه واقعاً می‌خوای کاملاً حذف
+      بشن (نه فقط کم‌رنگ بشن)، بگو تا انجامش بدم — الان محافظه‌کارانه عمل کردم چون حذف
+      برگشت‌پذیر نیست.
+
+## کارهای این نشست — همسو کردن با ctoon
+
+- [x] **`README_CLI.md` حذف شد.** به‌جاش، درست مثل ctoon (که اصلاً همچین فایلی نداره)، مستندات CLI
+      دو جا توی `README.md` خودش جا گرفت: یه اسنیپت کوچیک زیر «Quick Start» (دقیقاً مثل بخش
+      `### CLI` ctoon زیر `## Quick Start`ش) و یه بخش کامل‌تر «## 🖥️ CLI Reference» (مثل بخش
+      `## CLI Reference` ctoon که کنار `## C API Reference`ش میاد).
+- [x] **حذف argv-injection hack، جایگزین با ساختار درستِ CLI11.** قبلاً برای implicit-convert
+      argv رو دستی rewrite می‌کردیم که واقعاً bad practice بود. الان دقیقاً مثل خودِ CLI ctoon
+      (که اصلاً subcommand نداره، فقط option روی root app): آپشن‌های convert مستقیم روی خودِ
+      `app` نشستن (نه زیر یه subcommand بنام "convert")، و `info`/`query`/`batch` subcommand
+      واقعی CLI11 موندن. یعنی دیگه هیچ دستکاری‌ای روی argv نیست — CLI11 خودش قبل از این‌که یه
+      token رو positional حساب کنه چک می‌کنه ببینه اسم subcommand هست یا نه. یه اثر جانبی: کلمه‌ی
+      `convert` دیگه اصلاً یه subcommand شناخته‌شده نیست (مثل ctoon که هیچ‌وقت "encode"/"decode"
+      subcommand نداشته، فقط فلگ) — `novasvg convert file.svg` دیگه کار نمی‌کنه، باید مستقیم
+      `novasvg file.svg` بزنی.
+      - یه باگ کوچیک جانبی هم فیکس شد ضمن این کار: قبلاً exit code واقعیِ subcommandها
+        (`info`/`query`/`batch`) توی callback گم می‌شد (چون `std::function<void()>` مقدار
+        برگشتی لامبدا رو دور می‌ریخت) و `main` همیشه ۰ برمی‌گردوند حتی وقتی cmd خودش خطا داده
+        بود. الان با یه متغیر مشترک `exit_code` درست propagate می‌شه.
+- [x] **`cmake/Optimize.cmake` از ctoon sync شد** — نسخه‌ی novasvg قدیمی و API متفاوتی داشت
+      (`gsp_enable_optimizations`/فست‌مث اجباری/march=native همیشه روشن)، نسخه‌ی ctoon
+      (`apply_optimization_flags`) تمیزتر و امن‌تره (march=native فقط پشت یه `ENABLE_NATIVE`
+      اختیاری، IPO جدا برای Release/RelWithDebInfo). الان `include(Optimize)` +
+      `apply_optimization_flags(novasvg_cli)` توی روتِ `CMakeLists.txt` صدا زده می‌شه (دقیقاً
+      همون‌جوری که ctoon روی `ctoon`/`ctoon_cli`ش صدا می‌زنه). روی خودِ کتابخونه‌ی `novasvg`
+      اعمال نشد چون اون یه INTERFACE target هست (header-only، چیزی برای کامپایل نداره که
+      `target_compile_options(... PRIVATE ...)` روش معنی بده).
+- [x] **بقیه‌ی ماژول‌های `cmake/` مشترک با ctoon چک شدن** — `DynamicVersion.cmake` فقط تفاوت
+      نام پروژه داشت (درسته، دست نخورد)، `Startup.cmake`/`CMakeGraphVizOptions.cmake`/
+      `FixLCovPaths.cmake` فقط یه خط خالیِ آخر فایل کم داشتن (sync شد)، `PyProject.cmake`
+      واقعاً یه قابلیت اضافه‌ی عمدی داره (پشتیبانی از pre-release suffix توی ورژن، که نسخه‌ی
+      ctoon نداره) — این یکی رو **عمداً sync نکردم** چون معلوم نیست جایی از novasvg بهش وابسته
+      باشه یا نه.
+
+### تصمیمی که نگرفتم — نظرت رو بگو
+
+- [ ] **`info`/`query`/`batch` هنوز حذف نشدن.** الان به عنوان subcommand کنار convert موندن
+      (که دیگه اصلاً subcommand نیست). اگه واقعاً می‌خوای این‌ها هم کامل حذف بشن بگو.
+- [ ] **matlab/go بایندینگ اضافه نشد** — این عمداً انجام نشد چون خودت گفتی «بعداً» اضافه می‌کنیم.
+      فقط یادداشت می‌کنم که وقتی خواستی اضافه‌شون کنی، ساختار ctoon اینه: matlab زیر
+      `src/bindings/matlab/CMakeLists.txt` با `find_package(Matlab COMPONENTS MX_LIBRARY
+      MEX_COMPILER QUIET)` که اگه پیدا نشد فقط `message(WARNING ...)` می‌ده و `return()` می‌کنه
+      (نه خطا)، و از روت با `add_subdirectory` بدون شرط صدا زده می‌شه. Go برخلاف بقیه‌ی
+      binding ها اصلاً زیر `src/bindings/` نیست — یه ماژول Go جداست در ریشه‌ی خودِ ریپو
+      (`go.mod` + یه فایل `.go`)، بیرون از سیستم CMake. الان هیچ فایل placeholder ساختگی
+      اضافه نکردم چون چیزی برای build کردن نداره و فقط شلوغی بی‌فایده می‌شه.

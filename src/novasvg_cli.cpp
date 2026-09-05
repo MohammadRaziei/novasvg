@@ -326,41 +326,45 @@ int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
 int main(int argc, char** argv) {
     const std::string version_str = novasvg::versionString();
 
-    CLI::App app{"novasvg-cli Command Line Interface v" + version_str + " - High-performance SVG rendering toolkit."};   
-    app.name("novasvg-cli");
+    CLI::App app{"novasvg Command Line Interface v" + version_str + " - High-performance SVG rendering toolkit."};
+    app.name("novasvg");
     app.set_version_flag("-v,--version", version_str, "Show version information");
 
     // --------------------------------------------------------
-    // Convert Command
+    // Convert -- the default action. Its options live directly on the
+    // root app (matching ctoon's CLI, which does the same for its
+    // primary action) rather than behind a "convert" subcommand, so
+    // `novasvg input.svg -o out.png` just works with no keyword needed.
+    // `info`/`query`/`batch` below are real CLI11 subcommands for the
+    // genuinely different actions -- both forms are ordinary CLI11, no
+    // argv rewriting: CLI11 matches a token against a subcommand name
+    // before it considers consuming it as a positional here.
     // --------------------------------------------------------
-    auto convert_cmd = app.add_subcommand("convert", "Convert SVG files to PNG with optional styling.");
     std::string convert_input, convert_output, convert_bg_color, convert_style, convert_css_file;
     int convert_width = -1, convert_height = -1;
     float convert_scale = 0.0f;
 
-    convert_cmd->add_option("input", convert_input, "Input SVG file")->required()->check(CLI::ExistingFile);
-    convert_cmd->add_option("-o,--output", convert_output, "Output PNG file (default: input name with .png extension)");
-    convert_cmd->add_option("-w,--width", convert_width, "Output width in pixels");
-    convert_cmd->add_option("-H,--height", convert_height, "Output height in pixels");
-    convert_cmd->add_option("-s,--scale", convert_scale, "Scale factor (e.g., 2.0)");
-    convert_cmd->add_option("-b,--background-color", convert_bg_color, "Background color (hex: RRGGBB or RRGGBBAA, default: transparent)");
-    convert_cmd->add_option("--style", convert_style, "Apply CSS styles directly (string)");
-    convert_cmd->add_option("--css-file", convert_css_file, "Apply CSS styles from file")->check(CLI::ExistingFile);
+    app.add_option("input", convert_input, "Input SVG file")->check(CLI::ExistingFile);
+    app.add_option("-o,--output", convert_output, "Output PNG file (default: input name with .png extension)");
+    app.add_option("-w,--width", convert_width, "Output width in pixels");
+    app.add_option("-H,--height", convert_height, "Output height in pixels");
+    app.add_option("-s,--scale", convert_scale, "Scale factor (e.g., 2.0)");
+    app.add_option("-b,--background-color", convert_bg_color, "Background color (hex: RRGGBB or RRGGBBAA, default: transparent)");
+    app.add_option("--style", convert_style, "Apply CSS styles directly (string)");
+    app.add_option("--css-file", convert_css_file, "Apply CSS styles from file")->check(CLI::ExistingFile);
 
-    // Add specific help for convert command
-    convert_cmd->footer(
+    app.footer(
         "Examples:\n"
-        "  novasvg-cli convert input.svg\n"
-        "  novasvg-cli convert input.svg -o out.png\n"
-        "  novasvg-cli convert input.svg -w 800 -H 600\n"
-        "  novasvg-cli convert input.svg --css-file style.css\n"
-        "  novasvg-cli convert input.svg --css \"rect { fill: red; }\"\n"
+        "  novasvg input.svg\n"
+        "  novasvg input.svg -o out.png -w 800 -H 600\n"
+        "  novasvg input.svg --css-file style.css\n"
+        "  novasvg input.svg --style \"rect { fill: red; }\"\n"
+        "  novasvg info image.svg\n"
+        "  novasvg query \"circle\" input.svg\n"
+        "  novasvg batch ./svgs ./images\n"
     );
 
-    convert_cmd->callback([&]() {
-        return cmd_convert(convert_input, convert_output, convert_width, convert_height, 
-                           convert_bg_color, convert_scale, convert_style, convert_css_file);
-    });
+    int exit_code = 0;
 
     // --------------------------------------------------------
     // Info Command
@@ -371,15 +375,15 @@ int main(int argc, char** argv) {
 
     info_cmd->add_option("input", info_input, "Input SVG file")->required()->check(CLI::ExistingFile);
     info_cmd->add_flag("--json", info_json, "Output in JSON format");
-    
+
     info_cmd->footer(
         "Examples:\n"
-        "  novasvg-cli info image.svg\n"
-        "  novasvg-cli info image.svg --json\n"
+        "  novasvg info image.svg\n"
+        "  novasvg info image.svg --json\n"
     );
 
     info_cmd->callback([&]() {
-        return cmd_info(info_input, info_json);
+        exit_code = cmd_info(info_input, info_json);
     });
 
     // --------------------------------------------------------
@@ -395,12 +399,12 @@ int main(int argc, char** argv) {
 
     query_cmd->footer(
         "Examples:\n"
-        "  novasvg-cli query \"circle\" input.svg\n"
-        "  novasvg-cli query \"rect[fill='red']\" input.svg\n"
+        "  novasvg query \"circle\" input.svg\n"
+        "  novasvg query \"rect[fill='red']\" input.svg\n"
     );
 
     query_cmd->callback([&]() {
-        return cmd_query(query_selector, query_input, query_json);
+        exit_code = cmd_query(query_selector, query_input, query_json);
     });
 
     // --------------------------------------------------------
@@ -414,12 +418,14 @@ int main(int argc, char** argv) {
 
     batch_cmd->footer(
         "Examples:\n"
-        "  novasvg-cli batch ./svgs ./images\n"
+        "  novasvg batch ./svgs ./images\n"
     );
 
     batch_cmd->callback([&]() {
-        return cmd_batch(batch_input, batch_output);
+        exit_code = cmd_batch(batch_input, batch_output);
     });
+
+    app.require_subcommand(0, 1); // subcommand is optional -- root options are "convert"
 
     // --------------------------------------------------------
     // Parse
@@ -436,6 +442,15 @@ int main(int argc, char** argv) {
         std::cerr << "Error: " << e.what() << "\n";
         return 1;
     }
-    
-    return 0;
+
+    if (!app.get_subcommands().empty())
+        return exit_code; // info/query/batch already ran via their callback above
+
+    // No subcommand was given: this is the implicit convert action.
+    if (convert_input.empty()) {
+        std::cout << app.help() << std::endl;
+        return 0;
+    }
+    return cmd_convert(convert_input, convert_output, convert_width, convert_height,
+                        convert_bg_color, convert_scale, convert_style, convert_css_file);
 }

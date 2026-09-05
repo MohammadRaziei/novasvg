@@ -98,25 +98,12 @@ int main() {
 ### Command-Line Usage
 
 ```bash
-# Convert SVG to PNG (defaults to input name with .png extension)
-novasvg-cli convert input.svg
-
-# Convert to a specific output file and dimensions
-novasvg-cli convert input.svg -o output.png -w 800 -H 600
-
-# Get SVG information
-novasvg-cli info document.svg
-
-# Find all circles
-novasvg-cli query "circle" shapes.svg
-
-# Apply CSS styles while converting
-novasvg-cli convert input.svg -o styled.png --style "rect { fill: red; }"
-novasvg-cli convert input.svg -o styled.png --css-file styles.css
+cmake -B build && cmake --build build
+./build/novasvg input.svg              # convert is implied, no need to type it
+./build/novasvg input.svg -o output.png -w 800 -H 600
 ```
 
-Run `novasvg-cli --help` or `novasvg-cli <subcommand> --help` for the full
-option list (`convert`, `info`, `query`, `batch`).
+See the "CLI Reference" section below for the full option list.
 
 ## 📦 Installation
 
@@ -135,9 +122,9 @@ make -j4
 ```
 
 ### Command-Line Tool
-The `novasvg-cli` target builds automatically as part of the project (no
+The `novasvg` target builds automatically as part of the project (no
 separate flag needed) — after the build above, the binary is at
-`build/novasvg-cli`:
+`build/novasvg`:
 ```bash
 sudo make install  # Optional: install system-wide
 ```
@@ -171,6 +158,37 @@ sudo make install  # Optional: install system-wide
 - `inverse()` – Matrix inversion
 - Operator `*` – Matrix multiplication
 
+## 🖥️ CLI Reference
+
+```bash
+# Convert -- the default action, no subcommand keyword needed
+novasvg input.svg
+novasvg input.svg -o output.png
+novasvg input.svg -w 800 -H 600         # resize
+novasvg input.svg -s 2.0                # scale factor
+novasvg input.svg -b FFFFFF             # background color (hex)
+novasvg input.svg --style "rect { fill: red; }"
+novasvg input.svg --css-file custom.css
+
+# Info / query / batch -- real subcommands for the other actions
+novasvg info document.svg
+novasvg info document.svg --json
+novasvg query "circle" shapes.svg
+novasvg query "rect[fill='red']" shapes.svg --json
+novasvg batch svg_dir/ png_dir/
+```
+
+| Option | Description |
+|---|---|
+| `-o, --output <file>` | Output PNG file (default: input name with `.png`) |
+| `-w, --width <px>` / `-H, --height <px>` | Output dimensions |
+| `-s, --scale <factor>` | Scale factor (e.g. `2.0`) |
+| `-b, --background-color <hex>` | `RRGGBB` or `RRGGBBAA` (default: transparent) |
+| `--style <css>` / `--css-file <file>` | Apply CSS before rendering |
+
+Run `novasvg --help` or `novasvg <subcommand> --help` for the complete,
+always-up-to-date option list.
+
 ## 🔧 Build Options
 
 | Option | Description | Default |
@@ -181,8 +199,9 @@ sudo make install  # Optional: install system-wide
 | `NOVASVG_BUILD_DOCS` | Build documentation with Doxygen | `OFF` |
 | `NOVASVG_DIST_DIR` | Generate single-header distribution | Not defined |
 
-The `novasvg-cli` command-line tool itself has no build flag — it's built
-unconditionally alongside the library.
+The `novasvg` command-line tool itself has no build flag — it's built
+unconditionally alongside the library. Converting is the implied default
+action (`novasvg input.svg` works with no subcommand needed).
 
 ## 🧪 Examples
 
@@ -226,7 +245,7 @@ NovaSVG is distributed under the **MIT License**. See [LICENSE.txt](LICENSE.txt)
 - **API Reference**: Built with Doxygen (enable with `-DNOVASVG_BUILD_DOCS=ON`)
 - **Online Documentation**: https://mohammadraziei.github.io/novasvg
 - **Examples**: See `examples/` directory
-- **CLI Documentation**: See `README_CLI.md`
+- **CLI Documentation**: See the "CLI Reference" section above
 - **Renderer comparison**: `COMPARISON.md` — an empirical, same-input
   comparison against resvg/lunasvg/cairosvg/thorvg (filters, CSS
   transforms, foreignObject text handling)

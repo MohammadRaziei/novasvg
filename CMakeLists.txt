@@ -18,6 +18,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Include optimization flags
+include(Optimize)
+
 # Project options
 option(NOVASVG_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
@@ -36,7 +39,8 @@ target_include_directories(novasvg INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
 # Add CLI executable
 add_executable(novasvg_cli src/novasvg_cli.cpp)
 target_link_libraries(novasvg_cli PRIVATE novasvg::novasvg)
-set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg-cli)
+set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg)
+apply_optimization_flags(novasvg_cli)
 
 
 # target_compile_features(novasvg INTERFACE cxx_std_17)
