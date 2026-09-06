@@ -4755,7 +4755,18 @@ NOVASVG_INLINE Font SVGLayoutState::font() const
     auto bold = m_font_weight == FontWeight::Bold;
     auto italic = m_font_style == FontStyle::Italic;
 
-    FontFace face;
+    // Try the real OS-level substitution first (a no-op if fontconfig
+    // isn't available -- see NOVASVG_HAVE_FONTCONFIG): it's
+    // strictly better-informed than the literal-name-only loop below,
+    // since it knows the system's actual font aliases (e.g. "arial" ->
+    // an installed metric-compatible font). Trying that loop FIRST
+    // doesn't work as a gate for this: mermaid's own stacks always end
+    // in a plain generic name ("sans-serif") that the loop's
+    // generic_fallbacks table always matches, so by the time the loop
+    // finishes it's already "succeeded" via that crude last resort and
+    // this fontconfig call would never run.
+    auto face = fontFaceCache()->getFontFaceForFamilyStack(m_font_family, bold, italic);
+
     std::string_view input(m_font_family);
     while(!input.empty() && face.isNull()) {
         auto family = input.substr(0, input.find(','));

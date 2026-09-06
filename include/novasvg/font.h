@@ -6,12 +6,15 @@
 // would come out in a given font) without pulling in the rest of novasvg.
 
 #include "detail/config.h"
+#include "detail/svgparserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no SVG-tree dependency, consistent with this header's own self-contained goal
 #include "detail/render/path.h"    // path_move_to/line_to/cubic_to, used to extract glyph outlines
 #include "detail/render/font.h"
 
 #include <string>
+#include <string_view>
 #include <cstddef>
 #include <utility>
+#include <vector>
 
 namespace novasvg {
 using namespace render;
@@ -43,6 +46,21 @@ class FontFaceCache {
 public:
     bool addFontFace(const std::string& family, bool bold, bool italic, const FontFace& face);
     FontFace getFontFace(const std::string& family, bool bold, bool italic) const;
+
+    // Real OS font substitution for an entire CSS-style comma-separated
+    // family stack (e.g. `"trebuchet ms", verdana, arial, sans-serif`),
+    // used only after getFontFace() has already failed for every name in
+    // the stack individually (see SVGLayoutState::font() -- that's what
+    // builds `familyStack` in the first place). One fontconfig call
+    // covering the whole stack, not one call per name: fontconfig's own
+    // FcFontMatch always returns *some* match (its job is to never come
+    // up empty), so probing it name-by-name would "succeed" on the very
+    // first name with fontconfig's generic default substitution and
+    // never reach a later, better-aliased name (verified: this is
+    // exactly what happened when this was first tried per-name here).
+    // Handing fontconfig the complete ordered stack in one pattern lets
+    // its own substitution logic pick the best-aliased entry instead.
+    FontFace getFontFaceForFamilyStack(const std::string& familyStack, bool bold, bool italic) const;
 
 private:
     FontFaceCache();
@@ -194,6 +212,38 @@ NOVASVG_INLINE FontFace FontFaceCache::getFontFace(const std::string& family, bo
     }
 
     return FontFace();
+}
+
+NOVASVG_INLINE FontFace FontFaceCache::getFontFaceForFamilyStack(const std::string& familyStack, bool bold, bool italic) const
+{
+    std::vector<std::string> names;
+    std::string_view input(familyStack);
+    while(!input.empty()) {
+        auto family = input.substr(0, input.find(','));
+        input.remove_prefix(family.length());
+        if(!input.empty() && input.front() == ',')
+            input.remove_prefix(1);
+        stripLeadingAndTrailingSpaces(family);
+        if(!family.empty() && (family.front() == '\'' || family.front() == '"')) {
+            auto quote = family.front();
+            family.remove_prefix(1);
+            if(!family.empty() && family.back() == quote)
+                family.remove_suffix(1);
+            stripLeadingAndTrailingSpaces(family);
+        }
+        if(!family.empty())
+            names.emplace_back(family);
+    }
+
+    if(names.empty())
+        return FontFace();
+
+    std::vector<const char*> cNames;
+    cNames.reserve(names.size());
+    for(auto& name : names)
+        cNames.push_back(name.c_str());
+
+    return FontFace(font_face_cache_match_fontconfig_stack(m_cache, cNames.data(), int(cNames.size()), bold, italic));
 }
 
 NOVASVG_INLINE FontFaceCache::FontFaceCache()

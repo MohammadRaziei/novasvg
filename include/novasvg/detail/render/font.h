@@ -6014,6 +6014,62 @@ NOVASVG_INLINE int font_face_cache_load_dir(font_face_cache_t* cache, const char
 
 #endif // _WIN32
 
+// ---- optional: real OS font substitution via fontconfig ----
+// The scan above indexes fonts by their own literal internal family name
+// (straight from each file's TTF `name` table) -- it never consults the
+// OS's actual font-matching/alias system. That means an SVG asking for
+// "arial"/"verdana"/"trebuchet ms" (exactly what tools like Mermaid.js
+// emit) never resolves to a metric-compatible substitute even when one
+// is installed (e.g. fonts-liberation's "Liberation Sans", which
+// fontconfig itself would alias "arial" to) -- it silently falls through
+// to the hardcoded generic-family fallback above instead. This isn't a
+// hypothetical: verified by installing fonts-liberation and confirming
+// novasvg's own literal-name lookup for "arial" still missed it, while
+// `fc-match arial` correctly found it.
+//
+// This queries fontconfig for a real match (respecting the system's own
+// substitution/alias config, not a hardcoded guess-list of aliases) and,
+// if found, loads that file through the exact same
+// font_face_cache_load_file() path used for every other font, then looks
+// it up again under the family fontconfig actually resolved to.
+#if defined(NOVASVG_HAVE_FONTCONFIG)
+#include <fontconfig/fontconfig.h>
+
+NOVASVG_INLINE font_face_t* font_face_cache_match_fontconfig_stack(font_face_cache_t* cache, const char** families, int num_families, bool bold, bool italic)
+{
+    FcPattern* pattern = FcPatternCreate();
+    for(int i = 0; i < num_families; ++i)
+        FcPatternAddString(pattern, FC_FAMILY, reinterpret_cast<const FcChar8*>(families[i]));
+    FcPatternAddInteger(pattern, FC_WEIGHT, bold ? FC_WEIGHT_BOLD : FC_WEIGHT_REGULAR);
+    FcPatternAddInteger(pattern, FC_SLANT, italic ? FC_SLANT_ITALIC : FC_SLANT_ROMAN);
+    FcConfigSubstitute(NULL, pattern, FcMatchPattern);
+    FcDefaultSubstitute(pattern);
+
+    FcResult result;
+    FcPattern* matched = FcFontMatch(NULL, pattern, &result);
+    FcPatternDestroy(pattern);
+    if(matched == NULL)
+        return NULL;
+
+    font_face_t* face = NULL;
+    FcChar8* filepath = NULL;
+    FcChar8* matchedFamily = NULL;
+    if(FcPatternGetString(matched, FC_FILE, 0, &filepath) == FcResultMatch
+       && FcPatternGetString(matched, FC_FAMILY, 0, &matchedFamily) == FcResultMatch) {
+        font_face_cache_load_file(cache, reinterpret_cast<const char*>(filepath));
+        face = font_face_cache_get(cache, reinterpret_cast<const char*>(matchedFamily), bold, italic);
+    }
+
+    FcPatternDestroy(matched);
+    return face;
+}
+#else
+NOVASVG_INLINE font_face_t* font_face_cache_match_fontconfig_stack(font_face_cache_t* cache, const char** families, int num_families, bool bold, bool italic)
+{
+    return NULL;
+}
+#endif // NOVASVG_HAVE_FONTCONFIG
+
 NOVASVG_INLINE int font_face_cache_load_sys(font_face_cache_t* cache)
 {
     int num_faces = 0;
@@ -6044,6 +6100,11 @@ NOVASVG_INLINE int font_face_cache_load_dir(font_face_cache_t* cache, const char
 NOVASVG_INLINE int font_face_cache_load_sys(font_face_cache_t* cache)
 {
     return -1;
+}
+
+NOVASVG_INLINE font_face_t* font_face_cache_match_fontconfig_stack(font_face_cache_t* cache, const char** families, int num_families, bool bold, bool italic)
+{
+    return NULL;
 }
 
 #endif // NOVASVG_DISABLE_FONT_FACE_CACHE_LOAD

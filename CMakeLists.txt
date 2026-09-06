@@ -26,6 +26,7 @@ option(NOVASVG_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_PYTHON "Build Python" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_DOCS "Build documentation" OFF)
+option(NOVASVG_USE_FONTCONFIG "Use fontconfig for real OS font substitution (falls back to novasvg's built-in raw font-file scan if not found)" ON)
 
 
 set(NOVASVG_SOURCE_DIR ${PROJECT_SOURCE_DIR})
@@ -35,6 +36,17 @@ add_library(novasvg INTERFACE)
 add_library(novasvg::novasvg ALIAS novasvg)
 
 target_include_directories(novasvg INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+if(NOVASVG_USE_FONTCONFIG AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(Fontconfig)
+    if(Fontconfig_FOUND)
+        target_link_libraries(novasvg INTERFACE Fontconfig::Fontconfig)
+        target_compile_definitions(novasvg INTERFACE NOVASVG_HAVE_FONTCONFIG)
+        message(STATUS "novasvg: fontconfig found -- font-family substitution (e.g. \"arial\" -> an installed metric-compatible font) will use it")
+    else()
+        message(STATUS "novasvg: fontconfig not found -- font-family substitution limited to novasvg's own raw font-file scan (see font.h)")
+    endif()
+endif()
 
 # Add CLI executable
 add_executable(novasvg_cli src/novasvg_cli.cpp)

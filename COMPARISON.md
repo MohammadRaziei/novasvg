@@ -164,6 +164,44 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
     HTML's own `line-height` (mermaid's content usually says `1.5`) —
     noted as an upgrade path in `checklist.md`.
 
+- **Font-family fallback now goes through real OS font substitution
+  (fontconfig on Linux), closing most of the substitute-font-metrics gap
+  the wrap fix above still flagged as residual.** Root cause: novasvg's
+  font matching never consulted fontconfig at all — it does its own raw
+  scan of font files, indexing each by the literal internal name from
+  the file's own TTF `name` table. A request for "arial" only ever
+  matched a font whose own internal name is literally "Arial"; it never
+  found `fonts-liberation`'s "Liberation Sans" even though fontconfig
+  itself aliases "arial" to exactly that font system-wide (verified:
+  installed `fonts-liberation`, confirmed `fc-match arial` found it
+  while novasvg's own lookup still didn't). Since mermaid's own CSS
+  always asks for `"trebuchet ms", verdana, arial, sans-serif` — none of
+  which are typically installed under their literal names on Linux —
+  this silently affected the sizing of every text-containing diagram.
+  - Fix: `FontFaceCache::getFontFaceForFamilyStack()` asks fontconfig to
+    resolve the *entire* comma-separated family stack in one call
+    (`FcFontMatch` over a pattern with all names added as `FC_FAMILY`
+    values, matching how fontconfig is meant to be used for CSS-style
+    fallback lists), tried before the old literal-name/generic-table
+    loop. Gated behind `NOVASVG_HAVE_FONTCONFIG` (CMake auto-detects
+    fontconfig on Linux via `find_package(Fontconfig)`, controllable via
+    `NOVASVG_USE_FONTCONFIG`) — a clean no-op, falling back to the
+    previous literal-scan behavior unchanged, wherever fontconfig isn't
+    linked in.
+  - Got this wrong on the first attempt, worth recording: calling
+    fontconfig once *per name in the stack* (stopping at the first hit)
+    seemed like the obvious approach, but `FcFontMatch` always returns
+    *some* match — it never reports "not found" — so it "succeeded" on
+    the very first name ("trebuchet ms") with fontconfig's own generic
+    default substitution before ever reaching "verdana" or "arial" later
+    in the stack. Fontconfig has to see the whole ordered stack in one
+    pattern to pick the best-aliased entry itself.
+  - Verified against the real mmdc/Chrome reference
+    (`data/mermaid/02-flowchart-issue17.mmdc.png`): line count for the
+    flowchart sample's labels went from matching on almost none of them
+    to matching on 10 of 12 (only "Diamond with line break" and one
+    "Rounded square shape" instance are still off by a line).
+
 ## Still open
 
 - zenuml (nested HTML+CSS inside `<foreignObject>`) — still only raw
