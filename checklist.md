@@ -165,10 +165,10 @@
       (که اصلاً subcommand نداره، فقط option روی root app): آپشن‌های convert مستقیم روی خودِ
       `app` نشستن (نه زیر یه subcommand بنام "convert")، و `info`/`query`/`batch` subcommand
       واقعی CLI11 موندن. یعنی دیگه هیچ دستکاری‌ای روی argv نیست — CLI11 خودش قبل از این‌که یه
-      token رو positional حساب کنه چک می‌کنه ببینه اسم subcommand هست یا نه. یه اثر جانبی: کلمه‌ی
-      `convert` دیگه اصلاً یه subcommand شناخته‌شده نیست (مثل ctoon که هیچ‌وقت "encode"/"decode"
-      subcommand نداشته، فقط فلگ) — `novasvg convert file.svg` دیگه کار نمی‌کنه، باید مستقیم
-      `novasvg file.svg` بزنی.
+      token رو positional حساب کنه چک می‌کنه ببینه اسم subcommand هست یا نه.
+      **(آپدیت: بعداً کلمه‌ی `convert` رو دوباره برگردوندیم — یه subcommand واقعیِ `convert`
+      اضافه شد که دقیقاً همون متغیرهای root رو bind می‌کنه، پس `novasvg file.svg` و
+      `novasvg convert file.svg` هر دو کار می‌کنن، بدون هیچ hack یا دوتا کد جدا.)**
       - یه باگ کوچیک جانبی هم فیکس شد ضمن این کار: قبلاً exit code واقعیِ subcommandها
         (`info`/`query`/`batch`) توی callback گم می‌شد (چون `std::function<void()>` مقدار
         برگشتی لامبدا رو دور می‌ریخت) و `main` همیشه ۰ برمی‌گردوند حتی وقتی cmd خودش خطا داده

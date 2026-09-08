@@ -353,10 +353,24 @@ int main(int argc, char** argv) {
     app.add_option("--style", convert_style, "Apply CSS styles directly (string)");
     app.add_option("--css-file", convert_css_file, "Apply CSS styles from file")->check(CLI::ExistingFile);
 
+    // "convert" also works as an explicit subcommand, sharing the exact
+    // same bound variables as the root options above -- so
+    // `novasvg input.svg` and `novasvg convert input.svg` are genuinely
+    // the same thing to CLI11, not two code paths kept in sync by hand.
+    auto convert_cmd = app.add_subcommand("convert", "Convert SVG to PNG (also the default action -- see below).");
+    convert_cmd->add_option("input", convert_input, "Input SVG file")->check(CLI::ExistingFile);
+    convert_cmd->add_option("-o,--output", convert_output, "Output PNG file (default: input name with .png extension)");
+    convert_cmd->add_option("-w,--width", convert_width, "Output width in pixels");
+    convert_cmd->add_option("-H,--height", convert_height, "Output height in pixels");
+    convert_cmd->add_option("-s,--scale", convert_scale, "Scale factor (e.g., 2.0)");
+    convert_cmd->add_option("-b,--background-color", convert_bg_color, "Background color (hex: RRGGBB or RRGGBBAA, default: transparent)");
+    convert_cmd->add_option("--style", convert_style, "Apply CSS styles directly (string)");
+    convert_cmd->add_option("--css-file", convert_css_file, "Apply CSS styles from file")->check(CLI::ExistingFile);
+
     app.footer(
         "Examples:\n"
         "  novasvg input.svg\n"
-        "  novasvg input.svg -o out.png -w 800 -H 600\n"
+        "  novasvg convert input.svg -o out.png -w 800 -H 600\n"
         "  novasvg input.svg --css-file style.css\n"
         "  novasvg input.svg --style \"rect { fill: red; }\"\n"
         "  novasvg info image.svg\n"
@@ -365,6 +379,11 @@ int main(int argc, char** argv) {
     );
 
     int exit_code = 0;
+
+    convert_cmd->callback([&]() {
+        exit_code = cmd_convert(convert_input, convert_output, convert_width, convert_height,
+                                 convert_bg_color, convert_scale, convert_style, convert_css_file);
+    });
 
     // --------------------------------------------------------
     // Info Command

@@ -188,8 +188,9 @@ sudo make install  # Optional: install system-wide
 
 ```bash
 # Convert -- the default action, no subcommand keyword needed
+# (an explicit "convert" subcommand works identically, if you prefer it)
 novasvg input.svg
-novasvg input.svg -o output.png
+novasvg convert input.svg -o output.png
 novasvg input.svg -w 800 -H 600         # resize
 novasvg input.svg -s 2.0                # scale factor
 novasvg input.svg -b FFFFFF             # background color (hex)
