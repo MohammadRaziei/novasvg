@@ -45,6 +45,19 @@ private:
 class FontFaceCache {
 public:
     bool addFontFace(const std::string& family, bool bold, bool italic, const FontFace& face);
+
+    // Local-only lookup: just this cache's literal-name scan (system
+    // fonts by their own internal name, plus anything explicitly
+    // registered via addFontFace() -- including an @font-face-embedded
+    // font under the exact family name its CSS declared). No generic
+    // "sans-serif"-style fallback table and no OS substitution -- used
+    // by SVGLayoutState::font()'s per-name stack loop so an embedded
+    // font is found (and wins) before falling through to guessing at a
+    // substitute for names later in the stack.
+    FontFace getFontFaceLocal(const std::string& family, bool bold, bool italic) const;
+
+    // getFontFaceLocal(), then the hardcoded generic-family table
+    // ("sans-serif" -> "DejaVu Sans" and similar) as a last resort.
     FontFace getFontFace(const std::string& family, bool bold, bool italic) const;
 
     // Real OS font substitution for an entire CSS-style comma-separated
@@ -182,10 +195,15 @@ NOVASVG_INLINE bool FontFaceCache::addFontFace(const std::string& family, bool b
     return !face.isNull();
 }
 
+NOVASVG_INLINE FontFace FontFaceCache::getFontFaceLocal(const std::string& family, bool bold, bool italic) const
+{
+    return FontFace(font_face_cache_get(m_cache, family.data(), bold, italic));
+}
+
 NOVASVG_INLINE FontFace FontFaceCache::getFontFace(const std::string& family, bool bold, bool italic) const
 {
-    if(auto face = font_face_cache_get(m_cache, family.data(), bold, italic)) {
-        return FontFace(face);
+    if(auto face = getFontFaceLocal(family, bold, italic); !face.isNull()) {
+        return face;
     }
 
     static const struct {

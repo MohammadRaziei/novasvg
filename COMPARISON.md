@@ -160,9 +160,32 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
     not a wrapping-logic bug; every line still fits its box cleanly
     rather than being squished, which reads better than the old
     condense-the-whole-block behavior even when the line count differs.
-  - Line-height is a fixed 1.2× multiplier rather than reading the
-    HTML's own `line-height` (mermaid's content usually says `1.5`) —
-    noted as an upgrade path in `checklist.md`.
+  - Line-height now reads the HTML's own `line-height:` (a bare
+    multiplier or an absolute `Npx`) instead of a fixed 1.2× guess,
+    falling back to that same 1.2× default when the value is missing or
+    in an unhandled unit (`%`, `em`, `normal`).
+
+- **`@font-face`-embedded fonts (raw TTF/OTF only).** `@font-face` rules
+  in a `<style>` block are no longer skipped like every other `@`-rule —
+  `font-family`/`src`/`font-weight`/`font-style` are parsed, a
+  `url(data:...;base64,...)` payload is decoded and loaded via the same
+  `FontFace(data, length, ...)` path every other font uses, then
+  registered under the declared family. WOFF/WOFF2 aren't decoded (each
+  `src` fallback alternative is tried in turn; if none is raw SFNT,
+  nothing loads — not a crash, just an ignored `@font-face`, same as
+  before this existed). Found and fixed a real ordering bug this
+  surfaced with the fontconfig work above: `getFontFaceForFamilyStack()`
+  ran before the per-name loop that would find an embedded font by its
+  exact declared name, and since `FcFontMatch` never reports "not
+  found", it always "succeeded" first and silently shadowed the
+  embedded font. Fixed with a local-only lookup (`getFontFaceLocal()`,
+  no generic-family table) tried per-name first; fontconfig only runs
+  once nothing in the whole stack matches locally. Verified with a
+  visually unmistakable case (an embedded monospace font compared
+  side-by-side against a deliberately unresolvable family name): only
+  the embedded one renders with equal-width characters. Doesn't help
+  mermaid specifically — its own SVG output never embeds a font — but
+  helps other tools (Figma/Illustrator-style exports) that do.
 
 - **Font-family fallback now goes through real OS font substitution
   (fontconfig on Linux), closing most of the substitute-font-metrics gap
@@ -183,21 +206,58 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
     (`FcFontMatch` over a pattern with all names added as `FC_FAMILY`
     values, matching how fontconfig is meant to be used for CSS-style
     fallback lists), tried before the old literal-name/generic-table
-    loop. Gated behind `NOVASVG_HAVE_FONTCONFIG` (CMake auto-detects
-    fontconfig on Linux via `find_package(Fontconfig)`, controllable via
-    `NOVASVG_USE_FONTCONFIG`) — a clean no-op, falling back to the
-    previous literal-scan behavior unchanged, wherever fontconfig isn't
-    linked in.
-  - Got this wrong on the first attempt, worth recording: calling
-    fontconfig once *per name in the stack* (stopping at the first hit)
-    seemed like the obvious approach, but `FcFontMatch` always returns
-    *some* match — it never reports "not found" — so it "succeeded" on
-    the very first name ("trebuchet ms") with fontconfig's own generic
+    loop.
+  - **Two false starts on *how* to bring fontconfig in, both worth
+    recording:**
+    1. First version linked fontconfig at build time via CMake
+       (`find_package(Fontconfig)` + a `NOVASVG_HAVE_FONTCONFIG` compile
+       define set only by this repo's own CMakeLists.txt). Real bug for a
+       *header-only* library: anyone who drops these headers into their
+       own project without going through this repo's CMakeLists.txt at
+       all — the entire point of header-only — would silently get none
+       of it, no error, no way to know.
+    2. Overcorrected on the second attempt by loading fontconfig via
+       `dlopen()`/`dlsym()` at runtime instead, avoiding any compile-time
+       header or link-time dependency at all. That genuinely does work
+       header-only, but it's the wrong fix for the actual problem: it
+       trades a real function call for an indirect one through a
+       function pointer on every glyph lookup, and there was never
+       anything wrong with linking fontconfig directly — fontconfig-dev
+       being a real system requirement is fine, it's exactly the kind of
+       thing header-only libraries commonly still expect for an optional
+       feature.
+    3. Landed on `__has_include(<fontconfig/fontconfig.h>)` (standard
+       since C++17, which this project already requires) to auto-detect
+       fontconfig from the compiler alone, with a real, direct
+       `#include <fontconfig/fontconfig.h>` and ordinary function calls
+       when present. No custom define needs threading through from
+       CMake or any other build system — a header-only consumer's own
+       build just needs `-lfontconfig` once fontconfig-dev is installed
+       (this repo's CMakeLists.txt still runs `find_package(Fontconfig)`
+       to link it automatically for its own targets, now purely a
+       convenience rather than what makes detection work at all). Naturally
+       false on Windows/macOS (no fontconfig.h there ordinarily) with no
+       platform `#ifdef` needed — `__has_include` alone is the gate.
+       Missing entirely (typical on Windows/macOS, possible in a minimal
+       Linux container) degrades to the previous raw-file-scan behavior
+       with a one-line compiler notice (`#pragma message`/`#warning`)
+       explaining why, rather than silently.
+    Verified end-to-end with a plain, no-CMake compile:
+    `g++ -std=c++17 -I include main.cpp -lfontconfig` picks up the
+    fontconfig-based substitution correctly with zero build-system
+    involvement.
+  - Got the resolution *order* wrong within the fontconfig call itself
+    too, worth recording separately: calling fontconfig once *per name in
+    the stack* (stopping at the first hit) seemed like the obvious
+    approach, but `FcFontMatch` always returns *some* match — it never
+    reports "not found" — so it "succeeded" on the very first name
+    ("trebuchet ms") with fontconfig's own generic
     default substitution before ever reaching "verdana" or "arial" later
     in the stack. Fontconfig has to see the whole ordered stack in one
     pattern to pick the best-aliased entry itself.
   - Verified against the real mmdc/Chrome reference
     (`data/mermaid/02-flowchart-issue17.mmdc.png`): line count for the
+
     flowchart sample's labels went from matching on almost none of them
     to matching on 10 of 12 (only "Diamond with line break" and one
     "Rounded square shape" instance are still off by a line).

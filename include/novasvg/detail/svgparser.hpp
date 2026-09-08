@@ -534,12 +534,148 @@ static bool parseRule(std::string_view& input, Rule& rule)
     return parseDeclarations(input, rule.declarations);
 }
 
+// Splits a `src:` value on its *top-level* commas (each a
+// `url(...)` optionally followed by `format(...)`) -- paren-depth-aware
+// so a comma inside url()/format() (none occur in valid CSS, but
+// malformed input shouldn't split incorrectly) doesn't split the list.
+static std::vector<std::string_view> splitTopLevelCommas(std::string_view value)
+{
+    std::vector<std::string_view> parts;
+    size_t start = 0;
+    int depth = 0;
+    for(size_t i = 0; i < value.size(); ++i) {
+        auto ch = value[i];
+        if(ch == '(')
+            ++depth;
+        else if(ch == ')') {
+            if(depth > 0)
+                --depth;
+        } else if(ch == ',' && depth == 0) {
+            parts.push_back(value.substr(start, i - start));
+            start = i + 1;
+        }
+    }
+    parts.push_back(value.substr(start));
+    return parts;
+}
+
+static std::string_view stripQuotes(std::string_view value)
+{
+    stripLeadingAndTrailingSpaces(value);
+    if(!value.empty() && (value.front() == '\'' || value.front() == '"')) {
+        auto quote = value.front();
+        value.remove_prefix(1);
+        if(!value.empty() && value.back() == quote)
+            value.remove_suffix(1);
+    }
+    return value;
+}
+
+// Loads an `@font-face` rule's embedded font (a `src: url(data:...)`
+// entry) and registers it, matching what the CSS itself declares:
+// `font-family`, `font-weight`/`font-style` (bold/italic only -- numeric
+// weights other than "bold" all collapse to regular, matching the rest
+// of this codebase's Font handling elsewhere). Only *embedded* fonts
+// (data: URIs) are in scope -- a `url("external.ttf")` reference isn't
+// something we can resolve without filesystem/network context the SVG
+// doesn't provide, and is silently skipped, same as before this existed.
+//
+// Only raw TrueType/OpenType (SFNT) data is understood (via the same
+// stb_truetype loader every other font already goes through) -- WOFF/
+// WOFF2 aren't decoded. Rather than inspect each src alternative's
+// `format()` hint to guess which might work, this just tries loading
+// each in turn and keeps the first one that actually parses as valid
+// SFNT, exactly matching how real `@font-face` `src` fallback lists are
+// meant to be read (most-preferred format first, older formats after).
+static void parseFontFaceRule(std::string_view block)
+{
+    auto familyValue = findRawDeclarationValue(block, "font-family");
+    if(!familyValue)
+        return;
+    auto family = stripQuotes(*familyValue);
+    if(family.empty())
+        return;
+
+    auto srcValue = findRawDeclarationValue(block, "src");
+    if(!srcValue)
+        return;
+
+    auto bold = false;
+    if(auto weightValue = findRawDeclarationValue(block, "font-weight")) {
+        std::string weight(*weightValue);
+        for(auto& ch : weight)
+            ch = char(std::tolower(static_cast<unsigned char>(ch)));
+        bold = weight.find("bold") != std::string::npos || std::strtof(weight.c_str(), nullptr) >= 600.f;
+    }
+
+    auto italic = false;
+    if(auto styleValue = findRawDeclarationValue(block, "font-style")) {
+        std::string style(*styleValue);
+        for(auto& ch : style)
+            ch = char(std::tolower(static_cast<unsigned char>(ch)));
+        italic = style.find("italic") != std::string::npos || style.find("oblique") != std::string::npos;
+    }
+
+    for(auto alternative : splitTopLevelCommas(*srcValue)) {
+        auto urlPos = alternative.find("url(");
+        if(urlPos == std::string_view::npos)
+            continue;
+        auto contentStart = urlPos + 4;
+        auto closeParen = alternative.find(')', contentStart);
+        if(closeParen == std::string_view::npos)
+            continue;
+        auto url = stripQuotes(alternative.substr(contentStart, closeParen - contentStart));
+
+        if(url.compare(0, 5, "data:") != 0)
+            continue; // not embedded -- out of scope, see comment above
+        auto base64Pos = url.find("base64,");
+        if(base64Pos == std::string_view::npos)
+            continue;
+        auto payload = url.substr(base64Pos + 7);
+
+        size_t decodedLength = 0;
+        auto* decoded = base64_decode(payload.data(), int(payload.size()), &decodedLength);
+        if(decoded == nullptr)
+            continue;
+
+        FontFace face(decoded, decodedLength, [](void* closure) { free(closure); }, decoded);
+        if(face.isNull())
+            continue; // not raw SFNT (e.g. still WOFF/WOFF2) -- try the next alternative
+
+        fontFaceCache()->addFontFace(std::string(family), bold, italic, face);
+        return; // first successfully-loaded alternative wins
+    }
+}
+
 static RuleDataList parseStyleSheet(std::string_view input)
 {
     RuleDataList rules;
     while(!input.empty()) {
         skipOptionalSpaces(input);
         if(skipDelimiter(input, '@')) {
+            std::string atKeyword;
+            readCSSIdentifier(input, atKeyword);
+            for(auto& ch : atKeyword)
+                ch = char(std::tolower(static_cast<unsigned char>(ch)));
+
+            if(atKeyword == "font-face") {
+                skipOptionalSpaces(input);
+                if(skipDelimiter(input, '{')) {
+                    int depth = 1;
+                    size_t blockLength = 0;
+                    auto block = input;
+                    while(blockLength < input.size() && depth > 0) {
+                        auto ch = input[blockLength];
+                        if(ch == '{') ++depth;
+                        else if(ch == '}') --depth;
+                        ++blockLength;
+                    }
+                    parseFontFaceRule(block.substr(0, depth == 0 ? blockLength - 1 : blockLength));
+                    input.remove_prefix(blockLength);
+                }
+                continue;
+            }
+
             int depth = 0;
             while(!input.empty()) {
                 auto ch = input.front();

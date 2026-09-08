@@ -6027,12 +6027,25 @@ NOVASVG_INLINE int font_face_cache_load_dir(font_face_cache_t* cache, const char
 // novasvg's own literal-name lookup for "arial" still missed it, while
 // `fc-match arial` correctly found it.
 //
-// This queries fontconfig for a real match (respecting the system's own
-// substitution/alias config, not a hardcoded guess-list of aliases) and,
-// if found, loads that file through the exact same
-// font_face_cache_load_file() path used for every other font, then looks
-// it up again under the family fontconfig actually resolved to.
-#if defined(NOVASVG_HAVE_FONTCONFIG)
+// __has_include() (standard since C++17, which this project already
+// requires) lets this auto-detect fontconfig from the compiler alone --
+// no define needs to be passed in from CMake or any other build system,
+// so it works identically for a header-only consumer who never touches
+// this repo's CMakeLists.txt. This project's own CMakeLists.txt still
+// runs find_package(Fontconfig) and links it for convenience, but that's
+// no longer what makes this work; a plain compiler invocation with
+// -lfontconfig (or any build system that links it once fontconfig-dev
+// is installed) is equally sufficient. Naturally false on Windows/macOS
+// (no fontconfig.h there ordinarily), so no platform #ifdef needed
+// either -- if a future setup does have it (Homebrew/MSYS2/vcpkg), this
+// picks it up the same way.
+#if defined(__has_include)
+#if __has_include(<fontconfig/fontconfig.h>)
+#define NOVASVG_FONTCONFIG_AVAILABLE 1
+#endif
+#endif
+
+#if defined(NOVASVG_FONTCONFIG_AVAILABLE)
 #include <fontconfig/fontconfig.h>
 
 NOVASVG_INLINE font_face_t* font_face_cache_match_fontconfig_stack(font_face_cache_t* cache, const char** families, int num_families, bool bold, bool italic)
@@ -6064,11 +6077,18 @@ NOVASVG_INLINE font_face_t* font_face_cache_match_fontconfig_stack(font_face_cac
     return face;
 }
 #else
+
+#if defined(_MSC_VER)
+#pragma message("novasvg: <fontconfig/fontconfig.h> not found -- font-family substitution limited to novasvg's built-in raw font-file scan (no OS-level alias resolution for names like \"arial\"). Install fontconfig-dev and rebuild for full CSS-style font-family-stack fallback. This is expected/fine on Windows and macOS, which don't normally have fontconfig at all.")
+#else
+#warning "novasvg: <fontconfig/fontconfig.h> not found -- font-family substitution limited to novasvg's built-in raw font-file scan (no OS-level alias resolution for names like \"arial\"). Install fontconfig-dev and rebuild for full CSS-style font-family-stack fallback. This is expected/fine on Windows and macOS, which don't normally have fontconfig at all."
+#endif
+
 NOVASVG_INLINE font_face_t* font_face_cache_match_fontconfig_stack(font_face_cache_t* cache, const char** families, int num_families, bool bold, bool italic)
 {
     return NULL;
 }
-#endif // NOVASVG_HAVE_FONTCONFIG
+#endif // NOVASVG_FONTCONFIG_AVAILABLE
 
 NOVASVG_INLINE int font_face_cache_load_sys(font_face_cache_t* cache)
 {

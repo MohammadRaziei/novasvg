@@ -4755,39 +4755,48 @@ NOVASVG_INLINE Font SVGLayoutState::font() const
     auto bold = m_font_weight == FontWeight::Bold;
     auto italic = m_font_style == FontStyle::Italic;
 
-    // Try the real OS-level substitution first (a no-op if fontconfig
-    // isn't available -- see NOVASVG_HAVE_FONTCONFIG): it's
-    // strictly better-informed than the literal-name-only loop below,
-    // since it knows the system's actual font aliases (e.g. "arial" ->
-    // an installed metric-compatible font). Trying that loop FIRST
-    // doesn't work as a gate for this: mermaid's own stacks always end
-    // in a plain generic name ("sans-serif") that the loop's
-    // generic_fallbacks table always matches, so by the time the loop
-    // finishes it's already "succeeded" via that crude last resort and
-    // this fontconfig call would never run.
-    auto face = fontFaceCache()->getFontFaceForFamilyStack(m_font_family, bold, italic);
-
-    std::string_view input(m_font_family);
-    while(!input.empty() && face.isNull()) {
-        auto family = input.substr(0, input.find(','));
-        input.remove_prefix(family.length());
-        if(!input.empty() && input.front() == ',')
-            input.remove_prefix(1);
-        stripLeadingAndTrailingSpaces(family);
-        if(!family.empty() && (family.front() == '\'' || family.front() == '"')) {
-            auto quote = family.front();
-            family.remove_prefix(1);
-            if(!family.empty() && family.back() == quote)
-                family.remove_suffix(1);
+    // Local-only pass first, one name at a time: this is what finds an
+    // @font-face-embedded font under its exact declared family name (and
+    // any real system font whose own internal name literally matches).
+    // Deliberately skips the generic_fallbacks table here (see
+    // getFontFaceLocal()) -- with it included, a stack ending in a plain
+    // "sans-serif" (every one of mermaid's own stacks does) would always
+    // "succeed" via that crude last resort before ever reaching the
+    // fontconfig call below, which is strictly better-informed (it knows
+    // the system's actual font aliases, e.g. "arial" -> an installed
+    // metric-compatible font) -- but would also shadow an embedded font
+    // the exact same way, since fontconfig always returns *some* match
+    // for any name, never "not found".
+    FontFace face;
+    {
+        std::string_view input(m_font_family);
+        while(!input.empty() && face.isNull()) {
+            auto family = input.substr(0, input.find(','));
+            input.remove_prefix(family.length());
+            if(!input.empty() && input.front() == ',')
+                input.remove_prefix(1);
             stripLeadingAndTrailingSpaces(family);
-        }
+            if(!family.empty() && (family.front() == '\'' || family.front() == '"')) {
+                auto quote = family.front();
+                family.remove_prefix(1);
+                if(!family.empty() && family.back() == quote)
+                    family.remove_suffix(1);
+                stripLeadingAndTrailingSpaces(family);
+            }
 
-        std::string font_family(family);
-        if(!font_family.empty()) {
-            face = fontFaceCache()->getFontFace(font_family, bold, italic);
+            if(!family.empty())
+                face = fontFaceCache()->getFontFaceLocal(std::string(family), bold, italic);
         }
     }
 
+    // Nothing in the stack matched a real (or embedded) font by its own
+    // name -- ask fontconfig to resolve the whole stack at once (a no-op
+    // if fontconfig isn't available -- see NOVASVG_FONTCONFIG_AVAILABLE
+    // in render/font.h).
+    if(face.isNull())
+        face = fontFaceCache()->getFontFaceForFamilyStack(m_font_family, bold, italic);
+
+    // Absolute last resort: the hardcoded generic-family table.
     if(face.isNull())
         face = fontFaceCache()->getFontFace(emptyString, bold, italic);
     return Font(face, m_font_size);
@@ -5922,14 +5931,16 @@ inline std::u32string utf8ToU32(const std::string& text)
     return result;
 }
 
-// Pulls a "background-color: <value>" declaration's value out of a CSS
+// Pulls a "<property>: <value>" declaration's raw value text out of a CSS
 // declaration block (the inside of a style="..." attribute, or the
-// inside of a rule's { ... }) and parses it. Not a general CSS-value
-// parser -- just enough to hand the value off to color_parse(). `property`
-// match is boundary-checked (not preceded/followed by identifier
-// characters) so searching for "color" doesn't false-match inside
-// "background-color" or similar.
-inline std::optional<Color> parseColorDeclaration(std::string_view block, std::string_view property)
+// inside of a rule's { ... }). Not a general CSS-value parser -- just
+// finds and trims the text between the property name and the next
+// `;`/`}`/quote. `property` match is boundary-checked (not
+// preceded/followed by identifier characters) so searching for "color"
+// doesn't false-match inside "background-color", or "height" inside
+// "line-height". Shared by parseColorDeclaration() and
+// parseNumericDeclaration() below.
+inline std::optional<std::string_view> findDeclarationValue(std::string_view block, std::string_view property)
 {
     size_t pos = 0;
     while((pos = block.find(property, pos)) != std::string_view::npos) {
@@ -5939,8 +5950,10 @@ inline std::optional<Color> parseColorDeclaration(std::string_view block, std::s
         if(matchStart > 0) {
             auto prev = block[matchStart - 1];
             if(IS_ALPHA(prev) || IS_NUM(prev) || prev == '-' || prev == '_')
-                continue; // part of a longer property name, e.g. "background-color"
+                continue; // part of a longer property name
         }
+        if(after < block.size() && (IS_ALPHA(block[after]) || IS_NUM(block[after]) || block[after] == '-'))
+            continue; // property name continues past what we matched, e.g. "line-height" vs "height"
 
         while(after < block.size() && IS_WS(block[after]))
             ++after;
@@ -5953,16 +5966,109 @@ inline std::optional<Color> parseColorDeclaration(std::string_view block, std::s
         auto value = block.substr(after, (end == std::string_view::npos ? block.size() : end) - after);
         while(!value.empty() && IS_WS(value.back()))
             value.remove_suffix(1);
-
-        color_t color;
-        int length = color_parse(&color, value.data(), (int)value.length());
-        if(length == 0)
-            continue;
-        auto argb = color_to_argb32(&color);
-        return Color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff);
+        if(!value.empty())
+            return value;
     }
 
     return std::nullopt;
+}
+
+// Same idea as findDeclarationValue(), but scans to the next *top-level*
+// `;`/`}` instead of stopping at the first quote -- needed for
+// `@font-face`'s `src:` value, which legitimately contains both quotes
+// and commas (`url(...) format("truetype"), url(...) format("woff2")`).
+// Parens are tracked so a `;`/`}` inside a url()/format() call (neither
+// occurs in valid CSS, but malformed input shouldn't cut the scan short)
+// doesn't end the value early either.
+inline std::optional<std::string_view> findRawDeclarationValue(std::string_view block, std::string_view property)
+{
+    size_t pos = 0;
+    while((pos = block.find(property, pos)) != std::string_view::npos) {
+        auto matchStart = pos;
+        auto after = pos + property.size();
+        pos = after;
+        if(matchStart > 0) {
+            auto prev = block[matchStart - 1];
+            if(IS_ALPHA(prev) || IS_NUM(prev) || prev == '-' || prev == '_')
+                continue;
+        }
+        if(after < block.size() && (IS_ALPHA(block[after]) || IS_NUM(block[after]) || block[after] == '-'))
+            continue;
+
+        while(after < block.size() && IS_WS(block[after]))
+            ++after;
+        if(after >= block.size() || block[after] != ':')
+            continue;
+        ++after;
+        while(after < block.size() && IS_WS(block[after]))
+            ++after;
+
+        auto valueStart = after;
+        auto end = after;
+        int parenDepth = 0;
+        while(end < block.size()) {
+            auto ch = block[end];
+            if(ch == '(')
+                ++parenDepth;
+            else if(ch == ')') {
+                if(parenDepth > 0)
+                    --parenDepth;
+            } else if((ch == ';' || ch == '}') && parenDepth == 0) {
+                break;
+            }
+            ++end;
+        }
+
+        auto value = block.substr(valueStart, end - valueStart);
+        while(!value.empty() && IS_WS(value.back()))
+            value.remove_suffix(1);
+        if(!value.empty())
+            return value;
+    }
+
+    return std::nullopt;
+}
+
+inline std::optional<Color> parseColorDeclaration(std::string_view block, std::string_view property)
+{
+    auto value = findDeclarationValue(block, property);
+    if(!value)
+        return std::nullopt;
+
+    color_t color;
+    int length = color_parse(&color, value->data(), (int)value->length());
+    if(length == 0)
+        return std::nullopt;
+    auto argb = color_to_argb32(&color);
+    return Color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff);
+}
+
+// A parsed numeric CSS value: `raw` is the number itself, `isPixels`
+// says whether it carried a "px" suffix (an absolute length) as opposed
+// to a bare multiplier (e.g. line-height's "1.5"). Anything else
+// (%, em, "normal", ...) isn't handled -- callers fall back to their own
+// default for those, same as when the property is missing entirely.
+struct NumericDeclaration {
+    float raw;
+    bool isPixels;
+};
+
+inline std::optional<NumericDeclaration> parseNumericDeclaration(std::string_view block, std::string_view property)
+{
+    auto value = findDeclarationValue(block, property);
+    if(!value)
+        return std::nullopt;
+
+    char* end = nullptr;
+    std::string valueStr(*value);
+    auto number = std::strtof(valueStr.c_str(), &end);
+    if(end == valueStr.c_str())
+        return std::nullopt; // no leading number at all, e.g. "normal"
+
+    auto unit = valueStr.c_str() + (end - valueStr.c_str());
+    while(*unit == ' ')
+        ++unit;
+    return NumericDeclaration{number, std::string_view(unit) == "px"};
 }
 
 inline std::optional<Color> parseBackgroundColorDeclaration(std::string_view block)
@@ -6129,6 +6235,40 @@ inline Color foreignObjectTextColor(std::string_view rawHtml, const SVGRootEleme
     return findTagColor(rawHtml, root, "color").value_or(Color(0, 0, 0));
 }
 
+// Real line-height for foreignObject text, read from the HTML's own
+// inline style="line-height:..." (mermaid always sets this directly on
+// the wrapping <div> -- never via a class the way it sometimes does for
+// color/background-color -- so this only needs to check inline style=,
+// not walk the stylesheet the way findTagColor()/tagColor() do).
+// Handles a bare multiplier ("1.5", the common case, including
+// mermaid's own default) or an absolute "Npx" length; anything else
+// (%, em, "normal", ...) or no line-height at all falls back to the
+// caller's own default.
+inline std::optional<float> foreignObjectLineHeight(std::string_view rawHtml, float fontSize)
+{
+    size_t pos = 0;
+    while(pos < rawHtml.size()) {
+        auto tagStart = rawHtml.find('<', pos);
+        if(tagStart == std::string_view::npos)
+            break;
+        if(tagStart + 1 < rawHtml.size() && rawHtml[tagStart + 1] == '/') {
+            pos = tagStart + 2;
+            continue;
+        }
+        auto tagEnd = rawHtml.find('>', tagStart);
+        if(tagEnd == std::string_view::npos)
+            break;
+        auto tag = rawHtml.substr(tagStart, tagEnd - tagStart);
+        if(auto style = htmlAttribute(tag, "style=")) {
+            if(auto declaration = parseNumericDeclaration(*style, "line-height"))
+                return declaration->isPixels ? declaration->raw : declaration->raw * fontSize;
+        }
+        pos = tagEnd + 1;
+    }
+
+    return std::nullopt;
+}
+
 // Greedy word-wrap: splits `text` (already using '\n' for the forced
 // breaks foreignObjectPlainText() inserts at <br>/<p>/<div> boundaries)
 // into as many paragraphs as it has explicit breaks, then further
@@ -6192,15 +6332,11 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
     auto box = element->fillBoundingBox();
     auto lines = wrapForeignObjectText(text, font, box.w);
 
-    // ponytail: fixed 1.2x line-height rather than reading the HTML's
-    // own `line-height` CSS value (mermaid's own content usually says
-    // 1.5) -- close enough for readability, and every line is still
-    // independently centered/condensed below regardless of the exact
-    // spacing between them. Upgrade path: extend the existing
-    // `parseColorDeclaration`-style generic value scanner to pull a
-    // numeric `line-height` the same way color/background-color already
-    // are, if tighter fidelity is ever needed.
-    auto lineHeight = font.height() * 1.2f;
+    // Real line-height from the HTML's own `line-height:` (mermaid's
+    // content usually says 1.5) when present and parseable; falls back
+    // to a 1.2x default (roughly a browser's own "normal") otherwise --
+    // e.g. for %/em values or "normal" itself, which aren't handled.
+    auto lineHeight = foreignObjectLineHeight(element->rawContent(), font.size()).value_or(font.height() * 1.2f);
     auto totalHeight = lineHeight * float(lines.size());
     auto topY = box.y + (box.h - totalHeight) / 2.f;
 

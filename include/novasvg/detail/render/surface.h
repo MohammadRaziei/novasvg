@@ -8086,16 +8086,19 @@ static const uint8_t base64_table[128] = {
     0x31, 0x32, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-NOVASVG_INLINE surface_t* surface_load_from_image_base64(const char* data, int length)
+// Decodes a base64 payload into a malloc'd buffer (caller must free()).
+// Extracted so both image data URIs (below) and @font-face embedded font
+// data URIs (svgparser.hpp) can share one implementation. Returns NULL
+// on any malformed input (bad character, wrong padding, ...).
+NOVASVG_INLINE uint8_t* base64_decode(const char* data, int length, size_t* out_length)
 {
-    surface_t* surface = NULL;
     uint8_t* output_data = NULL;
     size_t output_length = 0;
-
     size_t equals_sign_count = 0;
     size_t sidx = 0;
     size_t didx = 0;
 
+    *out_length = 0;
     if(length == -1)
         length = strlen(data);
     output_data = static_cast<decltype(output_data)>(malloc(length));
@@ -8137,8 +8140,20 @@ NOVASVG_INLINE surface_t* surface_load_from_image_base64(const char* data, int l
         output_data[didx] = (((output_data[sidx + 1] << 4) & 255) | ((output_data[sidx + 2] >> 2) & 017));
     }
 
-    surface = surface_load_from_image_data(output_data, output_length);
+    *out_length = output_length;
+    return output_data;
 cleanup:
+    free(output_data);
+    return NULL;
+}
+
+NOVASVG_INLINE surface_t* surface_load_from_image_base64(const char* data, int length)
+{
+    size_t output_length = 0;
+    uint8_t* output_data = base64_decode(data, length, &output_length);
+    if(output_data == NULL)
+        return NULL;
+    surface_t* surface = surface_load_from_image_data(output_data, int(output_length));
     free(output_data);
     return surface;
 }
