@@ -1,74 +1,78 @@
-name: CI
+name: cmake stuff
 
 on:
-  push:
-    branches: [ master ]
+  workflow_dispatch:
+  workflow_call:
   pull_request:
     branches: [ master ]
-  workflow_dispatch:
 
 jobs:
   build-and-test:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     runs-on: ${{ matrix.os }}
-    
+
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Setup cmake
-      uses: jwlawson/actions-setup-cmake@v2
-      with:
-        cmake-version: '3.28.x'
+      uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: "3.11"
+        cache: "pip"
 
     - name: Install python deps
-      run: pip install pytest-cov nanobind
-    
-    - name: Use cmake
-      run: cmake --version
+      run: pip install -r requirements-dev.txt
 
-    - name: Configure CMake
-      run: |
-        cmake -B build \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DNOVASVG_BUILD_EXAMPLES=ON \
-          -DNOVASVG_BUILD_PYTHON=ON \
-          -DNOVASVG_BUILD_TESTS=ON \
-          -DNOVASVG_BUILD_DOCS=OFF
+    - name: Build Project
+      uses: threeal/cmake-action@v2.1.0
+      with:
+        build-dir: build
+        options: |
+          CMAKE_BUILD_TYPE=Release
+          NOVASVG_BUILD_EXAMPLES=ON
+          NOVASVG_BUILD_PYTHON=ON
+          NOVASVG_BUILD_TESTS=ON
+          NOVASVG_BUILD_DOCS=OFF
 
     - name: Build
-      run: cmake --build build -j4
+      run: cmake --build build -j4 --config Release
 
-    - name: Run tests
+    - name: Run tests (Linux/macOS)
+      if: runner.os != 'Windows'
       run: ctest --test-dir build --output-on-failure --extra-verbose
-      
+
 
   build-docs:
     needs: build-and-test
     # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Setup cmake
       uses: jwlawson/actions-setup-cmake@v2
       with:
         cmake-version: '3.28.x'
-    
+
     - name: Install apt dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y doxygen graphviz
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.11"
+        cache: "pip"
+
+    - name: Install python deps
+      run: pip install -r requirements-dev.txt
 
     - name: Configure CMake
       run: |
@@ -83,34 +87,35 @@ jobs:
       run: cmake --build build --target novasvg_docs
 
     - name: Upload documentation artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
-        name: documentation
-        path: build/docs/docs/html/
+        name: cmake-documentation
+        path: build/docs/docs/html
         retention-days: 5
 
   build-coverage:
     # needs: build-and-test
     # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Setup cmake
       uses: jwlawson/actions-setup-cmake@v2
       with:
         cmake-version: '3.28.x'
-        
+
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: "3.11"
+        cache: "pip"
 
     - name: Install python dependencies
-      run: pip install pytest-cov nanobind
-    
+      run: pip install -r requirements-dev.txt
+
     - name: Install coverage tools
       run: |
         sudo apt-get update
@@ -137,26 +142,24 @@ jobs:
         verbose: true
 
     - name: Upload coverage artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
-        name: coverage-report
+        name: cmake-coverage-report
         path: build/coverage/
         retention-days: 5
 
   build-single-header:
-    needs: build-coverage
-    # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Setup cmake
       uses: jwlawson/actions-setup-cmake@v2
       with:
         cmake-version: '3.28.x'
-    
+
     - name: Install quom
       run: pip install quom
 
@@ -166,58 +169,16 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release \
           -DNOVASVG_BUILD_EXAMPLES=OFF \
           -DNOVASVG_BUILD_PYTHON=OFF \
-          -DNOVASVG_BUILD_TESTS=ON \
+          -DNOVASVG_BUILD_TESTS=OFF \
           -DNOVASVG_BUILD_DOCS=OFF \
           -DNOVASVG_DIST_DIR=build/dist
 
     - name: Build single-header
       run: cmake --build build --target novasvg_dist_header
 
-    - name: Create beta release
-      id: create_release
-      uses: softprops/action-gh-release@v1
+    - name: Upload single-header artifact
+      uses: actions/upload-artifact@v7
       with:
-        tag_name: __beta__
-        name: "Beta Release"
-        body: "Single-header distribution of NovaSVG"
-        prerelease: true
-        draft: false
-        files: build/dist/novasvg/*
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  deploy-pages:
-    needs: [build-docs, build-coverage]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Download documentation artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: documentation
-        path: ./pages
-
-    - name: Download coverage artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: coverage-report
-        path: ./pages/coverage     
-
-    - name: Setup Pages
-      uses: actions/configure-pages@v4
-
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: ./pages
-
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+        name: cmake-single-header
+        path: build/dist/novasvg/*
+        retention-days: 5

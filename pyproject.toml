@@ -11,7 +11,7 @@ name = "novasvg"
 dynamic = ["version"]
 description = "NovaSVG is a header-only SVG library with Python bindings"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
     {name = "Mohammad Raziei", email = "mohammadraziei1375@gmail.com"}
@@ -20,8 +20,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -36,6 +34,9 @@ dependencies = [
 ]
 scripts.novasvg = "novasvg.__main__:main"
 scripts.novasvg-cli = "novasvg.native_cli:run"
+
+[project.optional-dependencies]
+test = ["pytest-xdist"]
 
 
 [project.urls]
@@ -62,6 +63,12 @@ regex = '''(?sx)
 \#define \s+ NOVASVG_VERSION_PATCH \s+ (?P<patch>\d+) .*?
 '''
 result = "{major}.{minor}.{patch}"
+
+
+[tool.cibuildwheel]
+test-command = "pytest {project}"
+test-extras = ["test"]
+test-skip = ["*universal2:arm64"]
 
 
 [tool.pytest.ini_options]

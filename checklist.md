@@ -306,3 +306,54 @@
       - محدودیت هنوز پابرجاست: فقط TTF/OTF خام (Tier 1). WOFF/WOFF2 دیکد نمی‌شن (تلاش
         بعدی توی زنجیره‌ی `src` امتحان می‌شه، اگه هیچ‌کدوم TTF/OTF نبود، آخرش هیچی لود
         نمی‌شه — نه crash، فقط فونت embedded نادیده گرفته می‌شه).
+
+## کارهای این نشست — workflow شبیه به ctoon
+
+رفتم `MohammadRaziei/ctoon` رو clone کردم و کل `.github/workflows/` ش رو دیدم. قبلاً novasvg
+فقط یه `cmake.yml` مونولیتیک داشت که همه‌چیز (build/test/docs/coverage/release) رو خودش تنها
+انجام می‌داد. ساختار ctoon تمیزتره: یه orchestrator که کارهای جدا رو coordinate می‌کنه.
+
+- [x] **`cmake.yml` بازنویسی شد** — trigger از `push`+`pull_request` به
+      `workflow_dispatch`+`workflow_call`+`pull_request` عوض شد (چون الان `orchestrator.yml`
+      صداش می‌زنه، نه مستقیم push). `windows-latest` به matrix اضافه شد (قبلاً فقط
+      ubuntu+macos). jobهای مربوط به release (build-single-header، deploy-pages) از این فایل
+      در اومدن، رفتن جای درستشون. اسم artifact ها (`cmake-documentation`,
+      `cmake-coverage-report`, `cmake-single-header`) دقیقاً مثل ctoon شد تا orchestrator
+      بتونه درست دانلودشون کنه.
+- [x] **`wheels.yml` اضافه شد** — build کردن Python wheel با cibuildwheel روی هر سه OS +
+      sdist، دقیقاً همون matrix و همون ترفند stable-ABI (`cp312-abi3` که خودش ۳.۱۳+ رو هم
+      پوشش می‌ده، بدون build جدا برای هر ورژن پایتونِ جدید).
+- [x] **`orchestrator.yml` اضافه شد** — هماهنگ‌کننده‌ی اصلی: ورژن رو از `version.py` می‌خونه
+      (که از قبل توی novasvg بود و دقیقاً همون رابطِ ctoon رو داره)، تگ رو با ورژنِ هدر چک
+      می‌کنه، `cmake.yml`/`wheels.yml` رو به‌عنوان reusable workflow صدا می‌زنه، بعد
+      artifact ها رو جمع می‌کنه و release واقعی روی GitHub می‌سازه + به PyPI publish می‌کنه +
+      docs/coverage رو به GitHub Pages می‌فرسته.
+- [x] **`release_template.md` اضافه شد** — با matrix واقعیِ CIBW_BUILD تنظیم شد (cp39 تا
+      cp312-abi3)، به‌علاوه یه ردیف اضافه که ctoon نداره: single-header artifact (چون novasvg
+      این قابلیت رو داره، ctoon نه).
+- [x] **`process_release.py` عمداً کپی نشد** — رفتم چک کردم، این فایل توی خودِ ctoon هم
+      هیچ‌جا صدا زده نمی‌شه (نه توی orchestrator.yml نه جای دیگه)، ظاهراً کدِ یتیم/نیمه‌کاره‌ست.
+      کپیِ کد استفاده‌نشده معنی نداشت.
+- [x] **`pyproject.toml` آپدیت شد**: بخش `[tool.cibuildwheel]` + گروه
+      `[project.optional-dependencies] test` اضافه شدن (دقیقاً مثل ctoon). یه ناهماهنگیِ
+      واقعی هم پیدا و فیکس شد: classifiers قبلاً مدعیِ پشتیبانی از پایتون ۳.۷/۳.۸ بود ولی
+      `CIBW_BUILD` اصلاً چیزی برای اون ورژن‌ها build نمی‌کنه (از ۳.۹ شروع می‌شه) — الان
+      classifiers/`requires-python` با چیزی که واقعاً build/test می‌شه یکی شدن (۳.۹ تا ۳.۱۳،
+      دقیقاً مثل ctoon).
+- [x] **`requirements-dev.txt` اضافه شد** — novasvg اصلاً نداشتش (ctoon داشت). با فرق مهم:
+      novasvg از Doxygenِ ساده استفاده می‌کنه نه Sphinx، پس وابستگی‌های مستندسازیِ ctoon
+      (`sphinx`, `furo`, `breathe`, `exhale`) رو کپی نکردم — بی‌ربط بودن.
+- [x] **همه‌ی سه فایل YAML و خودِ `pyproject.toml` سینتکسشون validate شد** (پارس با
+      `yaml.safe_load`/`tomllib`)، و مسیرهای واقعیِ خروجی (coverage.lcov, docs/html,
+      dist/novasvg/novasvg.h) رو با خودِ `CMakeLists.txt`/`tests/CMakeLists.txt`/
+      `docs/CMakeLists.txt` چک کردم که دقیقاً یکی باشن.
+
+### چیزی که نمی‌تونم از اینجا تست کنم — صادقانه بگم
+
+- **build واقعی روی ویندوز رو نمی‌تونم از این sandbox (لینوکسه) اجرا کنم.** ساختار
+  workflow رو درست کپی کردم (`windows-latest` توی matrix، `if: runner.os != 'Windows'`
+  برای رد کردنِ ctest روی ویندوز، دقیقاً مثل ctoon) ولی نمی‌تونم تضمین بدم خودِ کدِ novasvg
+  (فایل‌های cmake/render) روی MSVC بدون خطا کامپایل می‌شه — این فقط با یه اجرای واقعیِ
+  GitHub Actions معلوم می‌شه.
+- **PyPI publish/GitHub Pages نیاز به secret دارن** (`PYPI_USERNAME`, `PYPI_PASSWORD`) که
+  باید توی تنظیمات ریپو ست بشن — کاری نیست که از کد بشه چک کرد.
