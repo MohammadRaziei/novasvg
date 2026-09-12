@@ -262,8 +262,8 @@ NOVASVG_INLINE void path_add_rect(path_t* path, float x, float y, float w, float
 
 NOVASVG_INLINE void path_add_round_rect(path_t* path, float x, float y, float w, float h, float rx, float ry)
 {
-    rx = std::min(rx, w * 0.5f);
-    ry = std::min(ry, h * 0.5f);
+    rx = NOVASVG_MIN(rx, w * 0.5f);
+    ry = NOVASVG_MIN(ry, h * 0.5f);
     if(rx == 0.f && ry == 0.f) {
         path_add_rect(path, x, y, w, h);
         return;
@@ -688,10 +688,10 @@ NOVASVG_INLINE void extents_traverse_func(void* closure, path_command_t command,
     }
 
     for(int i = 0; i < npoints; ++i) {
-        calculator->x1 = std::min(calculator->x1, points[i].x);
-        calculator->y1 = std::min(calculator->y1, points[i].y);
-        calculator->x2 = std::max(calculator->x2, points[i].x);
-        calculator->y2 = std::max(calculator->y2, points[i].y);
+        calculator->x1 = NOVASVG_MIN(calculator->x1, points[i].x);
+        calculator->y1 = NOVASVG_MIN(calculator->y1, points[i].y);
+        calculator->x2 = NOVASVG_MAX(calculator->x2, points[i].x);
+        calculator->y2 = NOVASVG_MAX(calculator->y2, points[i].y);
         if(command != NOVASVG_PATH_COMMAND_MOVE_TO)
             calculator->length += hypotf(points[i].x - calculator->current_point.x, points[i].y - calculator->current_point.y);
         calculator->current_point = points[i];

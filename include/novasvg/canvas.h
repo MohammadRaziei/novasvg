@@ -217,10 +217,10 @@ constexpr Rect Rect::intersected(const Rect& rect) const
         return *this;
     if(!isValid())
         return rect;
-    auto l = std::max(x, rect.x);
-    auto t = std::max(y, rect.y);
-    auto r = std::min(x + w, rect.x + rect.w);
-    auto b = std::min(y + h, rect.y + rect.h);
+    auto l = NOVASVG_MAX(x, rect.x);
+    auto t = NOVASVG_MAX(y, rect.y);
+    auto r = NOVASVG_MIN(x + w, rect.x + rect.w);
+    auto b = NOVASVG_MIN(y + h, rect.y + rect.h);
     if(l >= r || t >= b)
         return Rect::Empty;
     return Rect(l, t, r - l, b - t);
@@ -232,10 +232,10 @@ constexpr Rect Rect::united(const Rect& rect) const
         return *this;
     if(!isValid())
         return rect;
-    auto l = std::min(x, rect.x);
-    auto t = std::min(y, rect.y);
-    auto r = std::max(x + w, rect.x + rect.w);
-    auto b = std::max(y + h, rect.y + rect.h);
+    auto l = NOVASVG_MIN(x, rect.x);
+    auto t = NOVASVG_MIN(y, rect.y);
+    auto r = NOVASVG_MAX(x + w, rect.x + rect.w);
+    auto b = NOVASVG_MAX(y + h, rect.y + rect.h);
     return Rect(l, t, r - l, b - t);
 }
 
@@ -1131,7 +1131,7 @@ static int gaussianRadiusForSigma(float sigma)
 {
     if(sigma <= 0.f)
         return 0;
-    return std::max(1, int(sigma * 3.f * std::sqrt(2.f * 3.14159265f) / 4.f + 0.5f));
+    return NOVASVG_MAX(1, int(sigma * 3.f * std::sqrt(2.f * 3.14159265f) / 4.f + 0.5f));
 }
 
 NOVASVG_INLINE void Canvas::boxBlur(float stdDeviationX, float stdDeviationY)
@@ -1246,10 +1246,10 @@ NOVASVG_INLINE void Canvas::compositeWith(const Canvas& src, PorterDuff mode)
 
             auto sr = (s >> 16) & 0xFF, sg = (s >> 8) & 0xFF, sb = s & 0xFF;
             auto dr = (d >> 16) & 0xFF, dg = (d >> 8) & 0xFF, db = d & 0xFF;
-            auto outA = std::min(255, int(sA * Fs + dA * Fd) / 255);
-            auto outR = std::min(255, int(sr * Fs + dr * Fd) / 255);
-            auto outG = std::min(255, int(sg * Fs + dg * Fd) / 255);
-            auto outB = std::min(255, int(sb * Fs + db * Fd) / 255);
+            auto outA = NOVASVG_MIN(255, int(sA * Fs + dA * Fd) / 255);
+            auto outR = NOVASVG_MIN(255, int(sr * Fs + dr * Fd) / 255);
+            auto outG = NOVASVG_MIN(255, int(sg * Fs + dg * Fd) / 255);
+            auto outB = NOVASVG_MIN(255, int(sb * Fs + db * Fd) / 255);
             dst[x] = (uint32_t(outA) << 24) | (uint32_t(outR) << 16) | (uint32_t(outG) << 8) | uint32_t(outB);
         }
     }

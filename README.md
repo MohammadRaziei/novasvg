@@ -9,7 +9,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
 [![C++17](https://img.shields.io/badge/C++-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
-[![CMake](https://img.shields.io/badge/CMake-3.15+-blue.svg)](https://cmake.org/)
+[![CMake](https://img.shields.io/badge/CMake-3.19+-blue.svg)](https://cmake.org/)
 [![codecov](https://codecov.io/gh/MohammadRaziei/novasvg/branch/master/graph/badge.svg)](https://codecov.io/gh/MohammadRaziei/novasvg)
 [![single header file-novasvg.h](https://img.shields.io/badge/single_header_file-novasvg.h-blue.svg)](https://github.com/MohammadRaziei/novasvg/releases/download/__beta__/novasvg.h)
 
@@ -44,7 +44,6 @@ The library also offers a **command-line interface** for batch processing and au
 - **SVG information** – Extract metadata, bounding boxes, and element counts
 - **CSS querying** – Find elements using CSS selectors
 - **Style application** – Apply CSS stylesheets to SVG documents
-- **Font management** – Add and manage fonts for rendering
 
 ### SVG Filters
 - **Full filter-primitive pipeline** – `feGaussianBlur`, `feOffset`, `feFlood`,
@@ -90,14 +89,12 @@ The library also offers a **command-line interface** for batch processing and au
   opposed to just naming a `font-family` and hoping the system has it)
   gets that font loaded and used under its declared family name. WOFF/
   WOFF2 aren't decoded yet — only raw TrueType/OpenType payloads.
-  explaining why.
 
 ## 🚀 Quick Start
 
 ### C++ Usage
 
 ```cpp
-#define NOVASVG_IMPLEMENTATION
 #include <novasvg/novasvg.h>
 
 int main() {
@@ -136,7 +133,14 @@ See the "CLI Reference" section below for the full option list.
 ### C++ Library
 
 #### As Header-Only Library
-Simply copy `include/novasvg/novasvg.h` and `include/novasvg/detail/novasvg_impl.h` to your project.
+Copy the `include/novasvg/` directory into your project (or grab the
+single-header `novasvg.h` from the
+[latest release](https://github.com/MohammadRaziei/novasvg/releases)) and
+`#include <novasvg/novasvg.h>`. Every function is marked `inline`, so
+there's no separate implementation file to define a macro for — that
+used to be required via a `detail/novasvg_impl.h` + `#define
+NOVASVG_IMPLEMENTATION`, but that split no longer exists; the whole
+library is safe to `#include` from any number of translation units as-is.
 
 #### Building from Source
 ```bash

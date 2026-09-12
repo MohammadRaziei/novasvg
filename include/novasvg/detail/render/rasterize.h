@@ -117,7 +117,7 @@ NOVASVG_INLINE void span_buffer_extents(span_buffer_t* span_buffer, rect_t* exte
 NOVASVG_INLINE void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, const span_buffer_t* b)
 {
     span_buffer_reset(span_buffer);
-    novasvg_array_ensure(span_buffer->spans, std::max(a->spans.size, b->spans.size));
+    novasvg_array_ensure(span_buffer->spans, NOVASVG_MAX(a->spans.size, b->spans.size));
 
     span_t* a_spans = a->spans.data;
     span_t* a_end = a_spans + a->spans.size;
@@ -149,8 +149,8 @@ NOVASVG_INLINE void span_buffer_intersect(span_buffer_t* span_buffer, const span
             continue;
         }
 
-        int x = std::max(ax1, bx1);
-        int len = std::min(ax2, bx2) - x;
+        int x = NOVASVG_MAX(ax1, bx1);
+        int len = NOVASVG_MIN(ax2, bx2) - x;
         if(len) {
             novasvg_array_ensure(span_buffer->spans, 1);
             span_t* span = span_buffer->spans.data + span_buffer->spans.size;

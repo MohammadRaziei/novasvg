@@ -1,6 +1,8 @@
 #ifndef NOVASVG_COLOR_H
 #define NOVASVG_COLOR_H
 
+#include "detail/config.h" // NOVASVG_MAX/NOVASVG_MIN
+
 #include <stdexcept>
 #include <string>
 #include <cstdint>
@@ -455,7 +457,7 @@ public:
      * @endcode
      */
     Color blend(const Color& other, int percentage) const {
-        int pct = std::max(0, std::min(100, percentage));
+        int pct = NOVASVG_MAX(0, NOVASVG_MIN(100, percentage));
         double p = pct / 100.0;
         double q = 1.0 - p;
 

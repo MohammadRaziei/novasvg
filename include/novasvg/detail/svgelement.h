@@ -2695,7 +2695,7 @@ NOVASVG_INLINE Rect SVGPreserveAspectRatio::getClipRect(const Rect& viewBoxRect,
         return Rect(viewBoxRect.x, viewBoxRect.y, viewportSize.w / xScale, viewportSize.h / yScale);
     }
 
-    auto scale = (m_meetOrSlice == MeetOrSlice::Meet) ? std::min(xScale, yScale) : std::max(xScale, yScale);
+    auto scale = (m_meetOrSlice == MeetOrSlice::Meet) ? NOVASVG_MIN(xScale, yScale) : NOVASVG_MAX(xScale, yScale);
     auto xOffset = -viewBoxRect.x * scale;
     auto yOffset = -viewBoxRect.y * scale;
     auto viewWidth = viewBoxRect.w * scale;
@@ -2742,7 +2742,7 @@ NOVASVG_INLINE Transform SVGPreserveAspectRatio::getTransform(const Rect& viewBo
         return Transform(xScale, 0, 0, yScale, -viewBoxRect.x * xScale, -viewBoxRect.y * yScale);
     }
 
-    auto scale = (m_meetOrSlice == MeetOrSlice::Meet) ? std::min(xScale, yScale) : std::max(xScale, yScale);
+    auto scale = (m_meetOrSlice == MeetOrSlice::Meet) ? NOVASVG_MIN(xScale, yScale) : NOVASVG_MAX(xScale, yScale);
     auto xOffset = -viewBoxRect.x * scale;
     auto yOffset = -viewBoxRect.y * scale;
     auto viewWidth = viewBoxRect.w * scale;
@@ -3313,7 +3313,7 @@ NOVASVG_INLINE Rect SVGGeometryElement::strokeBoundingBox() const
             joinLimit *= m_strokeData.miterLimit();
         }
 
-        strokeBoundingBox.inflate(std::max(capLimit, joinLimit));
+        strokeBoundingBox.inflate(NOVASVG_MAX(capLimit, joinLimit));
     }
 
     for(const auto& markerPosition : m_markerPositions)
@@ -3504,8 +3504,8 @@ NOVASVG_INLINE Rect SVGRectElement::updateShape(Path& path)
     if(rx <= 0.f) rx = ry;
     if(ry <= 0.f) ry = rx;
 
-    rx = std::min(rx, width / 2.f);
-    ry = std::min(ry, height / 2.f);
+    rx = NOVASVG_MIN(rx, width / 2.f);
+    ry = NOVASVG_MIN(ry, height / 2.f);
 
     path.addRoundRect(x, y, width, height, rx, ry);
     return Rect(x, y, width, height);
@@ -6694,16 +6694,16 @@ NOVASVG_INLINE float SVGFilterElement::pixelMargin() const
             continue;
         if(element->id() == ElementID::FeGaussianBlur) {
             auto sigma = parseFirstFloat(element->getAttribute(PropertyID::StdDeviation), 0.f);
-            margin = std::max(margin, sigma * 3.f);
+            margin = NOVASVG_MAX(margin, sigma * 3.f);
         } else if(element->id() == ElementID::FeDropShadow) {
             auto sigma = parseFirstFloat(element->getAttribute(PropertyID::StdDeviation), 2.f);
             auto dx = parseFirstFloat(element->getAttribute(PropertyID::Dx), 2.f);
             auto dy = parseFirstFloat(element->getAttribute(PropertyID::Dy), 2.f);
-            margin = std::max(margin, sigma * 3.f + std::max(std::abs(dx), std::abs(dy)));
+            margin = NOVASVG_MAX(margin, sigma * 3.f + NOVASVG_MAX(std::abs(dx), std::abs(dy)));
         } else if(element->id() == ElementID::FeOffset) {
             auto dx = parseFirstFloat(element->getAttribute(PropertyID::Dx), 0.f);
             auto dy = parseFirstFloat(element->getAttribute(PropertyID::Dy), 0.f);
-            margin = std::max(margin, std::max(std::abs(dx), std::abs(dy)));
+            margin = NOVASVG_MAX(margin, NOVASVG_MAX(std::abs(dx), std::abs(dy)));
         }
         // feFlood/feComposite/feMerge don't themselves need extra margin;
         // if they combine an already-blurred/offset named result, that

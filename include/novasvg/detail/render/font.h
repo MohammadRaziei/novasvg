@@ -5433,10 +5433,10 @@ NOVASVG_INLINE float font_face_text_extents(font_face_t* face, float size, const
             continue;
         }
 
-        float x1 = std::min(text_extents->x, glyph_extents.x);
-        float y1 = std::min(text_extents->y, glyph_extents.y);
-        float x2 = std::max(text_extents->x + text_extents->w, glyph_extents.x + glyph_extents.w);
-        float y2 = std::max(text_extents->y + text_extents->h, glyph_extents.y + glyph_extents.h);
+        float x1 = NOVASVG_MIN(text_extents->x, glyph_extents.x);
+        float y1 = NOVASVG_MIN(text_extents->y, glyph_extents.y);
+        float x2 = NOVASVG_MAX(text_extents->x + text_extents->w, glyph_extents.x + glyph_extents.w);
+        float y2 = NOVASVG_MAX(text_extents->y + text_extents->h, glyph_extents.y + glyph_extents.h);
 
         text_extents->x = x1;
         text_extents->y = y1;

@@ -693,7 +693,7 @@ NOVASVG_INLINE void blend_linear_gradient(surface_t* surface, operator_t op, con
         int length = spans->len;
         int x = spans->x;
         while(length) {
-            int l = std::min(length, BUFFER_SIZE);
+            int l = NOVASVG_MIN(length, BUFFER_SIZE);
             fetch_linear_gradient(buffer, &v, gradient, spans->y, x, l);
             uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + x;
             func(target, l, buffer, spans->coverage);
@@ -724,7 +724,7 @@ NOVASVG_INLINE void blend_radial_gradient(surface_t* surface, operator_t op, con
         int length = spans->len;
         int x = spans->x;
         while(length) {
-            int l = std::min(length, BUFFER_SIZE);
+            int l = NOVASVG_MIN(length, BUFFER_SIZE);
             fetch_radial_gradient(buffer, &v, gradient, spans->y, x, l);
             uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + x;
             func(target, l, buffer, spans->coverage);
@@ -800,7 +800,7 @@ NOVASVG_INLINE void blend_transformed_argb(surface_t* surface, operator_t op, co
         int length = spans->len;
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
         while(length) {
-            int l = std::min(length, BUFFER_SIZE);
+            int l = NOVASVG_MIN(length, BUFFER_SIZE);
             const uint32_t* end = buffer + l;
             uint32_t* b = buffer;
             while(b < end) {
@@ -857,7 +857,7 @@ NOVASVG_INLINE void blend_untransformed_tiled_argb(surface_t* surface, operator_
 
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
         while(length) {
-            int l = std::min(image_width - sx, length);
+            int l = NOVASVG_MIN(image_width - sx, length);
             if(BUFFER_SIZE < l)
                 l = BUFFER_SIZE;
             const uint32_t* src = (const uint32_t*)(texture->data + sy * texture->stride) + sx;
@@ -902,7 +902,7 @@ NOVASVG_INLINE void blend_transformed_tiled_argb(surface_t* surface, operator_t 
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
         int length = spans->len;
         while(length) {
-            int l = std::min(length, BUFFER_SIZE);
+            int l = NOVASVG_MIN(length, BUFFER_SIZE);
             const uint32_t* end = buffer + l;
             uint32_t* b = buffer;
             while(b < end) {
@@ -970,7 +970,7 @@ NOVASVG_INLINE void blend_transformed_bilinear_tiled_argb(surface_t* surface, op
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
         int length = spans->len;
         while(length) {
-            int l = std::min(length, BUFFER_SIZE);
+            int l = NOVASVG_MIN(length, BUFFER_SIZE);
             const uint32_t* end = buffer + l;
             uint32_t* b = buffer;
             while (b < end) {

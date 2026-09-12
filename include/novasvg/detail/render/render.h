@@ -25,6 +25,8 @@
 
 #include <stdbool.h>
 
+#include "../config.h" // NOVASVG_MAX/NOVASVG_MIN
+
 // Pure C++ project: no separate C translation units link against this,
 // so the extern "C" wrapper this file used to have (for use as a
 // standalone C library) has been dropped along with the novasvg_ prefix
@@ -99,6 +101,10 @@ typedef void (*write_func_t)(void* closure, void* data, int size);
 #define NOVASVG_DEG2RAD(x) ((x) * (NOVASVG_PI / 180.0f))
 #define NOVASVG_RAD2DEG(x) ((x) * (180.0f / NOVASVG_PI))
 
+// NOVASVG_MAX/NOVASVG_MIN live in detail/config.h (a lower-level, always-
+// included-first header) so standalone headers like color.h can reach
+// them too without depending on this render-internals header.
+
 /**
  * @brief A structure representing a point in 2D space.
  */
@@ -107,7 +113,7 @@ typedef struct point {
     float y; ///< The y-coordinate of the point.
 } point_t;
 
-#define NOVASVG_MAKE_POINT(x, y) ((point_t){x, y})
+#define NOVASVG_MAKE_POINT(x, y) (point_t{x, y})
 #define NOVASVG_EMPTY_POINT NOVASVG_MAKE_POINT(0, 0)
 
 /**
@@ -120,7 +126,7 @@ typedef struct rect {
     float h; ///< The height of the rectangle.
 } rect_t;
 
-#define NOVASVG_MAKE_RECT(x, y, w, h) ((rect_t){x, y, w, h})
+#define NOVASVG_MAKE_RECT(x, y, w, h) (rect_t{x, y, w, h})
 #define NOVASVG_EMPTY_RECT NOVASVG_MAKE_RECT(0, 0, 0, 0)
 
 /**
@@ -135,7 +141,7 @@ typedef struct matrix {
     float f; ///< The vertical translation offset.
 } matrix_t;
 
-#define NOVASVG_MAKE_MATRIX(a, b, c, d, e, f) ((matrix_t){a, b, c, d, e, f})
+#define NOVASVG_MAKE_MATRIX(a, b, c, d, e, f) (matrix_t{a, b, c, d, e, f})
 #define NOVASVG_MAKE_SCALE(x, y) NOVASVG_MAKE_MATRIX(x, 0, 0, y, 0, 0)
 #define NOVASVG_MAKE_TRANSLATE(x, y) NOVASVG_MAKE_MATRIX(1, 0, 0, 1, x, y)
 #define NOVASVG_IDENTITY_MATRIX NOVASVG_MAKE_MATRIX(1, 0, 0, 1, 0, 0)
@@ -1014,7 +1020,7 @@ typedef struct color {
     float a; ///< Alpha (opacity) component (0 to 1).
 } color_t;
 
-#define NOVASVG_MAKE_COLOR(r, g, b, a) ((color_t){r, g, b, a})
+#define NOVASVG_MAKE_COLOR(r, g, b, a) (color_t{r, g, b, a})
 
 #define NOVASVG_BLACK_COLOR   NOVASVG_MAKE_COLOR(0, 0, 0, 1)
 #define NOVASVG_WHITE_COLOR   NOVASVG_MAKE_COLOR(1, 1, 1, 1)

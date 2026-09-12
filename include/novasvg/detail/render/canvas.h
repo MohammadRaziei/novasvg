@@ -16,7 +16,7 @@ NOVASVG_INLINE const char* render_version_string(void)
     return NOVASVG_RENDER_VERSION_STRING;
 }
 
-#define NOVASVG_DEFAULT_STROKE_STYLE ((stroke_style_t){1.f, NOVASVG_LINE_CAP_BUTT, NOVASVG_LINE_JOIN_MITER, 10.f})
+#define NOVASVG_DEFAULT_STROKE_STYLE (stroke_style_t{1.f, NOVASVG_LINE_CAP_BUTT, NOVASVG_LINE_JOIN_MITER, 10.f})
 
 NOVASVG_INLINE state_t* state_create(void)
 {
