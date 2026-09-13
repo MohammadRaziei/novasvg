@@ -401,3 +401,39 @@
   همون خطاهایی رو هدف گرفتن که توی لاگِ واقعیِ CI اومده بودن، و هر دو تغییر پورتیبل و
   well-established هستن (نه حدس) — ولی تاییدِ قطعی فقط با یه اجرای واقعیِ دیگه‌ی GitHub
   Actions روی ویندوز به دست میاد.
+
+## کارهای این نشست — فیکسِ واقعیِ دوم از CI ویندوز (Python binding)
+
+اجرای بعدیِ CI روی ویندوز نشون داد فیکسِ قبلی (compound literal + min/max) جواب داد — دیگه اون
+خطاها نیستن — ولی یه خطای *جدید و متفاوت* توی `src/bindings/python/binding.cpp` ظاهر شد،
+عمیق‌تر توی build (خودِ nanobind، نه کدِ novasvg مستقیم).
+
+- [x] **`error C2440` توی nanobind روی MSVC، از `add_font_face_from_data` binding.** ریشه‌ش:
+      این binding یه function pointer خام (`novasvg_destroy_func_t`, یعنی `void(*)(void*)`)
+      رو مستقیم به‌عنوان یه پارامترِ Python-visible با مقدار پیش‌فرضِ `nullptr` expose کرده
+      بود. GCC/Clang تحملش می‌کردن، MSVC نه (template machinery خودِ nanobind گیر می‌کرد
+      روی "Ambiguous user-defined-conversion").
+      - رفتم عمیق‌تر چک کردم و یه باگِ واقعیِ memory-safety هم همینجا پیدا شد که مستقل از
+        خودِ کامپایلِ ویندوزه: وقتی `destroy_func=nullptr` باشه، novasvg اصلاً دیتای فونت
+        رو کپی نمی‌کنه — فقط یه pointer خام به همون بافرِ اصلی نگه می‌داره
+        (`stbtt_InitFont` مستقیم به دیتای ورودی اشاره می‌کنه، کپی نمی‌گیره). یعنی binding
+        قبلی یه pointer به بافرِ `bytes` پایتون نگه می‌داشت که هیچ تضمینی نداشت زنده بمونه —
+        اگه garbage collector اون شیء بایت‌ها رو جمع می‌کرد درحالی‌که فونت هنوز توی
+        `FontFaceCache` سراسری کش شده، یه use-after-free واقعی پیش میومد.
+      - فیکس: به‌جای expose کردنِ خودِ function pointer به پایتون، حالا لامبدا خودش دیتا رو
+        `malloc`+`memcpy` می‌کنه، و یه لامبدای capture-less (`[](void* p){ std::free(p); }`)
+        که خودش implicit به `void(*)(void*)` تبدیل می‌شه رو به‌عنوان `destroy_func` پاس
+        می‌ده — نه ambiguous برای MSVC (چون این تبدیل خودِ کد ماست، نه چیزی که nanobind
+        باید از یه پارامترِ ورودیِ پایتون حدس بزنه)، نه دیگه نیازی به expose کردنِ
+        function pointer به پایتون.
+      - تست شد (روی لینوکس، چون این sandbox ویندوز نداره): فونت از یه `bytes` پایتون
+        رجیستر شد، بعد خودِ اون متغیرِ `bytes` رو صراحتاً `del` کردم و `gc.collect()` صدا
+        زدم، بعد یه SVG با همون فونت رندر کردم — بدون کرش، و متنِ رندرشده واقعاً از فونتِ
+        درست (Liberation Mono، monospace) استفاده می‌کرد. این دقیقاً همون سناریوی
+        use-after-free ای بود که فیکس باید جلوش رو می‌گرفت.
+
+### چیزی که هنوز نمی‌تونم از اینجا تضمین بدم
+
+- هنوز نمی‌تونم واقعاً روی ویندوز build بگیرم؛ این فیکس دقیقاً خطای گزارش‌شده رو هدف گرفته و
+  یه الگوی استانداردِ پورتیبله (capture-less lambda به function pointer)، ولی تاییدِ قطعی با
+  یه اجرای دیگه‌ی CI به دست میاد.

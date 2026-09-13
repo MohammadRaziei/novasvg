@@ -4,6 +4,8 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/ndarray.h>
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
 // Include the main library header
 #include "novasvg/novasvg.h"
@@ -21,14 +23,32 @@ NB_MODULE(novasvg_py, m) {
           "family"_a, "bold"_a, "italic"_a, "filename"_a,
           "Add a font face from a file to the cache.");
     
-    // Binding for adding font from memory. 
-    // The destroy_func and closure are advanced usage; usually defaults to nullptr for simple bindings.
-    m.def("add_font_face_from_data", 
-          [](const char* family, bool bold, bool italic, nb::bytes data, novasvg_destroy_func_t destroy_func, void* closure) -> bool {
-               return novasvg::addFontFaceFromData(family, bold, italic, data.data(), data.size(), destroy_func, closure);
-          }, 
-          "family"_a, "bold"_a, "italic"_a, "data"_a, "destroy_func"_a = nullptr, "closure"_a = nullptr,
-          "Add a font face from a memory buffer.");
+    // Binding for adding a font from memory. The C++ API takes a raw
+    // (destroy_func, closure) pair so it can avoid copying the caller's
+    // buffer -- but exposing that pair as Python-visible parameters is
+    // both wrong and (on MSVC specifically) doesn't even compile: wrong
+    // because with destroy_func=nullptr novasvg never copies the data,
+    // it just keeps the original pointer alive only as long as the
+    // caller does -- here, only as long as Python's nb::bytes object
+    // isn't garbage-collected, which nothing guarantees once the font is
+    // cached indefinitely in FontFaceCache; a raw C function pointer
+    // isn't something a Python caller could usefully pass in anyway.
+    // Fixed by copying the buffer once here and owning that copy with a
+    // capture-less lambda (implicitly convertible to the destroy_func_t
+    // function-pointer type novasvg wants, portably across compilers --
+    // unlike a raw function pointer arriving through nanobind's
+    // Python-argument machinery, which is what didn't compile on MSVC).
+    m.def("add_font_face_from_data",
+          [](const char* family, bool bold, bool italic, nb::bytes data) -> bool {
+               auto* copy = std::malloc(data.size());
+               if(copy == nullptr)
+                   return false;
+               std::memcpy(copy, data.data(), data.size());
+               return novasvg::addFontFaceFromData(family, bold, italic, copy, data.size(),
+                                                     [](void* p) { std::free(p); }, copy);
+          },
+          "family"_a, "bold"_a, "italic"_a, "data"_a,
+          "Add a font face from a memory buffer (bytes) to the cache.");
 
     // --- Bind Color Class ---
     nb::class_<novasvg::Color>(m, "Color")
