@@ -70,6 +70,13 @@ test-command = "pytest {project}"
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
 
+[tool.cibuildwheel.macos]
+# novasvg_cli.cpp uses std::filesystem, unavailable in libc++ below 10.15.
+# Without this, cibuildwheel's default (10.13 for the universal2 x86_64
+# slice) tags the wheel as macosx_10_9/10_13 while the compiled binary
+# actually needs 10.15, and delocate-wheel refuses to repair the mismatch.
+environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
+
 
 [tool.pytest.ini_options]
 minversion = "6.0"
