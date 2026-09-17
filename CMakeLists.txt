@@ -1,5 +1,16 @@
 cmake_minimum_required(VERSION 3.19)
 
+# novasvg_cli.cpp uses std::filesystem, which libc++ marks unavailable below
+# macOS 10.15. cibuildwheel/scikit-build-core can otherwise pass an older
+# target (e.g. 10.13, its universal2/x86_64 default) via the
+# MACOSX_DEPLOYMENT_TARGET env var, so raise the floor here, before project(),
+# without clobbering a caller-supplied target that's already >= 10.15.
+if(APPLE)
+    if(NOT CMAKE_OSX_DEPLOYMENT_TARGET OR CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.15")
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS deployment target" FORCE)
+    endif()
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(DynamicVersion)
 
