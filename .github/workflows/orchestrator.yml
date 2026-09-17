@@ -73,7 +73,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: cmake-single-header
-          path: dist
+          path: artifacts
 
       - name: List dist directory
         run: tree --du -shaC .
@@ -86,7 +86,9 @@ jobs:
           draft: false
           prerelease: ${{ needs.init.outputs.is_tag == 'false' }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: dist/*
+          files: |
+            dist/*
+            artifacts/*
 
       - name: Publishing to PyPi
         uses: pypa/gh-action-pypi-publish@release/v1
