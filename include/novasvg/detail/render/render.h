@@ -35,7 +35,12 @@
 namespace novasvg {
 namespace render {
 
-#if defined(NOVASVG_BUILD_STATIC)
+// NovaSVG is header-only: every function is NOVASVG_INLINE, so the default
+// linkage must NOT be dllimport/dllexport. On MSVC, __declspec(dllimport) on
+// an inline-defined function suppresses the inline body and produces LNK2019
+// unresolved externals. Shared-library decoration is therefore opt-in via
+// NOVASVG_BUILD_SHARED.
+#if defined(NOVASVG_BUILD_STATIC) || !defined(NOVASVG_BUILD_SHARED)
 #define NOVASVG_EXPORT
 #define NOVASVG_IMPORT
 #elif (defined(_WIN32) || defined(__CYGWIN__))

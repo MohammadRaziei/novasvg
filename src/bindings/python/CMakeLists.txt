@@ -104,9 +104,15 @@ ExternalProject_Add(novasvg_build_python
         -DSKBUILD=2
         -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/python/install
         -Dnanobind_DIR=${NANOBIND_CMAKE_DIR}
+        -DCMAKE_BUILD_TYPE=$<IF:$<BOOL:${CMAKE_BUILD_TYPE}>,${CMAKE_BUILD_TYPE},Release>
+        -DPython_EXECUTABLE=${Python_EXECUTABLE}
+
+    # Multi-config generators (Visual Studio, Xcode) ignore CMAKE_BUILD_TYPE:
+    # tell the nested build/install which configuration to use explicitly.
+    BUILD_COMMAND ${CMAKE_COMMAND} --build . --config $<IF:$<CONFIG:Debug>,Debug,Release> --parallel 8
     
     # Ensure the build step runs the install command
-    INSTALL_COMMAND ${CMAKE_COMMAND} --build . --target install --parallel 8
+    INSTALL_COMMAND ${CMAKE_COMMAND} --build . --target install --config $<IF:$<CONFIG:Debug>,Debug,Release> --parallel 8
     
     # Build this target always, useful for testing workflows
     BUILD_ALWAYS 1
