@@ -18,13 +18,17 @@ if(DEFINED SKBUILD)
     target_link_libraries(novasvg_py PRIVATE novasvg::novasvg)
 
     # Generate Python stubs
+    # Run stubgen from the directory that actually contains the built module.
+    # On multi-config generators (Visual Studio, Xcode) the .pyd/.so lands in a
+    # per-config subdirectory (e.g. Debug/), so CMAKE_CURRENT_BINARY_DIR is the
+    # wrong import path and stubgen fails with ModuleNotFoundError.
     add_custom_command(TARGET novasvg_py POST_BUILD
-        COMMAND ${Python_EXECUTABLE} -m nanobind.stubgen 
-                -m novasvg_py 
-                -o ${CMAKE_CURRENT_BINARY_DIR}/novasvg_py.pyi
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND ${Python_EXECUTABLE} -m nanobind.stubgen
+                -m novasvg_py
+                -i $<TARGET_FILE_DIR:novasvg_py>
+                -o $<TARGET_FILE_DIR:novasvg_py>/novasvg_py.pyi
+        WORKING_DIRECTORY $<TARGET_FILE_DIR:novasvg_py>
         COMMENT "Generating Python stubs (.pyi) for novasvg_py..."
-        BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/novasvg_py.pyi
     )
     
     # Generate the single-header distribution for the Python package 
@@ -46,8 +50,9 @@ if(DEFINED SKBUILD)
         LIBRARY DESTINATION novasvg
     )
 
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/novasvg_py.pyi
+    install(FILES $<TARGET_FILE_DIR:novasvg_py>/novasvg_py.pyi
         DESTINATION novasvg
+        OPTIONAL
     )
 
     # 2. Install the Python source files (.py) into the package directory
@@ -91,6 +96,15 @@ endif()
 # We use the current source directory but build it in a separate binary directory
 # to avoid conflicts with the main build.
 
+# Configuration used for the nested python build. Prefer the single-config
+# CMAKE_BUILD_TYPE the user asked for; fall back to Release so multi-config
+# generators don't silently produce a Debug .pyd against a release Python.
+if(CMAKE_BUILD_TYPE)
+    set(NOVASVG_PYTHON_CONFIG ${CMAKE_BUILD_TYPE})
+else()
+    set(NOVASVG_PYTHON_CONFIG Release)
+endif()
+
 set(NOVASVG_PYTHON_INSTALL_DIR ${CMAKE_BINARY_DIR}/python/install)
 ExternalProject_Add(novasvg_build_python
     SOURCE_DIR ${CMAKE_SOURCE_DIR}
@@ -104,15 +118,15 @@ ExternalProject_Add(novasvg_build_python
         -DSKBUILD=2
         -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/python/install
         -Dnanobind_DIR=${NANOBIND_CMAKE_DIR}
-        -DCMAKE_BUILD_TYPE=$<IF:$<BOOL:${CMAKE_BUILD_TYPE}>,${CMAKE_BUILD_TYPE},Release>
+        -DCMAKE_BUILD_TYPE=${NOVASVG_PYTHON_CONFIG}
         -DPython_EXECUTABLE=${Python_EXECUTABLE}
 
     # Multi-config generators (Visual Studio, Xcode) ignore CMAKE_BUILD_TYPE:
     # tell the nested build/install which configuration to use explicitly.
-    BUILD_COMMAND ${CMAKE_COMMAND} --build . --config $<IF:$<CONFIG:Debug>,Debug,Release> --parallel 8
+    BUILD_COMMAND ${CMAKE_COMMAND} --build . --config ${NOVASVG_PYTHON_CONFIG} --parallel 8
     
     # Ensure the build step runs the install command
-    INSTALL_COMMAND ${CMAKE_COMMAND} --build . --target install --config $<IF:$<CONFIG:Debug>,Debug,Release> --parallel 8
+    INSTALL_COMMAND ${CMAKE_COMMAND} --build . --target install --config ${NOVASVG_PYTHON_CONFIG} --parallel 8
     
     # Build this target always, useful for testing workflows
     BUILD_ALWAYS 1
