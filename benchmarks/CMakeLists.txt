@@ -3,12 +3,14 @@ project(NovaSVGBenchmarks LANGUAGES CXX)
 
 # Compares novasvg against resvg, lunasvg, cairosvg and thorvg on capability,
 # rendered output, and speed -- and writes a single self-contained report.html.
-# novasvg itself is fetched and built from source here (cmake/FetchNovasvg.cmake,
-# real novasvg_cli binary) rather than driven through its PyPI binding, so the
-# numbers reflect the actual C++ engine; the other 4 engines are driven through
-# their Python bindings (resvg-py, pylunasvg, cairosvg, thorvg-python) -- same
-# self-contained-directory convention as
-# https://github.com/MohammadRaziei/pygixml/tree/main/benchmarks.
+# novasvg is driven directly through its own C++ API (novasvg::Document /
+# novasvg::Bitmap, native/novasvg_native_bench.cpp), fetched and built from
+# source here (cmake/FetchNovasvg.cmake) -- not the novasvg_cli binary, not a
+# subprocess per render. Every sample renders inside that one process, same
+# as the other 4 engines do inside one Python process via their bindings
+# (resvg-py, pylunasvg, cairosvg, thorvg-python), so timings are finally
+# apples-to-apples. Directory otherwise follows the self-contained-directory
+# convention of https://github.com/MohammadRaziei/pygixml/tree/main/benchmarks.
 #
 #   cmake -S . -B build
 #   cmake --build build --target novasvg_benchmark
@@ -29,6 +31,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 include(FetchNovasvg)
 
+add_subdirectory(native)
 add_subdirectory(python)
 add_subdirectory(report)
 

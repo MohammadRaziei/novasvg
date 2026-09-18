@@ -16,12 +16,16 @@ a base64 `data:` URI embedded directly in the page.
 
 ## How it works
 
-- **novasvg** is fetched and built from source (`cmake/FetchNovasvg.cmake`,
-  real `novasvg_cli` binary via CMake `FetchContent`) and driven as a
-  subprocess — this measures the actual C++ engine, not a PyPI snapshot.
-  The other 4 engines go through their **Python bindings**: `python/CMakeLists.txt`
-  creates an isolated venv and installs `resvg-py`, `pylunasvg`, `cairosvg`,
-  `thorvg-python`.
+- **novasvg** is fetched and built from source (`cmake/FetchNovasvg.cmake`)
+  and driven directly through its own C++ API — `novasvg::Document` /
+  `novasvg::Bitmap` — by `native/novasvg_native_bench.cpp`, a small
+  executable that links `novasvg::novasvg` and renders the *entire* corpus
+  in one process. No CLI, no subprocess per render: the same
+  in-process-after-first-init model the other 4 engines get for free from
+  being Python bindings, so timings are finally apples-to-apples.
+- The other 4 engines go through their **Python bindings**:
+  `python/CMakeLists.txt` creates an isolated venv and installs `resvg-py`,
+  `pylunasvg`, `cairosvg`, `thorvg-python`.
 - `python/corpus.py` reuses 10 files from novasvg's own `../data/` (plain
   shapes, the `tiger.svg` torture test, gradients/filters, clip+mask, CSS
   `transform`, an embedded raster `<image>`, and the mermaid flowchart with
@@ -50,13 +54,12 @@ cmake -S . -B build -DNOVASVG_BENCH_GIT_TAG=v0.5.0
 
 ## ponytail-scoped (not done here, upgrade path if it matters later)
 
-- **Timing isolation**: 4 of 5 engines run in one long-lived Python process,
-  back to back, no per-process isolation or warmup-run discard (novasvg
-  itself *is* a fresh subprocess per render, so it already pays process
-  startup cost every call — not directly comparable to the in-process
-  engines on that basis). Fine for relative comparison, not rigorous enough
-  to publish as absolute numbers. Upgrade path: subprocess-per-engine for
-  all 5, discard first run.
+- **Timing isolation**: all 5 engines now run in-process (novasvg inside
+  `novasvg_native_bench`, the other 4 inside this Python process), back to
+  back, no warmup-run discard, no OS-level isolation between samples. Fine
+  for relative comparison, not rigorous enough to publish as absolute
+  numbers. Upgrade path: separate process per sample for all 5, discard
+  the first run of each.
 - `NOVASVG_BENCH_GIT_TAG` defaults to `master`, not this exact checkout —
   matches the pygixml/benchmarks convention (fetch a real published
   checkout rather than reuse the local source tree, so this directory stays

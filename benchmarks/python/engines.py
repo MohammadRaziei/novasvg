@@ -1,13 +1,17 @@
-"""Uniform wrapper around each SVG renderer under test.
+"""Uniform wrapper around resvg, lunasvg, cairosvg and thorvg.
 
 Every engine exposes the same shape: `render(svg_path, w, h) -> bytes` (raw
-PNG bytes) or raises. That's the only contract run_benchmark.py depends on --
-ponytail: adding a 6th engine later means adding one more Engine() entry
-below, not touching the driver.
+PNG bytes) or raises. That's the only contract run_benchmark.py depends on
+for these 4 -- ponytail: adding a 6th Python-bound engine later means
+adding one more Engine() entry below, not touching the driver.
+
+novasvg itself is NOT here: it's driven directly through its C++ API by
+native/novasvg_native_bench.cpp (see native_novasvg.py), not a Python
+binding, so its whole corpus pass happens as one subprocess call handled
+separately in run_benchmark.py.
 """
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 import io
 
 
@@ -17,38 +21,6 @@ class Engine:
     label: str
     render: Callable[[str, int, int], bytes]
     version: Callable[[], str]
-
-
-def _novasvg(cli_path):
-    """Drives the real novasvg_cli binary (built from source via
-    cmake/FetchNovasvg.cmake) as a subprocess, instead of novasvg's PyPI
-    Python binding -- so this measures the actual C++ engine."""
-    import subprocess
-
-    if not cli_path or not Path(cli_path).is_file():
-        raise RuntimeError(f"novasvg_cli not found at {cli_path!r}")
-
-    def render(svg_path, w, h):
-        import tempfile, os
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            tmp_path = tmp.name
-        try:
-            proc = subprocess.run(
-                [cli_path, "convert", str(svg_path), "-o", tmp_path, "-w", str(w), "-H", str(h)],
-                capture_output=True, text=True, timeout=30,
-            )
-            if proc.returncode != 0:
-                raise RuntimeError(f"novasvg_cli exit {proc.returncode}: {proc.stderr.strip()[:300]}")
-            with open(tmp_path, "rb") as f:
-                return f.read()
-        finally:
-            os.unlink(tmp_path)
-
-    def version():
-        proc = subprocess.run([cli_path, "--version"], capture_output=True, text=True, timeout=10)
-        return proc.stdout.strip() or proc.stderr.strip() or "unknown"
-
-    return Engine("novasvg", "novasvg (CLI, built from source)", render, version)
 
 
 def _resvg():
@@ -68,7 +40,6 @@ def _lunasvg():
         if doc is None:
             raise RuntimeError("pylunasvg: failed to parse document")
         bmp = doc.renderToBitmap(w, h)
-        buf = io.BytesIO()
         # pylunasvg's Bitmap only writes to a path; use a temp file.
         import tempfile, os
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
@@ -121,14 +92,9 @@ def _thorvg():
 _PY_BUILDERS = [_resvg, _lunasvg, _cairosvg, _thorvg]
 
 
-def load_engines(novasvg_cli_path=None):
+def load_engines():
     engines = {}
     errors = {}
-    try:
-        eng = _novasvg(novasvg_cli_path)
-        engines[eng.key] = eng
-    except Exception as exc:  # noqa: BLE001
-        errors["novasvg"] = str(exc)
     for build in _PY_BUILDERS:
         try:
             eng = build()

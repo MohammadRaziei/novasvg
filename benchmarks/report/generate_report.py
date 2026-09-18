@@ -59,11 +59,12 @@ def build_summary_table(report):
         n_ok = len(times)
         avg = sum(times) / n_ok if n_ok else None
         total = sum(times) if n_ok else None
+        avg_label = fmt_ms(avg)
         rows.append(
             f"<tr><td>{html.escape(report['engines'][k]['label'])}</td>"
             f"<td>{html.escape(report['engines'][k]['version'])}</td>"
             f"<td>{n_ok}/{n_files}</td>"
-            f"<td>{fmt_ms(avg)}</td>"
+            f"<td>{avg_label}</td>"
             f"<td>{fmt_ms(total)}</td></tr>"
         )
     # sort by average time (None/failed-everything last)
@@ -196,7 +197,9 @@ def build_html(report):
 
   <footer>
     Built entirely by <code>benchmarks/CMakeLists.txt</code> (<code>cmake --build build --target novasvg_benchmark</code>)
-    from novasvg's own <code>data/</code> sample corpus. This report is fully self-contained — every image is a base64
+    from novasvg's own <code>data/</code> sample corpus. novasvg is driven directly through its C++ API in one
+    process (<code>native/novasvg_native_bench.cpp</code>), same as the other 4 engines through their Python
+    bindings — no CLI, no per-render subprocess. This report is fully self-contained — every image is a base64
     data URI, no external files or network access required to view it.
   </footer>
 </div>

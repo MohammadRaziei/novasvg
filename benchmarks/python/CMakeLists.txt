@@ -40,16 +40,17 @@ add_custom_target(novasvg_bench_deps DEPENDS "${NOVASVG_BENCH_DEPS_STAMP}")
 set(NOVASVG_BENCH_RESULTS_JSON "${NOVASVG_BENCH_RESULTS_DIR}/results.json")
 add_custom_command(
     OUTPUT "${NOVASVG_BENCH_RESULTS_JSON}"
-    DEPENDS novasvg_bench_deps novasvg_cli
+    DEPENDS novasvg_bench_deps novasvg_native_bench
             "${CMAKE_CURRENT_SOURCE_DIR}/run_benchmark.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/engines.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/corpus.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/native_novasvg.py"
     COMMAND "${NOVASVG_BENCH_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/run_benchmark.py"
             "${NOVASVG_BENCH_RESULTS_DIR}"
             --runs "${NOVASVG_BENCH_RUNS}"
             --width "${NOVASVG_BENCH_WIDTH}"
             --height "${NOVASVG_BENCH_HEIGHT}"
-            --novasvg-cli "$<TARGET_FILE:novasvg_cli>"
+            --novasvg-native-bench "$<TARGET_FILE:novasvg_native_bench>"
     COMMENT "novasvg_bench: rendering every (engine, sample) pair and timing it"
     VERBATIM
 )
