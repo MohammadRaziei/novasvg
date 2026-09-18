@@ -43,6 +43,35 @@ a base64 `data:` URI embedded directly in the page.
   an engine-version table, a capability+speed matrix (green = ok + timing,
   red = failed + hover for the error), and a visual gallery with every
   engine's render of every sample side by side.
+- `native/novasvg_native_bench.cpp` pays novasvg's one-time process-wide
+  font-cache warm-up (see below) with a throwaway 1&times;1 text render
+  before timing anything, so that cost doesn't land arbitrarily on
+  whichever sample happens to contain text first.
+
+## What this found in novasvg itself
+
+Profiling *why* novasvg was slower than expected (via a small ad-hoc
+instrumented build, not part of this benchmark) turned up two distinct
+costs that were getting conflated:
+
+1. **One-time, not per-file**: the first bit of text rendered anywhere in
+   a process — system font or embedded, doesn't matter — lazily triggers
+   novasvg's process-wide `fontFaceCache()` singleton, which scans every
+   installed system font. Measured cost here: a few ms once warm-cached by
+   the OS, up to ~300ms cold. This isn't a per-render cost and was
+   inflating whichever sample happened to be the first text-bearing one in
+   the corpus — `native_novasvg_bench` now pays it up front instead (see
+   above), before any timed job runs.
+2. **Real, per-render, in novasvg's filter pipeline**: `gradient-filter`
+   and `filter-primitives` (SVG `<filter>` with blur/offset/composite)
+   consistently cost novasvg ~9–24ms even fully warmed up, for a ~320px
+   canvas — notably more than lunasvg/cairosvg/thorvg pay for the same
+   files (single-digit ms). This one's a genuine algorithmic cost in
+   novasvg's filter code, not a benchmark artifact — worth profiling
+   upstream (likely candidate: the blur convolution) if novasvg's own
+   maintainers want to chase it. Not attempted here: changing that code
+   blind, without novasvg's own test suite to check against, isn't
+   something to do inside a benchmark PR.
 
 ## Tunables
 

@@ -6,6 +6,10 @@
 // counted once per sample, so novasvg's numbers are finally apples-to-apples
 // with the other 4.
 //
+// Before timing anything, one throwaway render pays novasvg's process-wide
+// font-cache warm-up cost (see main()) so that one-time cost doesn't land
+// arbitrarily on whichever sample happens to render text first.
+//
 // Reads a tab-separated manifest (one job per line: name, svg path, output
 // PNG path, width, height) and a run count, both as argv. For each job,
 // times `runs` full load+render passes and reports the median, writing the
@@ -73,6 +77,21 @@ int main(int argc, char** argv)
     const int runs = std::max(1, std::stoi(argv[2]));
 
     std::cout << "@@VERSION\t" << novasvg::versionString() << "\n";
+
+    // Rendering the first bit of text anywhere in this process (system font
+    // or embedded, doesn't matter) lazily triggers novasvg's process-wide
+    // font-face cache singleton, which scans every installed system font --
+    // a real but one-time cost that has nothing to do with whichever sample
+    // happens to run first. Paying it here, before any job is timed, keeps
+    // it out of every per-file measurement below instead of it landing
+    // arbitrarily on the first text-bearing sample in the corpus.
+    {
+        auto warm = novasvg::Document::loadFromData(
+            "<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'>"
+            "<text x='0' y='1'>x</text></svg>");
+        if(warm)
+            warm->renderToBitmap(1, 1, novasvg::Color::Transparent);
+    }
 
     for(const auto& job : jobs) {
         std::vector<double> times;
