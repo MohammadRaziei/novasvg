@@ -74,6 +74,15 @@ def build_summary_table(report):
     """
 
 
+def fmt_mae(cell, is_ground_truth):
+    if is_ground_truth:
+        return '<span class="mae-ref">reference</span>'
+    mae = cell.get("mae")
+    if mae is None:
+        return ""
+    return f'<span class="mae">MAE {mae:.2f}</span>'
+
+
 def build_gallery(report):
     engines = [k for k in ENGINE_ORDER if k in report["engines"]]
     blocks = []
@@ -89,7 +98,7 @@ def build_gallery(report):
                     f'alt="{label} render of {html.escape(name)}" loading="lazy" '
                     f'class="zoomable" onclick="openLightbox(this)">'
                 )
-                caption = fmt_ms(cell["seconds"])
+                caption = f'{fmt_ms(cell["seconds"])}<br>{fmt_mae(cell, k == "ground_truth")}'
             else:
                 img = '<div class="missing">no render</div>'
                 caption = "FAIL"
@@ -151,7 +160,9 @@ figure { margin: 0; text-align: center; width: 140px; flex: 0 0 auto; }
   border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .thumb img { max-width: 100%; max-height: 100%; }
 .missing { color: var(--muted); font-size: 0.75rem; }
-figcaption { font-size: 0.75rem; color: var(--muted); margin-top: 0.35rem; line-height: 1.3; }
+figcaption { font-size: 0.75rem; color: var(--muted); margin-top: 0.35rem; line-height: 1.4; }
+figcaption .mae { color: var(--fg); font-weight: 600; }
+figcaption .mae-ref { font-style: italic; }
 .meta { color: var(--muted); font-size: 0.85rem; }
 footer { margin-top: 3rem; color: var(--muted); font-size: 0.78rem; border-top: 1px solid var(--border); padding-top: 1rem; }
 .thumb img.zoomable { cursor: zoom-in; }
@@ -197,7 +208,11 @@ def build_html(report):
   <p class="meta"><strong>Chromium (ground truth)</strong> is the reference every other engine is checked
      against, not a competitor — its render time includes full browser page-navigation overhead (one shared
      instance for the whole corpus, one render each, no median-of-N) and isn't meant to be compared against
-     the others' numbers.</p>
+     the others' numbers. Under each other render, <strong>MAE</strong> (mean absolute error against the
+     ground-truth render, same pixel dimensions, all 4 RGBA channels, 0-255 scale) gives a rough sense of how
+     visually close it landed — roughly 0-3 is imperceptible, double digits means a visibly different image.
+     Picked over MSE/NMSE/NMAE: it stays in directly interpretable intensity units and doesn't blow up on the
+     many near-blank/single-color icons in this corpus the way variance-normalized metrics can.</p>
   <p class="meta">nanosvg is included as a lightweight baseline, not a fair fight with the other 5 — it's a
      minimal path/gradient rasterizer with no CSS, no filters, and no text layout, so its FAILs and blank
      renders on filter- or text-heavy samples below are expected scope, not bugs.</p>

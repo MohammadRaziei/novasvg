@@ -76,6 +76,14 @@ stays inside `build/` — `outputs/` holds only that one file.
   says as much). `requirements.txt` pins `playwright==1.56.0` to match
   whatever Chromium build is already on the machine; on a fresh machine,
   `playwright install chromium` first.
+- **MAE against ground truth** — `python/compare.py` computes mean absolute
+  error (0-255 scale, all 4 RGBA channels) between every engine's render
+  and Chromium's render of the same sample, shown under each render's time
+  in the gallery. Chosen over MSE/NMSE/NMAE: it stays in directly
+  interpretable intensity units (roughly 0-3 is imperceptible, double
+  digits is a visibly different image) and, unlike the variance-normalized
+  metrics, doesn't become unstable on the many near-blank/single-color
+  icons in this corpus, where that denominator is close to zero.
 - Every native engine speaks the same tiny protocol (`native/manifest.h`):
   read a tab-separated job list (name, svg path, out PNG path, w, h), time
   `runs` load+render passes per job with `std::chrono`, print

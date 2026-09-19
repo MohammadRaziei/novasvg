@@ -49,6 +49,7 @@ add_custom_command(
             "${CMAKE_CURRENT_SOURCE_DIR}/corpus.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/native_bench.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/ground_truth.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/compare.py"
     COMMAND "${NOVASVG_BENCH_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/run_benchmark.py"
             "${NOVASVG_BENCH_RESULTS_DIR}"
             --runs "${NOVASVG_BENCH_RUNS}"

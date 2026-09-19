@@ -1,2 +1,4 @@
 cairosvg
 playwright==1.56.0
+numpy
+Pillow
