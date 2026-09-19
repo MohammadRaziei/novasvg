@@ -13,7 +13,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-ENGINE_ORDER = ["novasvg", "resvg", "lunasvg", "cairosvg", "thorvg", "nanosvg"]
+ENGINE_ORDER = ["ground_truth", "novasvg", "resvg", "lunasvg", "cairosvg", "thorvg", "nanosvg"]
 
 
 def fmt_ms(seconds):
@@ -86,7 +86,8 @@ def build_gallery(report):
             if cell.get("ok") and cell.get("png_b64"):
                 img = (
                     f'<img src="data:image/png;base64,{cell["png_b64"]}" '
-                    f'alt="{label} render of {html.escape(name)}" loading="lazy">'
+                    f'alt="{label} render of {html.escape(name)}" loading="lazy" '
+                    f'class="zoomable" onclick="openLightbox(this)">'
                 )
                 caption = fmt_ms(cell["seconds"])
             else:
@@ -153,6 +154,18 @@ figure { margin: 0; text-align: center; width: 140px; flex: 0 0 auto; }
 figcaption { font-size: 0.75rem; color: var(--muted); margin-top: 0.35rem; line-height: 1.3; }
 .meta { color: var(--muted); font-size: 0.85rem; }
 footer { margin-top: 3rem; color: var(--muted); font-size: 0.78rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+.thumb img.zoomable { cursor: zoom-in; }
+#lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.82); display: none;
+  align-items: center; justify-content: center; z-index: 1000; padding: 3vh 3vw; cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 100%; max-height: 100%; border-radius: 6px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  background:
+    linear-gradient(45deg, #80808033 25%, transparent 25%), linear-gradient(-45deg, #80808033 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #80808033 75%), linear-gradient(-45deg, transparent 75%, #80808033 75%);
+  background-size: 24px 24px; background-position: 0 0, 0 12px, 12px -12px, -12px 0px; }
+#lightbox-caption { position: fixed; bottom: 2vh; left: 0; right: 0; text-align: center;
+  color: #eee; font-size: 0.85rem; }
 """
 
 
@@ -181,6 +194,10 @@ def build_html(report):
      each rendered at its own aspect ratio (fit within {report['width']}&times;{report['height']}px),
      median of {report['runs']} runs per cell. Generated {now}.</p>
   {unavailable_note}
+  <p class="meta"><strong>Chromium (ground truth)</strong> is the reference every other engine is checked
+     against, not a competitor — its render time includes full browser page-navigation overhead (one shared
+     instance for the whole corpus, one render each, no median-of-N) and isn't meant to be compared against
+     the others' numbers.</p>
   <p class="meta">nanosvg is included as a lightweight baseline, not a fair fight with the other 5 — it's a
      minimal path/gradient rasterizer with no CSS, no filters, and no text layout, so its FAILs and blank
      renders on filter- or text-heavy samples below are expected scope, not bugs.</p>
@@ -193,7 +210,7 @@ def build_html(report):
   {build_matrix_table(report)}
 
   <h2>Rendered output</h2>
-  <p class="meta">Same size (that sample's own aspect ratio, fit within {report['width']}&times;{report['height']}px) from every engine, side by side, so visual differences (missing text, wrong fills, unapplied filters, ...) are easy to spot.</p>
+  <p class="meta">Same size (that sample's own aspect ratio, fit within {report['width']}&times;{report['height']}px) from every engine, side by side, so visual differences (missing text, wrong fills, unapplied filters, ...) are easy to spot. Click any render to zoom in.</p>
   {build_gallery(report)}
 
   <footer>
@@ -201,10 +218,31 @@ def build_html(report):
     from novasvg's own <code>data/</code> sample corpus. novasvg, resvg, lunasvg, thorvg and nanosvg are each driven
     directly through their own C/C++ API in one process (<code>native/*_native_bench.cpp</code>) — no CLI, no
     per-render subprocess, no Python bindings. cairosvg is the one exception (it has no native library of its
-    own to link against) and runs through its Python binding instead. This report is fully self-contained —
-    every image is a base64 data URI, no external files or network access required to view it.
+    own to link against) and runs through its Python binding instead. Chromium (ground truth) is driven through
+    Playwright. This report is fully self-contained — every image is a base64 data URI, no external files or
+    network access required to view it.
   </footer>
 </div>
+
+<div id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="">
+  <div id="lightbox-caption"></div>
+</div>
+<script>
+function openLightbox(imgEl) {{
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const caption = document.getElementById('lightbox-caption');
+  lbImg.src = imgEl.src;
+  lbImg.alt = imgEl.alt;
+  caption.textContent = imgEl.alt;
+  lb.classList.add('open');
+}}
+function closeLightbox() {{
+  document.getElementById('lightbox').classList.remove('open');
+}}
+document.addEventListener('keydown', (e) => {{ if (e.key === 'Escape') closeLightbox(); }});
+</script>
 </body>
 </html>
 """

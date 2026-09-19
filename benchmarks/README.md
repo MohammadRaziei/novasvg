@@ -1,14 +1,16 @@
 # novasvg benchmarks
 
 Compares **novasvg** against **resvg**, **lunasvg**, **thorvg**, **nanosvg**
-and **cairosvg** on capability, rendered output, and speed — driven entirely
-by CMake, ending in one self-contained `results/report.html`.
+and **cairosvg** — with **Chromium** rendered alongside as visual ground
+truth — on capability, rendered output, and speed. Driven entirely by
+CMake, ending in one self-contained `outputs/report.html`.
 
-5 of the 6 engines are driven **directly through their own C/C++ API**, in
-one process each, built from source by this CMake project. Only cairosvg
-runs through a Python binding — it has no native library of its own to link
-against (cairosvg *is* Python: it wraps libcairo for drawing, but the
-SVG/CSS parsing is pure Python).
+5 of the 6 compared engines are driven **directly through their own C/C++
+API**, in one process each, built from source by this CMake project. Only
+cairosvg runs through a Python binding — it has no native library of its
+own to link against (cairosvg *is* Python: it wraps libcairo for drawing,
+but the SVG/CSS parsing is pure Python). Chromium sits alongside all of
+them as ground truth, not a 7th competitor.
 
 ## Run it
 
@@ -18,11 +20,15 @@ cmake --build build --target novasvg_benchmark
 ```
 
 Needs on `PATH`: a C++17 compiler, `meson` + `ninja` (for thorvg), `cargo`
-(for resvg), and Python 3. First build takes a few minutes (compiles resvg
-via cargo, thorvg via meson, lunasvg/nanosvg via CMake, novasvg from the
-local checkout this directory lives in). Open `results/report.html`
-afterwards — no server, no network needed, every render is a base64
-`data:` URI embedded directly in the page.
+(for resvg), and Python 3, plus a Chromium build Playwright can launch for
+ground truth (`playwright install chromium` if you don't already have one
+— see below for pinning the pip package to match it). First build takes a
+few minutes (compiles resvg via cargo, thorvg via meson, lunasvg/nanosvg
+via CMake, novasvg from the local checkout this directory lives in). Open
+`outputs/report.html` afterwards — no server, no network needed, every
+render is a base64 `data:` URI embedded directly in the page; click any
+render to zoom in. Everything else (`results.json`, per-engine renders/)
+stays inside `build/` — `outputs/` holds only that one file.
 
 ## How it works
 
@@ -59,6 +65,17 @@ afterwards — no server, no network needed, every render is a base64
   (what a stock `apt install cargo rustc` gives you); HEAD needs 1.85+.
 - **cairosvg** — the one Python binding. `python/CMakeLists.txt` creates an
   isolated venv and installs it; `python/engines.py` wraps `cairosvg.svg2png`.
+- **Chromium (ground truth)** — `python/ground_truth.py` drives it through
+  Playwright, the same approach as this repo's own `../playwright_render.py`:
+  navigate straight to the SVG as a document (its `<svg>` root becomes
+  `documentElement`, there's no `<body>`) and screenshot it, Chrome's own
+  engine doing the rendering. One shared browser instance covers the whole
+  corpus. This is the reference the other 6 are checked against, not
+  another competitor — its timing includes full page-navigation overhead
+  and isn't meant to be compared against the others' numbers (the report
+  says as much). `requirements.txt` pins `playwright==1.56.0` to match
+  whatever Chromium build is already on the machine; on a fresh machine,
+  `playwright install chromium` first.
 - Every native engine speaks the same tiny protocol (`native/manifest.h`):
   read a tab-separated job list (name, svg path, out PNG path, w, h), time
   `runs` load+render passes per job with `std::chrono`, print
@@ -81,7 +98,8 @@ afterwards — no server, no network needed, every render is a base64
   `object-fit: contain` — most of the corpus isn't square, so forcing a
   fixed square render would stretch the artwork itself), then calls each
   native binary once and cairosvg per-file, merging everything into
-  `results/results.json`.
+  `build/results/results.json` (an intermediate build artifact, not
+  something meant to be committed -- see Tunables below to relocate it).
 - `report/generate_report.py` turns that JSON into the single `report.html`:
   an engine-version table, a capability+speed matrix (green = ok + timing,
   red = failed + hover for the error), and a visual gallery with every
@@ -121,6 +139,8 @@ cmake -S . -B build -DNOVASVG_BENCH_RUNS=10 -DNOVASVG_BENCH_WIDTH=512 -DNOVASVG_
 cmake -S . -B build -DNOVASVG_BENCH_LUNASVG_GIT_TAG=v3.5.0     # lunasvg
 cmake -S . -B build -DNOVASVG_BENCH_THORVG_GIT_TAG=v1.0.1      # thorvg
 cmake -S . -B build -DNOVASVG_BENCH_RESVG_GIT_TAG=v0.45.1      # resvg (rust-version bound, see above)
+# relocate either output (both default to sensible build/ vs. source-tree locations, see above):
+cmake -S . -B build -DNOVASVG_BENCH_RESULTS_DIR=/tmp/novasvg-bench-results -DNOVASVG_BENCH_OUTPUT_DIR=/tmp/novasvg-bench-outputs
 ```
 
 ## ponytail-scoped (not done here, upgrade path if it matters later)

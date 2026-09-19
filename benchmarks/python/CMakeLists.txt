@@ -17,7 +17,7 @@ else()
 endif()
 
 set(NOVASVG_BENCH_RESULTS_DIR "${NOVASVG_BENCH_RESULTS_DIR_DEFAULT}" CACHE PATH
-    "Where results.json + report.html land")
+    "Where results.json + per-engine renders/ land (build/ by default -- intermediate, not committed)")
 
 add_custom_command(
     OUTPUT "${NOVASVG_BENCH_PYTHON}"
@@ -33,7 +33,7 @@ add_custom_command(
     COMMAND "${NOVASVG_BENCH_PYTHON}" -m pip install -q --upgrade pip
     COMMAND "${NOVASVG_BENCH_PYTHON}" -m pip install -q -r "${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt"
     COMMAND "${CMAKE_COMMAND}" -E touch "${NOVASVG_BENCH_DEPS_STAMP}"
-    COMMENT "novasvg_bench: installing cairosvg"
+    COMMENT "novasvg_bench: installing cairosvg + playwright"
     VERBATIM
 )
 add_custom_target(novasvg_bench_deps DEPENDS "${NOVASVG_BENCH_DEPS_STAMP}")
@@ -48,6 +48,7 @@ add_custom_command(
             "${CMAKE_CURRENT_SOURCE_DIR}/engines.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/corpus.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/native_bench.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/ground_truth.py"
     COMMAND "${NOVASVG_BENCH_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/run_benchmark.py"
             "${NOVASVG_BENCH_RESULTS_DIR}"
             --runs "${NOVASVG_BENCH_RUNS}"

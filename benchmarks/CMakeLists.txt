@@ -23,8 +23,10 @@ project(NovaSVGBenchmarks LANGUAGES CXX)
 # Needs on PATH: a C++17 compiler, meson + ninja (thorvg), cargo (resvg),
 # Python 3.
 #
-# Result: results/report.html (self-contained, safe to open with no server
-# and no network -- every render is a base64 data: URI).
+# Result: outputs/report.html (self-contained, safe to open with no server
+# and no network -- every render is a base64 data: URI). Everything else
+# (results.json, per-engine PNGs) stays in build/ -- outputs/ holds only
+# that one file.
 #
 # Tunables (cmake -D<name>=<value>):
 #   NOVASVG_BENCH_RUNS    renders per (engine, sample) cell, median reported (default 5)
@@ -34,8 +36,10 @@ project(NovaSVGBenchmarks LANGUAGES CXX)
 #     local checkout, see above; README.md has resvg's rust-version caveat)
 # See README.md for the full rundown and what's still ponytail-scoped for later.
 
-set(NOVASVG_BENCH_RESULTS_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/results" CACHE PATH
-    "Where the final standalone report.html (and results.json) are written -- the artifacts meant to be committed/shared")
+set(NOVASVG_BENCH_RESULTS_DIR_DEFAULT "${CMAKE_CURRENT_BINARY_DIR}/results" CACHE PATH
+    "Where intermediate build artifacts (results.json + per-engine renders/) land -- inside build/, not committed")
+set(NOVASVG_BENCH_OUTPUT_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/outputs" CACHE PATH
+    "Where the final deliverable (report.html, and nothing else) is written -- the one thing meant to be committed/shared")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Python3 COMPONENTS Interpreter REQUIRED)

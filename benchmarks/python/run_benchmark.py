@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from corpus import corpus_files, intrinsic_size, fit_box  # noqa: E402
 from engines import load_engines  # noqa: E402
 from native_bench import run_native_bench  # noqa: E402
+from ground_truth import render_ground_truth  # noqa: E402
 
 # Every native engine this driver knows how to call, in report display
 # order. Each maps to a --<key>-native-bench CLI flag and a
@@ -133,6 +134,31 @@ def main():
                 status = f"FAIL ({cell['error'][:60]})"
             report["matrix"][name][key] = cell
             print(f"  {name:20s} {key:10s} {status}")
+
+    # --- ground truth: Chromium via Playwright, one browser, whole corpus ---
+    gt_dir = results_dir / "renders" / "ground_truth"
+    gt_dir.mkdir(parents=True, exist_ok=True)
+    gt_jobs = [
+        (name, str(path), str(gt_dir / f"{name}.png"), w, h)
+        for name, path, desc, w, h in resolved
+    ]
+    try:
+        gt_version, gt_results = render_ground_truth(gt_jobs)
+        report["engines"]["ground_truth"] = {"label": "Chromium (ground truth)", "version": gt_version}
+        for name, path, desc, w, h in resolved:
+            res = gt_results.get(name, {"ok": False, "seconds": None, "error": "not run"})
+            cell = {"ok": res["ok"], "seconds": res["seconds"], "error": res["error"]}
+            if res["ok"]:
+                png_path = gt_dir / f"{name}.png"
+                cell["png_b64"] = base64.b64encode(png_path.read_bytes()).decode("ascii")
+                status = f"{res['seconds']*1000:.2f} ms"
+            else:
+                status = f"FAIL ({(res['error'] or '')[:60]})"
+            report["matrix"][name]["ground_truth"] = cell
+            print(f"  {name:20s} {'ground_truth':10s} {status}")
+    except Exception as exc:  # noqa: BLE001 - ground truth is best-effort, never blocks the run
+        print(f"Ground truth (Chromium/Playwright) unavailable: {exc}")
+        report["engine_load_errors"]["ground_truth"] = str(exc)
 
     out_path = results_dir / "results.json"
     out_path.write_text(json.dumps(report))
