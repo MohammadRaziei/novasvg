@@ -13,7 +13,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-ENGINE_ORDER = ["novasvg", "resvg", "lunasvg", "cairosvg", "thorvg"]
+ENGINE_ORDER = ["novasvg", "resvg", "lunasvg", "cairosvg", "thorvg", "nanosvg"]
 
 
 def fmt_ms(seconds):
@@ -59,15 +59,13 @@ def build_summary_table(report):
         n_ok = len(times)
         avg = sum(times) / n_ok if n_ok else None
         total = sum(times) if n_ok else None
-        avg_label = fmt_ms(avg)
         rows.append(
             f"<tr><td>{html.escape(report['engines'][k]['label'])}</td>"
             f"<td>{html.escape(report['engines'][k]['version'])}</td>"
             f"<td>{n_ok}/{n_files}</td>"
-            f"<td>{avg_label}</td>"
+            f"<td>{fmt_ms(avg)}</td>"
             f"<td>{fmt_ms(total)}</td></tr>"
         )
-    # sort by average time (None/failed-everything last)
     return f"""
     <table class="summary">
       <thead><tr><th>Engine</th><th>Version</th><th>Rendered OK</th><th>Avg time / sample</th><th>Total time</th></tr></thead>
@@ -172,7 +170,7 @@ def build_html(report):
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>novasvg vs. resvg, lunasvg, cairosvg, thorvg — SVG renderer benchmark</title>
+<title>novasvg vs. resvg, lunasvg, cairosvg, thorvg, nanosvg — SVG renderer benchmark</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>{CSS}</style>
 </head>
@@ -183,6 +181,9 @@ def build_html(report):
      each rendered at its own aspect ratio (fit within {report['width']}&times;{report['height']}px),
      median of {report['runs']} runs per cell. Generated {now}.</p>
   {unavailable_note}
+  <p class="meta">nanosvg is included as a lightweight baseline, not a fair fight with the other 5 — it's a
+     minimal path/gradient rasterizer with no CSS, no filters, and no text layout, so its FAILs and blank
+     renders on filter- or text-heavy samples below are expected scope, not bugs.</p>
 
   <h2>Engine versions</h2>
   {build_summary_table(report)}
@@ -197,10 +198,11 @@ def build_html(report):
 
   <footer>
     Built entirely by <code>benchmarks/CMakeLists.txt</code> (<code>cmake --build build --target novasvg_benchmark</code>)
-    from novasvg's own <code>data/</code> sample corpus. novasvg is driven directly through its C++ API in one
-    process (<code>native/novasvg_native_bench.cpp</code>), same as the other 4 engines through their Python
-    bindings — no CLI, no per-render subprocess. This report is fully self-contained — every image is a base64
-    data URI, no external files or network access required to view it.
+    from novasvg's own <code>data/</code> sample corpus. novasvg, resvg, lunasvg, thorvg and nanosvg are each driven
+    directly through their own C/C++ API in one process (<code>native/*_native_bench.cpp</code>) — no CLI, no
+    per-render subprocess, no Python bindings. cairosvg is the one exception (it has no native library of its
+    own to link against) and runs through its Python binding instead. This report is fully self-contained —
+    every image is a base64 data URI, no external files or network access required to view it.
   </footer>
 </div>
 </body>

@@ -1,5 +1,1 @@
-resvg-py
-pylunasvg
 cairosvg
-thorvg-python
-Pillow

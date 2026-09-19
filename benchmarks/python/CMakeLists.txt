@@ -1,10 +1,11 @@
-# Sets up an isolated venv with all 5 engines and runs the actual timing/
-# rendering pass. Kept separate from report/ so `novasvg_bench_run` can be
-# re-run on its own (e.g. with a different --runs) without regenerating
-# anything else until you ask for it.
+# Sets up an isolated venv with cairosvg (the one engine with no native
+# counterpart) and runs the actual timing/rendering pass, which also drives
+# the 5 native_*_bench binaries built under ../native. Kept separate from
+# report/ so `novasvg_bench_run` can be re-run on its own (e.g. with a
+# different --runs) without regenerating anything else until you ask for it.
 
 set(NOVASVG_BENCH_VENV "${CMAKE_CURRENT_BINARY_DIR}/venv" CACHE PATH
-    "Python venv used to install and run all 5 SVG engines")
+    "Python venv used to install and run cairosvg")
 set(NOVASVG_BENCH_RUNS "5" CACHE STRING "Renders per (engine, sample) cell; median is reported")
 set(NOVASVG_BENCH_WIDTH "320" CACHE STRING "Render width in px, shared by every engine")
 set(NOVASVG_BENCH_HEIGHT "320" CACHE STRING "Render height in px, shared by every engine")
@@ -32,7 +33,7 @@ add_custom_command(
     COMMAND "${NOVASVG_BENCH_PYTHON}" -m pip install -q --upgrade pip
     COMMAND "${NOVASVG_BENCH_PYTHON}" -m pip install -q -r "${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt"
     COMMAND "${CMAKE_COMMAND}" -E touch "${NOVASVG_BENCH_DEPS_STAMP}"
-    COMMENT "novasvg_bench: installing resvg-py, pylunasvg, cairosvg, thorvg-python"
+    COMMENT "novasvg_bench: installing cairosvg"
     VERBATIM
 )
 add_custom_target(novasvg_bench_deps DEPENDS "${NOVASVG_BENCH_DEPS_STAMP}")
@@ -40,17 +41,23 @@ add_custom_target(novasvg_bench_deps DEPENDS "${NOVASVG_BENCH_DEPS_STAMP}")
 set(NOVASVG_BENCH_RESULTS_JSON "${NOVASVG_BENCH_RESULTS_DIR}/results.json")
 add_custom_command(
     OUTPUT "${NOVASVG_BENCH_RESULTS_JSON}"
-    DEPENDS novasvg_bench_deps novasvg_native_bench
+    DEPENDS novasvg_bench_deps
+            novasvg_native_bench resvg_native_bench lunasvg_native_bench
+            thorvg_native_bench nanosvg_native_bench
             "${CMAKE_CURRENT_SOURCE_DIR}/run_benchmark.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/engines.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/corpus.py"
-            "${CMAKE_CURRENT_SOURCE_DIR}/native_novasvg.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/native_bench.py"
     COMMAND "${NOVASVG_BENCH_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/run_benchmark.py"
             "${NOVASVG_BENCH_RESULTS_DIR}"
             --runs "${NOVASVG_BENCH_RUNS}"
             --width "${NOVASVG_BENCH_WIDTH}"
             --height "${NOVASVG_BENCH_HEIGHT}"
             --novasvg-native-bench "$<TARGET_FILE:novasvg_native_bench>"
+            --resvg-native-bench "$<TARGET_FILE:resvg_native_bench>"
+            --lunasvg-native-bench "$<TARGET_FILE:lunasvg_native_bench>"
+            --thorvg-native-bench "$<TARGET_FILE:thorvg_native_bench>"
+            --nanosvg-native-bench "$<TARGET_FILE:nanosvg_native_bench>"
     COMMENT "novasvg_bench: rendering every (engine, sample) pair and timing it"
     VERBATIM
 )
