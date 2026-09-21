@@ -7,6 +7,7 @@
 #include <map>
 #include <unordered_map>
 #include <optional>
+#include <vector>
 #include <cmath>
 #include <cctype>
 #include <set>
@@ -35,6 +36,7 @@ using namespace render; // render/ layer (novasvg::render), the former plutovg
 enum class PropertyID : uint8_t {
     Unknown = 0,
     Alignment_Baseline,
+    Background_Color,
     Baseline_Shift,
     Class,
     Clip_Path,
@@ -119,6 +121,8 @@ enum class PropertyID : uint8_t {
     Text_Orientation,
     TextLength,
     Transform,
+    Transform_Box,
+    Transform_Origin,
     ViewBox,
     Visibility,
     White_Space,
@@ -565,6 +569,58 @@ private:
     Transform m_value;
 };
 
+enum class TransformBoxType : uint8_t {
+    ViewBox,
+    FillBox
+};
+
+// CSS `transform-box`. Only distinguishes fill-box (and content-box, treated
+// the same here) from the default view-box -- stroke-box and the various
+// *-box refinements aren't worth the extra bookkeeping for what this is
+// used for (resolving `transform-origin`'s reference box).
+class SVGTransformBox final : public SVGProperty {
+public:
+    explicit SVGTransformBox(PropertyID id)
+        : SVGProperty(id)
+    {}
+
+    TransformBoxType value() const { return m_value; }
+    bool specified() const { return m_specified; }
+    bool parse(std::string_view input) final;
+
+private:
+    TransformBoxType m_value = TransformBoxType::ViewBox;
+    bool m_specified = false;
+};
+
+// CSS `transform-origin`, 2-value form (x y; an optional 3rd z-offset token
+// is skipped if present, this renderer is 2D only). Supports the keywords
+// (left/center/right/top/bottom), percentages, and plain numbers (treated
+// as user-unit lengths) -- covers the common cases without pulling in the
+// full CSS <length-percentage> grammar.
+class SVGTransformOrigin final : public SVGProperty {
+public:
+    explicit SVGTransformOrigin(PropertyID id)
+        : SVGProperty(id)
+    {}
+
+    bool specified() const { return m_specified; }
+    Point resolve(const Rect& box) const
+    {
+        auto ox = m_xIsPercent ? box.x + box.w * m_x : box.x + m_x;
+        auto oy = m_yIsPercent ? box.y + box.h * m_y : box.y + m_y;
+        return Point(ox, oy);
+    }
+    bool parse(std::string_view input) final;
+
+private:
+    float m_x = 0.5f;
+    float m_y = 0.5f;
+    bool m_xIsPercent = true;
+    bool m_yIsPercent = true;
+    bool m_specified = false;
+};
+
 class SVGPreserveAspectRatio final : public SVGProperty {
 public:
     enum class AlignType {
@@ -924,13 +980,15 @@ public:
     bool isGraphicsElement() const final { return true; }
 
     const SVGTransform& transform() const { return m_transform; }
-    Transform localTransform() const override { return m_transform.value(); }
+    Transform localTransform() const override;
 
     SVGPaintServer getPaintServer(const Paint& paint, float opacity) const;
     StrokeData getStrokeData(const SVGLayoutState& state) const;
 
 private:
     SVGTransform m_transform;
+    SVGTransformOrigin m_transformOrigin;
+    SVGTransformBox m_transformBox;
 };
 
 class SVGSVGElement : public SVGGraphicsElement, public SVGFitToViewBox {
@@ -2232,6 +2290,7 @@ NOVASVG_INLINE PropertyID csspropertyid(std::string_view name)
         PropertyID value;
     } table[] = {
         {"alignment-baseline", PropertyID::Alignment_Baseline},
+        {"background-color", PropertyID::Background_Color},
         {"baseline-shift", PropertyID::Baseline_Shift},
         {"clip-path", PropertyID::Clip_Path},
         {"clip-rule", PropertyID::Clip_Rule},
@@ -2270,6 +2329,8 @@ NOVASVG_INLINE PropertyID csspropertyid(std::string_view name)
         {"stroke-width", PropertyID::Stroke_Width},
         {"text-anchor", PropertyID::Text_Anchor},
         {"text-orientation", PropertyID::Text_Orientation},
+        {"transform-box", PropertyID::Transform_Box},
+        {"transform-origin", PropertyID::Transform_Origin},
         {"visibility", PropertyID::Visibility},
         {"white-space", PropertyID::White_Space},
         {"word-spacing", PropertyID::Word_Spacing},
@@ -2638,6 +2699,79 @@ NOVASVG_INLINE bool SVGRect::parse(std::string_view input)
 NOVASVG_INLINE bool SVGTransform::parse(std::string_view input)
 {
     return m_value.parse(input.data(), input.length());
+}
+
+NOVASVG_INLINE bool SVGTransformBox::parse(std::string_view input)
+{
+    stripLeadingAndTrailingSpaces(input);
+    if(input == "fill-box" || input == "content-box") {
+        m_value = TransformBoxType::FillBox;
+    } else if(input == "view-box" || input == "border-box" || input == "stroke-box") {
+        // border-box/stroke-box aren't distinguished from view-box here (see
+        // the class comment) -- treated as "not fill-box" for origin purposes.
+        m_value = TransformBoxType::ViewBox;
+    } else {
+        return false;
+    }
+
+    m_specified = true;
+    return true;
+}
+
+NOVASVG_INLINE bool SVGTransformOrigin::parse(std::string_view input)
+{
+    auto parseComponent = [](std::string_view token, float& value, bool& isPercent) {
+        if(token == "left" || token == "top") { value = 0.f; isPercent = true; return true; }
+        if(token == "center") { value = 0.5f; isPercent = true; return true; }
+        if(token == "right" || token == "bottom") { value = 1.f; isPercent = true; return true; }
+        float number = 0.f;
+        if(!parseNumber(token, number))
+            return false;
+        if(!token.empty() && token.front() == '%') {
+            value = number / 100.f;
+            isPercent = true;
+            token.remove_prefix(1);
+        } else {
+            value = number;
+            isPercent = false;
+        }
+        return token.empty();
+    };
+
+    std::vector<std::string_view> tokens;
+    stripLeadingAndTrailingSpaces(input);
+    while(!input.empty()) {
+        size_t count = 0;
+        while(count < input.length() && !IS_WS(input[count]))
+            ++count;
+        tokens.push_back(input.substr(0, count));
+        input.remove_prefix(count);
+        skipOptionalSpaces(input);
+    }
+
+    if(tokens.empty() || tokens.size() > 2)
+        return false;
+
+    float x = 0.5f, y = 0.5f;
+    bool xIsPercent = true, yIsPercent = true;
+    if(tokens.size() == 1) {
+        if(tokens[0] == "top" || tokens[0] == "bottom") {
+            if(!parseComponent(tokens[0], y, yIsPercent))
+                return false;
+        } else if(!parseComponent(tokens[0], x, xIsPercent)) {
+            return false;
+        }
+    } else {
+        if(!parseComponent(tokens[0], x, xIsPercent) || !parseComponent(tokens[1], y, yIsPercent))
+            return false;
+    }
+
+    m_x = x;
+    m_y = y;
+    m_xIsPercent = xIsPercent;
+    m_yIsPercent = yIsPercent;
+    m_specified = true;
+    return true;
 }
 
 NOVASVG_INLINE bool SVGPreserveAspectRatio::parse(std::string_view input)
@@ -5432,8 +5566,37 @@ NOVASVG_INLINE bool SVGPaintServer::applyPaint(SVGRenderState& state) const
 NOVASVG_INLINE SVGGraphicsElement::SVGGraphicsElement(Document* document, ElementID id)
     : SVGElement(document, id)
     , m_transform(PropertyID::Transform)
+    , m_transformOrigin(PropertyID::Transform_Origin)
+    , m_transformBox(PropertyID::Transform_Box)
 {
     addProperty(m_transform);
+    addProperty(m_transformOrigin);
+    addProperty(m_transformBox);
+}
+
+NOVASVG_INLINE Transform SVGGraphicsElement::localTransform() const
+{
+    // Only shift the pivot when transform-origin was actually specified --
+    // matches legacy behavior (origin at the current user-space (0,0)) for
+    // every element that doesn't use it, i.e. everything except elements
+    // that explicitly opt in the way feature-css-use-symbol.svg's `.rot`
+    // class does.
+    if(!m_transformOrigin.specified())
+        return m_transform.value();
+
+    Rect box;
+    if(m_transformBox.specified() && m_transformBox.value() == TransformBoxType::FillBox) {
+        box = fillBoundingBox();
+    } else {
+        auto size = currentViewportSize();
+        box = Rect(0.f, 0.f, size.w, size.h);
+    }
+
+    if(box.isEmpty())
+        return m_transform.value();
+
+    auto origin = m_transformOrigin.resolve(box);
+    return Transform::translated(origin.x, origin.y) * m_transform.value() * Transform::translated(-origin.x, -origin.y);
 }
 
 NOVASVG_INLINE SVGPaintServer SVGGraphicsElement::getPaintServer(const Paint& paint, float opacity) const
@@ -6117,6 +6280,50 @@ inline std::optional<Color> findClassBackgroundColor(std::string_view css, std::
     return findClassColor(css, className, "background-color");
 }
 
+// Same lightweight substring search as findClassColor(), but for a bare
+// tag-name selector (e.g. Mermaid's own "#mermaid-svg span{fill:#ccc;
+// color:#ccc;}", which is how it sets default label-text color -- not
+// via a class rule at all). Deliberately only wired up for the "color"
+// property (see tagColor() below) rather than every property: unlike a
+// class name, a bare tag name is also how CSS ends plenty of genuinely
+// *scoped* descendant selectors (".edgeLabel p{background-color:...}"),
+// which this substring search can't tell apart from a real "every <p>"
+// rule -- restricting it to "color" avoids that ambiguity because
+// nothing else in a Mermaid stylesheet sets "color" (as opposed to SVG's
+// own "fill") on a bare tag-name selector.
+inline std::optional<Color> findTagNameColor(std::string_view css, std::string_view tagName, std::string_view property)
+{
+    if(tagName.empty())
+        return std::nullopt;
+
+    size_t pos = 0;
+    while((pos = css.find(tagName, pos)) != std::string_view::npos) {
+        auto before = pos;
+        auto after = pos + tagName.size();
+        pos = after;
+
+        auto isIdentChar = [](char c) { return IS_ALPHA(c) || IS_NUM(c) || c == '-' || c == '_'; };
+        if(before > 0 && isIdentChar(css[before - 1]))
+            continue; // matched inside a longer identifier, e.g. "spancontainer"
+        if(after < css.size() && isIdentChar(css[after]))
+            continue;
+
+        auto i = after;
+        while(i < css.size() && IS_WS(css[i]))
+            ++i;
+        if(i >= css.size() || css[i] != '{')
+            continue;
+
+        auto close = css.find('}', i);
+        if(close == std::string_view::npos)
+            return std::nullopt;
+        if(auto color = parseColorDeclaration(css.substr(i, close - i), property))
+            return color;
+    }
+
+    return std::nullopt;
+}
+
 inline std::optional<std::string_view> htmlAttribute(std::string_view tag, std::string_view name)
 {
     auto pos = tag.find(name);
@@ -6159,6 +6366,29 @@ inline std::optional<Color> tagColor(std::string_view tag, const SVGRootElement*
             if(end == std::string_view::npos)
                 break;
             remaining.remove_prefix(end);
+        }
+    }
+
+    // No class-based rule matched (or the tag has no class= at all) --
+    // try the tag's own name against a bare tag-name selector, e.g.
+    // Mermaid's "#mermaid-svg span{color:#ccc}" for default label text.
+    // Without this, an unclassed <span> (or one whose classes only carry
+    // unrelated rules) silently falls through to tagColor()'s black
+    // default even though the stylesheet does specify a color for it --
+    // just not by class. Scoped to "color" only -- see
+    // findTagNameColor()'s own comment for why "background-color" isn't
+    // safe to extend this to.
+    if(property == "color") {
+        std::string_view name = tag;
+        if(!name.empty() && name.front() == '<')
+            name.remove_prefix(1);
+        size_t nameLen = 0;
+        while(nameLen < name.size() && (IS_ALPHA(name[nameLen]) || IS_NUM(name[nameLen]) || name[nameLen] == '-'))
+            ++nameLen;
+        name = name.substr(0, nameLen);
+        if(!name.empty()) {
+            if(auto color = findTagNameColor(root->styleSheetText(), name, property))
+                return color;
         }
     }
 
@@ -6279,37 +6509,26 @@ inline std::optional<float> foreignObjectLineHeight(std::string_view rawHtml, fl
 // (overflowing) line; the caller falls back to the same horizontal
 // condense trick per-line for that rare case, exactly as the old
 // single-line code did for the whole string.
-inline std::vector<std::u32string> wrapForeignObjectText(const std::string& text, const Font& font, float maxWidth)
+inline std::vector<std::u32string> wrapForeignObjectText(const std::string& text)
 {
+    // Mermaid's own labels are `white-space: nowrap` by design (each is
+    // laid out to fit on one line at the font it expects) and only ever
+    // span multiple lines where it inserted an explicit `<br>`/`<p>`
+    // itself at a deliberate break point (already turned into '\n' by
+    // foreignObjectPlainText()) -- so this only ever splits on those
+    // forced breaks. No width-based word-wrap: a line that's too wide
+    // for its box (typically because this environment lacks whatever
+    // font Mermaid originally measured with) is handled by
+    // ForeignObjectSimple::render()'s own horizontal condense instead of
+    // being wrapped into extra lines nowrap never asked for.
     std::vector<std::u32string> lines;
     size_t pos = 0;
     while(pos <= text.size()) {
         auto nl = text.find('\n', pos);
         auto paragraph = text.substr(pos, nl == std::string::npos ? std::string::npos : nl - pos);
         pos = (nl == std::string::npos) ? text.size() + 1 : nl + 1;
-        if(paragraph.empty())
-            continue;
-
-        std::u32string currentLine;
-        size_t wordStart = 0;
-        while(wordStart <= paragraph.size()) {
-            auto wordEnd = paragraph.find(' ', wordStart);
-            auto word = paragraph.substr(wordStart, wordEnd == std::string::npos ? std::string::npos : wordEnd - wordStart);
-            wordStart = (wordEnd == std::string::npos) ? paragraph.size() + 1 : wordEnd + 1;
-            if(word.empty())
-                continue;
-
-            auto u32word = utf8ToU32(word);
-            auto candidate = currentLine.empty() ? u32word : currentLine + U" " + u32word;
-            if(!currentLine.empty() && font.measureText(candidate) > maxWidth) {
-                lines.push_back(currentLine);
-                currentLine = std::move(u32word);
-            } else {
-                currentLine = std::move(candidate);
-            }
-        }
-        if(!currentLine.empty())
-            lines.push_back(currentLine);
+        if(!paragraph.empty())
+            lines.push_back(utf8ToU32(paragraph));
     }
 
     if(lines.empty())
@@ -6330,7 +6549,7 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
         return;
 
     auto box = element->fillBoundingBox();
-    auto lines = wrapForeignObjectText(text, font, box.w);
+    auto lines = wrapForeignObjectText(text);
 
     // Real line-height from the HTML's own `line-height:` (mermaid's
     // content usually says 1.5) when present and parseable; falls back

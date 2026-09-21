@@ -1045,6 +1045,43 @@ NOVASVG_INLINE void Document::render(Bitmap& bitmap, const Matrix& matrix) const
 {
     if(bitmap.isNull())
         return;
+
+    // A `background-color` in the root <svg>'s own inline style isn't a
+    // real SVG presentation property -- it's a CSS box-model property
+    // that only means something when an SVG is displayed as a standalone
+    // document/replaced element (which is exactly how a browser navigated
+    // straight to a .svg file treats it, painting that color behind
+    // everything). Most pure-vector SVG renderers ignore it entirely, but
+    // since generated SVGs (Mermaid in particular) rely on it for a
+    // correct-looking standalone render, honor it here the same way:
+    // clear the bitmap to it before any content paints, so it sits under
+    // everything and behind any transparency in the content itself. Takes
+    // priority over renderToBitmap()'s own `backgroundColor` argument
+    // (this runs after that clear) since that argument means "what to
+    // show through transparent content", and content here isn't actually
+    // transparent -- it explicitly asked for this color.
+    // A `background-color` in the root <svg>'s own style isn't a real SVG
+    // presentation property -- it's a CSS box-model property that only
+    // means something when an SVG is displayed as a standalone
+    // document/replaced element (exactly how a browser navigated straight
+    // to a .svg file treats it, painting that color behind everything).
+    // Most pure-vector SVG renderers ignore it entirely, but since
+    // generated SVGs (Mermaid in particular) rely on it for a
+    // correct-looking standalone render, honor it here the same way:
+    // clear the bitmap to it before any content paints, so it sits under
+    // everything and behind any transparency in the content itself. Takes
+    // priority over renderToBitmap()'s own `backgroundColor` argument
+    // (this runs after that clear) since that argument means "what to
+    // show through transparent content", and content here isn't actually
+    // transparent -- it explicitly asked for this color.
+    if(const auto& bg = rootElement(true)->getAttribute(PropertyID::Background_Color); !bg.empty()) {
+        color_t color;
+        if(color_parse(&color, bg.data(), static_cast<int>(bg.length())) > 0) {
+            auto argb = color_to_argb32(&color);
+            bitmap.clear(Color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff));
+        }
+    }
+
     auto canvas = Canvas::create(bitmap);
     SVGRenderState state(nullptr, nullptr, matrix, SVGRenderMode::Painting, canvas);
     rootElement(true)->render(state);

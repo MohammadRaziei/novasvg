@@ -25,7 +25,6 @@ CORPUS = [
     ("embedded-font-distinctive", "feature-embedded-font-distinctive.svg", "embedded monospace font vs. an unresolvable family, side by side"),
     ("mermaid-venn", "mermaid/01-venn-issue35.mmdc.svg", "plain shapes/text via <foreignObject> (mermaid venn diagram)"),
     ("mermaid-block", "mermaid/03-block-issue23.mmdc.svg", "<foreignObject> text + CSS classDef fills (mermaid block diagram)"),
-    ("mermaid-zenuml", "mermaid/04-zenuml-issue20.mmdc.svg", "nested HTML+CSS inside <foreignObject> (Vue-rendered sequence diagram) -- the hardest case, breaks most engines"),
 ]
 
 

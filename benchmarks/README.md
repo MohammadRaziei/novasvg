@@ -76,14 +76,14 @@ stays inside `build/` — `outputs/` holds only that one file.
   says as much). `requirements.txt` pins `playwright==1.56.0` to match
   whatever Chromium build is already on the machine; on a fresh machine,
   `playwright install chromium` first.
-- **MAE against ground truth** — `python/compare.py` computes mean absolute
-  error (0-255 scale, all 4 RGBA channels) between every engine's render
-  and Chromium's render of the same sample, shown under each render's time
-  in the gallery. Chosen over MSE/NMSE/NMAE: it stays in directly
-  interpretable intensity units (roughly 0-3 is imperceptible, double
-  digits is a visibly different image) and, unlike the variance-normalized
-  metrics, doesn't become unstable on the many near-blank/single-color
-  icons in this corpus, where that denominator is close to zero.
+- **MSE against ground truth** — `python/compare.py` computes mean squared
+  error (0-255 scale squared, all 4 RGBA channels) between every engine's
+  render and Chromium's render of the same sample, shown under each
+  render's time in the gallery. Squaring weights a handful of badly-wrong
+  pixels (a missing filter, a wrong fill, a shifted shape) far more than
+  the routine anti-aliasing noise along every edge — low single digits is
+  essentially imperceptible, tens or higher usually means something
+  structural differs.
 - Every native engine speaks the same tiny protocol (`native/manifest.h`):
   read a tab-separated job list (name, svg path, out PNG path, w, h), time
   `runs` load+render passes per job with `std::chrono`, print
@@ -98,9 +98,8 @@ stays inside `build/` — `outputs/` holds only that one file.
 - `python/corpus.py` reuses 15 files from novasvg's own `../data/` — plain
   shapes, the `tiger.svg` torture test, gradients/filters/clip/mask, CSS
   `transform`, an embedded raster `<image>`, two files with `@font-face`
-  embedded fonts, and three real mermaid.js renders (venn, block, and
-  zenuml's nested HTML/CSS inside `<foreignObject>` — the hardest case,
-  breaks most engines) — instead of inventing a parallel test set.
+  embedded fonts, and two real mermaid.js renders (venn and block) —
+  instead of inventing a parallel test set.
 - `python/run_benchmark.py` resolves every sample's aspect-fit render size
   up front (`corpus.py`'s `fit_box()`, same logic as CSS
   `object-fit: contain` — most of the corpus isn't square, so forcing a

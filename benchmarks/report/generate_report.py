@@ -74,13 +74,13 @@ def build_summary_table(report):
     """
 
 
-def fmt_mae(cell, is_ground_truth):
+def fmt_mse(cell, is_ground_truth):
     if is_ground_truth:
-        return '<span class="mae-ref">reference</span>'
-    mae = cell.get("mae")
-    if mae is None:
+        return '<span class="mse-ref">reference</span>'
+    mse = cell.get("mse")
+    if mse is None:
         return ""
-    return f'<span class="mae">MAE {mae:.2f}</span>'
+    return f'<span class="mse">MSE {mse:.2f}</span>'
 
 
 def build_gallery(report):
@@ -98,7 +98,7 @@ def build_gallery(report):
                     f'alt="{label} render of {html.escape(name)}" loading="lazy" '
                     f'class="zoomable" onclick="openLightbox(this)">'
                 )
-                caption = f'{fmt_ms(cell["seconds"])}<br>{fmt_mae(cell, k == "ground_truth")}'
+                caption = f'{fmt_ms(cell["seconds"])}<br>{fmt_mse(cell, k == "ground_truth")}'
             else:
                 img = '<div class="missing">no render</div>'
                 caption = "FAIL"
@@ -161,8 +161,8 @@ figure { margin: 0; text-align: center; width: 140px; flex: 0 0 auto; }
 .thumb img { max-width: 100%; max-height: 100%; }
 .missing { color: var(--muted); font-size: 0.75rem; }
 figcaption { font-size: 0.75rem; color: var(--muted); margin-top: 0.35rem; line-height: 1.4; }
-figcaption .mae { color: var(--fg); font-weight: 600; }
-figcaption .mae-ref { font-style: italic; }
+figcaption .mse { color: var(--fg); font-weight: 600; }
+figcaption .mse-ref { font-style: italic; }
 .meta { color: var(--muted); font-size: 0.85rem; }
 footer { margin-top: 3rem; color: var(--muted); font-size: 0.78rem; border-top: 1px solid var(--border); padding-top: 1rem; }
 .thumb img.zoomable { cursor: zoom-in; }
@@ -208,11 +208,11 @@ def build_html(report):
   <p class="meta"><strong>Chromium (ground truth)</strong> is the reference every other engine is checked
      against, not a competitor — its render time includes full browser page-navigation overhead (one shared
      instance for the whole corpus, one render each, no median-of-N) and isn't meant to be compared against
-     the others' numbers. Under each other render, <strong>MAE</strong> (mean absolute error against the
-     ground-truth render, same pixel dimensions, all 4 RGBA channels, 0-255 scale) gives a rough sense of how
-     visually close it landed — roughly 0-3 is imperceptible, double digits means a visibly different image.
-     Picked over MSE/NMSE/NMAE: it stays in directly interpretable intensity units and doesn't blow up on the
-     many near-blank/single-color icons in this corpus the way variance-normalized metrics can.</p>
+     the others' numbers. Under each other render, <strong>MSE</strong> (mean squared error against the
+     ground-truth render, same pixel dimensions, all 4 RGBA channels, 0-255 scale squared) gives a rough sense of
+     how visually close it landed — squaring weights a handful of badly-wrong pixels (a missing filter, a wrong
+     fill, a shifted shape) far more than the routine anti-aliasing noise along every edge, so low single digits
+     is essentially imperceptible and anything in the tens or higher usually means something structural differs.</p>
   <p class="meta">nanosvg is included as a lightweight baseline, not a fair fight with the other 5 — it's a
      minimal path/gradient rasterizer with no CSS, no filters, and no text layout, so its FAILs and blank
      renders on filter- or text-heavy samples below are expected scope, not bugs.</p>

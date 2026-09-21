@@ -23,7 +23,7 @@ from corpus import corpus_files, intrinsic_size, fit_box  # noqa: E402
 from engines import load_engines  # noqa: E402
 from native_bench import run_native_bench  # noqa: E402
 from ground_truth import render_ground_truth  # noqa: E402
-from compare import compute_mae  # noqa: E402
+from compare import compute_mse  # noqa: E402
 
 # Every native engine this driver knows how to call, in report display
 # order. Each maps to a --<key>-native-bench CLI flag and a
@@ -161,7 +161,7 @@ def main():
         print(f"Ground truth (Chromium/Playwright) unavailable: {exc}")
         report["engine_load_errors"]["ground_truth"] = str(exc)
 
-    # --- MAE of every engine's render against the ground-truth render for
+    # --- MSE of every engine's render against the ground-truth render for
     # that same sample. Requires both cells to have actually rendered. ---
     for name in report["matrix"]:
         gt_cell = report["matrix"][name].get("ground_truth")
@@ -172,10 +172,10 @@ def main():
             if key == "ground_truth" or not (cell.get("ok") and cell.get("png_b64")):
                 continue
             try:
-                cell["mae"] = compute_mae(gt_png, base64.b64decode(cell["png_b64"]))
+                cell["mse"] = compute_mse(gt_png, base64.b64decode(cell["png_b64"]))
             except Exception as exc:  # noqa: BLE001 - recorded, never blocks the run
-                cell["mae"] = None
-                cell["mae_error"] = str(exc)
+                cell["mse"] = None
+                cell["mse_error"] = str(exc)
 
     out_path = results_dir / "results.json"
     out_path.write_text(json.dumps(report))

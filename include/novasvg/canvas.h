@@ -1127,11 +1127,20 @@ static void boxBlurPass(unsigned char* data, int width, int height, int stride, 
 
 // Converts a true gaussian stdDeviation to an equivalent box-blur radius
 // (the well-known 3-box approximation formula), then runs 3 passes.
+//
+// The SVG spec's formula gives `d`, the box *width* each pass should use
+// (https://www.w3.org/TR/SVG11/filters.html#feGaussianBlurElement) --
+// boxBlurPass below takes a *radius* (box width = 2*radius+1), so d needs
+// halving before rounding. Using d itself as the radius (i.e. a box width
+// of 2d+1) doubles the effective blur: for stdDeviation=4 that's an
+// effective sigma of ~8.5 instead of 4, visibly wider/softer than every
+// other engine's render of the same filter.
 static int gaussianRadiusForSigma(float sigma)
 {
     if(sigma <= 0.f)
         return 0;
-    return NOVASVG_MAX(1, int(sigma * 3.f * std::sqrt(2.f * 3.14159265f) / 4.f + 0.5f));
+    auto d = sigma * 3.f * std::sqrt(2.f * 3.14159265f) / 4.f;
+    return NOVASVG_MAX(1, int(d / 2.f + 0.5f));
 }
 
 NOVASVG_INLINE void Canvas::boxBlur(float stdDeviationX, float stdDeviationY)
