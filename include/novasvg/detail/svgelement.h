@@ -6587,8 +6587,14 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
         Point origin(
             box.x + (box.w - lineWidth * scale) / 2.f,
             // Baseline for this line = top of the text block + however
-            // many line-heights precede it + this font's ascent.
-            topY + float(i) * lineHeight + font.ascent()
+            // many line-heights precede it + half the leading (the extra
+            // space line-height adds beyond the font's own ascent+descent,
+            // split evenly above and below -- standard CSS line-box
+            // behavior) + this font's ascent. Without the half-leading
+            // term, text sits noticeably above center (font.height() is
+            // usually well under a 1.5x line-height, so the omitted term
+            // isn't a rounding-sized error).
+            topY + float(i) * lineHeight + (lineHeight - font.height()) / 2.f + font.ascent()
         );
 
         auto textTransform = state.currentTransform();
