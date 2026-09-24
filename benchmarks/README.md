@@ -76,14 +76,14 @@ stays inside `build/` — `outputs/` holds only that one file.
   says as much). `requirements.txt` pins `playwright==1.56.0` to match
   whatever Chromium build is already on the machine; on a fresh machine,
   `playwright install chromium` first.
-- **MSE against ground truth** — `python/compare.py` computes mean squared
-  error (0-255 scale squared, all 4 RGBA channels) between every engine's
-  render and Chromium's render of the same sample, shown under each
-  render's time in the gallery. Squaring weights a handful of badly-wrong
-  pixels (a missing filter, a wrong fill, a shifted shape) far more than
-  the routine anti-aliasing noise along every edge — low single digits is
-  essentially imperceptible, tens or higher usually means something
-  structural differs.
+- **RMSE against ground truth** — `python/compare.py` computes root mean
+  squared error (back on the 0-255 scale, all 4 RGBA channels) between
+  every engine's render and Chromium's render of the same sample, shown
+  under each render's time in the gallery. Squaring before the square
+  root weights a handful of badly-wrong pixels (a missing filter, a wrong
+  fill, a shifted shape) far more than the routine anti-aliasing noise
+  along every edge — low single digits is essentially imperceptible, tens
+  or higher usually means something structural differs.
 - Every native engine speaks the same tiny protocol (`native/manifest.h`):
   read a tab-separated job list (name, svg path, out PNG path, w, h), time
   `runs` load+render passes per job with `std::chrono`, print

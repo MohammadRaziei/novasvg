@@ -5327,6 +5327,23 @@ NOVASVG_INLINE void font_face_get_glyph_metrics(font_face_t* face, float size, c
     }
 }
 
+// Pairwise kerning adjustment between two consecutive codepoints, straight
+// from the font's own `kern`/GPOS table via stb_truetype (present in the
+// vendored copy, just never called from anywhere in novasvg's own code
+// until now). Without this, both text measurement and actual glyph
+// painting summed each glyph's bare advance_width only -- correct in
+// total for fonts with no kerning pairs, but for ones that do (this
+// benchmark's own feature-embedded-font*.svg test files, deliberately),
+// the two loops previously advanced one codepoint at a time without ever
+// asking the font "should these two sit closer/further apart", so a
+// multi-character run's rendered position drifted further from every
+// other engine's (all of which do apply it) the longer the string got.
+NOVASVG_INLINE float font_face_get_kern_advance(font_face_t* face, float size, codepoint_t ch1, codepoint_t ch2)
+{
+    float scale = font_face_get_scale(face, size);
+    return static_cast<float>(stbtt_GetCodepointKernAdvance(&face->info, static_cast<int>(ch1), static_cast<int>(ch2))) * scale;
+}
+
 static void glyph_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
 {
     path_t* path = (path_t*)(closure);
@@ -5412,8 +5429,14 @@ NOVASVG_INLINE float font_face_text_extents(font_face_t* face, float size, const
     text_iterator_init(&it, text, length, encoding);
     rect_t* text_extents = NULL;
     float total_advance_width = 0.f;
+    codepoint_t previous = 0;
+    bool has_previous = false;
     while(text_iterator_has_next(&it)) {
         codepoint_t codepoint = text_iterator_next(&it);
+        if(has_previous)
+            total_advance_width += font_face_get_kern_advance(face, size, previous, codepoint);
+        previous = codepoint;
+        has_previous = true;
 
         float advance_width;
         if(extents == NULL) {

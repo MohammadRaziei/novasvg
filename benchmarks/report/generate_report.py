@@ -20,32 +20,6 @@ def fmt_ms(seconds):
     return f"{seconds * 1000:.2f} ms" if seconds is not None else "-"
 
 
-def build_matrix_table(report):
-    engines = [k for k in ENGINE_ORDER if k in report["engines"]]
-    head = "".join(f"<th>{html.escape(report['engines'][k]['label'])}</th>" for k in engines)
-    rows = []
-    for f in report["files"]:
-        name = f["name"]
-        cells = []
-        for k in engines:
-            cell = report["matrix"][name].get(k, {"ok": False, "error": "not run"})
-            if cell["ok"]:
-                cells.append(f'<td class="ok">{fmt_ms(cell["seconds"])}</td>')
-            else:
-                err = html.escape((cell.get("error") or "fail")[:80])
-                cells.append(f'<td class="fail" title="{err}">FAIL</td>')
-        rows.append(
-            f'<tr><td class="filename">{html.escape(name)}'
-            f'<div class="desc">{html.escape(f["desc"])}</div></td>{"".join(cells)}</tr>'
-        )
-    return f"""
-    <table class="matrix">
-      <thead><tr><th>Sample</th>{head}</tr></thead>
-      <tbody>{"".join(rows)}</tbody>
-    </table>
-    """
-
-
 def build_summary_table(report):
     engines = [k for k in ENGINE_ORDER if k in report["engines"]]
     rows = []
@@ -74,13 +48,13 @@ def build_summary_table(report):
     """
 
 
-def fmt_mse(cell, is_ground_truth):
+def fmt_rmse(cell, is_ground_truth):
     if is_ground_truth:
-        return '<span class="mse-ref">reference</span>'
-    mse = cell.get("mse")
-    if mse is None:
+        return '<span class="rmse-ref">reference</span>'
+    rmse = cell.get("rmse")
+    if rmse is None:
         return ""
-    return f'<span class="mse">MSE {mse:.2f}</span>'
+    return f'<span class="rmse">RMSE {rmse:.2f}</span>'
 
 
 def build_gallery(report):
@@ -98,7 +72,7 @@ def build_gallery(report):
                     f'alt="{label} render of {html.escape(name)}" loading="lazy" '
                     f'class="zoomable" onclick="openLightbox(this)">'
                 )
-                caption = f'{fmt_ms(cell["seconds"])}<br>{fmt_mse(cell, k == "ground_truth")}'
+                caption = f'{fmt_ms(cell["seconds"])}<br>{fmt_rmse(cell, k == "ground_truth")}'
             else:
                 img = '<div class="missing">no render</div>'
                 caption = "FAIL"
@@ -115,19 +89,16 @@ def build_gallery(report):
 CSS = """
 :root {
   --bg: #ffffff; --fg: #1a1a1a; --muted: #666; --border: #e2e2e2;
-  --ok-bg: #e8f7ee; --ok-fg: #1a7f3c; --fail-bg: #fdecec; --fail-fg: #b3261e;
   --card-bg: #fafafa;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #14161a; --fg: #eaeaea; --muted: #9a9a9a; --border: #2c2f36;
-    --ok-bg: #123522; --ok-fg: #63d68f; --fail-bg: #3a1616; --fail-fg: #ff8a80;
     --card-bg: #1c1f26;
   }
 }
 :root[data-theme="dark"] {
   --bg: #14161a; --fg: #eaeaea; --muted: #9a9a9a; --border: #2c2f36;
-  --ok-bg: #123522; --ok-fg: #63d68f; --fail-bg: #3a1616; --fail-fg: #ff8a80;
   --card-bg: #1c1f26;
 }
 body {
@@ -141,11 +112,6 @@ h2 { font-size: 1.15rem; margin-top: 2.5rem; border-bottom: 1px solid var(--bord
 table { border-collapse: collapse; width: 100%; margin-top: 1rem; font-size: 0.88rem; }
 th, td { padding: 0.5rem 0.6rem; border: 1px solid var(--border); text-align: left; }
 th { background: var(--card-bg); }
-td.filename { font-weight: 600; }
-td.filename .desc { font-weight: 400; color: var(--muted); font-size: 0.78rem; }
-td.ok { background: var(--ok-bg); color: var(--ok-fg); text-align: right; font-variant-numeric: tabular-nums; }
-td.fail { background: var(--fail-bg); color: var(--fail-fg); text-align: center; cursor: help; }
-.matrix { overflow-x: auto; display: block; }
 .sample { margin-top: 2rem; padding: 1rem; border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg); }
 .sample h3 { margin: 0 0 0.15rem; }
 .sample h3 .dims { font-weight: 400; color: var(--muted); font-size: 0.8rem; }
@@ -161,8 +127,8 @@ figure { margin: 0; text-align: center; width: 140px; flex: 0 0 auto; }
 .thumb img { max-width: 100%; max-height: 100%; }
 .missing { color: var(--muted); font-size: 0.75rem; }
 figcaption { font-size: 0.75rem; color: var(--muted); margin-top: 0.35rem; line-height: 1.4; }
-figcaption .mse { color: var(--fg); font-weight: 600; }
-figcaption .mse-ref { font-style: italic; }
+figcaption .rmse { color: var(--fg); font-weight: 600; }
+figcaption .rmse-ref { font-style: italic; }
 .meta { color: var(--muted); font-size: 0.85rem; }
 footer { margin-top: 3rem; color: var(--muted); font-size: 0.78rem; border-top: 1px solid var(--border); padding-top: 1rem; }
 .thumb img.zoomable { cursor: zoom-in; }
@@ -208,21 +174,18 @@ def build_html(report):
   <p class="meta"><strong>Chromium (ground truth)</strong> is the reference every other engine is checked
      against, not a competitor — its render time includes full browser page-navigation overhead (one shared
      instance for the whole corpus, one render each, no median-of-N) and isn't meant to be compared against
-     the others' numbers. Under each other render, <strong>MSE</strong> (mean squared error against the
-     ground-truth render, same pixel dimensions, all 4 RGBA channels, 0-255 scale squared) gives a rough sense of
-     how visually close it landed — squaring weights a handful of badly-wrong pixels (a missing filter, a wrong
-     fill, a shifted shape) far more than the routine anti-aliasing noise along every edge, so low single digits
-     is essentially imperceptible and anything in the tens or higher usually means something structural differs.</p>
+     the others' numbers. Under each other render, <strong>RMSE</strong> (root mean squared error against the
+     ground-truth render, same pixel dimensions, all 4 RGBA channels, back on the 0-255 scale) gives a rough sense
+     of how visually close it landed — squaring before the square root weights a handful of badly-wrong pixels (a
+     missing filter, a wrong fill, a shifted shape) far more than the routine anti-aliasing noise along every
+     edge, so low single digits is essentially imperceptible and anything in the tens or higher usually means
+     something structural differs.</p>
   <p class="meta">nanosvg is included as a lightweight baseline, not a fair fight with the other 5 — it's a
      minimal path/gradient rasterizer with no CSS, no filters, and no text layout, so its FAILs and blank
      renders on filter- or text-heavy samples below are expected scope, not bugs.</p>
 
   <h2>Engine versions</h2>
   {build_summary_table(report)}
-
-  <h2>Capability &amp; speed matrix</h2>
-  <p class="meta">Green = rendered successfully (median render time shown). Red = the engine failed on that file; hover for the error.</p>
-  {build_matrix_table(report)}
 
   <h2>Rendered output</h2>
   <p class="meta">Same size (that sample's own aspect ratio, fit within {report['width']}&times;{report['height']}px) from every engine, side by side, so visual differences (missing text, wrong fills, unapplied filters, ...) are easy to spot. Click any render to zoom in.</p>
