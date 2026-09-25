@@ -50,6 +50,89 @@ NB_MODULE(novasvg_py, m) {
           "family"_a, "bold"_a, "italic"_a, "data"_a,
           "Add a font face from a memory buffer (bytes) to the cache.");
 
+    // --- Bind FontFace / Font (text measurement) ---
+    // Exposes novasvg's own font stack (a vendored stb_truetype under
+    // include/novasvg/detail/render/font.h) to Python, so callers that need
+    // to measure text -- e.g. mermaidx computing label/box sizes before it
+    // ever builds the SVG -- can ask the exact same engine that will later
+    // paint the glyphs, instead of hand-rolling a second TTF parser that
+    // has to be kept in sync with it by hand.
+    nb::class_<novasvg::FontFace>(m, "FontFace")
+        .def(nb::init<>(), "Construct a null font face.")
+        .def(nb::init<const char*>(), "filename"_a, "Load a font face directly from a font file (no cache involved).")
+        .def("__init__", [](novasvg::FontFace* self, nb::bytes data) {
+            auto* copy = std::malloc(data.size());
+            if(copy == nullptr) {
+                new (self) novasvg::FontFace();
+                return;
+            }
+            std::memcpy(copy, data.data(), data.size());
+            new (self) novasvg::FontFace(copy, data.size(), [](void* p) { std::free(p); }, copy);
+        }, "data"_a, "Load a font face directly from a memory buffer (bytes), no cache involved.")
+        .def("is_null", &novasvg::FontFace::isNull, "Check if the font face is null/invalid.")
+        .def("__bool__", [](const novasvg::FontFace& face) { return !face.isNull(); })
+        .def_prop_ro("units_per_em", &novasvg::FontFace::unitsPerEm,
+             "Raw font design-unit space this face's own tables are defined in "
+             "(e.g. head.unitsPerEm). Pair with advance_width_units()/ascent_units()/"
+             "descent_units() to build a complete, size-independent advance table -- "
+             "e.g. to hand text-measurement data to a JS engine that can't call back "
+             "into Python per string (mermaidx's v8_engine does exactly this).")
+        .def_prop_ro("ascent_units", &novasvg::FontFace::ascentUnits, "Ascent in raw font design units (unscaled).")
+        .def_prop_ro("descent_units", &novasvg::FontFace::descentUnits, "Descent in raw font design units (unscaled).")
+        .def("advance_width_units", [](const novasvg::FontFace& face, uint32_t codepoint) {
+            return face.advanceWidthUnits(static_cast<char32_t>(codepoint));
+        }, "codepoint"_a, "Advance width of a single Unicode codepoint, in raw font design units (unscaled).")
+        .def_prop_ro("notdef_advance_width_units", &novasvg::FontFace::notdefAdvanceWidthUnits,
+             "The advance width used for any codepoint outside this font's cmap "
+             "(glyph id 0, the \".notdef\" glyph) -- what advance_width_units() itself "
+             "already falls back to for such a codepoint.")
+        .def("codepoints", [](const novasvg::FontFace& face) {
+            auto cps = face.codepoints();
+            std::vector<uint32_t> out;
+            out.reserve(cps.size());
+            for(auto cp : cps)
+                out.push_back(static_cast<uint32_t>(cp));
+            return out;
+        }, "Every Unicode codepoint this face's cmap maps to a glyph (see FontFace::codepoints() in font.h "
+           "for exactly which cmap formats are covered -- virtually every real-world font).");
+
+    m.def("get_font_face", [](const std::string& family, bool bold, bool italic) {
+        return novasvg::fontFaceCache()->getFontFace(family, bold, italic);
+    }, "family"_a, "bold"_a = false, "italic"_a = false,
+       "Look up a font face previously registered via add_font_face_from_file/_data "
+       "(falling back to novasvg's built-in generic-family table, e.g. \"sans-serif\").");
+
+    m.def("get_font_face_for_family_stack", [](const std::string& family_stack, bool bold, bool italic) {
+        return novasvg::fontFaceCache()->getFontFaceForFamilyStack(family_stack, bold, italic);
+    }, "family_stack"_a, "bold"_a = false, "italic"_a = false,
+       "Resolve a CSS-style comma-separated font-family stack (e.g. "
+       "'\"trebuchet ms\", verdana, arial, sans-serif') via fontconfig/OS "
+       "substitution. Falls back to get_font_face() semantics where fontconfig "
+       "isn't available (e.g. not linked on this build).");
+
+    nb::class_<novasvg::Font>(m, "Font")
+        .def(nb::init<>(), "Construct a null font.")
+        .def(nb::init<const novasvg::FontFace&, float>(), "face"_a, "size"_a,
+             "Construct a font from a face at a given pixel size.")
+        .def_prop_ro("ascent", &novasvg::Font::ascent, "Ascent in pixels, at this font's size.")
+        .def_prop_ro("descent", &novasvg::Font::descent, "Descent in pixels (typically negative), at this font's size.")
+        .def_prop_ro("height", &novasvg::Font::height, "ascent - descent.")
+        .def_prop_ro("line_gap", &novasvg::Font::lineGap, "Recommended extra spacing between lines, in pixels.")
+        .def_prop_ro("x_height", &novasvg::Font::xHeight, "Height of a lowercase 'x' glyph, in pixels.")
+        .def_prop_ro("size", &novasvg::Font::size, "The pixel size this font was constructed with.")
+        .def_prop_ro("face", &novasvg::Font::face, nb::rv_policy::reference_internal, "The underlying FontFace.")
+        .def("is_null", &novasvg::Font::isNull, "Check if the font is null/invalid.")
+        .def("__bool__", [](const novasvg::Font& font) { return !font.isNull(); })
+        .def("measure_text", [](const novasvg::Font& font, const std::string& text) {
+            // Python str arrives as UTF-8 (nanobind's std::string conversion);
+            // Font::measureText wants UTF-32, same as novasvg's own SVG text
+            // layout path (see SVGTextFragmentsBuilder), so route through the
+            // identical utf8ToU32() conversion for byte-for-byte consistency
+            // with what novasvg will actually paint.
+            auto u32text = novasvg::utf8ToU32(text);
+            return font.measureText(u32text);
+        }, "text"_a, "Measure the advance width of a UTF-8 string, in pixels, at this font's size.");
+
     // --- Bind Color Class ---
     nb::class_<novasvg::Color>(m, "Color")
         .def(nb::init<uint8_t, uint8_t, uint8_t, uint8_t>(),

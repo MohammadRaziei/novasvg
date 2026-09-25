@@ -37,6 +37,37 @@ public:
     bool isNull() const { return m_face == nullptr; }
     font_face_t* get() const { return m_face; }
 
+    // Raw font design units (unscaled by any particular pixel size) -- the
+    // same space a font file's own tables (head.unitsPerEm, hmtx advance
+    // widths) are defined in. Together these let a caller build a
+    // size-independent advance table once and rescale it later (by
+    // size / unitsPerEm) without coming back through novasvg per size --
+    // e.g. handing the whole table to a JS engine that can't make
+    // synchronous calls back into Python/C++ (see mermaidx's v8_engine,
+    // which needs exactly this to replace its own hand-rolled TTF-table
+    // parser). Font::measureText()/ascent()/etc. remain the right choice
+    // whenever a single already-known pixel size is enough.
+    float unitsPerEm() const;
+    float ascentUnits() const;
+    float descentUnits() const;
+    float advanceWidthUnits(char32_t codepoint) const;
+
+    // The advance width used for any codepoint outside the font's cmap
+    // (glyph id 0, the ".notdef" glyph) -- what advanceWidthUnits() itself
+    // already falls back to for such a codepoint (stbtt_FindGlyphIndex()
+    // returns glyph 0 when nothing matches), exposed under its own name
+    // purely so callers building a fallback value don't have to know that.
+    float notdefAdvanceWidthUnits() const { return advanceWidthUnits(0); }
+
+    // Every Unicode codepoint this face's cmap maps to a glyph (see
+    // font_face_enumerate_codepoints() for exactly which cmap formats are
+    // covered). Pair with advanceWidthUnits()/unitsPerEm() to build a
+    // complete, size-independent advance table -- e.g. for a caller that
+    // needs to reproduce Font::measureText() without being able to call
+    // back into novasvg per string (see mermaidx's v8_engine, which ships
+    // such a table into a V8 isolate once at boot).
+    std::vector<char32_t> codepoints() const;
+
 private:
     font_face_t* release();
     font_face_t* m_face = nullptr;
@@ -186,6 +217,55 @@ NOVASVG_INLINE void FontFace::swap(FontFace& face)
 NOVASVG_INLINE font_face_t* FontFace::release()
 {
     return std::exchange(m_face, nullptr);
+}
+
+NOVASVG_INLINE float FontFace::unitsPerEm() const
+{
+    if(isNull())
+        return 0.f;
+    return font_face_get_units_per_em(m_face);
+}
+
+NOVASVG_INLINE float FontFace::ascentUnits() const
+{
+    if(isNull())
+        return 0.f;
+    float ascent = 0.f;
+    font_face_get_metrics(m_face, unitsPerEm(), &ascent, nullptr, nullptr, nullptr);
+    return ascent;
+}
+
+NOVASVG_INLINE float FontFace::descentUnits() const
+{
+    if(isNull())
+        return 0.f;
+    float descent = 0.f;
+    font_face_get_metrics(m_face, unitsPerEm(), nullptr, &descent, nullptr, nullptr);
+    return descent;
+}
+
+NOVASVG_INLINE float FontFace::advanceWidthUnits(char32_t codepoint) const
+{
+    if(isNull())
+        return 0.f;
+    // font_face_get_glyph_metrics() always returns advance_width * scale
+    // (see detail/render/font.h) -- passing unitsPerEm() as the "size"
+    // makes scale == 1, i.e. the raw, size-independent font-unit value,
+    // with no separate unscaled code path needed on the render side.
+    float advance = 0.f;
+    font_face_get_glyph_metrics(m_face, unitsPerEm(), codepoint, &advance, nullptr, nullptr);
+    return advance;
+}
+
+NOVASVG_INLINE std::vector<char32_t> FontFace::codepoints() const
+{
+    std::vector<char32_t> result;
+    if(isNull())
+        return result;
+    font_face_enumerate_codepoints(m_face, [](uint32_t codepoint, void* closure) {
+        static_cast<std::vector<char32_t>*>(closure)->push_back(static_cast<char32_t>(codepoint));
+    }, &result);
+    return result;
 }
 
 NOVASVG_INLINE bool FontFaceCache::addFontFace(const std::string& family, bool bold, bool italic, const FontFace& face)

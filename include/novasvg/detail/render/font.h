@@ -5294,6 +5294,67 @@ static float font_face_get_scale(const font_face_t* face, float size)
     return stbtt_ScaleForMappingEmToPixels(&face->info, size);
 }
 
+// unitsPerEm itself isn't exposed by stb_truetype as a direct getter (only
+// buried in the private head-table offset math inside
+// stbtt_ScaleForPixelHeight/stbtt_ScaleForMappingEmToPixels). Recovering it
+// by evaluating the em-to-pixels scale at exactly 1 pixel --
+// stbtt_ScaleForMappingEmToPixels(info, pixels) == pixels / unitsPerEm, so
+// at pixels=1 that's 1/unitsPerEm -- avoids reaching into font_face's
+// private stbtt_fontinfo/table-offset fields directly, and stays correct
+// automatically if a future stb_truetype update changes how head.unitsPerEm
+// is stored.
+NOVASVG_INLINE float font_face_get_units_per_em(const font_face_t* face)
+{
+    return 1.0f / stbtt_ScaleForMappingEmToPixels(&face->info, 1.0f);
+}
+
+// Enumerate every Unicode codepoint mapped by this font's cmap subtable --
+// specifically the one subtable stb_truetype's own stbtt_InitFont already
+// picked as authoritative (its platform/encoding priority scan runs once,
+// far above, at font-load time), so this always agrees with whatever
+// stbtt_FindGlyphIndex()/font_face_get_glyph_metrics() resolve for the same
+// codepoint -- one selection, not two kept in sync by hand. Only formats 4
+// (Windows BMP) and 12/13 (full-Unicode) are walked: the two formats
+// virtually every modern TrueType/OpenType font uses, and the only ones
+// stbtt_FindGlyphIndex() itself fully implements (see its format==2 branch
+// above, which just asserts). Formats 0/2/6 are silently skipped --
+// per-codepoint lookups (Font::measureText, FontFace::advanceWidthUnits)
+// remain unaffected either way, only this *bulk* enumeration is narrower
+// for those rarer subtable kinds.
+NOVASVG_INLINE void font_face_enumerate_codepoints(const font_face_t* face, void (*callback)(uint32_t codepoint, void* closure), void* closure)
+{
+    const stbtt_fontinfo* info = &face->info;
+    stbtt_uint8* data = info->data;
+    stbtt_uint32 index_map = info->index_map;
+    if(index_map == 0)
+        return;
+
+    stbtt_uint16 format = ttUSHORT(data + index_map + 0);
+    if(format == 4) {
+        stbtt_uint16 segcount = ttUSHORT(data + index_map + 6) >> 1;
+        stbtt_uint32 end_count_base = index_map + 14;
+        stbtt_uint32 start_count_base = end_count_base + segcount * 2 + 2;
+        for(stbtt_uint16 s = 0; s < segcount; ++s) {
+            stbtt_uint16 end = ttUSHORT(data + end_count_base + s * 2);
+            stbtt_uint16 start = ttUSHORT(data + start_count_base + s * 2);
+            if(start == 0xFFFF && end == 0xFFFF)
+                continue;
+            for(uint32_t cp = start; cp <= end && cp != 0xFFFFu; ++cp) {
+                if(stbtt_FindGlyphIndex(info, (int)cp) != 0)
+                    callback(cp, closure);
+            }
+        }
+    } else if(format == 12 || format == 13) {
+        stbtt_uint32 ngroups = ttULONG(data + index_map + 12);
+        for(stbtt_uint32 g = 0; g < ngroups; ++g) {
+            stbtt_uint32 start_char = ttULONG(data + index_map + 16 + g * 12);
+            stbtt_uint32 end_char = ttULONG(data + index_map + 16 + g * 12 + 4);
+            for(uint32_t cp = start_char; cp <= end_char; ++cp)
+                callback(cp, closure);
+        }
+    }
+}
+
 NOVASVG_INLINE void font_face_get_metrics(const font_face_t* face, float size, float* ascent, float* descent, float* line_gap, rect_t* extents)
 {
     float scale = font_face_get_scale(face, size);
