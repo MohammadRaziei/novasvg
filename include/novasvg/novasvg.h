@@ -68,7 +68,7 @@
 #endif
 
 #define NOVASVG_VERSION_MAJOR 0
-#define NOVASVG_VERSION_MINOR 5
+#define NOVASVG_VERSION_MINOR 6
 #define NOVASVG_VERSION_PATCH 0
 
 #define NOVASVG_VERSION_ENCODE(major, minor, patch) (((major) * 10000) + ((minor) * 100) + ((patch) * 1))
