@@ -22,6 +22,7 @@ from .novasvg_py import FontFace
 from .novasvg_py import Font
 from .novasvg_py import get_font_face
 from .novasvg_py import get_font_face_for_family_stack
+from .novasvg_py import measure_foreign_object
 
 # Set version directly from the C++ library
 __version__ = version_string()
@@ -375,6 +376,7 @@ def svg2png(
 __all__ = [
     "add_font_face_from_file", "add_font_face_from_data",
     "FontFace", "Font", "get_font_face", "get_font_face_for_family_stack",
+    "measure_foreign_object",
     "Bitmap", "Box", "Matrix", "Node", "TextNode", "Element", "Document",
     "svg2png",
     "__version__", "__author__"

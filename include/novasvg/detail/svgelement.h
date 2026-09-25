@@ -6538,6 +6538,61 @@ inline std::vector<std::u32string> wrapForeignObjectText(const std::string& text
 
 } // namespace
 
+/**
+ * @brief Metrics for how ForeignObjectSimple::render() will lay out and
+ * size a <foreignObject>'s content, computed WITHOUT actually rendering it.
+ *
+ * Exists so a caller building the SVG in the first place (i.e. before any
+ * SVGForeignObjectElement exists to query) -- e.g. mermaid.js's own layout
+ * pass, run headless inside mermaidx's QuickJS/V8 DOM shim, computing a
+ * node box's height to fit a multi-line HTML label -- can ask novasvg
+ * itself what height that content will need, rather than reimplementing
+ * (and risking drifting out of sync with) the line-counting/line-height
+ * logic ForeignObjectSimple::render() uses at actual paint time. See
+ * measureForeignObjectContent() below.
+ */
+struct ForeignObjectMetrics {
+    float height = 0.f;   ///< Total height ForeignObjectSimple::render() will use for this content, in pixels.
+    float width = 0.f;    ///< Widest line, per Font::measureText() -- see this struct's own field-level note above measureForeignObjectContent() for why this is NOT what render() itself uses to size anything.
+    int lineCount = 0;    ///< Number of lines wrapForeignObjectText() splits this content into.
+    float lineHeight = 0.f; ///< Per-line height (from the content's own inline `line-height:`, or `font.height() * 1.2`).
+};
+
+/**
+ * @brief Measures what ForeignObjectMetrics::height (etc.) will be for
+ * `rawHtml` painted with `font`, using the exact same
+ * foreignObjectPlainText() / wrapForeignObjectText() / foreignObjectLineHeight()
+ * logic ForeignObjectSimple::render() itself calls -- so a value computed
+ * here and a box later painted by novasvg with the same (rawHtml, font)
+ * can never disagree, short of a bug in this shared logic itself.
+ *
+ * ForeignObjectMetrics::width is the one field render() itself never
+ * actually uses to size anything -- unlike height, render() never grows a
+ * line's box to fit its content horizontally (mermaid's own foreignObject
+ * labels are `white-space: nowrap`, i.e. already laid out to fit a given
+ * width; see wrapForeignObjectText()'s own docstring); it only ever
+ * horizontally condenses a line that overflows the box it's given. It's
+ * computed and returned anyway (via the same per-line Font::measureText()
+ * render() itself calls) because a caller BUILDING that box in the first
+ * place -- this function's whole reason to exist -- needs some width to
+ * size it to, and the widest line at this exact font is the only figure
+ * that guarantees render() never needs to condense anything afterward.
+ */
+inline ForeignObjectMetrics measureForeignObjectContent(std::string_view rawHtml, const Font& font)
+{
+    ForeignObjectMetrics metrics;
+    if(font.isNull())
+        return metrics;
+    auto text = foreignObjectPlainText(rawHtml);
+    auto lines = wrapForeignObjectText(text);
+    metrics.lineCount = int(lines.size());
+    metrics.lineHeight = foreignObjectLineHeight(rawHtml, font.size()).value_or(font.height() * 1.2f);
+    metrics.height = metrics.lineHeight * float(metrics.lineCount);
+    for(const auto& line : lines)
+        metrics.width = std::max(metrics.width, font.measureText(std::u32string_view(line)));
+    return metrics;
+}
+
 NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* element, SVGRenderState& state) const
 {
     auto text = foreignObjectPlainText(element->rawContent());

@@ -133,6 +133,24 @@ NB_MODULE(novasvg_py, m) {
             return font.measureText(u32text);
         }, "text"_a, "Measure the advance width of a UTF-8 string, in pixels, at this font's size.");
 
+    m.def("measure_foreign_object", [](const std::string& html, const novasvg::Font& font) {
+        auto metrics = novasvg::measureForeignObjectContent(html, font);
+        nb::dict result;
+        result["height"] = metrics.height;
+        result["width"] = metrics.width;
+        result["line_count"] = metrics.lineCount;
+        result["line_height"] = metrics.lineHeight;
+        return result;
+    }, "html"_a, "font"_a,
+       "Height/width (and line count/line-height) novasvg will use when painting <foreignObject> "
+       "content, computed WITHOUT rendering -- the exact same logic ForeignObjectSimple::render() "
+       "itself uses (see measureForeignObjectContent() in svgelement.h -- note its docstring on "
+       "why 'width' specifically is NOT something render() itself uses to size anything, unlike "
+       "'height'), so a caller building the SVG's own layout (e.g. mermaidx's headless JS DOM shim "
+       "sizing a node box for a multi-line HTML label) can ask novasvg what size it will need "
+       "instead of guessing separately. Returns {'height': float, 'width': float, "
+       "'line_count': int, 'line_height': float}.");
+
     // --- Bind Color Class ---
     nb::class_<novasvg::Color>(m, "Color")
         .def(nb::init<uint8_t, uint8_t, uint8_t, uint8_t>(),
