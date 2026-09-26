@@ -82,6 +82,12 @@ NB_MODULE(novasvg_py, m) {
         .def("advance_width_units", [](const novasvg::FontFace& face, uint32_t codepoint) {
             return face.advanceWidthUnits(static_cast<char32_t>(codepoint));
         }, "codepoint"_a, "Advance width of a single Unicode codepoint, in raw font design units (unscaled).")
+        .def("kern_advance_units", [](const novasvg::FontFace& face, uint32_t first, uint32_t second) {
+            return face.kernAdvanceUnits(static_cast<char32_t>(first), static_cast<char32_t>(second));
+        }, "first"_a, "second"_a,
+           "Kerning adjustment between two consecutive codepoints, in raw font design units "
+           "(unscaled) -- see FontFace::kernAdvanceUnits() in font.h for why this is a per-pair "
+           "query rather than a bulk table like codepoints().")
         .def_prop_ro("notdef_advance_width_units", &novasvg::FontFace::notdefAdvanceWidthUnits,
              "The advance width used for any codepoint outside this font's cmap "
              "(glyph id 0, the \".notdef\" glyph) -- what advance_width_units() itself "

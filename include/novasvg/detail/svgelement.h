@@ -6589,7 +6589,11 @@ inline ForeignObjectMetrics measureForeignObjectContent(std::string_view rawHtml
     metrics.lineHeight = foreignObjectLineHeight(rawHtml, font.size()).value_or(font.height() * 1.2f);
     metrics.height = metrics.lineHeight * float(metrics.lineCount);
     for(const auto& line : lines)
-        metrics.width = std::max(metrics.width, font.measureText(std::u32string_view(line)));
+        // NOVASVG_MAX(), not std::max(): see detail/config.h's own
+        // comment on why this codebase avoids std::max/std::min entirely
+        // rather than special-casing each call site against the
+        // Windows.h max/min macro collision.
+        metrics.width = NOVASVG_MAX(metrics.width, font.measureText(std::u32string_view(line)));
     return metrics;
 }
 

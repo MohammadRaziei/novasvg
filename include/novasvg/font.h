@@ -52,6 +52,26 @@ public:
     float descentUnits() const;
     float advanceWidthUnits(char32_t codepoint) const;
 
+    // Kerning adjustment between two consecutive codepoints, in raw font
+    // design units (unscaled) -- the same "kern"/GPOS lookup
+    // Font::measureText() itself applies between every glyph pair (see
+    // font_face_text_extents() in detail/render/font.h), exposed per-pair
+    // so a caller that (unlike Font::measureText()) can't call back into
+    // novasvg per string -- e.g. mermaidx's V8 engine, which sums a
+    // shipped per-codepoint advance table in JS instead -- can still fold
+    // kerning into that sum for whichever pairs it queries up front.
+    // Deliberately NOT a bulk enumeration like codepoints(): unlike the
+    // simple, single-format cmap table codepoints() walks, kerning may
+    // live in either a legacy "kern" table or an OpenType GPOS Pair
+    // Adjustment Positioning lookup (format 1, a per-pair list, or format
+    // 2, a glyph-class matrix) -- stb_truetype's own bulk accessors
+    // (stbtt_GetKerningTable()) only cover the "kern" table (see that
+    // function's own comment), not GPOS, so a from-scratch GPOS enumerator
+    // would be a second, substantially larger parser to maintain
+    // alongside stb_truetype's -- while this per-pair query reuses
+    // stb_truetype's own GPOS-aware lookup path exactly as-is.
+    float kernAdvanceUnits(char32_t first, char32_t second) const;
+
     // The advance width used for any codepoint outside the font's cmap
     // (glyph id 0, the ".notdef" glyph) -- what advanceWidthUnits() itself
     // already falls back to for such a codepoint (stbtt_FindGlyphIndex()
@@ -255,6 +275,16 @@ NOVASVG_INLINE float FontFace::advanceWidthUnits(char32_t codepoint) const
     float advance = 0.f;
     font_face_get_glyph_metrics(m_face, unitsPerEm(), codepoint, &advance, nullptr, nullptr);
     return advance;
+}
+
+NOVASVG_INLINE float FontFace::kernAdvanceUnits(char32_t first, char32_t second) const
+{
+    if(isNull())
+        return 0.f;
+    // Same unitsPerEm()-as-size trick as advanceWidthUnits(): makes
+    // font_face_get_kern_advance()'s internal scale multiplication a
+    // no-op, yielding the raw, size-independent value.
+    return font_face_get_kern_advance(m_face, unitsPerEm(), first, second);
 }
 
 NOVASVG_INLINE std::vector<char32_t> FontFace::codepoints() const
