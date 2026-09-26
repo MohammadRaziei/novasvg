@@ -10,7 +10,16 @@ if(DEFINED SKBUILD)
 
     # Create the Python extension module
     # Note: The module name here ('novasvg_py') should match the NB_MODULE name in binding.cpp
+    # Python >=3.12 gets one abi3 wheel via nanobind's STABLE_ABI (Limited API);
+    # below that, STABLE_ABI isn't available so each version still builds its own wheel.
+    if(Python_VERSION VERSION_GREATER_EQUAL "3.12")
+        set(NOVASVG_NANOBIND_ABI_OPTION STABLE_ABI)
+    else()
+        set(NOVASVG_NANOBIND_ABI_OPTION "")
+    endif()
+
     nanobind_add_module(novasvg_py
+        ${NOVASVG_NANOBIND_ABI_OPTION}
         ${BINDING_SOURCE_FILE}
     )
 
