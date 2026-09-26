@@ -168,7 +168,7 @@ def cmd_tag(args):
         new_version = version_str(version)
         tag_name = f"v{new_version}"
         run(["git", "add", str(HEADER_ABS_PATH)])
-        run(["git", "commit", "-m", f"Release {new_version}"])
+        run(["git", "commit", "-m", f"Release {new_version}", "--allow-empty-message"])
         run(["git", "tag", tag_name])
         print(f"Committed and tagged {tag_name}")
         return
