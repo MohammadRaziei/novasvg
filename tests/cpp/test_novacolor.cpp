@@ -1,6 +1,6 @@
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #include "doctest.h"
-#include "novasvg/color.h"
+#include "novasvg/detail/color.h"
 
 using namespace novasvg;
 using namespace novasvg::color_literals;

@@ -5,10 +5,9 @@
 // can be used entirely on its own (e.g. to measure how wide some text
 // would come out in a given font) without pulling in the rest of novasvg.
 
-#include "detail/config.h"
-#include "detail/svgparserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no SVG-tree dependency, consistent with this header's own self-contained goal
-#include "detail/render/path.h"    // path_move_to/line_to/cubic_to, used to extract glyph outlines
-#include "detail/render/font.h"
+#include "svgparserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no SVG-tree dependency, consistent with this header's own self-contained goal
+#include "render/path.h"    // path_move_to/line_to/cubic_to, used to extract glyph outlines
+#include "render/font.h"
 
 #include <string>
 #include <string_view>

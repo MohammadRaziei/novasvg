@@ -67,9 +67,31 @@
 #define NOVASVG_API NOVASVG_IMPORT
 #endif
 
+// Plain ternary macros instead of std::max/std::min. A uniquely-prefixed
+// macro can never collide with anything, which a bare `std::max`/
+// `std::min` call genuinely can: <windows.h> (pulled in transitively by
+// Python.h and friends on a Windows build) `#define`s `max`/`min` as
+// object-like macros unless NOMINMAX is defined first, and since that's
+// a build-system concern novasvg can't force on every consumer of a
+// header-only library, this codebase calls these instead of std::max/
+// std::min directly wherever it needs a two-argument max/min. Same
+// pattern the vendored FreeType rasterizer already uses for its own
+// internals (PVG_FT_MIN/PVG_FT_MAX in detail/render/vendor/), just
+// under this project's own prefix for general-purpose call sites.
+// ponytail: no protection against double-evaluating a/b if either has
+// side effects -- fine for every current call site (plain variable/
+// member reads), just don't reach for these with e.g. `x++` as an
+// argument.
+#ifndef NOVASVG_MAX
+#define NOVASVG_MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
+#ifndef NOVASVG_MIN
+#define NOVASVG_MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 #define NOVASVG_VERSION_MAJOR 0
 #define NOVASVG_VERSION_MINOR 7
-#define NOVASVG_VERSION_PATCH 1
+#define NOVASVG_VERSION_PATCH 0
 
 #define NOVASVG_VERSION_ENCODE(major, minor, patch) (((major) * 10000) + ((minor) * 100) + ((patch) * 1))
 #define NOVASVG_VERSION NOVASVG_VERSION_ENCODE(NOVASVG_VERSION_MAJOR, NOVASVG_VERSION_MINOR, NOVASVG_VERSION_PATCH)
@@ -78,7 +100,7 @@
 #define NOVASVG_VERSION_STRINGIZE(major, minor, patch) NOVASVG_VERSION_XSTRINGIZE(major, minor, patch)
 #define NOVASVG_VERSION_STRING NOVASVG_VERSION_STRINGIZE(NOVASVG_VERSION_MAJOR, NOVASVG_VERSION_MINOR, NOVASVG_VERSION_PATCH)
 
-#include "color.h"
+#include "detail/color.h"
 
 namespace novasvg {
 namespace render {
@@ -132,9 +154,9 @@ std::string versionString();
 
 } // namespace novasvg
 
-#include "font.h"
+#include "detail/font.h"
 
-#include "bitmap.h"
+#include "detail/bitmap.h"
 
 namespace novasvg {
 using namespace render;
@@ -671,7 +693,7 @@ private:
 #include <fstream>
 #include <cmath>
 
-#include "canvas.h"
+#include "detail/canvas.h"
 #include "detail/svgelement.h"
 #include "detail/svgparser.hpp"
 

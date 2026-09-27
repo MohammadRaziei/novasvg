@@ -7,11 +7,10 @@
 // (e.g. to build up an image and write it out) without pulling in the
 // rest of novasvg.
 
-#include "detail/config.h"
 #include "color.h"
-#include "detail/render/blend.h"   // memfill32, used by surface_clear()
-#include "detail/render/paint.h"   // color_to_argb32 / color_init_rgba32, used by surface_clear()
-#include "detail/render/surface.h"
+#include "render/blend.h"   // memfill32, used by surface_clear()
+#include "render/paint.h"   // color_to_argb32 / color_init_rgba32, used by surface_clear()
+#include "render/surface.h"
 
 #include <cstdint>
 #include <cstdio>

@@ -25,7 +25,9 @@
 
 #include <stdbool.h>
 
-#include "../config.h" // NOVASVG_MAX/NOVASVG_MIN
+// NOVASVG_MAX/NOVASVG_MIN are defined in novasvg.h, which #includes
+// (transitively, via canvas.h) this header -- always available by the
+// time any of the macros below are actually used at a call site.
 
 // Pure C++ project: no separate C translation units link against this,
 // so the extern "C" wrapper this file used to have (for use as a
@@ -105,10 +107,6 @@ typedef void (*write_func_t)(void* closure, void* data, int size);
 
 #define NOVASVG_DEG2RAD(x) ((x) * (NOVASVG_PI / 180.0f))
 #define NOVASVG_RAD2DEG(x) ((x) * (180.0f / NOVASVG_PI))
-
-// NOVASVG_MAX/NOVASVG_MIN live in detail/config.h (a lower-level, always-
-// included-first header) so standalone headers like color.h can reach
-// them too without depending on this render-internals header.
 
 /**
  * @brief A structure representing a point in 2D space.
