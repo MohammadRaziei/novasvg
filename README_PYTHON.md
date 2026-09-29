@@ -84,25 +84,37 @@ elements = doc.query_selector_all("rect, circle")
 ```
 
 #### `Bitmap`
-Image buffer class with numpy integration.
+Image buffer class with numpy integration and built-in encoders (PNG, BMP, TGA, JPEG) -- no Pillow needed.
 
 ```python
-# Create bitmap
+# Create / render
 bitmap = novasvg.Bitmap(800, 600)
+bitmap = doc.render_to_bitmap(width=400, height=300)
 
-# Convert to/from numpy
-array = bitmap.to_numpy()  # shape: (height, width, 4)
-bitmap2 = novasvg.Bitmap.from_numpy(array)
+# Pixel access (ARGB32 premultiplied, shape (height, width, 4))
+array = bitmap.numpy()
+bitmap.width, bitmap.height, bitmap.stride
 
-# Save to PNG
-bitmap.write_to_png("output.png")
+# Encode to bytes in memory (no temp file)
+png  = bitmap.to_png()
+bmp  = bitmap.to_bmp()
+tga  = bitmap.to_tga()
+jpg  = bitmap.to_jpg(quality=90)          # 1-100, default 80
+data = bitmap.to_bytes("jpeg", quality=90) # or "png" (default), "bmp", "tga"; ".JPG"/"PNG" also accepted
 
-# Properties
-width = bitmap.width()
-height = bitmap.height()
-stride = bitmap.stride()  # bytes per row
-data = bitmap.data()      # raw pointer
+# Or write to a file; each returns True on success
+bitmap.write_to_png("out.png")
+bitmap.write_to_bmp("out.bmp")
+bitmap.write_to_tga("out.tga")
+bitmap.write_to_jpg("out.jpg", quality=90)
+bitmap.write("out.jpg")                    # format picked from the extension (PNG if unrecognized)
 ```
+
+Notes:
+
+- The `to_*` methods raise `ValueError` for a null bitmap and `RuntimeError` if encoding fails -- they never return empty `bytes`.
+- **Don't call `convert_to_rgba()` before encoding.** The encoders already convert from premultiplied ARGB to straight RGBA themselves (on a scratch copy); converting the bitmap in place first makes them convert a second time, which swaps red/blue and corrupts semi-transparent pixels. `convert_to_rgba()` is only for handing the raw buffer to something else.
+- JPEG has no alpha channel. Render onto an opaque background (`doc.render_to_bitmap(w, h, 0xFFFFFFFF)`) before `to_jpg()`/`write_to_jpg()`, otherwise transparent areas come out black.
 
 #### `Matrix`
 2D transformation matrix.

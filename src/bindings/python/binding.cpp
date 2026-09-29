@@ -6,6 +6,9 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <cctype>
+#include <stdexcept>
+#include <string>
 
 // Include the main library header
 #include "novasvg/novasvg.h"
@@ -13,6 +16,43 @@
 namespace nb = nanobind;
 using namespace nb::literals;
 
+
+namespace {
+
+// Collects an encoder's streamed output (novasvg_write_func_t chunks) into
+// one std::string. Bitmap::writeTo{Png,Bmp,Tga,Jpg}()'s callback overloads
+// are what make an in-memory encode possible without a temp file.
+void collect_chunk(void* closure, void* data, int size)
+{
+    static_cast<std::string*>(closure)->append(static_cast<const char*>(data), size_t(size));
+}
+
+// Runs `encode(callback, closure)` -- one of the Bitmap::writeTo*()
+// stream overloads, bound with its format-specific extra arguments -- and
+// returns the result as `bytes`. A null bitmap is the caller's mistake
+// (ValueError); anything else that leaves the encoder reporting failure
+// or producing nothing is a RuntimeError, never a silent empty `bytes`
+// (an encoder's own bool return is easy to drop on the floor, and an
+// empty result would otherwise look like a valid, empty image).
+template<typename Encode>
+nb::bytes encode_to_bytes(const novasvg::Bitmap& bitmap, const char* format, Encode&& encode)
+{
+    if(bitmap.isNull())
+        throw std::invalid_argument(std::string("cannot encode a null Bitmap as ") + format);
+    std::string buffer;
+    if(!encode(&collect_chunk, &buffer) || buffer.empty())
+        throw std::runtime_error(std::string("failed to encode Bitmap as ") + format);
+    return nb::bytes(buffer.data(), buffer.size());
+}
+
+std::string lowercase(std::string text)
+{
+    for(auto& c : text)
+        c = char(std::tolower(static_cast<unsigned char>(c)));
+    return text;
+}
+
+} // namespace
 
 NB_MODULE(novasvg_py, m) {
     m.doc() = "Python bindings for NovaSVG using nanobind";
@@ -247,10 +287,74 @@ NB_MODULE(novasvg_py, m) {
         .def("clear", [](novasvg::Bitmap& bitmap, uint32_t value) {
             bitmap.clear(novasvg::Color::fromValue(value));
         }, "value"_a, "Clear the bitmap with a packed 0xRRGGBBAA value.")
-        .def("convert_to_rgba", &novasvg::Bitmap::convertToRGBA, "Convert pixel data from ARGB32 Premultiplied to RGBA Plain.")
+        .def("convert_to_rgba", &novasvg::Bitmap::convertToRGBA, "Convert pixel data in place from ARGB32 Premultiplied to RGBA Plain. Only needed to hand the raw "
+             "buffer to something else (e.g. numpy consumers wanting straight RGBA); NOT before "
+             "write_to_*/to_*/write, which convert internally -- doing both converts twice.")
+        // The encoders below all take the Bitmap as it comes out of
+        // render_to_bitmap() (ARGB32 premultiplied) and do their own
+        // premultiplied->straight-RGBA conversion internally, into a
+        // scratch copy. Do NOT call convert_to_rgba() first: that converts
+        // the Bitmap in place, and encoding it afterwards converts it a
+        // *second* time -- swapping red/blue channels and corrupting
+        // semi-transparent pixels.
         .def("write_to_png", [](const novasvg::Bitmap &bmp, const std::string &filename) {
             return bmp.writeToPng(filename);
-        }, "filename"_a, "Write the bitmap to a PNG file.");
+        }, "filename"_a, "Write the bitmap to a PNG file. Returns True on success.")
+        .def("write_to_bmp", [](const novasvg::Bitmap &bmp, const std::string &filename) {
+            return bmp.writeToBmp(filename);
+        }, "filename"_a, "Write the bitmap to a BMP file. Returns True on success.")
+        .def("write_to_tga", [](const novasvg::Bitmap &bmp, const std::string &filename) {
+            return bmp.writeToTga(filename);
+        }, "filename"_a, "Write the bitmap to a TGA file. Returns True on success.")
+        .def("write_to_jpg", [](const novasvg::Bitmap &bmp, const std::string &filename, int quality) {
+            return bmp.writeToJpg(filename, quality);
+        }, "filename"_a, "quality"_a = 80,
+           "Write the bitmap to a JPEG file (quality 1-100). JPEG has no alpha channel: "
+           "render onto an opaque background first. Returns True on success.")
+        .def("write", [](const novasvg::Bitmap &bmp, const std::string &filename, int jpg_quality) {
+            return bmp.write(filename, jpg_quality);
+        }, "filename"_a, "jpg_quality"_a = 80,
+           "Write the bitmap to a file, picking PNG/BMP/TGA/JPEG from the extension "
+           "(.png/.bmp/.tga/.jpg/.jpeg; PNG if unrecognized). Returns True on success.")
+        .def("to_png", [](const novasvg::Bitmap &bmp) {
+            return encode_to_bytes(bmp, "PNG", [&](novasvg_write_func_t cb, void* closure) {
+                return bmp.writeToPng(cb, closure);
+            });
+        }, "Encode the bitmap as PNG and return the file contents as bytes (no temp file).")
+        .def("to_bmp", [](const novasvg::Bitmap &bmp) {
+            return encode_to_bytes(bmp, "BMP", [&](novasvg_write_func_t cb, void* closure) {
+                return bmp.writeToBmp(cb, closure);
+            });
+        }, "Encode the bitmap as BMP and return the file contents as bytes.")
+        .def("to_tga", [](const novasvg::Bitmap &bmp) {
+            return encode_to_bytes(bmp, "TGA", [&](novasvg_write_func_t cb, void* closure) {
+                return bmp.writeToTga(cb, closure);
+            });
+        }, "Encode the bitmap as TGA and return the file contents as bytes.")
+        .def("to_jpg", [](const novasvg::Bitmap &bmp, int quality) {
+            return encode_to_bytes(bmp, "JPEG", [&](novasvg_write_func_t cb, void* closure) {
+                return bmp.writeToJpg(cb, closure, quality);
+            });
+        }, "quality"_a = 80,
+           "Encode the bitmap as JPEG (quality 1-100) and return the file contents as bytes. "
+           "JPEG has no alpha channel: render onto an opaque background first.")
+        .def("to_bytes", [](const novasvg::Bitmap &bmp, const std::string &format, int quality) {
+            auto fmt = lowercase(format);
+            if(!fmt.empty() && fmt[0] == '.')
+                fmt.erase(0, 1);
+            if(fmt == "png")
+                return encode_to_bytes(bmp, "PNG", [&](novasvg_write_func_t cb, void* c) { return bmp.writeToPng(cb, c); });
+            if(fmt == "bmp")
+                return encode_to_bytes(bmp, "BMP", [&](novasvg_write_func_t cb, void* c) { return bmp.writeToBmp(cb, c); });
+            if(fmt == "tga")
+                return encode_to_bytes(bmp, "TGA", [&](novasvg_write_func_t cb, void* c) { return bmp.writeToTga(cb, c); });
+            if(fmt == "jpg" || fmt == "jpeg")
+                return encode_to_bytes(bmp, "JPEG", [&](novasvg_write_func_t cb, void* c) { return bmp.writeToJpg(cb, c, quality); });
+            throw std::invalid_argument("unknown image format '" + format + "' (expected png, bmp, tga, jpg or jpeg)");
+        }, "format"_a = "png", "quality"_a = 80,
+           "Encode the bitmap in the given format ('png', 'bmp', 'tga', 'jpg'/'jpeg'; a leading '.' "
+           "and any letter case are accepted) and return the file contents as bytes. `quality` "
+           "(1-100) is used only for JPEG.");
 
     // --- Bind Node Class ---
     nb::class_<novasvg::Node>(m, "Node")
