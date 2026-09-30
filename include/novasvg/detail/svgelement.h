@@ -6499,35 +6499,133 @@ inline std::optional<float> foreignObjectLineHeight(std::string_view rawHtml, fl
     return std::nullopt;
 }
 
-// Greedy word-wrap: splits `text` (already using '\n' for the forced
-// breaks foreignObjectPlainText() inserts at <br>/<p>/<div> boundaries)
-// into as many paragraphs as it has explicit breaks, then further
-// wraps each paragraph's words into as many lines as needed to fit
-// `maxWidth` at `font`'s metrics -- reusing the same measureText() the
-// single-line path already depended on. An unbreakable single word
-// wider than maxWidth on its own is still returned as its own
-// (overflowing) line; the caller falls back to the same horizontal
-// condense trick per-line for that rare case, exactly as the old
-// single-line code did for the whole string.
-inline std::vector<std::u32string> wrapForeignObjectText(const std::string& text)
+// Whether the HTML's own CSS lets its text wrap at the box edge. Decided
+// exactly like a browser would: the OUTERMOST element that declares
+// `white-space` wins, and `nowrap` / `pre` mean "never soft-wrap" -- that is
+// what mermaid's default labels say (`display:table-cell; white-space:nowrap`),
+// so those keep laying out on one line (an overflowing line is handled by
+// render()'s own horizontal condense, unchanged). Anything else --
+// `normal`, `break-spaces` (mermaid's wrap mode: `display:table;
+// white-space:break-spaces; width:200px`), `pre-wrap`, `pre-line` -- may
+// wrap. No `white-space` declared at all is CSS's initial value, `normal`.
+inline bool foreignObjectAllowsWrap(std::string_view rawHtml)
 {
-    // Mermaid's own labels are `white-space: nowrap` by design (each is
-    // laid out to fit on one line at the font it expects) and only ever
-    // span multiple lines where it inserted an explicit `<br>`/`<p>`
-    // itself at a deliberate break point (already turned into '\n' by
-    // foreignObjectPlainText()) -- so this only ever splits on those
-    // forced breaks. No width-based word-wrap: a line that's too wide
-    // for its box (typically because this environment lacks whatever
-    // font Mermaid originally measured with) is handled by
-    // ForeignObjectSimple::render()'s own horizontal condense instead of
-    // being wrapped into extra lines nowrap never asked for.
+    size_t pos = 0;
+    while(pos < rawHtml.size()) {
+        auto tagStart = rawHtml.find('<', pos);
+        if(tagStart == std::string_view::npos)
+            break;
+        if(tagStart + 1 < rawHtml.size() && rawHtml[tagStart + 1] == '/') {
+            pos = tagStart + 2;
+            continue;
+        }
+        auto tagEnd = rawHtml.find('>', tagStart);
+        if(tagEnd == std::string_view::npos)
+            break;
+        auto tag = rawHtml.substr(tagStart, tagEnd - tagStart);
+        if(auto style = htmlAttribute(tag, "style=")) {
+            if(auto value = findDeclarationValue(*style, "white-space"))
+                return !(*value == "nowrap" || *value == "pre");
+        }
+        pos = tagEnd + 1;
+    }
+    return true;
+}
+
+// The px width the HTML itself constrains its text to, when it says so:
+// the outermost element declaring `width` and/or `max-width` in px (both ->
+// the smaller, as in CSS). Only px is understood; anything else (%, em, auto)
+// means "no declared width" and the caller falls back to the box it has.
+inline std::optional<float> foreignObjectDeclaredWidth(std::string_view rawHtml)
+{
+    size_t pos = 0;
+    while(pos < rawHtml.size()) {
+        auto tagStart = rawHtml.find('<', pos);
+        if(tagStart == std::string_view::npos)
+            break;
+        if(tagStart + 1 < rawHtml.size() && rawHtml[tagStart + 1] == '/') {
+            pos = tagStart + 2;
+            continue;
+        }
+        auto tagEnd = rawHtml.find('>', tagStart);
+        if(tagEnd == std::string_view::npos)
+            break;
+        auto tag = rawHtml.substr(tagStart, tagEnd - tagStart);
+        if(auto style = htmlAttribute(tag, "style=")) {
+            std::optional<float> width;
+            if(auto d = parseNumericDeclaration(*style, "width"); d && d->isPixels)
+                width = d->raw;
+            if(auto d = parseNumericDeclaration(*style, "max-width"); d && d->isPixels)
+                width = width ? NOVASVG_MIN(*width, d->raw) : d->raw;
+            if(width)
+                return width;
+        }
+        pos = tagEnd + 1;
+    }
+    return std::nullopt;
+}
+
+// Greedy word-wrap of ONE paragraph to `maxWidth`: a line takes the next word
+// while the whole candidate line ("a b c", measured as one string so kerning
+// across the space counts, like a browser's shaping) still fits. A single
+// word wider than maxWidth stays alone on an overflowing line -- CSS never
+// breaks inside a word by default; render() condenses that one line.
+inline void wrapForeignObjectParagraph(const std::u32string& paragraph, const Font& font, float maxWidth, std::vector<std::u32string>& lines)
+{
+    // Browsers lay out in 1/64px units, so "fits" tolerates that much slack.
+    const float limit = maxWidth + 1.f / 128.f;
+    std::u32string current;
+    size_t i = 0;
+    while(i < paragraph.size()) {
+        while(i < paragraph.size() && (paragraph[i] == U' ' || paragraph[i] == U'\t'))
+            ++i;
+        auto wordEnd = i;
+        while(wordEnd < paragraph.size() && paragraph[wordEnd] != U' ' && paragraph[wordEnd] != U'\t')
+            ++wordEnd;
+        if(wordEnd == i)
+            break;
+        auto word = paragraph.substr(i, wordEnd - i);
+        i = wordEnd;
+
+        if(current.empty()) {
+            current = std::move(word);
+            continue;
+        }
+        auto candidate = current;
+        candidate += U' ';
+        candidate += word;
+        if(font.measureText(std::u32string_view(candidate)) <= limit) {
+            current = std::move(candidate);
+        } else {
+            lines.push_back(std::move(current));
+            current = std::move(word);
+        }
+    }
+    if(!current.empty())
+        lines.push_back(std::move(current));
+}
+
+// Splits `text` (already using '\n' for the forced breaks
+// foreignObjectPlainText() inserts at <br>/<p>/<div> boundaries) into lines.
+// With maxWidth <= 0 (the caller's HTML is `white-space: nowrap`/`pre`, or
+// there is no width to wrap at) it only splits on those forced breaks, as
+// mermaid's nowrap labels want. With a positive maxWidth each paragraph is
+// additionally greedy word-wrapped to it, using the same Font::measureText()
+// the paint path uses.
+inline std::vector<std::u32string> wrapForeignObjectText(const std::string& text, const Font* font = nullptr, float maxWidth = 0.f)
+{
     std::vector<std::u32string> lines;
+    const bool softWrap = font != nullptr && !font->isNull() && maxWidth > 0.f;
     size_t pos = 0;
     while(pos <= text.size()) {
         auto nl = text.find('\n', pos);
         auto paragraph = text.substr(pos, nl == std::string::npos ? std::string::npos : nl - pos);
         pos = (nl == std::string::npos) ? text.size() + 1 : nl + 1;
-        if(!paragraph.empty())
+        if(paragraph.empty())
+            continue;
+        if(softWrap)
+            wrapForeignObjectParagraph(utf8ToU32(paragraph), *font, maxWidth, lines);
+        else
             lines.push_back(utf8ToU32(paragraph));
     }
 
@@ -6566,11 +6664,14 @@ struct ForeignObjectMetrics {
  * here and a box later painted by novasvg with the same (rawHtml, font)
  * can never disagree, short of a bug in this shared logic itself.
  *
- * ForeignObjectMetrics::width is the one field render() itself never
- * actually uses to size anything -- unlike height, render() never grows a
- * line's box to fit its content horizontally (mermaid's own foreignObject
- * labels are `white-space: nowrap`, i.e. already laid out to fit a given
- * width; see wrapForeignObjectText()'s own docstring); it only ever
+ * `maxWidth` (px, optional): the width text may wrap at. When omitted it is
+ * read from the HTML's own `width`/`max-width` (px). Wrapping happens only if
+ * the HTML's `white-space` allows it (see foreignObjectAllowsWrap()): mermaid's
+ * `nowrap` labels stay one line, its wrap mode (`white-space:break-spaces;
+ * width:200px`) wraps -- exactly what render() does at the box's own width.
+ *
+ * ForeignObjectMetrics::width is the widest resulting line. render() never
+ * grows a line's box to fit its content horizontally; it only ever
  * horizontally condenses a line that overflows the box it's given. It's
  * computed and returned anyway (via the same per-line Font::measureText()
  * render() itself calls) because a caller BUILDING that box in the first
@@ -6578,13 +6679,23 @@ struct ForeignObjectMetrics {
  * size it to, and the widest line at this exact font is the only figure
  * that guarantees render() never needs to condense anything afterward.
  */
-inline ForeignObjectMetrics measureForeignObjectContent(std::string_view rawHtml, const Font& font)
+inline ForeignObjectMetrics measureForeignObjectContent(std::string_view rawHtml, const Font& font, float maxWidth = -1.f)
 {
     ForeignObjectMetrics metrics;
     if(font.isNull())
         return metrics;
     auto text = foreignObjectPlainText(rawHtml);
-    auto lines = wrapForeignObjectText(text);
+    // Same rule render() applies, so layout and paint agree: soft-wrap only if
+    // the HTML's own `white-space` allows it, at the explicit maxWidth if one
+    // was given, else at the width the HTML itself declares (px).
+    float wrapWidth = 0.f;
+    if(foreignObjectAllowsWrap(rawHtml)) {
+        if(maxWidth > 0.f)
+            wrapWidth = maxWidth;
+        else if(auto declared = foreignObjectDeclaredWidth(rawHtml))
+            wrapWidth = *declared;
+    }
+    auto lines = wrapForeignObjectText(text, &font, wrapWidth);
     metrics.lineCount = int(lines.size());
     metrics.lineHeight = foreignObjectLineHeight(rawHtml, font.size()).value_or(font.height() * 1.2f);
     metrics.height = metrics.lineHeight * float(metrics.lineCount);
@@ -6608,7 +6719,8 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
         return;
 
     auto box = element->fillBoundingBox();
-    auto lines = wrapForeignObjectText(text);
+    // A browser wraps HTML text at its box's edge unless CSS says nowrap/pre.
+    auto lines = wrapForeignObjectText(text, &font, foreignObjectAllowsWrap(element->rawContent()) ? box.w : 0.f);
 
     // Real line-height from the HTML's own `line-height:` (mermaid's
     // content usually says 1.5) when present and parseable; falls back

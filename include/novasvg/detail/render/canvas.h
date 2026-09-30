@@ -681,6 +681,7 @@ NOVASVG_INLINE float canvas_add_text(canvas_t* canvas, const void* text, int len
     bool has_previous = false;
     while(text_iterator_has_next(&it)) {
         codepoint_t codepoint = text_iterator_next(&it);
+        codepoint = font_face_apply_ligature(state->font_face, &it, codepoint);
         if(has_previous)
             advance_width += font_face_get_kern_advance(state->font_face, state->font_size, previous, codepoint);
         advance_width += font_face_get_glyph_path(state->font_face, state->font_size, x + advance_width, y, codepoint, canvas->path);

@@ -586,7 +586,7 @@ struct stbtt_fontinfo
 
    int numGlyphs;                     // number of glyphs, needed for range checking
 
-   int loca,head,glyf,hhea,hmtx,kern,gpos,svg; // table locations as offset from start of .ttf
+   int loca,head,glyf,hhea,hmtx,kern,gpos,gsub,svg; // table locations as offset from start of .ttf
    int index_map;                     // a cmap mapping for our chosen character encoding
    int indexToLocFormat;              // format needed to map from glyph index to glyph
 
@@ -1265,6 +1265,7 @@ static int stbtt_InitFont_internal(stbtt_fontinfo *info, unsigned char *data, in
    info->hmtx = stbtt__find_table(data, fontstart, "hmtx"); // required
    info->kern = stbtt__find_table(data, fontstart, "kern"); // not required
    info->gpos = stbtt__find_table(data, fontstart, "GPOS"); // not required
+   info->gsub = stbtt__find_table(data, fontstart, "GSUB"); // not required
 
    if (!cmap || !info->head || !info->hhea || !info->hmtx)
       return 0;
@@ -2310,6 +2311,58 @@ static stbtt_int32 stbtt__GetCoverageIndex(stbtt_uint8 *coverageTable, int glyph
    }
 
    return -1;
+}
+
+// Ligature glyph the font's own GSUB `liga`/`clig` lookups (type 4, directly or via
+// type 7 extension) substitute for the glyph sequence first + rest[0..nrest), or 0.
+static int stbtt__GetGsubLigature(const stbtt_fontinfo *info, int first, const int *rest, int nrest)
+{
+   if (!info->gsub) return 0;
+   stbtt_uint8 *gsub = info->data + info->gsub;
+   stbtt_uint8 *featureList = gsub + ttUSHORT(gsub + 6);
+   stbtt_uint8 *lookupList = gsub + ttUSHORT(gsub + 8);
+   int featureCount = ttUSHORT(featureList);
+   int lookupCount = ttUSHORT(lookupList);
+   int f, l, s, k, i;
+   for (f = 0; f < featureCount; ++f) {
+      stbtt_uint8 *rec = featureList + 2 + 6 * f;
+      int isLiga = (rec[0]=='l' && rec[1]=='i' && rec[2]=='g' && rec[3]=='a');
+      int isClig = (rec[0]=='c' && rec[1]=='l' && rec[2]=='i' && rec[3]=='g');
+      if (!isLiga && !isClig) continue;
+      stbtt_uint8 *feature = featureList + ttUSHORT(rec + 4);
+      int nLookups = ttUSHORT(feature + 2);
+      for (l = 0; l < nLookups; ++l) {
+         int li = ttUSHORT(feature + 4 + 2 * l);
+         if (li >= lookupCount) continue;
+         stbtt_uint8 *lookup = lookupList + ttUSHORT(lookupList + 2 + 2 * li);
+         int type = ttUSHORT(lookup);
+         int nsub = ttUSHORT(lookup + 4);
+         for (s = 0; s < nsub; ++s) {
+            stbtt_uint8 *sub = lookup + ttUSHORT(lookup + 6 + 2 * s);
+            int st = type;
+            if (type == 7) {
+               if (ttUSHORT(sub) != 1) continue;
+               st = ttUSHORT(sub + 2);
+               sub = sub + ttULONG(sub + 4);
+            }
+            if (st != 4 || ttUSHORT(sub) != 1) continue;
+            int cov = stbtt__GetCoverageIndex(sub + ttUSHORT(sub + 2), first);
+            if (cov < 0 || cov >= ttUSHORT(sub + 4)) continue;
+            stbtt_uint8 *ligSet = sub + ttUSHORT(sub + 6 + 2 * cov);
+            int ligCount = ttUSHORT(ligSet);
+            for (k = 0; k < ligCount; ++k) {
+               stbtt_uint8 *lig = ligSet + ttUSHORT(ligSet + 2 + 2 * k);
+               int ligGlyph = ttUSHORT(lig);
+               int compCount = ttUSHORT(lig + 2);
+               if (compCount - 1 != nrest) continue;
+               for (i = 0; i < nrest; ++i)
+                  if (ttUSHORT(lig + 4 + 2 * i) != rest[i]) break;
+               if (i == nrest) return ligGlyph;
+            }
+         }
+      }
+   }
+   return 0;
 }
 
 static stbtt_int32  stbtt__GetGlyphClass(stbtt_uint8 *classDefTable, int glyph)
@@ -5123,6 +5176,15 @@ struct font_face {
     glyph_cache_t cache;
     destroy_func_t destroy_func;
     void* closure;
+    // Ligatures the font's GSUB `liga`/`clig` applies to f-sequences (see
+    // font_face_apply_ligature()); built lazily, once, under `mutex`.
+    int ligatures_ready;
+    int ligature_count;
+    struct {
+        codepoint_t seq[3];
+        int len;
+        codepoint_t ligature;
+    } ligatures[5];
 };
 
 static void glyph_cache_init(glyph_cache_t* cache)
@@ -5264,6 +5326,8 @@ NOVASVG_INLINE font_face_t* font_face_load_from_data(const void* data, unsigned 
     glyph_cache_init(&face->cache);
     face->destroy_func = destroy_func;
     face->closure = closure;
+    face->ligatures_ready = 0;
+    face->ligature_count = 0;
     return face;
 }
 
@@ -5484,6 +5548,71 @@ NOVASVG_INLINE float font_face_traverse_glyph_path(font_face_t* face, float size
     return glyph->advance_width * scale;
 }
 
+// Builds (once) the list of f-ligatures this font's own GSUB applies. A sequence is only
+// taken when the glyph GSUB substitutes is the very glyph the Unicode presentation-form
+// codepoint (U+FB00..FB04) maps to, so both measuring and painting can simply swap in that
+// codepoint: a font without a `liga`/`clig` for the sequence (or whose ligature glyph has no
+// such codepoint) is left exactly as it was.
+NOVASVG_INLINE void font_face_init_ligatures(font_face_t* face)
+{
+    static const struct { codepoint_t seq[3]; int len; codepoint_t ligature; } candidates[5] = {
+        {{'f', 'f', 'i'}, 3, 0xFB03}, {{'f', 'f', 'l'}, 3, 0xFB04}, {{'f', 'f', 0}, 2, 0xFB00},
+        {{'f', 'i', 0}, 2, 0xFB01}, {{'f', 'l', 0}, 2, 0xFB02},
+    };
+    novasvg_mutex_lock(&face->mutex);
+    if(!face->ligatures_ready) {
+        face->ligature_count = 0;
+        for(int c = 0; c < 5; ++c) {
+            int glyphs[3] = {0, 0, 0};
+            int ok = 1;
+            for(int i = 0; i < candidates[c].len; ++i) {
+                glyphs[i] = stbtt_FindGlyphIndex(&face->info, candidates[c].seq[i]);
+                if(glyphs[i] == 0)
+                    ok = 0;
+            }
+            int presentation = stbtt_FindGlyphIndex(&face->info, candidates[c].ligature);
+            if(!ok || presentation == 0)
+                continue;
+            if(stbtt__GetGsubLigature(&face->info, glyphs[0], glyphs + 1, candidates[c].len - 1) != presentation)
+                continue;
+            auto& e = face->ligatures[face->ligature_count++];
+            for(int i = 0; i < 3; ++i)
+                e.seq[i] = candidates[c].seq[i];
+            e.len = candidates[c].len;
+            e.ligature = candidates[c].ligature;
+        }
+        face->ligatures_ready = 1;
+    }
+    novasvg_mutex_unlock(&face->mutex);
+}
+
+// `codepoint` was just read from `it`. If it starts an f-ligature the font applies (longest
+// first: ffi, ffl, ff, fi, fl), consumes the rest of the sequence from `it` and returns the
+// ligature's codepoint; otherwise returns `codepoint` unchanged.
+NOVASVG_INLINE codepoint_t font_face_apply_ligature(font_face_t* face, text_iterator_t* it, codepoint_t codepoint)
+{
+    if(codepoint != 'f')
+        return codepoint;
+    if(!face->ligatures_ready)
+        font_face_init_ligatures(face);
+    for(int k = 0; k < face->ligature_count; ++k) {
+        const auto& e = face->ligatures[k];
+        text_iterator_t peek = *it;
+        int matched = 1;
+        for(int i = 1; i < e.len; ++i) {
+            if(!text_iterator_has_next(&peek) || text_iterator_next(&peek) != e.seq[i]) {
+                matched = 0;
+                break;
+            }
+        }
+        if(matched) {
+            *it = peek;
+            return e.ligature;
+        }
+    }
+    return codepoint;
+}
+
 NOVASVG_INLINE float font_face_text_extents(font_face_t* face, float size, const void* text, int length, text_encoding_t encoding, rect_t* extents)
 {
     text_iterator_t it;
@@ -5494,6 +5623,7 @@ NOVASVG_INLINE float font_face_text_extents(font_face_t* face, float size, const
     bool has_previous = false;
     while(text_iterator_has_next(&it)) {
         codepoint_t codepoint = text_iterator_next(&it);
+        codepoint = font_face_apply_ligature(face, &it, codepoint);
         if(has_previous)
             total_advance_width += font_face_get_kern_advance(face, size, previous, codepoint);
         previous = codepoint;

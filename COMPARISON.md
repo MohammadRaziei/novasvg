@@ -137,6 +137,28 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
   `color`-styled labels ("Backend" green, "Frontend" blue) still resolve
   correctly, confirming no regression on the working case.
 
+- **0.7.3 — foreignObject soft-wrap restored, now driven by the HTML's own
+  `white-space`; `measure_foreign_object(html, font, max_width=None)`;
+  GSUB f-ligatures.**
+  - The width-based wrap described in the next entry had been removed because
+    it ignored `white-space: nowrap` and broke mermaid's (nowrap) labels into
+    extra lines. It is back, decided the way a browser decides:
+    the outermost element declaring `white-space` wins, `nowrap`/`pre` never
+    soft-wrap (mermaid's default labels: still one line, a too-wide line is
+    condensed exactly as before), and `normal`/`break-spaces`/`pre-wrap`/
+    `pre-line` (or nothing declared) wrap at the foreignObject's own width in
+    `render()`. mermaid's wrap mode (`display:table; white-space:break-spaces;
+    width:200px`) therefore now paints wrapped instead of squeezed onto one
+    line.
+  - `measure_foreign_object()` uses the very same rule, so layout and paint
+    agree: it wraps at `max_width` if given, else at the px `width`/`max-width`
+    the HTML declares, and reports the widest resulting line as `width`.
+  - `Font::measureText()` and the fill-text path apply the f-ligatures the
+    font's own GSUB `liga`/`clig` defines (`ff`, `fi`, `fl`, `ffi`, `ffl`),
+    but only when the ligature glyph is the one its Unicode presentation-form
+    codepoint (U+FB00..FB04) maps to; a font without such a lookup is
+    unaffected. Matches browsers (DejaVu Sans "Off" is 0.23px narrower at 16px).
+
 - **foreignObject real multi-line text wrapping added.** Previously a
   single horizontally-condensed line no matter what; now genuine
   greedy word-wrap. Two mechanisms, combined:

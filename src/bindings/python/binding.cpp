@@ -1,4 +1,6 @@
 #include <nanobind/nanobind.h>
+#include <nanobind/stl/optional.h>
+#include <optional>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
 #include <nanobind/stl/unique_ptr.h>
@@ -179,23 +181,25 @@ NB_MODULE(novasvg_py, m) {
             return font.measureText(u32text);
         }, "text"_a, "Measure the advance width of a UTF-8 string, in pixels, at this font's size.");
 
-    m.def("measure_foreign_object", [](const std::string& html, const novasvg::Font& font) {
-        auto metrics = novasvg::measureForeignObjectContent(html, font);
+    m.def("measure_foreign_object", [](const std::string& html, const novasvg::Font& font, std::optional<float> max_width) {
+        auto metrics = novasvg::measureForeignObjectContent(html, font, max_width.value_or(-1.f));
         nb::dict result;
         result["height"] = metrics.height;
         result["width"] = metrics.width;
         result["line_count"] = metrics.lineCount;
         result["line_height"] = metrics.lineHeight;
         return result;
-    }, "html"_a, "font"_a,
+    }, "html"_a, "font"_a, "max_width"_a = nb::none(),
        "Height/width (and line count/line-height) novasvg will use when painting <foreignObject> "
        "content, computed WITHOUT rendering -- the exact same logic ForeignObjectSimple::render() "
-       "itself uses (see measureForeignObjectContent() in svgelement.h -- note its docstring on "
-       "why 'width' specifically is NOT something render() itself uses to size anything, unlike "
-       "'height'), so a caller building the SVG's own layout (e.g. mermaidx's headless JS DOM shim "
-       "sizing a node box for a multi-line HTML label) can ask novasvg what size it will need "
-       "instead of guessing separately. Returns {'height': float, 'width': float, "
-       "'line_count': int, 'line_height': float}.");
+       "itself uses (see measureForeignObjectContent() in svgelement.h), so a caller building the "
+       "SVG's own layout (e.g. mermaidx's headless JS DOM shim sizing a node box for an HTML label) "
+       "can ask novasvg what size it will need instead of guessing separately. "
+       "Text soft-wraps only if the HTML's own CSS `white-space` allows it (not `nowrap`/`pre`), "
+       "at `max_width` (px) if given, else at the px `width`/`max-width` the HTML itself declares "
+       "-- the same rule render() applies at the foreignObject's own width, so layout and paint "
+       "agree. Returns {'height': float, 'width': float, 'line_count': int, 'line_height': float}; "
+       "'width' is the widest resulting line.");
 
     // --- Bind Color Class ---
     nb::class_<novasvg::Color>(m, "Color")
