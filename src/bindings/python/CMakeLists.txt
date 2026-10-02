@@ -1,4 +1,11 @@
-find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(Python COMPONENTS Interpreter REQUIRED)
+# nanobind's STABLE_ABI (used below for Python >= 3.12) needs the SABIModule
+# component; without it nanobind silently builds a regular, non-abi3 extension.
+if(DEFINED SKBUILD AND Python_VERSION VERSION_GREATER_EQUAL "3.12")
+    find_package(Python COMPONENTS Interpreter Development.Module Development.SABIModule REQUIRED)
+else()
+    find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+endif()
 
 if(DEFINED SKBUILD)
 

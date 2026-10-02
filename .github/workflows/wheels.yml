@@ -54,17 +54,13 @@ jobs:
         submodules: true
 
     - name: Build wheels
-      uses: pypa/cibuildwheel@v3.4.1
+      uses: pypa/cibuildwheel@v4.2.1
       env:
-        MACOSX_DEPLOYMENT_TARGET: "10.13"
         CIBW_ARCHS_MACOS: universal2
-        # 3.9-3.11: normal per-version build (nanobind has no stable-ABI
-        # support below 3.12, it silently builds a regular extension there).
-        # 3.12: built once, tagged cp312-abi3 via SKBUILD_WHEEL_PY_API, and
-        # that single wheel covers every newer interpreter too - so 3.13+
-        # is skipped here to avoid building a redundant duplicate wheel.
+        # 3.9-3.11: normal per-version build. 3.12: built once as cp312-abi3
+        # (see [[tool.cibuildwheel.overrides]] in pyproject.toml) and that
+        # single wheel covers every newer interpreter, so 3.13+ is not built.
         CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
-        CIBW_ENVIRONMENT_CP312: "SKBUILD_WHEEL_PY_API=cp312"
         # Disable building PyPy wheels on all platforms
         CIBW_SKIP: pp*
 
