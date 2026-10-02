@@ -74,6 +74,9 @@ test-skip = ["*universal2:arm64"]
 # cp312-abi3 so that single wheel covers every newer interpreter as well.
 [[tool.cibuildwheel.overrides]]
 select = "cp312-*"
+# "append": keep the platform environment (e.g. MACOSX_DEPLOYMENT_TARGET below)
+# instead of replacing it with just this variable.
+inherit.environment = "append"
 environment = { SKBUILD_WHEEL_PY_API = "cp312" }
 
 [tool.cibuildwheel.macos]
