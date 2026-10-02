@@ -1,6 +1,5 @@
 """<foreignObject> HTML text: soft wrapping (measure + paint agree) and GSUB ligatures."""
-import glob
-import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -8,15 +7,10 @@ import pytest
 import novasvg
 import novasvg.fonts as fonts
 
-_CANDIDATES = [
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/TTF/DejaVuSans.ttf",
-] + glob.glob("/usr/local/lib/python3*/**/DejaVuSans.ttf", recursive=True) \
-  + glob.glob("/usr/lib/python3*/**/DejaVuSans.ttf", recursive=True)
-_FONT_PATH = next((p for p in _CANDIDATES if os.path.exists(p)), None)
-
-pytestmark = pytest.mark.skipif(_FONT_PATH is None, reason="DejaVu Sans not found on this system")
+# The font the tests measure with ships in data/fonts/ (unmodified, license alongside; shared with the C++ tests): wrapping and
+# ligature results depend on its exact metrics and GSUB table, so they must not depend on whatever
+# fonts a machine happens to have installed.
+_FONT_PATH = Path(__file__).resolve().parents[2] / "data" / "fonts" / "DejaVuSans.ttf"
 
 FAMILY = "DejaVu Sans"
 TEXT = "This is a very long label that should wrap across several lines when the maximum text width is reached"
@@ -24,7 +18,7 @@ TEXT = "This is a very long label that should wrap across several lines when the
 
 @pytest.fixture(scope="module")
 def font():
-    fonts.add_font_face_from_file(FAMILY, False, False, _FONT_PATH)
+    fonts.add_font_face_from_file(FAMILY, False, False, str(_FONT_PATH))
     return fonts.Font(fonts.get_font_face(FAMILY, False, False), 16.0)
 
 
