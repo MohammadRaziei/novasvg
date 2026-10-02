@@ -100,6 +100,7 @@ enum class PropertyID : uint8_t {
     R,
     RefX,
     RefY,
+    RequiredExtensions,
     Result,
     Rotate,
     Rx,
@@ -117,6 +118,7 @@ enum class PropertyID : uint8_t {
     Stroke_Opacity,
     Stroke_Width,
     Style,
+    SystemLanguage,
     Text_Anchor,
     Text_Orientation,
     TextLength,
@@ -762,6 +764,7 @@ enum class ElementID : uint8_t {
     Stop,
     Style,
     Svg,
+    Switch,
     Symbol,
     Text,
     Tspan,
@@ -1173,6 +1176,22 @@ public:
     SVGGElement(Document* document);
 
     void render(SVGRenderState& state) const final;
+};
+
+// <switch>: renders ONLY the first direct child whose conditional-processing attributes all
+// evaluate true (a child with none always does), exactly as a browser does. mermaid's journey
+// diagram writes every label as `<switch><foreignObject>...</foreignObject><text>...</text></switch>`:
+// the foreignObject (which this library paints) wins and the native <text> is only the fallback
+// for renderers without foreignObject support. Before this element existed, `switch` was an
+// unknown element and its whole subtree -- label included -- was skipped.
+class SVGSwitchElement final : public SVGGraphicsElement {
+public:
+    SVGSwitchElement(Document* document);
+
+    void render(SVGRenderState& state) const final;
+
+private:
+    const SVGElement* selectedChild() const;
 };
 
 class SVGDefsElement final : public SVGGraphicsElement {
@@ -2256,6 +2275,7 @@ NOVASVG_INLINE PropertyID propertyid(std::string_view name)
         {"r", PropertyID::R},
         {"refX", PropertyID::RefX},
         {"refY", PropertyID::RefY},
+        {"requiredExtensions", PropertyID::RequiredExtensions},
         {"result", PropertyID::Result},
         {"rotate", PropertyID::Rotate},
         {"rx", PropertyID::Rx},
@@ -2263,6 +2283,7 @@ NOVASVG_INLINE PropertyID propertyid(std::string_view name)
         {"spreadMethod", PropertyID::SpreadMethod},
         {"stdDeviation", PropertyID::StdDeviation},
         {"style", PropertyID::Style},
+        {"systemLanguage", PropertyID::SystemLanguage},
         {"textLength", PropertyID::TextLength},
         {"transform", PropertyID::Transform},
         {"viewBox", PropertyID::ViewBox},
@@ -4974,6 +4995,7 @@ NOVASVG_INLINE ElementID elementid(std::string_view name)
         {"stop", ElementID::Stop},
         {"style", ElementID::Style},
         {"svg", ElementID::Svg},
+        {"switch", ElementID::Switch},
         {"symbol", ElementID::Symbol},
         {"text", ElementID::Text},
         {"tspan", ElementID::Tspan},
@@ -5015,6 +5037,8 @@ NOVASVG_INLINE std::unique_ptr<SVGElement> SVGElement::create(Document* document
         return std::make_unique<SVGPathElement>(document);
     case ElementID::G:
         return std::make_unique<SVGGElement>(document);
+    case ElementID::Switch:
+        return std::make_unique<SVGSwitchElement>(document);
     case ElementID::Rect:
         return std::make_unique<SVGRectElement>(document);
     case ElementID::Circle:
@@ -5808,6 +5832,7 @@ inline bool isDisallowedElement(const SVGElement* element)
     case ElementID::Polyline:
     case ElementID::Rect:
     case ElementID::Svg:
+    case ElementID::Switch:
     case ElementID::Symbol:
     case ElementID::Text:
     case ElementID::Tspan:
@@ -6798,6 +6823,86 @@ NOVASVG_INLINE void SVGGElement::render(SVGRenderState& state) const
     SVGRenderState newState(this, state, localTransform());
     newState.beginGroup(blendInfo);
     renderChildren(newState);
+    newState.endGroup(blendInfo);
+}
+
+NOVASVG_INLINE SVGSwitchElement::SVGSwitchElement(Document* document)
+    : SVGGraphicsElement(document, ElementID::Switch)
+{
+}
+
+// SVG conditional processing for one switch child. `requiredExtensions` must be non-empty
+// and name an extension we implement (the XHTML namespace -- <foreignObject> content);
+// `systemLanguage` must list a tag matching the user language ("en"); no attribute -> true.
+// (requiredFeatures was removed in SVG 2 and browsers treat it as always true.)
+inline bool switchChildPasses(const SVGElement* child)
+{
+    auto trim = [](std::string_view v) {
+        while(!v.empty() && std::isspace(static_cast<unsigned char>(v.front())))
+            v.remove_prefix(1);
+        while(!v.empty() && std::isspace(static_cast<unsigned char>(v.back())))
+            v.remove_suffix(1);
+        return v;
+    };
+    if(child->hasAttribute(PropertyID::RequiredExtensions)) {
+        std::string_view value = trim(child->getAttribute(PropertyID::RequiredExtensions));
+        bool supported = false;
+        size_t pos = 0;
+        while(pos < value.size() && !supported) {
+            while(pos < value.size() && std::isspace(static_cast<unsigned char>(value[pos])))
+                ++pos;
+            auto end = pos;
+            while(end < value.size() && !std::isspace(static_cast<unsigned char>(value[end])))
+                ++end;
+            supported = value.substr(pos, end - pos) == "http://www.w3.org/1999/xhtml";
+            pos = end;
+        }
+        if(!supported)
+            return false;
+    }
+    if(child->hasAttribute(PropertyID::SystemLanguage)) {
+        std::string_view value = child->getAttribute(PropertyID::SystemLanguage);
+        bool matches = false;
+        size_t pos = 0;
+        while(pos <= value.size() && !matches) {
+            auto comma = value.find(',', pos);
+            auto tag = trim(value.substr(pos, comma == std::string_view::npos ? std::string_view::npos : comma - pos));
+            std::string lower(tag);
+            for(auto& c : lower)
+                c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            matches = lower == "en" || lower.rfind("en-", 0) == 0;
+            if(comma == std::string_view::npos)
+                break;
+            pos = comma + 1;
+        }
+        if(!matches)
+            return false;
+    }
+    return true;
+}
+
+NOVASVG_INLINE const SVGElement* SVGSwitchElement::selectedChild() const
+{
+    for(const auto& child : children()) {
+        auto element = toSVGElement(child);
+        // only graphics elements take part; <title>, <desc>, <defs>... are skipped
+        if(!element || isDisallowedElement(element))
+            continue;
+        if(switchChildPasses(element))
+            return element;
+    }
+    return nullptr;
+}
+
+NOVASVG_INLINE void SVGSwitchElement::render(SVGRenderState& state) const
+{
+    if(isDisplayNone())
+        return;
+    SVGBlendInfo blendInfo(this);
+    SVGRenderState newState(this, state, localTransform());
+    newState.beginGroup(blendInfo);
+    if(auto child = selectedChild())
+        child->render(newState);
     newState.endGroup(blendInfo);
 }
 

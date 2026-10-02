@@ -137,9 +137,16 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
   `color`-styled labels ("Backend" green, "Frontend" blue) still resolve
   correctly, confirming no regression on the working case.
 
-- **0.7.3 — foreignObject soft-wrap restored, now driven by the HTML's own
+- **0.7.3 — `<switch>`; foreignObject soft-wrap restored, now driven by the HTML's own
   `white-space`; `measure_foreign_object(html, font, max_width=None)`;
   GSUB f-ligatures.**
+  - `<switch>` was an unknown element, so it and its whole subtree were
+    skipped. It now renders only the first direct graphics child whose
+    conditional-processing attributes pass (`requiredExtensions` naming the
+    XHTML namespace, `systemLanguage` matching `en`; none -> passes), like a
+    browser. mermaid's journey diagram writes every label as
+    `<switch><foreignObject>..</foreignObject><text>..</text></switch>`, so all
+    journey/timeline task and section labels were missing from the output.
   - The width-based wrap described in the next entry had been removed because
     it ignored `white-space: nowrap` and broke mermaid's (nowrap) labels into
     extra lines. It is back, decided the way a browser decides:
