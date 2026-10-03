@@ -181,6 +181,17 @@ NB_MODULE(novasvg_py, m) {
             return font.measureText(u32text);
         }, "text"_a, "Measure the advance width of a UTF-8 string, in pixels, at this font's size.");
 
+    // nb::class_<Font> chain above ends with measure_text; attach glyph_boxes to it.
+    m.attr("Font").attr("glyph_boxes") = nb::cpp_function(
+        [](const novasvg::Font& font, const std::string& text) {
+            nb::list out;
+            for(const auto& box : font.glyphBoxes(novasvg::utf8ToU32(text)))
+                out.append(nb::make_tuple(box.pen, box.inkLeft, box.inkRight));
+            return out;
+        }, nb::is_method(), "text"_a,
+        "Per-glyph (pen_x, ink_left, ink_right) in pixels for every glyph that has an outline "
+        "(spaces are skipped), using the same ligature + kerning walk as measure_text().");
+
     m.def("measure_foreign_object", [](const std::string& html, const novasvg::Font& font, std::optional<float> max_width) {
         auto metrics = novasvg::measureForeignObjectContent(html, font, max_width.value_or(-1.f));
         nb::dict result;

@@ -146,6 +146,19 @@ public:
 
     float measureText(const std::u32string_view& text) const;
 
+    // One entry per glyph that has an outline (spaces and other empty glyphs
+    // are left out): where its pen starts and where its ink begins/ends, in
+    // pixels along the baseline. Walks the text exactly like measureText()
+    // (ligatures, then kerning), so `pen` is where the glyph is painted.
+    // These are the raw outline extents -- no pixel rounding; that is a
+    // consumer's (browser-emulation) decision, not the font engine's.
+    struct GlyphBox {
+        float pen;
+        float inkLeft;
+        float inkRight;
+    };
+    std::vector<GlyphBox> glyphBoxes(const std::u32string_view& text) const;
+
     const FontFace& face() const { return m_face; }
     float size() const { return m_size; }
 
@@ -409,6 +422,36 @@ NOVASVG_INLINE float Font::measureText(const std::u32string_view& text) const
         return font_face_text_extents(m_face.get(), m_size, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF32, nullptr);
     return 0;
 }
+NOVASVG_INLINE std::vector<Font::GlyphBox> Font::glyphBoxes(const std::u32string_view& text) const
+{
+    std::vector<GlyphBox> boxes;
+    if(m_size <= 0.f || m_face.isNull())
+        return boxes;
+
+    font_face_t* face = m_face.get();
+    text_iterator_t it;
+    text_iterator_init(&it, text.data(), static_cast<int>(text.length()), NOVASVG_TEXT_ENCODING_UTF32);
+    float pen = 0.f;
+    codepoint_t previous = 0;
+    bool hasPrevious = false;
+    while(text_iterator_has_next(&it)) {
+        codepoint_t codepoint = text_iterator_next(&it);
+        codepoint = font_face_apply_ligature(face, &it, codepoint);
+        if(hasPrevious)
+            pen += font_face_get_kern_advance(face, m_size, previous, codepoint);
+        previous = codepoint;
+        hasPrevious = true;
+
+        float advance = 0.f;
+        rect_t extents = {0};
+        font_face_get_glyph_metrics(face, m_size, codepoint, &advance, nullptr, &extents);
+        if(extents.w > 0.f || extents.h > 0.f)
+            boxes.push_back({pen, extents.x, extents.x + extents.w});
+        pen += advance;
+    }
+    return boxes;
+}
+
 NOVASVG_INLINE bool addFontFaceFromFile(const char* family, bool bold, bool italic, const char* filename)
 {
     return fontFaceCache()->addFontFace(family, bold, italic, FontFace(filename));
