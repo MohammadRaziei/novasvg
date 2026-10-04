@@ -23,9 +23,36 @@ CORPUS = [
     # --- text / font stress tests ---
     ("embedded-font", "feature-embedded-font.svg", "plain <text>, @font-face embedded TTF/OTF"),
     ("embedded-font-distinctive", "feature-embedded-font-distinctive.svg", "embedded monospace font vs. an unresolvable family, side by side"),
-    ("mermaid-venn", "mermaid/01-venn-issue35.mmdc.svg", "plain shapes/text via <foreignObject> (mermaid venn diagram)"),
-    ("mermaid-block", "mermaid/03-block-issue23.mmdc.svg", "<foreignObject> text + CSS classDef fills (mermaid block diagram)"),
 ]
+
+# Every mermaid sample under data/mermaid/: `NN-name.mmd` is the source and `NN-name.mmdc.svg` what
+# mmdc (mermaid-cli, rendered in Chromium) made of it, numbered 01, 02, ... without gaps. Picked up by
+# glob rather than listed here, so adding a pair of files is all it takes to benchmark it.
+MERMAID_DIR = DATA_DIR / "mermaid"
+
+
+def mermaid_diagram_type(mmd_path):
+    """First keyword of a .mmd source (`flowchart`, `sequenceDiagram`, `xychart-beta`, ...), skipping
+    blank lines, `%%` comments and a leading `---` front-matter block."""
+    in_front_matter = False
+    for line in Path(mmd_path).read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if line == "---":
+            in_front_matter = not in_front_matter
+            continue
+        if in_front_matter or not line or line.startswith("%%"):
+            continue
+        return line.split()[0]
+    return "unknown"
+
+
+def mermaid_corpus():
+    for svg in sorted(MERMAID_DIR.rglob("*.mmdc.svg")):
+        stem = svg.name[: -len(".mmdc.svg")]
+        name = f"mermaid-{stem}"
+        source = svg.with_name(stem + ".mmd")
+        kind = mermaid_diagram_type(source) if source.exists() else "unknown"
+        yield name, svg, f"mermaid {kind} diagram (mmdc render)"
 
 
 def corpus_files():
@@ -33,30 +60,48 @@ def corpus_files():
         path = DATA_DIR / filename
         if path.exists():
             yield name, path, desc
+    yield from mermaid_corpus()
 
 
 _NUM = r"[-+]?[0-9]*\.?[0-9]+"
 
 
+def _length(text):
+    """'120' / '120px' / '3.5mm' -> 120.0 / 120.0 / 3.5 (unit stripped, like the rest of this file);
+    None for a percentage or anything that isn't a plain length -- 100% is not 100 pixels."""
+    match = re.fullmatch(rf"\s*({_NUM})([a-z]*)\s*", text or "")
+    return float(match.group(1)) if match else None
+
+
+def _pair(w_text, h_text):
+    w, h = _length(w_text), _length(h_text)
+    return (w, h) if w and h and w > 0 and h > 0 else None
+
+
 def intrinsic_size(svg_path):
-    """(width, height) from the <svg> tag's own width/height (numbers only,
-    unit suffix stripped) or, failing that, its viewBox -- most sample SVGs
-    here aren't square, so forcing a fixed square render distorts them.
-    Falls back to (1, 1) if neither is parseable (caller should then just
-    fit a square).
+    """(width, height) the way a browser sizes a standalone SVG, most specific first: the root's CSS
+    `style="width:..;height:.."`, then its width/height attributes, then its viewBox. Percentages are
+    skipped (they mean "fill the container", not a size). Falls back to (1, 1) if nothing usable is
+    declared (caller should then just fit a square). Most sample SVGs here aren't square, so forcing a
+    fixed square render would distort them.
     """
     head = Path(svg_path).read_text(encoding="utf-8", errors="ignore")[:4000]
     tag_match = re.search(r"<svg\b[^>]*>", head)
     tag = tag_match.group(0) if tag_match else head
 
-    w_match = re.search(rf'\bwidth="({_NUM})', tag)
-    h_match = re.search(rf'\bheight="({_NUM})', tag)
-    if w_match and h_match:
-        w, h = float(w_match.group(1)), float(h_match.group(1))
-        if w > 0 and h > 0:
-            return w, h
+    def attr(name):
+        m = re.search(rf'(?<![-\w:]){name}="([^"]*)"', tag)
+        return m.group(1) if m else None
 
-    vb_match = re.search(rf'viewBox="\s*{_NUM}\s+{_NUM}\s+({_NUM})\s+({_NUM})', tag)
+    def css(prop):  # `max-width` must not be read as `width`
+        m = re.search(rf"(?<![-\w]){prop}\s*:\s*([^;]+)", attr("style") or "")
+        return m.group(1) if m else None
+
+    size = _pair(css("width"), css("height")) or _pair(attr("width"), attr("height"))
+    if size:
+        return size
+
+    vb_match = re.search(rf'viewBox="\s*{_NUM}[\s,]+{_NUM}[\s,]+({_NUM})[\s,]+({_NUM})', tag)
     if vb_match:
         w, h = float(vb_match.group(1)), float(vb_match.group(2))
         if w > 0 and h > 0:

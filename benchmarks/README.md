@@ -30,6 +30,32 @@ render is a base64 `data:` URI embedded directly in the page; click any
 render to zoom in. Everything else (`results.json`, per-engine renders/)
 stays inside `build/` — `outputs/` holds only that one file.
 
+## What gets rendered
+
+`python/corpus.py` lists the hand-picked feature samples from `../data`, then adds **every mermaid
+sample it finds** under `../data/mermaid/`: `NN-name.mmd` is the source and `NN-name.mmdc.svg` what
+mmdc (mermaid-cli, in Chromium) rendered from it, numbered 01, 02, ... in order. Adding the next pair of
+files is all it takes to benchmark a new diagram -- there is no list to keep in sync.
+
+Each sample is rendered at its own aspect ratio, sized from (most specific first) the root's CSS
+`style="width:..;height:.."`, its `width`/`height` attributes, then its `viewBox`; a percentage is never
+read as pixels. Because that fits the longest side into `--width`/`--height` (320 px by default), a wide
+diagram's text comes out only a few pixels tall -- raise `NOVASVG_BENCH_WIDTH/HEIGHT` to compare text.
+
+## Using a specific Chromium for ground truth
+
+By default Playwright launches the Chromium that `playwright install chromium` fetched. To pin another
+build (CI image, no network, the exact browser the references were made with):
+
+```
+export NOVASVG_BENCH_CHROMIUM=/path/to/chrome
+export NOVASVG_BENCH_CHROMIUM_ARGS="--no-sandbox --font-render-hinting=none"
+```
+
+Fonts matter just as much for text-heavy samples: mermaid lays its diagrams out with whatever font the
+browser that made them had, so for a fair comparison run everything (this script and the browser) with
+the same fontconfig, e.g. `FONTCONFIG_FILE` pointing at a config that exposes only DejaVu Sans.
+
 ## How it works
 
 - **novasvg** — `cmake/FetchNovasvg.cmake` builds the checkout this

@@ -11,8 +11,27 @@ this pays full browser page-navigation overhead per sample, not a
 library call, and one Chromium instance covers the whole corpus so even
 that overhead is shared, not the point of this column.
 """
+import os
 import time
 from pathlib import Path
+
+
+def chromium_launch_options(env=None):
+    """Playwright launch() keyword arguments from the environment, so ground truth can use a Chromium
+    that isn't the one `playwright install` fetches (CI images, no-network machines, a pinned build):
+
+      NOVASVG_BENCH_CHROMIUM       path to the browser executable
+      NOVASVG_BENCH_CHROMIUM_ARGS  extra command-line flags, whitespace separated
+
+    Both unset -> {} -> Playwright's own Chromium, exactly as before.
+    """
+    env = os.environ if env is None else env
+    options = {}
+    if env.get("NOVASVG_BENCH_CHROMIUM"):
+        options["executable_path"] = env["NOVASVG_BENCH_CHROMIUM"]
+    if env.get("NOVASVG_BENCH_CHROMIUM_ARGS", "").split():
+        options["args"] = env["NOVASVG_BENCH_CHROMIUM_ARGS"].split()
+    return options
 
 
 def render_ground_truth(jobs, timeout_ms=30000):
@@ -24,7 +43,7 @@ def render_ground_truth(jobs, timeout_ms=30000):
     results = {}
     version = "unknown"
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(**chromium_launch_options())
         version = f"Chromium {browser.version}"
         page = browser.new_page()
         for name, svg_path, out_path, w, h in jobs:

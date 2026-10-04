@@ -1,4 +1,4 @@
-"""Font.glyph_boxes(): per-glyph (pen_x, ink_left, ink_right), same walk as measure_text()."""
+"""Font.glyph_boxes(): per-glyph (pen_x, ink_left, ink_right, ink_top, ink_bottom), same walk as measure_text()."""
 from pathlib import Path
 
 import pytest
@@ -22,7 +22,7 @@ def test_empty_text_has_no_boxes(font):
 
 def test_known_values_from_the_font_outlines(font):
     # DejaVu Sans, 2048 units/em, 16px: P = 201..1165, K = 201..1386 (advance 1343), P advance 1235.
-    (p_pen, p_l, p_r), (k_pen, k_l, k_r) = font.glyph_boxes("PK")
+    (p_pen, p_l, p_r, *_), (k_pen, k_l, k_r, *_) = font.glyph_boxes("PK")
     assert (p_pen, p_l, p_r) == (0.0, pytest.approx(201 * 16 / 2048), pytest.approx(1165 * 16 / 2048))
     assert k_pen == pytest.approx(1235 * 16 / 2048)
     assert (k_l, k_r) == (pytest.approx(201 * 16 / 2048), pytest.approx(1386 * 16 / 2048))
@@ -31,13 +31,13 @@ def test_known_values_from_the_font_outlines(font):
 def test_ink_can_stick_out_past_the_advance_box(font):
     # K's outline ends further right than its own advance (1386 > 1343 units) -- the case where a
     # browser's text box grows beyond the advance width.
-    _, (_, _, k_right) = font.glyph_boxes("PK")
+    _, (_, _, k_right, *_) = font.glyph_boxes("PK")
     assert k_right == pytest.approx(1386 * 16 / 2048)
     assert k_right > 1343 * 16 / 2048
 
 
 def test_negative_left_side_bearing_is_reported_as_is(font):
-    (_, ink_left, _), *_ = font.glyph_boxes("T")
+    (_, ink_left, *_), *_ = font.glyph_boxes("T")
     assert ink_left < 0  # T's outline starts left of its pen position
 
 
@@ -49,7 +49,7 @@ def test_spaces_have_no_ink_but_still_advance_the_pen(font):
 
 def test_pen_follows_kerning_like_measure_text(font):
     # "To" is a kerned pair, so 'o' sits closer than the plain advance of 'T'.
-    _, (o_pen, _, _) = font.glyph_boxes("To")
+    _, (o_pen, *_) = font.glyph_boxes("To")
     assert o_pen == pytest.approx(font.measure_text("To") - font.measure_text("o"), abs=1e-3)
     assert o_pen < font.measure_text("T") - 1
 
@@ -64,3 +64,13 @@ def test_last_pen_plus_advance_matches_measure_text(font):
     boxes = font.glyph_boxes(text)
     assert len(boxes) == len(text)
     assert boxes[-1][0] + font.measure_text("g") == pytest.approx(font.measure_text(text), abs=1e-3)
+
+
+def test_vertical_ink_is_relative_to_the_baseline_with_y_down(font):
+    # DejaVu Sans, 2048 units/em, 16px: 'g' has a descender (yMin = -426), 'l' is an ascender (yMax = 1556).
+    (_, _, _, g_top, g_bottom), = font.glyph_boxes("g")
+    assert g_bottom == pytest.approx(426 * 16 / 2048)   # below the baseline -> positive
+    assert g_top < 0                                    # its bowl is above the baseline -> negative
+    (_, _, _, l_top, l_bottom), = font.glyph_boxes("l")
+    assert l_top == pytest.approx(-1556 * 16 / 2048)
+    assert l_bottom == pytest.approx(0.0, abs=1e-3)

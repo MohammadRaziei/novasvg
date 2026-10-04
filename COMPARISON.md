@@ -1,14 +1,14 @@
 # SVG renderer comparison: novasvg vs resvg vs lunasvg vs cairosvg vs thorvg
 
-All five actually built/installed and run on the same 8 files (not guessed):
+All five actually built/installed and run on the same 7 files (not guessed):
 
 - **novasvg** — this repo, built from source (`build/novasvg-cli`)
-- **resvg** — via `resvg_py` (Rust; the same engine mermaidx itself uses)
+- **resvg** — via `resvg_py` (Rust)
 - **lunasvg** 3.5 — built from source, official `svg2png` example
 - **cairosvg** 2.9 — Python/Cairo, `pip install cairosvg`
 - **thorvg** 1.1.3 — via `thorvg-python` (ctypes bindings), software canvas
 
-Ground truth for the 4 mermaid samples (from mermaidx issues #35, #17, #23, #20 —
+Ground truth for the 3 mermaid samples (venn, flowchart, block —
 see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
 4 more files probe specific SVG features directly (`data/feature-*.svg`).
 
@@ -19,7 +19,6 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
 | venn — plain shapes/text | match | match | match | match | **text missing entirely** (shapes fine) |
 | block — plain shapes/text | match | match | match | match | text missing, **CSS-class fills render solid black** |
 | flowchart — `<br/>`/text inside `<foreignObject>`, CSS classDef fills | text now correctly space-separated, colored, and **genuinely multi-line** (real greedy word-wrap, not a single condensed line — see Fixes below); the "Inner / circle..." label renders in black across properly wrapped lines | blank (no foreignObject text) | blank | blank | text missing entirely; subgraph bg and several classDef-filled shapes render **solid black**; edges render as thick black wedges |
-| zenuml — nested HTML+CSS inside `<foreignObject>` (Vue-rendered) | raw concatenated text only, no layout | blank canvas | **fails to parse the file** (hard error) | **hard crash**: `ValueError: could not convert string to float: 'calc(100'` | only a stray inline `<svg>` icon fragment renders, wrong scale/position; everything else (boxes, text, lifelines) missing |
 | base64 `<image>` (href/xlink:href) | ok | ok | ok | ok | ok (image fine, caption **text missing**) |
 | linear/radial gradient | ok | ok | ok | ok | ok |
 | `feGaussianBlur` filter | **applied** (added; see Fixes below) | applied | not applied | not applied | applied |
@@ -38,7 +37,7 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
   rasterizer, see `docs/about.md`), so parity with lunasvg specifically is
   by design, not coincidence.
 - **thorvg is the outlier, in both directions.** Its SVG loader doesn't
-  render `<text>` at all in any of the 8 files — that's a hard gap none of
+  render `<text>` at all in any of the 7 files — that's a hard gap none of
   the other four have. It also fails to resolve CSS-class fills once the
   stylesheet gets non-trivial (mermaid's classDef output), painting those
   shapes solid black instead. But it's the *only* engine of the five that
@@ -47,12 +46,7 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
 - **`<foreignObject>` (what mermaid.js uses for every text label):**
   novasvg is the strongest of the five — the only one that extracts any
   text from it, even if line-wrapping is broken and one label got dropped.
-  resvg and lunasvg render empty boxes; cairosvg crashes on `calc()`;
-  thorvg ignores it beyond a stray nested icon.
-- **zenuml specifically** breaks all five to some degree: 2 of 5 (novasvg,
-  thorvg-partial) draw *something*, 2 of 5 (resvg, thorvg-mostly) draw a
-  blank/near-blank canvas, and 2 of 5 (lunasvg, cairosvg) fail outright
-  before producing any image.
+  resvg and lunasvg render empty boxes.
 - Nothing here applied the CSS `transform:` *property* (as opposed to the
   SVG `transform=` attribute) at the time this comparison table was first
   generated — novasvg has since fixed this (see Fixes below); resvg,
@@ -133,7 +127,7 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
   matching how a real browser treats a foreignObject's HTML content as
   its own formatting context. Verified: the "Inner / circle and some odd
   special characters" label now renders in black
-  (`data/mermaid/02-flowchart-issue17.mmdc.svg`); the venn diagram's
+  (`data/mermaid/02-flowchart.mmdc.svg`); the venn diagram's
   `color`-styled labels ("Backend" green, "Frontend" blue) still resolve
   correctly, confirming no regression on the working case.
 
@@ -181,7 +175,7 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
      applied to the whole block, for the rare case of a single
      unbreakable word wider than the box.
   - Verified against the real mmdc/Chrome reference
-    (`data/mermaid/02-flowchart-issue17.mmdc.png`): line *content* and
+    (`data/mermaid/02-flowchart.mmdc.png`): line *content* and
     break points now match closely. Line *count* can still run one or
     two lines higher than Chrome's for borderline-width labels — that
     residual gap is the substitute-font-metrics issue this file's
@@ -285,17 +279,11 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
     in the stack. Fontconfig has to see the whole ordered stack in one
     pattern to pick the best-aliased entry itself.
   - Verified against the real mmdc/Chrome reference
-    (`data/mermaid/02-flowchart-issue17.mmdc.png`): line count for the
+    (`data/mermaid/02-flowchart.mmdc.png`): line count for the
 
     flowchart sample's labels went from matching on almost none of them
     to matching on 10 of 12 (only "Diamond with line break" and one
     "Rounded square shape" instance are still off by a line).
-
-## Still open
-
-- zenuml (nested HTML+CSS inside `<foreignObject>`) — still only raw
-  text, no layout. Out of scope for a "fix", this needs an actual HTML
-  layout engine.
 
 ## Bottom line
 

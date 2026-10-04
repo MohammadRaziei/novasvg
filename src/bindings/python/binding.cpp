@@ -186,10 +186,10 @@ NB_MODULE(novasvg_py, m) {
         [](const novasvg::Font& font, const std::string& text) {
             nb::list out;
             for(const auto& box : font.glyphBoxes(novasvg::utf8ToU32(text)))
-                out.append(nb::make_tuple(box.pen, box.inkLeft, box.inkRight));
+                out.append(nb::make_tuple(box.pen, box.inkLeft, box.inkRight, box.inkTop, box.inkBottom));
             return out;
         }, nb::is_method(), "text"_a,
-        "Per-glyph (pen_x, ink_left, ink_right) in pixels for every glyph that has an outline "
+        "Per-glyph (pen_x, ink_left, ink_right, ink_top, ink_bottom) in pixels (top/bottom relative to the baseline, y down) for every glyph that has an outline "
         "(spaces are skipped), using the same ligature + kerning walk as measure_text().");
 
     m.def("measure_foreign_object", [](const std::string& html, const novasvg::Font& font, std::optional<float> max_width) {

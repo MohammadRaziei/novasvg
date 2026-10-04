@@ -148,14 +148,19 @@ public:
 
     // One entry per glyph that has an outline (spaces and other empty glyphs
     // are left out): where its pen starts and where its ink begins/ends, in
-    // pixels along the baseline. Walks the text exactly like measureText()
-    // (ligatures, then kerning), so `pen` is where the glyph is painted.
-    // These are the raw outline extents -- no pixel rounding; that is a
-    // consumer's (browser-emulation) decision, not the font engine's.
+    // pixels. inkLeft/inkRight are along the baseline relative to the glyph's
+    // own pen; inkTop/inkBottom are relative to the baseline with y pointing
+    // DOWN (so ink above the baseline is negative). Walks the text exactly
+    // like measureText() (ligatures, then kerning), so `pen` is where the
+    // glyph is painted. These are the raw outline extents -- no pixel
+    // rounding; that is a consumer's (browser-emulation) decision, not the
+    // font engine's.
     struct GlyphBox {
         float pen;
         float inkLeft;
         float inkRight;
+        float inkTop;
+        float inkBottom;
     };
     std::vector<GlyphBox> glyphBoxes(const std::u32string_view& text) const;
 
@@ -446,7 +451,7 @@ NOVASVG_INLINE std::vector<Font::GlyphBox> Font::glyphBoxes(const std::u32string
         rect_t extents = {0};
         font_face_get_glyph_metrics(face, m_size, codepoint, &advance, nullptr, &extents);
         if(extents.w > 0.f || extents.h > 0.f)
-            boxes.push_back({pen, extents.x, extents.x + extents.w});
+            boxes.push_back({pen, extents.x, extents.x + extents.w, extents.y, extents.y + extents.h});
         pen += advance;
     }
     return boxes;
