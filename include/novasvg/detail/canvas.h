@@ -391,7 +391,13 @@ enum class BlendMode {
     Src = NOVASVG_OPERATOR_SRC,
     Src_Over = NOVASVG_OPERATOR_SRC_OVER,
     Dst_In = NOVASVG_OPERATOR_DST_IN,
-    Dst_Out = NOVASVG_OPERATOR_DST_OUT
+    Dst_Out = NOVASVG_OPERATOR_DST_OUT,
+    Multiply = NOVASVG_OPERATOR_MULTIPLY,
+    Screen = NOVASVG_OPERATOR_SCREEN,
+    Darken = NOVASVG_OPERATOR_DARKEN,
+    Lighten = NOVASVG_OPERATOR_LIGHTEN,
+    Difference = NOVASVG_OPERATOR_DIFFERENCE,
+    Exclusion = NOVASVG_OPERATOR_EXCLUSION
 };
 
 using DashArray = std::vector<float>;

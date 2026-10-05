@@ -1438,7 +1438,15 @@ typedef enum {
     NOVASVG_OPERATOR_DST_OUT,     ///< Destination outside source.
     NOVASVG_OPERATOR_SRC_ATOP,    ///< Source atop destination (source shown over destination but only in the destination's bounds).
     NOVASVG_OPERATOR_DST_ATOP,    ///< Destination atop source (destination shown over source but only in the source's bounds).
-    NOVASVG_OPERATOR_XOR          ///< Source and destination are combined, but their overlapping regions are cleared.
+    NOVASVG_OPERATOR_XOR,         ///< Source and destination are combined, but their overlapping regions are cleared.
+    // CSS blend modes (W3C Compositing and Blending): the source is blended with the backdrop's colour,
+    // then composited over it. Appended after the Porter-Duff operators; same order as the tables in blend.h.
+    NOVASVG_OPERATOR_MULTIPLY,    ///< Backdrop * source: darkens, white is neutral.
+    NOVASVG_OPERATOR_SCREEN,      ///< Inverse of multiply: lightens, black is neutral.
+    NOVASVG_OPERATOR_DARKEN,      ///< The darker of backdrop and source, per channel.
+    NOVASVG_OPERATOR_LIGHTEN,     ///< The lighter of backdrop and source, per channel.
+    NOVASVG_OPERATOR_DIFFERENCE,  ///< Absolute difference of backdrop and source, per channel.
+    NOVASVG_OPERATOR_EXCLUSION    ///< Like difference, with lower contrast.
 } operator_t;
 
 /**

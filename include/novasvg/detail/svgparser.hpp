@@ -55,14 +55,16 @@ struct SimpleSelector {
 
     Combinator combinator{Combinator::Descendant};
     ElementID id{ElementID::Star};
+    std::string tag; // lower-case tag name as written; empty for `*`. For matching HTML (no ElementID for it)
     std::vector<AttributeSelector> attributeSelectors;
     std::vector<PseudoClassSelector> pseudoClassSelectors;
 };
 
 struct Declaration {
     int specificity;
-    PropertyID id;
+    PropertyID id; // Unknown for a property no SVG element has (only the HTML in a foreignObject reads those)
     std::string value;
+    std::string name; // lower-case property name as written
 };
 
 using DeclarationList = std::vector<Declaration>;
@@ -147,9 +149,8 @@ NOVASVG_INLINE constexpr bool dashequals(std::string_view value, std::string_vie
     return false;
 }
 
-static bool matchAttributeSelector(const AttributeSelector& selector, const SVGElement* element)
+static bool matchAttributeValue(const AttributeSelector& selector, std::string_view value)
 {
-    const auto& value = element->getAttribute(selector.id);
     if(selector.matchType == AttributeSelector::MatchType::None)
         return !value.empty();
     if(selector.matchType == AttributeSelector::MatchType::Equals)
@@ -165,6 +166,11 @@ static bool matchAttributeSelector(const AttributeSelector& selector, const SVGE
     if(selector.matchType == AttributeSelector::MatchType::DashEquals)
         return dashequals(value, selector.value);
     return false;
+}
+
+static bool matchAttributeSelector(const AttributeSelector& selector, const SVGElement* element)
+{
+    return matchAttributeValue(selector, element->getAttribute(selector.id));
 }
 
 static bool matchSimpleSelector(const SimpleSelector& selector, const SVGElement* element);
@@ -315,10 +321,14 @@ static bool parseTagSelector(std::string_view& input, SimpleSelector& simpleSele
     std::string name;
     if(skipDelimiter(input, '*'))
         simpleSelector.id = ElementID::Star;
-    else if(readCSSIdentifier(input, name))
+    else if(readCSSIdentifier(input, name)) {
         simpleSelector.id = elementid(name);
-    else
+        for(auto& ch : name)
+            ch = char(std::tolower(static_cast<unsigned char>(ch)));
+        simpleSelector.tag = name;
+    } else {
         return false;
+    }
     return true;
 }
 
@@ -510,17 +520,21 @@ static bool parseDeclarations(std::string_view& input, DeclarationList& declarat
         stripTrailingSpaces(value);
 
         Declaration declaration;
-        declaration.specificity = 0x10;
+        declaration.specificity = Specificity::Stylesheet;
         declaration.id = propertyid(name);
         declaration.value.assign(value);
+        for(auto& ch : name)
+            ch = char(std::tolower(static_cast<unsigned char>(ch)));
+        declaration.name = name;
         if(skipDelimiter(input, '!')) {
             skipOptionalSpaces(input);
             if(!skipString(input, "important"))
                 return false;
-            declaration.specificity = 0x1000;
+            declaration.specificity = Specificity::StylesheetImportant;
         }
 
-        if(declaration.id != PropertyID::Unknown)
+        // `background-color` is no SVG property, but the HTML inside a foreignObject paints it
+        if(declaration.id != PropertyID::Unknown || declaration.name == "background-color")
             declarations.push_back(std::move(declaration));
         skipOptionalSpacesOrDelimiter(input, ';');
     } while(!input.empty() && input.front() != '}');
@@ -727,6 +741,31 @@ static SelectorList parseQuerySelectors(std::string_view input)
     return selectors;
 }
 
+// Removes a trailing `!important` (any case, any spacing around the bang) from a declaration value and
+// reports whether there was one. `fill:#f9f !important` is the colour #f9f, flagged important -- it is
+// not a colour called "#f9f !important".
+inline bool stripImportantFlag(std::string& value)
+{
+    auto bang = value.rfind('!');
+    if(bang == std::string::npos)
+        return false;
+    std::string_view flag(value);
+    flag.remove_prefix(bang + 1);
+    skipOptionalSpaces(flag);
+    stripTrailingSpaces(flag);
+    if(flag.size() != 9)
+        return false;
+    for(size_t i = 0; i < flag.size(); ++i) {
+        if(std::tolower(static_cast<unsigned char>(flag[i])) != "important"[i])
+            return false;
+    }
+
+    value.erase(bang);
+    while(!value.empty() && IS_WS(value.back()))
+        value.pop_back();
+    return true;
+}
+
 inline void parseInlineStyle(std::string_view input, SVGElement* element)
 {
     std::string name;
@@ -742,8 +781,10 @@ inline void parseInlineStyle(std::string_view input, SVGElement* element)
         }
 
         auto id = csspropertyid(name);
-        if(id != PropertyID::Unknown)
-            element->setAttribute(0x100, id, value);
+        if(id != PropertyID::Unknown) {
+            const bool important = stripImportantFlag(value);
+            element->setAttribute(important ? Specificity::InlineImportant : Specificity::InlineStyle, id, value);
+        }
         skipOptionalSpacesOrDelimiter(input, ';');
     }
 }
@@ -1018,7 +1059,7 @@ NOVASVG_INLINE bool Document::parse(const char* data, size_t length)
                 } else {
                     if(id == PropertyID::Id)
                         m_rootElement->addElementById(buffer, element);
-                    element->setAttribute(0x1, id, buffer);
+                    element->setAttribute(Specificity::PresentationAttribute, id, buffer);
                 }
             }
 
@@ -1060,10 +1101,356 @@ NOVASVG_INLINE bool Document::parse(const char* data, size_t length)
 
     if(m_rootElement == nullptr || ignoring > 0 || !input.empty())
         return false;
-    m_rootElement->setStyleSheetText(styleSheet);
     applyStyleSheet(styleSheet);
     m_rootElement->build();
     return true;
+}
+
+// ---------------------------------------------------------------------------------------------------
+// The HTML inside a <foreignObject>, styled by the document's CSS.
+//
+// ForeignObjectSimple paints HTML as plain text in one colour on one optional box, so all the CSS has to
+// answer is: which `color` does the text end up with, and which `background-color` box sits behind it.
+// A browser answers that with the cascade, and the part that matters in practice (mermaid) is a selector
+// that reaches *through* the foreignObject into the SVG around it: `.section-0 span{color:black}` styles a
+// <span> because the <g class="section-0"> it lives in matches. So the HTML tags are modelled as nodes
+// that have a parent chain -- first the HTML ancestors, then the foreignObject, then the SVG elements
+// above it -- and the very same selector matcher the SVG elements use walks that chain.
+// ---------------------------------------------------------------------------------------------------
+
+struct HtmlNode {
+    std::string tag; // lower case
+    std::string id;
+    std::string className;
+    std::string style; // the style="" attribute, verbatim
+    int parent{-1};    // index in the node list; -1 = a direct child of the foreignObject
+    bool hasText{false}; // has non-blank text of its own
+};
+
+static bool isVoidHtmlTag(const std::string& tag)
+{
+    static constexpr std::string_view names[] = {"area", "base", "br", "col", "embed", "hr", "img",
+                                                 "input", "link", "meta", "source", "track", "wbr"};
+    for(auto name : names) {
+        if(tag == name)
+            return true;
+    }
+
+    return false;
+}
+
+static std::string lowerCase(std::string_view text)
+{
+    std::string out(text);
+    for(auto& ch : out)
+        ch = char(std::tolower(static_cast<unsigned char>(ch)));
+    return out;
+}
+
+// The opening/closing tags of a piece of HTML as a flat list in document order, each with the index of
+// the element it sits in. Only what the cascade needs is read: tag name, id, class, style.
+static std::vector<HtmlNode> parseHtmlNodes(std::string_view html)
+{
+    std::vector<HtmlNode> nodes;
+    std::vector<int> open;
+    size_t pos = 0;
+    while(pos < html.size()) {
+        auto lt = html.find('<', pos);
+        auto text = html.substr(pos, lt == std::string_view::npos ? std::string_view::npos : lt - pos);
+        if(!open.empty()) {
+            for(char ch : text) {
+                if(!IS_WS(ch)) {
+                    nodes[open.back()].hasText = true;
+                    break;
+                }
+            }
+        }
+
+        if(lt == std::string_view::npos)
+            break;
+        if(html.compare(lt, 4, "<!--") == 0) {
+            auto end = html.find("-->", lt + 4);
+            pos = end == std::string_view::npos ? html.size() : end + 3;
+            continue;
+        }
+
+        // the end of the tag: the first '>' that is not inside a quoted attribute value
+        size_t gt = lt + 1;
+        char quote = 0;
+        while(gt < html.size() && (quote || html[gt] != '>')) {
+            if(quote) {
+                if(html[gt] == quote)
+                    quote = 0;
+            } else if(html[gt] == '"' || html[gt] == '\'') {
+                quote = html[gt];
+            }
+            ++gt;
+        }
+
+        auto inside = html.substr(lt + 1, gt - lt - 1);
+        pos = std::min(gt + 1, html.size());
+        if(inside.empty() || inside.front() == '!' || inside.front() == '?')
+            continue;
+
+        if(inside.front() == '/') {
+            inside.remove_prefix(1);
+            size_t n = 0;
+            while(n < inside.size() && !IS_WS(inside[n]))
+                ++n;
+            auto name = lowerCase(inside.substr(0, n));
+            for(size_t i = open.size(); i-- > 0;) {
+                if(nodes[open[i]].tag == name) {
+                    open.resize(i);
+                    break;
+                }
+            }
+
+            continue;
+        }
+
+        HtmlNode node;
+        size_t n = 0;
+        while(n < inside.size() && !IS_WS(inside[n]) && inside[n] != '/')
+            ++n;
+        node.tag = lowerCase(inside.substr(0, n));
+        inside.remove_prefix(n);
+        bool selfClosing = false;
+        while(!inside.empty()) {
+            skipOptionalSpaces(inside);
+            if(inside.empty())
+                break;
+            if(inside.front() == '/') {
+                selfClosing = true;
+                inside.remove_prefix(1);
+                continue;
+            }
+
+            selfClosing = false;
+            size_t m = 0;
+            while(m < inside.size() && !IS_WS(inside[m]) && inside[m] != '=' && inside[m] != '/')
+                ++m;
+            auto name = lowerCase(inside.substr(0, m));
+            inside.remove_prefix(m);
+            skipOptionalSpaces(inside);
+            std::string value;
+            if(!inside.empty() && inside.front() == '=') {
+                inside.remove_prefix(1);
+                skipOptionalSpaces(inside);
+                if(!inside.empty() && (inside.front() == '"' || inside.front() == '\'')) {
+                    auto q = inside.front();
+                    inside.remove_prefix(1);
+                    auto end = inside.find(q);
+                    value.assign(inside.substr(0, end));
+                    inside.remove_prefix(end == std::string_view::npos ? inside.size() : end + 1);
+                } else {
+                    size_t v = 0;
+                    while(v < inside.size() && !IS_WS(inside[v]))
+                        ++v;
+                    value.assign(inside.substr(0, v));
+                    inside.remove_prefix(v);
+                }
+            }
+
+            if(name == "class")
+                node.className = value;
+            else if(name == "id")
+                node.id = value;
+            else if(name == "style")
+                node.style = value;
+        }
+
+        node.parent = open.empty() ? -1 : open.back();
+        nodes.push_back(std::move(node));
+        if(!selfClosing && !isVoidHtmlTag(nodes.back().tag))
+            open.push_back(int(nodes.size()) - 1);
+    }
+
+    return nodes;
+}
+
+// A step along the ancestor chain: an HTML node, or -- once the HTML runs out -- an SVG element.
+struct StyleNode {
+    const HtmlNode* html{nullptr};
+    const SVGElement* svg{nullptr};
+    explicit operator bool() const { return html || svg; }
+};
+
+static bool matchHtmlSimpleSelector(const SimpleSelector& selector, const HtmlNode& node)
+{
+    if(selector.id != ElementID::Star && (selector.tag.empty() || selector.tag != node.tag))
+        return false;
+    if(!selector.pseudoClassSelectors.empty())
+        return false; // :first-child, :not(...) & co are not modelled for HTML
+    for(const auto& attribute : selector.attributeSelectors) {
+        std::string_view value;
+        if(attribute.id == PropertyID::Class)
+            value = node.className;
+        else if(attribute.id == PropertyID::Id)
+            value = node.id;
+        else if(attribute.id == PropertyID::Style)
+            value = node.style;
+        if(!matchAttributeValue(attribute, value))
+            return false;
+    }
+
+    return true;
+}
+
+// matchSelector() for an HTML node: the rightmost compound must match the node, the ones before it its
+// ancestors -- HTML elements first, then `owner` (the foreignObject) and the SVG elements above it.
+// Sibling combinators (+ ~) are not modelled for HTML, so a selector using one never matches.
+static bool matchHtmlSelector(const Selector& selector, const std::vector<HtmlNode>& nodes, int index, const SVGElement* owner)
+{
+    if(selector.empty())
+        return false;
+    auto parentOf = [&](const StyleNode& node) {
+        if(node.html) {
+            if(node.html->parent >= 0)
+                return StyleNode{&nodes[node.html->parent], nullptr};
+            return StyleNode{nullptr, owner};
+        }
+
+        return StyleNode{nullptr, node.svg->parentElement()};
+    };
+    auto matches = [](const SimpleSelector& simple, const StyleNode& node) {
+        return node.html ? matchHtmlSimpleSelector(simple, *node.html) : matchSimpleSelector(simple, node.svg);
+    };
+
+    StyleNode node{&nodes[index], nullptr};
+    auto it = selector.rbegin();
+    auto end = selector.rend();
+    if(!matches(*it, node))
+        return false;
+    auto combinator = it->combinator;
+    ++it;
+    while(it != end) {
+        if(combinator != SimpleSelector::Combinator::Child && combinator != SimpleSelector::Combinator::Descendant)
+            return false;
+        node = parentOf(node);
+        if(!node)
+            return false;
+        if(matches(*it, node)) {
+            combinator = it->combinator;
+            ++it;
+        } else if(combinator != SimpleSelector::Combinator::Descendant) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// The declaration of one property that currently wins, by cascade priority (a later one wins a tie).
+struct CascadedValue {
+    int specificity{-1};
+    std::string value;
+    void offer(int priority, const std::string& candidate)
+    {
+        if(priority >= specificity) {
+            specificity = priority;
+            value = candidate;
+        }
+    }
+};
+
+// Offers every `color` / `background-color` declaration of a style="" attribute.
+static void offerInlineStyle(std::string_view style, CascadedValue& color, CascadedValue& background)
+{
+    while(!style.empty()) {
+        auto end = style.find(';');
+        auto declaration = style.substr(0, end);
+        style.remove_prefix(end == std::string_view::npos ? style.size() : end + 1);
+        auto colon = declaration.find(':');
+        if(colon == std::string_view::npos)
+            continue;
+        auto nameText = declaration.substr(0, colon);
+        stripLeadingAndTrailingSpaces(nameText);
+        auto name = lowerCase(nameText);
+        std::string value(declaration.substr(colon + 1));
+        const int priority = stripImportantFlag(value) ? Specificity::InlineImportant : Specificity::InlineStyle;
+        std::string_view trimmed(value);
+        stripLeadingAndTrailingSpaces(trimmed);
+        if(name == "color")
+            color.offer(priority, std::string(trimmed));
+        else if(name == "background-color")
+            background.offer(priority, std::string(trimmed));
+    }
+}
+
+// Works out the text colour and the box colour the CSS gives this foreignObject's HTML and stores them on
+// it. `rules` must be sorted (least to most specific, then source order), as applyStyleSheet() leaves them.
+//  * text colour: `color` inherits, so every node has the colour of its own rule or else its parent's; the
+//    text is painted in the colour of the last element that holds text itself (black if nothing sets one).
+//    This is the HTML's CSS `color` -- deliberately not the SVG `fill` that happens to be in effect around
+//    the foreignObject: a classDef like `.green>*{fill:#9f6}` also matches the label's <g>, and must not
+//    turn the label text the same shade as its box.
+//  * box colour: `background-color` does not inherit. Checked against a real WebKit render: mermaid's edge
+//    labels have an opaque box on an inner <span> stacked over a translucent one on the outer <div>, and
+//    the opaque one is what shows -- so the last element in document order that has a visible box wins,
+//    like paint order (later/nested elements paint over earlier ones). `transparent` is no box.
+static void resolveForeignObjectStyle(SVGForeignObjectElement* foreignObject, const RuleDataList& rules)
+{
+    const auto nodes = parseHtmlNodes(foreignObject->rawContent());
+    std::vector<const RuleData*> relevant;
+    for(const auto& rule : rules) {
+        for(const auto& declaration : rule.declarations()) {
+            if(declaration.name == "color" || declaration.name == "background-color") {
+                relevant.push_back(&rule);
+                break;
+            }
+        }
+    }
+
+    std::vector<std::optional<Color>> colorOf(nodes.size());
+    std::optional<Color> textColor, textColorOfLastNode, background;
+    bool anyText = false;
+    for(size_t i = 0; i < nodes.size(); ++i) {
+        CascadedValue color, box;
+        for(const auto* rule : relevant) {
+            if(!matchHtmlSelector(rule->selector(), nodes, int(i), foreignObject))
+                continue;
+            for(const auto& declaration : rule->declarations()) {
+                if(declaration.name == "color")
+                    color.offer(declaration.specificity, declaration.value);
+                else if(declaration.name == "background-color")
+                    box.offer(declaration.specificity, declaration.value);
+            }
+        }
+
+        offerInlineStyle(nodes[i].style, color, box);
+
+        std::optional<Color> declared;
+        if(color.specificity >= 0)
+            declared = parseCssColor(color.value);
+        colorOf[i] = declared ? declared : (nodes[i].parent >= 0 ? colorOf[nodes[i].parent] : std::nullopt);
+        textColorOfLastNode = colorOf[i];
+        if(nodes[i].hasText) {
+            textColor = colorOf[i];
+            anyText = true;
+        }
+
+        if(box.specificity >= 0) {
+            if(auto fill = parseCssColor(box.value); fill && fill->isVisible())
+                background = fill;
+        }
+    }
+
+    foreignObject->setHtmlStyle(anyText ? textColor : textColorOfLastNode, background);
+}
+
+// One RuleDataList out of several stylesheets applied one after another, each parsed on its own (a rule
+// the parser can't read ends only its own sheet) and numbered on from the sheets before it, so a later
+// sheet wins a tie. Sorted the way applyStyleSheet() sorts.
+static RuleDataList parseStyleSheets(const std::vector<std::string>& sheets)
+{
+    RuleDataList all;
+    for(const auto& sheet : sheets) {
+        for(auto& rule : parseStyleSheet(sheet))
+            all.emplace_back(rule.selector(), rule.declarations(), rule.specificity(), all.size());
+    }
+
+    std::sort(all.begin(), all.end());
+    return all;
 }
 
 NOVASVG_INLINE void Document::applyStyleSheet(const std::string& content)
@@ -1075,12 +1462,24 @@ NOVASVG_INLINE void Document::applyStyleSheet(const std::string& content)
             for(const auto& rule : rules) {
                 if(rule.match(element)) {
                     for(const auto& declaration : rule.declarations()) {
-                        element->setAttribute(declaration.specificity, declaration.id, declaration.value);
+                        if(declaration.id != PropertyID::Unknown)
+                            element->setAttribute(declaration.specificity, declaration.id, declaration.value);
                     }
                 }
             }
         });
     }
+
+    if(!content.empty())
+        m_rootElement->addStyleSheet(content);
+
+    // The HTML in a foreignObject is not part of the element tree above, so it is styled here, from every
+    // sheet applied so far (a stylesheet given later than the one in the file sits after it in the cascade).
+    const auto htmlRules = parseStyleSheets(m_rootElement->styleSheets());
+    m_rootElement->transverse([&htmlRules](SVGElement* element) {
+        if(element->id() == ElementID::ForeignObject)
+            resolveForeignObjectStyle(static_cast<SVGForeignObjectElement*>(element), htmlRules);
+    });
 }
 
 NOVASVG_INLINE ElementList Document::querySelectorAll(const std::string& content) const

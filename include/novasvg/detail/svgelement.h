@@ -86,6 +86,7 @@ enum class PropertyID : uint8_t {
     Mask_Type,
     MaskContentUnits,
     MaskUnits,
+    Mix_Blend_Mode,
     Offset,
     Opacity,
     Operator,
@@ -202,6 +203,19 @@ enum class Visibility : uint8_t {
 enum class Overflow : uint8_t {
     Visible,
     Hidden
+};
+
+// CSS mix-blend-mode. Normal = ordinary painting. Of the other keywords the separable modes below are
+// supported; overlay, color-dodge, color-burn, hard-light, soft-light and the non-separable ones (hue,
+// saturation, color, luminosity) are not yet and paint as Normal, like a value this library doesn't know.
+enum class MixBlendMode : uint8_t {
+    Normal,
+    Multiply,
+    Screen,
+    Darken,
+    Lighten,
+    Difference,
+    Exclusion
 };
 
 enum class PointerEvents : uint8_t {
@@ -714,6 +728,22 @@ private:
     std::string m_data;
 };
 
+/**
+ * Where an attribute value came from, as a number: when two sources set the same property the higher one
+ * wins, and the later one wins a tie. This is CSS's cascade, lowest to highest:
+ * presentation attribute, stylesheet, inline `style=""`, stylesheet `!important`, inline `!important`,
+ * and finally a value set through the API (a program that loads a document and then changes a property
+ * means it, whatever CSS the file carried).
+ */
+namespace Specificity {
+constexpr int PresentationAttribute = 0x1;
+constexpr int Stylesheet = 0x10;
+constexpr int InlineStyle = 0x100;
+constexpr int StylesheetImportant = 0x1000;
+constexpr int InlineImportant = 0x2000;
+constexpr int Api = 0x4000;
+} // namespace Specificity
+
 class Attribute {
 public:
     Attribute() = default;
@@ -872,6 +902,7 @@ public:
     const SVGMaskElement* masker() const { return m_masker; }
     const SVGFilterElement* filterElement() const { return m_filter; }
     float opacity() const { return m_opacity; }
+    MixBlendMode mixBlendMode() const { return m_mix_blend_mode; }
 
     bool isElement() const final { return true; }
 
@@ -881,6 +912,7 @@ private:
     const SVGMaskElement* m_masker = nullptr;
     const SVGFilterElement* m_filter = nullptr;
     float m_opacity = 1.f;
+    MixBlendMode m_mix_blend_mode = MixBlendMode::Normal;
 
     float m_font_size = 12.f;
     Display m_display = Display::Inline;
@@ -1031,19 +1063,18 @@ public:
 
     void forceLayout();
 
-    // Raw <style> text collected while parsing, kept verbatim (not just
-    // the resolved SVG presentation properties applyStyleSheet() pulls
-    // out of it) so foreignObject content -- which sits outside the SVG
-    // element tree and so never goes through that resolver -- can still
-    // look up a class's declarations itself. See ForeignObjectSimple.
-    const std::string& styleSheetText() const { return m_styleSheetText; }
-    void setStyleSheetText(std::string text) { m_styleSheetText = std::move(text); }
+    // Every stylesheet applied to the document -- the <style> text found while parsing, then anything
+    // passed to Document::applyStyleSheet() -- kept verbatim and in order. The HTML inside a
+    // <foreignObject> sits outside the SVG element tree and so never goes through the resolver that sets
+    // SVG presentation properties; it is styled from these (see resolveForeignObjectStyle()).
+    const std::vector<std::string>& styleSheets() const { return m_styleSheets; }
+    void addStyleSheet(std::string text) { m_styleSheets.push_back(std::move(text)); }
 
 private:
     std::map<std::string, SVGElement*, std::less<>> m_idCache;
     float m_intrinsicWidth{-1.f};
     float m_intrinsicHeight{-1.f};
-    std::string m_styleSheetText;
+    std::vector<std::string> m_styleSheets;
 };
 
 class SVGUseElement final : public SVGGraphicsElement, public SVGURIReference {
@@ -1150,6 +1181,19 @@ public:
     ForeignObjectRenderer* renderer() const { return m_renderer; }
     void setRenderer(ForeignObjectRenderer* renderer) { m_renderer = renderer; }
 
+    /**
+     * The text colour and the box colour the document's CSS gives this element's HTML, worked out when a
+     * stylesheet is applied (see resolveForeignObjectStyle()). Unset = nothing in the CSS asked for one
+     * (text is then black, and no box is painted).
+     */
+    const std::optional<Color>& htmlTextColor() const { return m_htmlTextColor; }
+    const std::optional<Color>& htmlBackgroundColor() const { return m_htmlBackgroundColor; }
+    void setHtmlStyle(std::optional<Color> text, std::optional<Color> background)
+    {
+        m_htmlTextColor = text;
+        m_htmlBackgroundColor = background;
+    }
+
     Rect fillBoundingBox() const final;
     Rect strokeBoundingBox() const final;
     void layoutElement(const SVGLayoutState& state) final;
@@ -1164,6 +1208,8 @@ private:
     SVGPaintServer m_fill;
     std::string m_rawContent;
     ForeignObjectRenderer* m_renderer = nullptr;
+    std::optional<Color> m_htmlTextColor;
+    std::optional<Color> m_htmlBackgroundColor;
 };
 
 class SVGSymbolElement final : public SVGGraphicsElement, public SVGFitToViewBox {
@@ -1493,8 +1539,9 @@ enum class SVGRenderMode {
 class SVGBlendInfo {
 public:
     explicit SVGBlendInfo(const SVGElement* element);
-    SVGBlendInfo(const SVGClipPathElement* clipper, const SVGMaskElement* masker, const SVGFilterElement* filter, float opacity)
-        : m_clipper(clipper), m_masker(masker), m_filter(filter), m_opacity(opacity)
+    SVGBlendInfo(const SVGClipPathElement* clipper, const SVGMaskElement* masker, const SVGFilterElement* filter, float opacity,
+                 MixBlendMode mixBlendMode = MixBlendMode::Normal)
+        : m_clipper(clipper), m_masker(masker), m_filter(filter), m_opacity(opacity), m_mixBlendMode(mixBlendMode)
     {}
 
     bool requiresCompositing(SVGRenderMode mode) const;
@@ -1502,12 +1549,14 @@ public:
     const SVGMaskElement* masker() const { return m_masker; }
     const SVGFilterElement* filterElement() const { return m_filter; }
     float opacity() const { return m_opacity; }
+    MixBlendMode mixBlendMode() const { return m_mixBlendMode; }
 
 private:
     const SVGClipPathElement* m_clipper;
     const SVGMaskElement* m_masker;
     const SVGFilterElement* m_filter;
     const float m_opacity;
+    const MixBlendMode m_mixBlendMode;
 };
 
 class SVGRenderState {
@@ -2119,6 +2168,7 @@ public:
     const Color& stop_color() const { return m_stop_color; }
 
     float opacity() const { return m_opacity; }
+    MixBlendMode mix_blend_mode() const { return m_mix_blend_mode; }
     float stop_opacity() const { return m_stop_opacity; }
     float fill_opacity() const { return m_fill_opacity; }
     float stroke_opacity() const { return m_stroke_opacity; }
@@ -2178,6 +2228,7 @@ private:
     Color m_stop_color = Color::Black;
 
     float m_opacity = 1.f;
+    MixBlendMode m_mix_blend_mode = MixBlendMode::Normal; // like opacity: not inherited
     float m_fill_opacity = 1.f;
     float m_stroke_opacity = 1.f;
     float m_stop_opacity = 1.f;
@@ -2335,6 +2386,7 @@ NOVASVG_INLINE PropertyID csspropertyid(std::string_view name)
         {"marker-start", PropertyID::Marker_Start},
         {"mask", PropertyID::Mask},
         {"mask-type", PropertyID::Mask_Type},
+        {"mix-blend-mode", PropertyID::Mix_Blend_Mode},
         {"opacity", PropertyID::Opacity},
         {"overflow", PropertyID::Overflow},
         {"pointer-events", PropertyID::Pointer_Events},
@@ -3024,12 +3076,13 @@ NOVASVG_INLINE SVGBlendInfo::SVGBlendInfo(const SVGElement* element)
     , m_masker(element->masker())
     , m_filter(element->filterElement())
     , m_opacity(element->opacity())
+    , m_mixBlendMode(element->mixBlendMode())
 {
 }
 
 NOVASVG_INLINE bool SVGBlendInfo::requiresCompositing(SVGRenderMode mode) const
 {
-    return (m_clipper && m_clipper->requiresMasking()) || (mode == SVGRenderMode::Painting && (m_masker || m_filter || m_opacity < 1.f));
+    return (m_clipper && m_clipper->requiresMasking()) || (mode == SVGRenderMode::Painting && (m_masker || m_filter || m_opacity < 1.f || m_mixBlendMode != MixBlendMode::Normal));
 }
 
 NOVASVG_INLINE bool SVGRenderState::hasCycleReference(const SVGElement* element) const
@@ -3079,7 +3132,21 @@ NOVASVG_INLINE void SVGRenderState::endGroup(const SVGBlendInfo& blendInfo)
         blendInfo.filterElement()->applyFilter(*this, m_currentTransform.xScale());
     }
 
-    m_parent->m_canvas->blendCanvas(*m_canvas, BlendMode::Src_Over, opacity);
+    // the finished group is blended into what is already painted under it, with its mix-blend-mode
+    BlendMode blendMode = BlendMode::Src_Over;
+    if(m_mode == SVGRenderMode::Painting) {
+        switch(blendInfo.mixBlendMode()) {
+        case MixBlendMode::Multiply: blendMode = BlendMode::Multiply; break;
+        case MixBlendMode::Screen: blendMode = BlendMode::Screen; break;
+        case MixBlendMode::Darken: blendMode = BlendMode::Darken; break;
+        case MixBlendMode::Lighten: blendMode = BlendMode::Lighten; break;
+        case MixBlendMode::Difference: blendMode = BlendMode::Difference; break;
+        case MixBlendMode::Exclusion: blendMode = BlendMode::Exclusion; break;
+        case MixBlendMode::Normal: break;
+        }
+    }
+
+    m_parent->m_canvas->blendCanvas(*m_canvas, blendMode, opacity);
 }
 
 // ---- svgpaintelement (impl) ----
@@ -4693,6 +4760,25 @@ NOVASVG_INLINE WhiteSpace parseWhiteSpace(std::string_view input)
     return parseEnumValue(input, entries, WhiteSpace::Default);
 }
 
+NOVASVG_INLINE MixBlendMode parseMixBlendMode(std::string_view input)
+{
+    static const SVGEnumerationEntry<MixBlendMode> entries[] = {
+        {MixBlendMode::Normal, "normal"},
+        {MixBlendMode::Multiply, "multiply"},
+        {MixBlendMode::Screen, "screen"},
+        {MixBlendMode::Darken, "darken"},
+        {MixBlendMode::Lighten, "lighten"},
+        {MixBlendMode::Difference, "difference"},
+        {MixBlendMode::Exclusion, "exclusion"}
+    };
+
+    // CSS keywords are ASCII case-insensitive
+    std::string keyword;
+    for(char ch : input)
+        keyword.push_back(char(std::tolower(static_cast<unsigned char>(ch))));
+    return parseEnumValue(keyword, entries, MixBlendMode::Normal);
+}
+
 NOVASVG_INLINE MaskType parseMaskType(std::string_view input)
 {
     static const SVGEnumerationEntry<MaskType> entries[] = {
@@ -4790,6 +4876,9 @@ NOVASVG_INLINE SVGLayoutState::SVGLayoutState(const SVGLayoutState& parent, cons
             break;
         case PropertyID::Opacity:
             m_opacity = parseNumberOrPercentage(input, true, 1.f);
+            break;
+        case PropertyID::Mix_Blend_Mode:
+            m_mix_blend_mode = parseMixBlendMode(input);
             break;
         case PropertyID::Fill_Opacity:
             m_fill_opacity = parseNumberOrPercentage(input, true, 1.f);
@@ -5130,7 +5219,7 @@ NOVASVG_INLINE bool SVGElement::setAttribute(std::string_view name, const std::s
     auto id = propertyid(name);
     if(id == PropertyID::Unknown)
         return false;
-    return setAttribute(0x1000, id, value);
+    return setAttribute(Specificity::Api, id, value);
 }
 
 NOVASVG_INLINE const Attribute* SVGElement::findAttribute(PropertyID id) const
@@ -5444,6 +5533,7 @@ NOVASVG_INLINE void SVGElement::layoutElement(const SVGLayoutState& state)
     m_masker = getMasker(state.mask());
     m_filter = getFilterElement(state.filter());
     m_opacity = state.opacity();
+    m_mix_blend_mode = state.mix_blend_mode();
 
     m_font_size = state.font_size();
     m_display = state.display();
@@ -6126,8 +6216,8 @@ inline std::u32string utf8ToU32(const std::string& text)
 // `;`/`}`/quote. `property` match is boundary-checked (not
 // preceded/followed by identifier characters) so searching for "color"
 // doesn't false-match inside "background-color", or "height" inside
-// "line-height". Shared by parseColorDeclaration() and
-// parseNumericDeclaration() below.
+// "line-height". Used by parseNumericDeclaration() below and by the
+// white-space lookup.
 inline std::optional<std::string_view> findDeclarationValue(std::string_view block, std::string_view property)
 {
     size_t pos = 0;
@@ -6217,14 +6307,11 @@ inline std::optional<std::string_view> findRawDeclarationValue(std::string_view 
     return std::nullopt;
 }
 
-inline std::optional<Color> parseColorDeclaration(std::string_view block, std::string_view property)
+// A CSS colour value (`#f9f`, `rgb(..)`, `hsl(..)`, `rgba(..)`, a name) -> Color; nullopt if it isn't one.
+inline std::optional<Color> parseCssColor(std::string_view value)
 {
-    auto value = findDeclarationValue(block, property);
-    if(!value)
-        return std::nullopt;
-
     color_t color;
-    int length = color_parse(&color, value->data(), (int)value->length());
+    int length = color_parse(&color, value.data(), (int)value.length());
     if(length == 0)
         return std::nullopt;
     auto argb = color_to_argb32(&color);
@@ -6259,96 +6346,6 @@ inline std::optional<NumericDeclaration> parseNumericDeclaration(std::string_vie
     return NumericDeclaration{number, std::string_view(unit) == "px"};
 }
 
-inline std::optional<Color> parseBackgroundColorDeclaration(std::string_view block)
-{
-    return parseColorDeclaration(block, "background-color");
-}
-
-// Finds a bare ".className{ ... }" (or ".className , " / ".className\n{")
-// rule in a stylesheet and returns its `property` color, if any.
-// Deliberately not a selector engine: skips any rule where the class
-// isn't immediately followed by whitespace-then-brace, so a compound
-// selector like ".edgeLabel p{...}" is correctly left alone rather than
-// mismatched.
-inline std::optional<Color> findClassColor(std::string_view css, std::string_view className, std::string_view property)
-{
-    std::string needle;
-    needle.reserve(className.size() + 1);
-    needle += '.';
-    needle.append(className);
-
-    size_t pos = 0;
-    while((pos = css.find(needle, pos)) != std::string_view::npos) {
-        auto after = pos + needle.size();
-        pos = after;
-        if(after < css.size() && (IS_ALPHA(css[after]) || IS_NUM(css[after]) || css[after] == '-' || css[after] == '_'))
-            continue; // matched a longer class name, e.g. ".edgeLabel2"
-
-        auto i = after;
-        while(i < css.size() && IS_WS(css[i]))
-            ++i;
-        if(i >= css.size() || css[i] != '{')
-            continue;
-
-        auto close = css.find('}', i);
-        if(close == std::string_view::npos)
-            return std::nullopt;
-        if(auto color = parseColorDeclaration(css.substr(i, close - i), property))
-            return color;
-    }
-
-    return std::nullopt;
-}
-
-inline std::optional<Color> findClassBackgroundColor(std::string_view css, std::string_view className)
-{
-    return findClassColor(css, className, "background-color");
-}
-
-// Same lightweight substring search as findClassColor(), but for a bare
-// tag-name selector (e.g. Mermaid's own "#mermaid-svg span{fill:#ccc;
-// color:#ccc;}", which is how it sets default label-text color -- not
-// via a class rule at all). Deliberately only wired up for the "color"
-// property (see tagColor() below) rather than every property: unlike a
-// class name, a bare tag name is also how CSS ends plenty of genuinely
-// *scoped* descendant selectors (".edgeLabel p{background-color:...}"),
-// which this substring search can't tell apart from a real "every <p>"
-// rule -- restricting it to "color" avoids that ambiguity because
-// nothing else in a Mermaid stylesheet sets "color" (as opposed to SVG's
-// own "fill") on a bare tag-name selector.
-inline std::optional<Color> findTagNameColor(std::string_view css, std::string_view tagName, std::string_view property)
-{
-    if(tagName.empty())
-        return std::nullopt;
-
-    size_t pos = 0;
-    while((pos = css.find(tagName, pos)) != std::string_view::npos) {
-        auto before = pos;
-        auto after = pos + tagName.size();
-        pos = after;
-
-        auto isIdentChar = [](char c) { return IS_ALPHA(c) || IS_NUM(c) || c == '-' || c == '_'; };
-        if(before > 0 && isIdentChar(css[before - 1]))
-            continue; // matched inside a longer identifier, e.g. "spancontainer"
-        if(after < css.size() && isIdentChar(css[after]))
-            continue;
-
-        auto i = after;
-        while(i < css.size() && IS_WS(css[i]))
-            ++i;
-        if(i >= css.size() || css[i] != '{')
-            continue;
-
-        auto close = css.find('}', i);
-        if(close == std::string_view::npos)
-            return std::nullopt;
-        if(auto color = parseColorDeclaration(css.substr(i, close - i), property))
-            return color;
-    }
-
-    return std::nullopt;
-}
-
 inline std::optional<std::string_view> htmlAttribute(std::string_view tag, std::string_view name)
 {
     auto pos = tag.find(name);
@@ -6365,136 +6362,11 @@ inline std::optional<std::string_view> htmlAttribute(std::string_view tag, std::
     return tag.substr(valueStart, valueEnd - valueStart);
 }
 
-// Color a single opening tag declares for `property`, from an inline
-// style="property:..." or from class="..." resolved against the
-// document's stylesheet text.
-inline std::optional<Color> tagColor(std::string_view tag, const SVGRootElement* root, std::string_view property)
-{
-    if(auto style = htmlAttribute(tag, "style=")) {
-        if(auto color = parseColorDeclaration(*style, property))
-            return color;
-    }
-
-    if(root == nullptr)
-        return std::nullopt;
-    if(auto classes = htmlAttribute(tag, "class=")) {
-        std::string_view remaining = *classes;
-        while(!remaining.empty()) {
-            while(!remaining.empty() && IS_WS(remaining.front()))
-                remaining.remove_prefix(1);
-            auto end = remaining.find(' ');
-            auto className = remaining.substr(0, end);
-            if(!className.empty()) {
-                if(auto color = findClassColor(root->styleSheetText(), className, property))
-                    return color;
-            }
-            if(end == std::string_view::npos)
-                break;
-            remaining.remove_prefix(end);
-        }
-    }
-
-    // No class-based rule matched (or the tag has no class= at all) --
-    // try the tag's own name against a bare tag-name selector, e.g.
-    // Mermaid's "#mermaid-svg span{color:#ccc}" for default label text.
-    // Without this, an unclassed <span> (or one whose classes only carry
-    // unrelated rules) silently falls through to tagColor()'s black
-    // default even though the stylesheet does specify a color for it --
-    // just not by class. Scoped to "color" only -- see
-    // findTagNameColor()'s own comment for why "background-color" isn't
-    // safe to extend this to.
-    if(property == "color") {
-        std::string_view name = tag;
-        if(!name.empty() && name.front() == '<')
-            name.remove_prefix(1);
-        size_t nameLen = 0;
-        while(nameLen < name.size() && (IS_ALPHA(name[nameLen]) || IS_NUM(name[nameLen]) || name[nameLen] == '-'))
-            ++nameLen;
-        name = name.substr(0, nameLen);
-        if(!name.empty()) {
-            if(auto color = findTagNameColor(root->styleSheetText(), name, property))
-                return color;
-        }
-    }
-
-    return std::nullopt;
-}
-
-inline std::optional<Color> tagBackgroundColor(std::string_view tag, const SVGRootElement* root)
-{
-    return tagColor(tag, root, "background-color");
-}
-
-// Recovers the background box Mermaid (and similar tools) paint behind
-// foreignObject text via CSS on the wrapping <div> and any element nested
-// inside it -- either an inline style="background-color:..." or a
-// class="..." resolved against the document's stylesheet text.
-// ForeignObjectSimple only strips tags down to plain text, so nothing
-// paints that box otherwise; edge labels in particular then sit directly
-// on the connecting line with nothing behind them to break it up.
-//
-// Checked against a real WebKit render: Mermaid's edge labels have an
-// opaque background on an inner <span> stacked on top of a translucent
-// one on the outer <div>, and the opaque one is what's actually visible
-// -- so this walks every opening tag in document order and keeps the
-// *last* match, mirroring normal paint order (later/nested elements
-// paint over earlier ones).
-//
-// findTagColor() is the shared walk used for both background-color and
-// (see below) text color -- same document-order/"last match wins" logic,
-// parameterized on which CSS property to look for.
-inline std::optional<Color> findTagColor(std::string_view rawHtml, const SVGRootElement* root, std::string_view property)
-{
-    std::optional<Color> result;
-    size_t pos = 0;
-    while(pos < rawHtml.size()) {
-        auto tagStart = rawHtml.find('<', pos);
-        if(tagStart == std::string_view::npos)
-            break;
-        if(tagStart + 1 < rawHtml.size() && rawHtml[tagStart + 1] == '/') {
-            pos = tagStart + 2;
-            continue;
-        }
-        auto tagEnd = rawHtml.find('>', tagStart);
-        if(tagEnd == std::string_view::npos)
-            break;
-        auto tag = rawHtml.substr(tagStart, tagEnd - tagStart);
-        if(auto color = tagColor(tag, root, property))
-            result = color;
-        pos = tagEnd + 1;
-    }
-
-    return result;
-}
-
-inline std::optional<Color> foreignObjectBackgroundColor(std::string_view rawHtml, const SVGRootElement* root)
-{
-    return findTagColor(rawHtml, root, "background-color");
-}
-
-// Text color for foreignObject content, read from the HTML's own CSS
-// (inline style="color:..." or a class="..." rule) exactly like
-// foreignObjectBackgroundColor -- deliberately NOT the ambient SVG
-// `fill` property. foreignObject opens a fresh HTML formatting context:
-// a real browser colors this text via CSS `color` (defaulting to black),
-// which is independent of whatever `fill` the SVG ancestor chain
-// resolves to. Reading `element->fill()` here instead (the previous
-// behavior) means a mermaid classDef like `.green>*{fill:#9f6}` --
-// which legitimately also matches this label's ancestor <g>, since it's
-// a direct child of the same green-classed node -- leaks into the text
-// color via SVG's normal fill inheritance, silently turning label text
-// the same shade as its background. Falls back to black, matching a
-// plain HTML default and every reference render checked against.
-inline Color foreignObjectTextColor(std::string_view rawHtml, const SVGRootElement* root)
-{
-    return findTagColor(rawHtml, root, "color").value_or(Color(0, 0, 0));
-}
-
 // Real line-height for foreignObject text, read from the HTML's own
 // inline style="line-height:..." (mermaid always sets this directly on
 // the wrapping <div> -- never via a class the way it sometimes does for
 // color/background-color -- so this only needs to check inline style=,
-// not walk the stylesheet the way findTagColor()/tagColor() do).
+// not walk the stylesheet the way resolveForeignObjectStyle() does).
 // Handles a bare multiplier ("1.5", the common case, including
 // mermaid's own default) or an absolute "Npx" length; anything else
 // (%, em, "normal", ...) or no line-height at all falls back to the
@@ -6755,15 +6627,14 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
     auto totalHeight = lineHeight * float(lines.size());
     auto topY = box.y + (box.h - totalHeight) / 2.f;
 
-    if(auto backgroundColor = foreignObjectBackgroundColor(element->rawContent(), element->rootElement())) {
+    if(auto backgroundColor = element->htmlBackgroundColor()) {
         state->setColor(*backgroundColor);
         Path backgroundPath;
         backgroundPath.addRect(box);
         state->fillPath(backgroundPath, FillRule::NonZero, state.currentTransform());
     }
 
-    const auto textColor = foreignObjectTextColor(element->rawContent(), element->rootElement());
-    state->setColor(textColor);
+    state->setColor(element->htmlTextColor().value_or(Color(0, 0, 0)));
 
     for(size_t i = 0; i < lines.size(); ++i) {
         std::u32string_view lineView(lines[i]);

@@ -446,6 +446,76 @@ NOVASVG_INLINE void composition_solid_xor(uint32_t* dest, int length, uint32_t c
     }
 }
 
+// ---- CSS blend modes -------------------------------------------------------------------------------
+// W3C Compositing and Blending, on premultiplied channels (all 0..255, "mul" = x*y/255 rounded):
+//   result colour = Cs*(1-ab) + Cb*(1-as) + as*ab*B(Cb/ab, Cs/as)        result alpha = as + ab - as*ab
+// which for each separable mode B simplifies to (Cs, Cb premultiplied; as, ab the two alphas):
+//   multiply   Cs*(1-ab) + Cb*(1-as) + Cs*Cb
+//   screen     Cs + Cb - Cs*Cb
+//   darken     Cs + Cb - max(Cs*ab, Cb*as)
+//   lighten    Cs + Cb - min(Cs*ab, Cb*as)
+//   difference Cs + Cb - 2*min(Cs*ab, Cb*as)
+//   exclusion  Cs + Cb - 2*Cs*Cb
+NOVASVG_INLINE int blend_mul255(int x, int y)
+{
+    return (x * y + 127) / 255;
+}
+
+template<operator_t Mode>
+NOVASVG_INLINE int blend_mode_channel(int cs, int cb, int as, int ab)
+{
+    int value;
+    if(Mode == NOVASVG_OPERATOR_MULTIPLY)
+        value = blend_mul255(cs, 255 - ab) + blend_mul255(cb, 255 - as) + blend_mul255(cs, cb);
+    else if(Mode == NOVASVG_OPERATOR_SCREEN)
+        value = cs + cb - blend_mul255(cs, cb);
+    else if(Mode == NOVASVG_OPERATOR_DARKEN)
+        value = cs + cb - NOVASVG_MAX(blend_mul255(cs, ab), blend_mul255(cb, as));
+    else if(Mode == NOVASVG_OPERATOR_LIGHTEN)
+        value = cs + cb - NOVASVG_MIN(blend_mul255(cs, ab), blend_mul255(cb, as));
+    else if(Mode == NOVASVG_OPERATOR_DIFFERENCE)
+        value = cs + cb - 2 * NOVASVG_MIN(blend_mul255(cs, ab), blend_mul255(cb, as));
+    else
+        value = cs + cb - 2 * blend_mul255(cs, cb);
+    return value;
+}
+
+template<operator_t Mode>
+NOVASVG_INLINE uint32_t blend_mode_pixel(uint32_t dest, uint32_t src)
+{
+    if(src == 0)
+        return dest;
+    const int as = novasvg_alpha(src);
+    const int ab = novasvg_alpha(dest);
+    const int ar = as + ab - blend_mul255(as, ab);
+    uint32_t result = uint32_t(ar) << 24;
+    for(int shift = 16; shift >= 0; shift -= 8) {
+        int c = blend_mode_channel<Mode>(int((src >> shift) & 0xff), int((dest >> shift) & 0xff), as, ab);
+        c = NOVASVG_MAX(0, NOVASVG_MIN(c, ar)); // a premultiplied channel never exceeds the alpha
+        result |= uint32_t(c) << shift;
+    }
+
+    return result;
+}
+
+template<operator_t Mode>
+NOVASVG_INLINE void composition_blend_mode(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+{
+    for(int i = 0; i < length; i++) {
+        uint32_t s = const_alpha == 255 ? src[i] : BYTE_MUL(src[i], const_alpha);
+        dest[i] = blend_mode_pixel<Mode>(dest[i], s);
+    }
+}
+
+template<operator_t Mode>
+NOVASVG_INLINE void composition_solid_blend_mode(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+{
+    if(const_alpha != 255)
+        color = BYTE_MUL(color, const_alpha);
+    for(int i = 0; i < length; i++)
+        dest[i] = blend_mode_pixel<Mode>(dest[i], color);
+}
+
 typedef void(*composition_solid_function_t)(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
 
 NOVASVG_INLINE const composition_solid_function_t composition_solid_table[] = {
@@ -460,7 +530,13 @@ NOVASVG_INLINE const composition_solid_function_t composition_solid_table[] = {
     composition_solid_destination_out,
     composition_solid_source_atop,
     composition_solid_destination_atop,
-    composition_solid_xor
+    composition_solid_xor,
+    composition_solid_blend_mode<NOVASVG_OPERATOR_MULTIPLY>,
+    composition_solid_blend_mode<NOVASVG_OPERATOR_SCREEN>,
+    composition_solid_blend_mode<NOVASVG_OPERATOR_DARKEN>,
+    composition_solid_blend_mode<NOVASVG_OPERATOR_LIGHTEN>,
+    composition_solid_blend_mode<NOVASVG_OPERATOR_DIFFERENCE>,
+    composition_solid_blend_mode<NOVASVG_OPERATOR_EXCLUSION>
 };
 
 NOVASVG_INLINE void composition_clear(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
@@ -655,7 +731,13 @@ NOVASVG_INLINE const composition_function_t composition_table[] = {
     composition_destination_out,
     composition_source_atop,
     composition_destination_atop,
-    composition_xor
+    composition_xor,
+    composition_blend_mode<NOVASVG_OPERATOR_MULTIPLY>,
+    composition_blend_mode<NOVASVG_OPERATOR_SCREEN>,
+    composition_blend_mode<NOVASVG_OPERATOR_DARKEN>,
+    composition_blend_mode<NOVASVG_OPERATOR_LIGHTEN>,
+    composition_blend_mode<NOVASVG_OPERATOR_DIFFERENCE>,
+    composition_blend_mode<NOVASVG_OPERATOR_EXCLUSION>
 };
 
 NOVASVG_INLINE void blend_solid(surface_t* surface, operator_t op, uint32_t solid, const span_buffer_t* span_buffer)
