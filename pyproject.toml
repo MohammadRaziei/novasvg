@@ -36,7 +36,7 @@ scripts.novasvg = "novasvg.__main__:main"
 scripts.novasvg-cli = "novasvg.native_cli:run"
 
 [project.optional-dependencies]
-test = ["pytest-xdist", "fonttools"]
+test = ["pytest-xdist", "fonttools", "pillow"]
 
 
 [project.urls]

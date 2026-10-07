@@ -361,22 +361,22 @@ NOVASVG_INLINE FontFace FontFaceCache::getFontFaceForFamilyStack(const std::stri
     // Metric-compatible stand-ins only: a substitute must lay text out the
     // same way as the font it replaces, so a name with no such stand-in
     // (verdana, trebuchet ms, ...) is skipped and the stack moves on. Each
-    // list starts with the family's real name, so a differently-cased
-    // request still finds an installed original.
+    // key is tried under its own spelling first, so a differently-cased
+    // request (`helvetica`, `ARIAL`) still finds an installed original.
     static const char* const sans[] = {"Arial", "Liberation Sans", "Arimo", "Nimbus Sans", "Nimbus Sans L", "FreeSans", nullptr};
     static const char* const serif[] = {"Times New Roman", "Liberation Serif", "Tinos", "Nimbus Roman", "Nimbus Roman No9 L", "FreeSerif", nullptr};
     static const char* const mono[] = {"Courier New", "Liberation Mono", "Cousine", "Nimbus Mono PS", "Nimbus Mono", "FreeMono", nullptr};
-    static const char* const calibri[] = {"Calibri", "Carlito", nullptr};
-    static const char* const cambria[] = {"Cambria", "Caladea", nullptr};
-    static const char* const georgia[] = {"Georgia", "Gelasio", nullptr};
+    static const char* const calibri[] = {"Carlito", nullptr};
+    static const char* const cambria[] = {"Caladea", nullptr};
+    static const char* const georgia[] = {"Gelasio", nullptr};
     static const struct {
-        const char* family; // lower case
+        const char* family; // real spelling; matched case-insensitively
         const char* const* substitutes;
     } aliases[] = {
-        {"arial", sans}, {"helvetica", sans}, {"helvetica neue", sans},
-        {"times new roman", serif}, {"times", serif},
-        {"courier new", mono}, {"courier", mono},
-        {"calibri", calibri}, {"cambria", cambria}, {"georgia", georgia},
+        {"Arial", sans}, {"Helvetica", sans}, {"Helvetica Neue", sans},
+        {"Times New Roman", serif}, {"Times", serif},
+        {"Courier New", mono}, {"Courier", mono},
+        {"Calibri", calibri}, {"Cambria", cambria}, {"Georgia", georgia},
     };
 
     std::string_view input(familyStack);
@@ -405,8 +405,13 @@ NOVASVG_INLINE FontFace FontFaceCache::getFontFaceForFamilyStack(const std::stri
             ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
 
         for(const auto& alias : aliases) {
-            if(lower != alias.family)
+            std::string key(alias.family);
+            for(auto& ch : key)
+                ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+            if(lower != key)
                 continue;
+            if(auto face = getFontFaceLocal(alias.family, bold, italic); !face.isNull())
+                return face;
             for(auto substitute = alias.substitutes; *substitute; ++substitute) {
                 if(auto face = getFontFaceLocal(*substitute, bold, italic); !face.isNull())
                     return face;
