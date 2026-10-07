@@ -80,6 +80,15 @@ The library also offers a **command-line interface** for batch processing and au
   guessed. Same result on every platform and no fontconfig or any other
   dependency; for best fidelity install a metric-compatible family such as
   `fonts-liberation`.
+- **Built-in fallback font (works with no fonts installed)** – a ~40 KB Latin
+  subset of DejaVu Sans (kerning and `fi`/`fl`/`ffi` ligatures kept, so text
+  lays out exactly like the full font) is compiled in and used only as the
+  last resort, when a generic family (`sans-serif`, `serif`, …) finds nothing
+  else on the machine. Fonts you install or register always win. Characters
+  outside Latin-1 and common punctuation need a system or registered font.
+  Disable with `-DNOVASVG_EMBED_DEFAULT_FONT=OFF` (CMake) or by defining
+  `NOVASVG_DISABLE_EMBEDDED_FONT`; regenerate with
+  `python tools/gen_default_font.py`. License: `data/fonts/LICENSE-DejaVu.txt`.
 - **`@font-face`-embedded fonts (raw TTF/OTF)** – an SVG that embeds its
   own font via `@font-face { src: url(data:font/ttf;base64,...) }` (as
   opposed to just naming a `font-family` and hoping the system has it)

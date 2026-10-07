@@ -1,5 +1,9 @@
 #include <cassert>
 
+#ifndef NOVASVG_DISABLE_EMBEDDED_FONT
+#include "default_font.h"
+#endif
+
 namespace novasvg {
 
 struct SimpleSelector;
@@ -585,6 +589,35 @@ static std::string_view stripQuotes(std::string_view value)
     return value;
 }
 
+// Decodes a base64 payload holding raw TrueType/OpenType (SFNT) data into a
+// FontFace; a null face when the payload is malformed or isn't raw SFNT
+// (e.g. WOFF/WOFF2). Shared by `@font-face` data URIs and the embedded
+// fallback font.
+static FontFace fontFaceFromBase64(std::string_view payload)
+{
+    size_t decodedLength = 0;
+    auto* decoded = base64_decode(payload.data(), int(payload.size()), &decodedLength);
+    if(decoded == nullptr)
+        return FontFace();
+    return FontFace(decoded, decodedLength, [](void* closure) { free(closure); }, decoded);
+}
+
+NOVASVG_INLINE FontFace embeddedFallbackFont()
+{
+#ifdef NOVASVG_DISABLE_EMBEDDED_FONT
+    return FontFace();
+#else
+    // Built on first use only: a machine with fonts never pays for the decode.
+    static const FontFace face = [] {
+        std::string payload;
+        for(auto chunk = detail::kEmbeddedFontBase64; *chunk; ++chunk)
+            payload += *chunk;
+        return fontFaceFromBase64(payload);
+    }();
+    return face;
+#endif
+}
+
 // Loads an `@font-face` rule's embedded font (a `src: url(data:...)`
 // entry) and registers it, matching what the CSS itself declares:
 // `font-family`, `font-weight`/`font-style` (bold/italic only -- numeric
@@ -647,14 +680,9 @@ static void parseFontFaceRule(std::string_view block)
             continue;
         auto payload = url.substr(base64Pos + 7);
 
-        size_t decodedLength = 0;
-        auto* decoded = base64_decode(payload.data(), int(payload.size()), &decodedLength);
-        if(decoded == nullptr)
-            continue;
-
-        FontFace face(decoded, decodedLength, [](void* closure) { free(closure); }, decoded);
+        auto face = fontFaceFromBase64(payload);
         if(face.isNull())
-            continue; // not raw SFNT (e.g. still WOFF/WOFF2) -- try the next alternative
+            continue; // malformed, or not raw SFNT (e.g. still WOFF/WOFF2) -- try the next alternative
 
         fontFaceCache()->addFontFace(std::string(family), bold, italic, face);
         return; // first successfully-loaded alternative wins

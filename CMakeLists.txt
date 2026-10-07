@@ -34,6 +34,7 @@ include(Optimize)
 
 # Project options
 option(NOVASVG_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
+option(NOVASVG_EMBED_DEFAULT_FONT "Compile a Latin subset of DejaVu Sans in as the last-resort fallback font" ON)
 option(NOVASVG_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_PYTHON "Build Python" ${PROJECT_IS_TOP_LEVEL})
 option(NOVASVG_BUILD_DOCS "Build documentation" OFF)
@@ -44,6 +45,10 @@ set(NOVASVG_SOURCE_DIR ${PROJECT_SOURCE_DIR})
 # Header-only library (interface target)
 add_library(novasvg INTERFACE)
 add_library(novasvg::novasvg ALIAS novasvg)
+
+if(NOT NOVASVG_EMBED_DEFAULT_FONT)
+    target_compile_definitions(novasvg INTERFACE NOVASVG_DISABLE_EMBEDDED_FONT)
+endif()
 
 target_include_directories(novasvg INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 

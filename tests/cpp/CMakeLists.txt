@@ -20,12 +20,22 @@ target_include_directories(test_novasvg_cpp PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}
 
 add_test(NAME test_novasvg_cpp COMMAND $<TARGET_FILE:test_novasvg_cpp>)
 
+# The embedded fallback font only matters when the machine has no fonts, so this check is built with system
+# font loading compiled out and runs as its own executable (the main one deliberately sees system fonts).
+add_executable(test_novasvg_embedded_font embedded_font/check_embedded_font.cpp)
+target_include_directories(test_novasvg_embedded_font PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}")
+target_compile_definitions(test_novasvg_embedded_font PRIVATE
+    NOVASVG_DISABLE_LOAD_SYSTEM_FONTS
+    NOVASVG_TEST_FONT_PATH="${PROJECT_SOURCE_DIR}/data/fonts/DejaVuSans.ttf")
+add_test(NAME test_novasvg_embedded_font COMMAND $<TARGET_FILE:test_novasvg_embedded_font>)
+
 add_custom_target(novasvg_test_cpp
     COMMAND ${CMAKE_COMMAND} -E echo "-- Running c++ tests..."
     COMMAND $<TARGET_FILE:test_novasvg_cpp>
+    COMMAND $<TARGET_FILE:test_novasvg_embedded_font>
     WORKING_DIRECTORY ${NOVASVG_TEST_BINARY_DIR}
 )
-add_dependencies(novasvg_test_cpp test_novasvg_cpp)
+add_dependencies(novasvg_test_cpp test_novasvg_cpp test_novasvg_embedded_font)
 add_dependencies(novasvg_test novasvg_test_cpp)
 
 

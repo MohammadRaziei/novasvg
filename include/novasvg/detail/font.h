@@ -93,6 +93,11 @@ private:
     font_face_t* m_face = nullptr;
 };
 
+// The last-resort font: a Latin subset of DejaVu Sans compiled into the library
+// (see default_font.h), a null face when built with NOVASVG_DISABLE_EMBEDDED_FONT.
+// Defined in svgparser.hpp, next to the base64 decoding it shares with @font-face.
+FontFace embeddedFallbackFont();
+
 class FontFaceCache {
 public:
     bool addFontFace(const std::string& family, bool bold, bool italic, const FontFace& face);
@@ -119,7 +124,8 @@ public:
     // table (`arial` -> Liberation Sans / Arimo / ..., matched
     // case-insensitively), then the generic keywords ("sans-serif", ...).
     // A name nothing matches is skipped, not guessed at; returns a null
-    // face when the whole stack is unresolved.
+    // face when the whole stack is unresolved. A generic keyword nothing on
+    // the machine satisfies resolves to the embedded fallback font.
     FontFace getFontFaceForFamilyStack(const std::string& familyStack, bool bold, bool italic) const;
 
 private:
@@ -349,7 +355,11 @@ NOVASVG_INLINE FontFace FontFaceCache::getFontFace(const std::string& family, bo
 
     for(auto value : generic_fallbacks) {
         if(value.generic == family || family.empty()) {
-            return FontFace(font_face_cache_get(m_cache, value.fallback, bold, italic));
+            if(auto face = FontFace(font_face_cache_get(m_cache, value.fallback, bold, italic)); !face.isNull())
+                return face;
+            // Not even the platform's stand-in is installed: use the embedded font
+            // so text is still drawn (and drawn the same way) on a machine without fonts.
+            return embeddedFallbackFont();
         }
     }
 
