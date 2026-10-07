@@ -154,9 +154,10 @@ NB_MODULE(novasvg_py, m) {
         return novasvg::fontFaceCache()->getFontFaceForFamilyStack(family_stack, bold, italic);
     }, "family_stack"_a, "bold"_a = false, "italic"_a = false,
        "Resolve a CSS-style comma-separated font-family stack (e.g. "
-       "'\"trebuchet ms\", verdana, arial, sans-serif') via fontconfig/OS "
-       "substitution. Falls back to get_font_face() semantics where fontconfig "
-       "isn't available (e.g. not linked on this build).");
+       "'\"trebuchet ms\", verdana, arial, sans-serif') name by name: a face registered or "
+       "installed under that exact name, then a metric-compatible substitute from novasvg's "
+       "built-in table (case-insensitive, e.g. 'arial' -> Liberation Sans), then generic "
+       "keywords. Names nothing matches are skipped; returns a null face if none resolve.");
 
     nb::class_<novasvg::Font>(m, "Font")
         .def(nb::init<>(), "Construct a null font.")

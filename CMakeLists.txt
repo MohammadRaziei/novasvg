@@ -47,20 +47,6 @@ add_library(novasvg::novasvg ALIAS novasvg)
 
 target_include_directories(novasvg INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# Real OS font substitution (fontconfig) auto-detects from the compiler
-# alone via __has_include() in font.h -- no define needs to be passed in
-# from here, so this stays true header-only for anyone who skips this
-# CMakeLists.txt entirely. This find_package() call only makes sure our
-# own build actually links it once __has_include() has found the header
-# (Linux typically; harmless no-op elsewhere since Fontconfig_FOUND will
-# just be false there).
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    find_package(Fontconfig)
-    if(Fontconfig_FOUND)
-        target_link_libraries(novasvg INTERFACE Fontconfig::Fontconfig)
-    endif()
-endif()
-
 # Add CLI executable
 add_executable(novasvg_cli src/novasvg_cli.cpp)
 target_link_libraries(novasvg_cli PRIVATE novasvg::novasvg)

@@ -1188,7 +1188,7 @@ static std::vector<HtmlNode> parseHtmlNodes(std::string_view html)
         }
 
         auto inside = html.substr(lt + 1, gt - lt - 1);
-        pos = std::min(gt + 1, html.size());
+        pos = NOVASVG_MIN(gt + 1, html.size());
         if(inside.empty() || inside.front() == '!' || inside.front() == '?')
             continue;
 

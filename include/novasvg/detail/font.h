@@ -11,6 +11,7 @@
 
 #include <string>
 #include <string_view>
+#include <cctype>
 #include <cstddef>
 #include <utility>
 #include <vector>
@@ -110,19 +111,15 @@ public:
     // ("sans-serif" -> "DejaVu Sans" and similar) as a last resort.
     FontFace getFontFace(const std::string& family, bool bold, bool italic) const;
 
-    // Real OS font substitution for an entire CSS-style comma-separated
-    // family stack (e.g. `"trebuchet ms", verdana, arial, sans-serif`),
-    // used only after getFontFace() has already failed for every name in
-    // the stack individually (see SVGLayoutState::font() -- that's what
-    // builds `familyStack` in the first place). One fontconfig call
-    // covering the whole stack, not one call per name: fontconfig's own
-    // FcFontMatch always returns *some* match (its job is to never come
-    // up empty), so probing it name-by-name would "succeed" on the very
-    // first name with fontconfig's generic default substitution and
-    // never reach a later, better-aliased name (verified: this is
-    // exactly what happened when this was first tried per-name here).
-    // Handing fontconfig the complete ordered stack in one pattern lets
-    // its own substitution logic pick the best-aliased entry instead.
+    // Resolves a CSS-style comma-separated family stack (e.g.
+    // `"trebuchet ms", verdana, arial, sans-serif`) the way a browser walks
+    // it: name by name, in order, and the first name that yields a face
+    // wins. For each name: a font registered or installed under exactly
+    // that name, then a metric-compatible substitute from novasvg's own
+    // table (`arial` -> Liberation Sans / Arimo / ..., matched
+    // case-insensitively), then the generic keywords ("sans-serif", ...).
+    // A name nothing matches is skipped, not guessed at; returns a null
+    // face when the whole stack is unresolved.
     FontFace getFontFaceForFamilyStack(const std::string& familyStack, bool bold, bool italic) const;
 
 private:
@@ -361,7 +358,27 @@ NOVASVG_INLINE FontFace FontFaceCache::getFontFace(const std::string& family, bo
 
 NOVASVG_INLINE FontFace FontFaceCache::getFontFaceForFamilyStack(const std::string& familyStack, bool bold, bool italic) const
 {
-    std::vector<std::string> names;
+    // Metric-compatible stand-ins only: a substitute must lay text out the
+    // same way as the font it replaces, so a name with no such stand-in
+    // (verdana, trebuchet ms, ...) is skipped and the stack moves on. Each
+    // list starts with the family's real name, so a differently-cased
+    // request still finds an installed original.
+    static const char* const sans[] = {"Arial", "Liberation Sans", "Arimo", "Nimbus Sans", "Nimbus Sans L", "FreeSans", nullptr};
+    static const char* const serif[] = {"Times New Roman", "Liberation Serif", "Tinos", "Nimbus Roman", "Nimbus Roman No9 L", "FreeSerif", nullptr};
+    static const char* const mono[] = {"Courier New", "Liberation Mono", "Cousine", "Nimbus Mono PS", "Nimbus Mono", "FreeMono", nullptr};
+    static const char* const calibri[] = {"Calibri", "Carlito", nullptr};
+    static const char* const cambria[] = {"Cambria", "Caladea", nullptr};
+    static const char* const georgia[] = {"Georgia", "Gelasio", nullptr};
+    static const struct {
+        const char* family; // lower case
+        const char* const* substitutes;
+    } aliases[] = {
+        {"arial", sans}, {"helvetica", sans}, {"helvetica neue", sans},
+        {"times new roman", serif}, {"times", serif},
+        {"courier new", mono}, {"courier", mono},
+        {"calibri", calibri}, {"cambria", cambria}, {"georgia", georgia},
+    };
+
     std::string_view input(familyStack);
     while(!input.empty()) {
         auto family = input.substr(0, input.find(','));
@@ -376,19 +393,33 @@ NOVASVG_INLINE FontFace FontFaceCache::getFontFaceForFamilyStack(const std::stri
                 family.remove_suffix(1);
             stripLeadingAndTrailingSpaces(family);
         }
-        if(!family.empty())
-            names.emplace_back(family);
+        if(family.empty())
+            continue;
+
+        std::string name(family);
+        if(auto face = getFontFaceLocal(name, bold, italic); !face.isNull())
+            return face;
+
+        std::string lower(name);
+        for(auto& ch : lower)
+            ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+
+        for(const auto& alias : aliases) {
+            if(lower != alias.family)
+                continue;
+            for(auto substitute = alias.substitutes; *substitute; ++substitute) {
+                if(auto face = getFontFaceLocal(*substitute, bold, italic); !face.isNull())
+                    return face;
+            }
+        }
+
+        // Generic keywords ("sans-serif", ...). Anything else is not a
+        // generic name, so this stays empty for it and the walk goes on.
+        if(auto face = getFontFace(lower, bold, italic); !face.isNull())
+            return face;
     }
 
-    if(names.empty())
-        return FontFace();
-
-    std::vector<const char*> cNames;
-    cNames.reserve(names.size());
-    for(auto& name : names)
-        cNames.push_back(name.c_str());
-
-    return FontFace(font_face_cache_match_fontconfig_stack(m_cache, cNames.data(), int(cNames.size()), bold, italic));
+    return FontFace();
 }
 
 NOVASVG_INLINE FontFaceCache::FontFaceCache()

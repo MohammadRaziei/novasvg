@@ -4999,46 +4999,11 @@ NOVASVG_INLINE Font SVGLayoutState::font() const
     auto bold = m_font_weight == FontWeight::Bold;
     auto italic = m_font_style == FontStyle::Italic;
 
-    // Local-only pass first, one name at a time: this is what finds an
-    // @font-face-embedded font under its exact declared family name (and
-    // any real system font whose own internal name literally matches).
-    // Deliberately skips the generic_fallbacks table here (see
-    // getFontFaceLocal()) -- with it included, a stack ending in a plain
-    // "sans-serif" (every one of mermaid's own stacks does) would always
-    // "succeed" via that crude last resort before ever reaching the
-    // fontconfig call below, which is strictly better-informed (it knows
-    // the system's actual font aliases, e.g. "arial" -> an installed
-    // metric-compatible font) -- but would also shadow an embedded font
-    // the exact same way, since fontconfig always returns *some* match
-    // for any name, never "not found".
-    FontFace face;
-    {
-        std::string_view input(m_font_family);
-        while(!input.empty() && face.isNull()) {
-            auto family = input.substr(0, input.find(','));
-            input.remove_prefix(family.length());
-            if(!input.empty() && input.front() == ',')
-                input.remove_prefix(1);
-            stripLeadingAndTrailingSpaces(family);
-            if(!family.empty() && (family.front() == '\'' || family.front() == '"')) {
-                auto quote = family.front();
-                family.remove_prefix(1);
-                if(!family.empty() && family.back() == quote)
-                    family.remove_suffix(1);
-                stripLeadingAndTrailingSpaces(family);
-            }
-
-            if(!family.empty())
-                face = fontFaceCache()->getFontFaceLocal(std::string(family), bold, italic);
-        }
-    }
-
-    // Nothing in the stack matched a real (or embedded) font by its own
-    // name -- ask fontconfig to resolve the whole stack at once (a no-op
-    // if fontconfig isn't available -- see NOVASVG_FONTCONFIG_AVAILABLE
-    // in render/font.h).
-    if(face.isNull())
-        face = fontFaceCache()->getFontFaceForFamilyStack(m_font_family, bold, italic);
+    // Walk the font-family stack name by name (see
+    // FontFaceCache::getFontFaceForFamilyStack()): an @font-face-embedded
+    // font wins under its exact declared name, an uninstalled name falls
+    // back to a metric-compatible substitute, unresolvable names are skipped.
+    FontFace face = fontFaceCache()->getFontFaceForFamilyStack(m_font_family, bold, italic);
 
     // Absolute last resort: the hardcoded generic-family table.
     if(face.isNull())

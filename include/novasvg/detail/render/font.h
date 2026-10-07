@@ -6228,82 +6228,6 @@ NOVASVG_INLINE int font_face_cache_load_dir(font_face_cache_t* cache, const char
 
 #endif // _WIN32
 
-// ---- optional: real OS font substitution via fontconfig ----
-// The scan above indexes fonts by their own literal internal family name
-// (straight from each file's TTF `name` table) -- it never consults the
-// OS's actual font-matching/alias system. That means an SVG asking for
-// "arial"/"verdana"/"trebuchet ms" (exactly what tools like Mermaid.js
-// emit) never resolves to a metric-compatible substitute even when one
-// is installed (e.g. fonts-liberation's "Liberation Sans", which
-// fontconfig itself would alias "arial" to) -- it silently falls through
-// to the hardcoded generic-family fallback above instead. This isn't a
-// hypothetical: verified by installing fonts-liberation and confirming
-// novasvg's own literal-name lookup for "arial" still missed it, while
-// `fc-match arial` correctly found it.
-//
-// __has_include() (standard since C++17, which this project already
-// requires) lets this auto-detect fontconfig from the compiler alone --
-// no define needs to be passed in from CMake or any other build system,
-// so it works identically for a header-only consumer who never touches
-// this repo's CMakeLists.txt. This project's own CMakeLists.txt still
-// runs find_package(Fontconfig) and links it for convenience, but that's
-// no longer what makes this work; a plain compiler invocation with
-// -lfontconfig (or any build system that links it once fontconfig-dev
-// is installed) is equally sufficient. Naturally false on Windows/macOS
-// (no fontconfig.h there ordinarily), so no platform #ifdef needed
-// either -- if a future setup does have it (Homebrew/MSYS2/vcpkg), this
-// picks it up the same way.
-#if defined(__has_include)
-#if __has_include(<fontconfig/fontconfig.h>)
-#define NOVASVG_FONTCONFIG_AVAILABLE 1
-#endif
-#endif
-
-#if defined(NOVASVG_FONTCONFIG_AVAILABLE)
-#include <fontconfig/fontconfig.h>
-
-NOVASVG_INLINE font_face_t* font_face_cache_match_fontconfig_stack(font_face_cache_t* cache, const char** families, int num_families, bool bold, bool italic)
-{
-    FcPattern* pattern = FcPatternCreate();
-    for(int i = 0; i < num_families; ++i)
-        FcPatternAddString(pattern, FC_FAMILY, reinterpret_cast<const FcChar8*>(families[i]));
-    FcPatternAddInteger(pattern, FC_WEIGHT, bold ? FC_WEIGHT_BOLD : FC_WEIGHT_REGULAR);
-    FcPatternAddInteger(pattern, FC_SLANT, italic ? FC_SLANT_ITALIC : FC_SLANT_ROMAN);
-    FcConfigSubstitute(NULL, pattern, FcMatchPattern);
-    FcDefaultSubstitute(pattern);
-
-    FcResult result;
-    FcPattern* matched = FcFontMatch(NULL, pattern, &result);
-    FcPatternDestroy(pattern);
-    if(matched == NULL)
-        return NULL;
-
-    font_face_t* face = NULL;
-    FcChar8* filepath = NULL;
-    FcChar8* matchedFamily = NULL;
-    if(FcPatternGetString(matched, FC_FILE, 0, &filepath) == FcResultMatch
-       && FcPatternGetString(matched, FC_FAMILY, 0, &matchedFamily) == FcResultMatch) {
-        font_face_cache_load_file(cache, reinterpret_cast<const char*>(filepath));
-        face = font_face_cache_get(cache, reinterpret_cast<const char*>(matchedFamily), bold, italic);
-    }
-
-    FcPatternDestroy(matched);
-    return face;
-}
-#else
-
-#if defined(_MSC_VER)
-#pragma message("novasvg: <fontconfig/fontconfig.h> not found -- font-family substitution limited to novasvg's built-in raw font-file scan (no OS-level alias resolution for names like \"arial\"). Install fontconfig-dev and rebuild for full CSS-style font-family-stack fallback. This is expected/fine on Windows and macOS, which don't normally have fontconfig at all.")
-#else
-#warning "novasvg: <fontconfig/fontconfig.h> not found -- font-family substitution limited to novasvg's built-in raw font-file scan (no OS-level alias resolution for names like \"arial\"). Install fontconfig-dev and rebuild for full CSS-style font-family-stack fallback. This is expected/fine on Windows and macOS, which don't normally have fontconfig at all."
-#endif
-
-NOVASVG_INLINE font_face_t* font_face_cache_match_fontconfig_stack(font_face_cache_t* cache, const char** families, int num_families, bool bold, bool italic)
-{
-    return NULL;
-}
-#endif // NOVASVG_FONTCONFIG_AVAILABLE
-
 NOVASVG_INLINE int font_face_cache_load_sys(font_face_cache_t* cache)
 {
     int num_faces = 0;
@@ -6334,11 +6258,6 @@ NOVASVG_INLINE int font_face_cache_load_dir(font_face_cache_t* cache, const char
 NOVASVG_INLINE int font_face_cache_load_sys(font_face_cache_t* cache)
 {
     return -1;
-}
-
-NOVASVG_INLINE font_face_t* font_face_cache_match_fontconfig_stack(font_face_cache_t* cache, const char** families, int num_families, bool bold, bool italic)
-{
-    return NULL;
 }
 
 #endif // NOVASVG_DISABLE_FONT_FACE_CACHE_LOAD
