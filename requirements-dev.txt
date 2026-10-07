@@ -7,9 +7,11 @@ numpy
 build
 twine
 
-# testing dependencies
+# testing dependencies (keep in step with the `test` extra in pyproject.toml)
 pytest
 pytest-cov
+fonttools
+pillow
 
 # documentation dependencies (novasvg uses plain Doxygen, not Sphinx --
 # doxygen/graphviz themselves are installed via apt in cmake.yml, not here)
