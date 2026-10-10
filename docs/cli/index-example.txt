@@ -1,0 +1,17 @@
+            <div class="code-wrap">
+                <div class="code-label">
+                    <div class="code-lang-row"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-lang">bash</span></div>
+                    <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> copy</button>
+                </div>
+                <pre><code class="language-bash"># SVG -> PNG (writes input.png next to the input)
+novasvg input.svg
+
+# Choose the output file and size
+novasvg input.svg -o output.png -w 800 -H 600
+
+# Apply CSS, inspect, query and batch-convert
+novasvg input.svg --style "rect { fill: red; }"
+novasvg info image.svg --json
+novasvg query "circle" input.svg
+novasvg batch ./svgs ./images</code></pre>
+            </div>

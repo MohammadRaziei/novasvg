@@ -79,7 +79,7 @@ jobs:
         cmake -B build \
           -DCMAKE_BUILD_TYPE=Release \
           -DNOVASVG_BUILD_EXAMPLES=OFF \
-          -DNOVASVG_BUILD_PYTHON=OFF \
+          -DNOVASVG_BUILD_PYTHON=ON \
           -DNOVASVG_BUILD_TESTS=OFF \
           -DNOVASVG_BUILD_DOCS=ON
 
@@ -90,7 +90,7 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: cmake-documentation
-        path: build/docs/docs/html
+        path: build/docs/out
         retention-days: 5
 
   build-coverage:

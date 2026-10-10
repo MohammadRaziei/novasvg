@@ -47,8 +47,8 @@ if(TARGET novasvg_build_python)
         # Enable coverage for the python test target
         # We define a custom target to generate the coverage report.
         add_custom_target(novasvg_coverage_python
-            # Clean previous coverage data
-            COMMAND ${CMAKE_COMMAND} -E remove_directory ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}
+            # Clean previous coverage data (only html, keep index.html wrapper)
+            COMMAND ${CMAKE_COMMAND} -E remove_directory ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html
             COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html
             
             # Run tests with coverage enabled
@@ -89,7 +89,7 @@ if(TARGET novasvg_build_python)
                 COMMAND ${GENHTML_EXECUTABLE} --quiet 
                         ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/coverage.lcov
                         --output-directory ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html
-                        --title "Novasvg Python Coverage"
+                        --title "NovaSVG Python Coverage"
                         --css-file ${NOVASVG_TEST_SOURCE_DIR}/genhtml.css
                         --dark-mode 
                 COMMAND ${CMAKE_COMMAND} -E echo "-- HTML entry point created here: ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}/html/index.html"
@@ -101,6 +101,22 @@ if(TARGET novasvg_build_python)
         
         # Add this python coverage target to the main 'novasvg_coverage' target
         add_dependencies(novasvg_coverage novasvg_coverage_python)
+
+        # Generate iframe wrapper using GenerateIframe.cmake
+        file(MAKE_DIRECTORY ${NOVASVG_COVERAGE_PYTHON_BINARY_DIR})
+
+        # Add custom command to run GenerateIframe.cmake after coverage target
+        add_custom_command(TARGET novasvg_coverage_python POST_BUILD
+            COMMAND ${CMAKE_COMMAND}
+                -DIFRAME_SRC="html/index.html"
+                -DSECTION_TITLE="Python-Bindings"
+                -DLOGO_SVG="${PROJECT_SOURCE_DIR}/docs/images/novasvg-sq.svg"
+                -DPROJECT_NAME="${PROJECT_NAME}"
+                -DOUTPUT_DIR="${NOVASVG_COVERAGE_PYTHON_BINARY_DIR}"
+                -P "${PROJECT_SOURCE_DIR}/cmake/GenerateIframe.cmake"
+            COMMENT "Generating iframe wrapper for Python coverage report"
+            WORKING_DIRECTORY ${NOVASVG_TEST_SOURCE_DIR}
+        )
     else()
         message(WARNING "coverage module is not installed. Python coverage target will be skipped.")
         message(WARNING "Please install it using: pip install coverage")

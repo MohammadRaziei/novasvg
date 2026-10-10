@@ -1,0 +1,20 @@
+            <div class="code-wrap">
+                <div class="code-label">
+                    <div class="code-lang-row"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-lang">CMake — FetchContent</span></div>
+                    <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> copy</button>
+                </div>
+                <pre><code class="language-cmake"># CMakeLists.txt
+include(FetchContent)
+FetchContent_Declare(
+  novasvg
+  GIT_REPOSITORY https://github.com/MohammadRaziei/novasvg.git
+  GIT_TAG        master
+)
+FetchContent_MakeAvailable(novasvg)
+
+# Link the header-only target
+target_link_libraries(my_app PRIVATE novasvg::novasvg)</code></pre>
+            </div>
+            <div class="install-note">
+                Requires CMake 3.19+ and a C++17-compatible compiler. Link against <code>novasvg::novasvg</code> and include <code>&lt;novasvg/novasvg.h&gt;</code>. The library is header-only, so there is nothing to compile separately. You can also copy <code>include/novasvg/</code> into your project, or use the single-header <code>novasvg.h</code> from the latest release.
+            </div>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NovaSVG Documentation</title>
+    <link rel="icon" href="@FAVICON@" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" id="hljs-theme-dark" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet" id="hljs-theme-light" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css" disabled>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cmake.min.js"></script>
+    <link rel="stylesheet" href="novasvg-docs.css">
+</head>
+<body>
+
+<!-- Topbar -->
+<header class="topbar">
+    <a class="topbar-brand" href="#">
+        <div class="topbar-logo">@LOGO_CONTENT@</div>
+        <span class="topbar-name">NovaSVG</span>
+        <span class="topbar-sep"></span>
+        <span class="topbar-subtitle">Documentation</span>
+    </a>
+    <div class="topbar-actions">
+        <span class="topbar-version">v@PROJECT_VERSION@</span>
+        <a class="topbar-gh" href="https://github.com/MohammadRaziei/novasvg" target="_blank">
+            <i class="fa-brands fa-github"></i> GitHub
+        </a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+            <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/></svg>
+            <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg>
+        </button>
+    </div>
+</header>
+
+<!-- Hero -->
+<div class="hero">
+    <div class="hero-eyebrow">
+        <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M6 4v4M4 6h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        @LANG_EYEBROW@
+    </div>
+    <h1>NovaSVG Documentation</h1>
+    <p class="hero-desc">
+        A lightweight, header-only C++17 library for parsing, manipulating and rasterizing SVG.
+        Exposing APIs for @LANG_LIST@.
+    </p>
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <div class="hero-stat-num">C++17</div>
+            <div class="hero-stat-label">Core language</div>
+        </div>
+        <div class="hero-stat-div"></div>
+        <div class="hero-stat">
+            <div class="hero-stat-num">@BINDING_COUNT@</div>
+            <div class="hero-stat-label">Language bindings</div>
+        </div>
+        <div class="hero-stat-div"></div>
+        <div class="hero-stat">
+            <div class="hero-stat-num">MIT</div>
+            <div class="hero-stat-label">License</div>
+        </div>
+        <div class="hero-stat-div"></div>
+        <div class="hero-stat">
+            <div class="hero-stat-num">1</div>
+            <div class="hero-stat-label">Single header</div>
+        </div>
+    </div>
+</div>
+
+<div class="wrap">
+
+<!-- Overview -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-label">Overview</div>
+        <div class="section-title">What is NovaSVG?</div>
+        <div class="section-desc">
+            <strong>NovaSVG</strong> is a lightweight, header-only C++17 library for parsing, manipulating and
+            rasterizing SVG files. Load a document from a file, a string or a memory buffer, query it with CSS
+            selectors, apply stylesheets, and render it to a bitmap or a PNG, from C++, Python or the command line.
+        </div>
+    </div>
+
+    <ul class="compare-notes">
+        <li><strong>Header-only</strong> &mdash; one include file, no linking required, and a single-header distribution is available.</li>
+        <li><strong>Rasterization</strong> &mdash; render to bitmaps with custom dimensions and backgrounds, or straight to PNG.</li>
+        <li><strong>Querying and styling</strong> &mdash; CSS selectors to find elements, and stylesheets to change how a document looks.</li>
+        <li><strong>Filters and text</strong> &mdash; the filter-primitive pipeline, <code>&lt;foreignObject&gt;</code> text with word-wrap, and built-in font substitution with an embedded fallback font.</li>
+        <li><strong>CLI and Python</strong> &mdash; a command-line tool for batch conversion and inspection, and nanobind-based Python bindings.</li>
+    </ul>
+</div>
+
+<div class="divider"></div>
+
+<!-- API References -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-label">API References</div>
+        <div class="section-title">Language Documentation</div>
+        <div class="section-desc">Full API reference for the C++ library and the Python binding, plus the command-line tool.</div>
+    </div>
+    <div class="tabbed-panel" id="docs-panel">
+        <div class="tab-bar" id="docs-tabs">
+@DOCS_TABS@        </div>
+
+@DOCS_CONTENT@    </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Installation -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-label">Get Started</div>
+        <div class="section-title">Installation</div>
+        <div class="section-desc">Add NovaSVG to your project in seconds.</div>
+    </div>
+    <div class="tabbed-panel" id="install-panel">
+        <div class="tab-bar" id="install-tabs">
+@INSTALL_TABS@        </div>
+
+@INSTALL_CONTENT@    </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Examples -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-label">Usage</div>
+        <div class="section-title">Quick Examples</div>
+        <div class="section-desc">Load an SVG and render it to PNG in a few lines of code.</div>
+    </div>
+    <div class="tabbed-panel" id="example-panel">
+        <div class="tab-bar" id="example-tabs">
+@EXAMPLE_TABS@        </div>
+
+@EXAMPLE_CONTENT@    </div>
+</div>
+
+</div><!-- /wrap -->
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-inner">
+        <div>
+            <div class="footer-brand">
+                <div class="footer-logo">@LOGO_CONTENT@</div>
+                <span class="footer-name">NovaSVG</span>
+            </div>
+            <div class="footer-tagline">
+                A lightweight, header-only C++17 SVG library,
+                with a command-line tool and a @BINDING_LIST@ binding.
+            </div>
+            <div class="footer-copy">
+                &copy; 2025 <a href="https://github.com/mohammadraziei">Mohammad Raziei</a>
+                &nbsp;·&nbsp; <a href="https://github.com/MohammadRaziei/novasvg/blob/master/LICENSE.txt">MIT License</a>
+                &nbsp;·&nbsp; v@PROJECT_VERSION@
+            </div>
+        </div>
+
+        <div>
+            <div class="footer-links-title">Resources</div>
+            <div class="footer-links">
+                <a class="footer-link" href="https://github.com/MohammadRaziei/novasvg" target="_blank">
+                    <i class="fa-brands fa-github"></i> Source code
+                </a>
+                <a class="footer-link" href="cpp/html/index.html">
+                    <i class="fa-solid fa-book"></i> C++ reference
+                </a>
+                <a class="footer-link" href="python/html/index.html">
+                    <i class="fa-brands fa-python"></i> Python reference
+                </a>
+                <a class="footer-link" href="cli/index.html">
+                    <i class="fa-solid fa-terminal"></i> CLI reference
+                </a>
+                <a class="footer-link" href="benchmarks/index.html">
+                    <i class="fa-solid fa-gauge-high"></i> Benchmarks
+                </a>
+                <a class="footer-link" href="coverage/index.html">
+                    <i class="fa-solid fa-chart-pie"></i> Coverage report
+                    <span class="footer-link-badge">dev</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // ── State ────────────────────────────────────────────────
+    // Single source of truth — like React state but vanilla JS.
+    // All panels (docs, install, example) are always in sync.
+    const PANELS = ['docs', 'install', 'example'];
+    const STORAGE_KEY = 'novasvg-docs';
+
+    const state = {
+        theme: 'dark',
+        lang:  'cli',
+    };
+
+    function setState(patch) {
+        Object.assign(state, patch);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        render();
+    }
+
+    function render() {
+        // Theme
+        document.documentElement.setAttribute('data-theme', state.theme);
+        document.getElementById('hljs-theme-dark').disabled  = (state.theme !== 'dark');
+        document.getElementById('hljs-theme-light').disabled = (state.theme !== 'light');
+
+        // Tabs — sync all panels to state.lang, fallback to first tab if lang absent
+        PANELS.forEach(panel => {
+            const btns  = document.querySelectorAll('#' + panel + '-tabs .tab-btn');
+            const panes = document.querySelectorAll('#' + panel + '-panel .tab-content');
+
+            // Check if this panel actually has the requested lang
+            const targetPane = document.getElementById(panel + '-' + state.lang);
+            const effectiveLang = targetPane ? state.lang : (btns[0] ? btns[0].dataset.tab.replace(panel + '-', '') : null);
+            if (!effectiveLang) return;
+
+            btns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === panel + '-' + effectiveLang);
+            });
+            panes.forEach(pane => {
+                pane.classList.toggle('active', pane.id === panel + '-' + effectiveLang);
+            });
+        });
+    }
+
+    // ── Init ─────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        // Restore persisted state
+        try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            if (saved.theme) state.theme = saved.theme;
+            if (saved.lang)  state.lang  = saved.lang;
+        } catch (e) {}
+
+        render();
+
+        hljs.configure({ ignoreUnescapedHTML: true });
+        hljs.highlightAll();
+    });
+
+    // ── Public API ───────────────────────────────────────────
+    function switchTab(panel, lang) {
+        // panel arg is ignored — all panels always sync to the same lang
+        setState({ lang });
+    }
+
+    function toggleTheme() {
+        setState({ theme: state.theme === 'dark' ? 'light' : 'dark' });
+    }
+
+    // ── Copy button ──────────────────────────────────────────
+    function copyCode(btn) {
+        const code = btn.closest('.code-wrap').querySelector('pre code') ||
+                     btn.closest('.code-wrap').querySelector('pre');
+        navigator.clipboard.writeText(code.innerText).then(() => {
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> copied!';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.innerHTML = '<i class="fa-regular fa-copy"></i> copy'; btn.classList.remove('copied'); }, 1800);
+        });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "title": "C++ API",
+  "badge": "C++17",
+  "description": "Header-only C++17 API with RAII semantics. Covers <code>novasvg::Document</code>, <code>novasvg::Element</code>, <code>novasvg::Bitmap</code>, <code>novasvg::Matrix</code>, <code>novasvg::Box</code> and <code>novasvg::Color</code>: loading from files, strings or memory, CSS selector queries, stylesheets, transforms, font management and rasterization to bitmaps or PNG.",
+  "meta_icon": "fa-solid fa-book",
+  "meta_label": "Generated with Doxygen",
+  "link_href": "cpp/html/index.html",
+  "link_label": "Open C++ Reference"
+}

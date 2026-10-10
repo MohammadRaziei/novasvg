@@ -13,5 +13,8 @@ pytest-cov
 fonttools
 pillow
 
-# documentation dependencies (novasvg uses plain Doxygen, not Sphinx --
-# doxygen/graphviz themselves are installed via apt in cmake.yml, not here)
+# documentation dependencies (doxygen/graphviz themselves are installed via
+# apt in cmake.yml, not here)
+sphinx
+markdown-it-py
+doxygen-awesome-css

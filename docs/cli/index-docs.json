@@ -1,0 +1,9 @@
+{
+  "title": "CLI Reference",
+  "badge": "v@PROJECT_VERSION@",
+  "description": "Command-line tool for converting SVG to PNG, inspecting documents, querying elements with CSS selectors and converting whole directories. Covers all options and subcommands including <code>--width</code>, <code>--scale</code>, <code>--background-color</code>, <code>--css-file</code>, <code>info</code>, <code>query</code> and <code>batch</code>.",
+  "meta_icon": "fa-solid fa-file-lines",
+  "meta_label": "Written in Markdown",
+  "link_href": "cli/index.html",
+  "link_label": "Open CLI Reference"
+}

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 146.5 73.6">
+  <!-- Generator: Adobe Illustrator 30.1.0, SVG Export Plug-In . SVG Version: 2.1.1 Build 136)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: url(#linear-gradient2);
+      }
+
+      .st1 {
+        fill: url(#linear-gradient1);
+      }
+
+      .st2 {
+        fill: url(#radial-gradient);
+      }
+
+      .st3 {
+        fill: url(#radial-gradient1);
+      }
+
+      .st4 {
+        fill: url(#linear-gradient4);
+      }
+
+      .st5 {
+        fill: url(#linear-gradient5);
+      }
+
+      .st6 {
+        fill: url(#linear-gradient3);
+      }
+
+      .st7 {
+        fill: url(#radial-gradient2);
+      }
+
+      .st8 {
+        fill: url(#linear-gradient);
+      }
+    </style>
+    <radialGradient id="radial-gradient" cx="54.21" cy="56.49" fx="54.21" fy="56.49" r="16.78" gradientTransform="translate(0 73.89) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#19469b"/>
+      <stop offset="1" stop-color="#884d9e"/>
+    </radialGradient>
+    <radialGradient id="radial-gradient1" cx="59" cy="62.29" fx="59" fy="62.29" r="13.5" gradientTransform="translate(0 73.89) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#19469b"/>
+      <stop offset="1" stop-color="#884d9e"/>
+    </radialGradient>
+    <linearGradient id="linear-gradient" x1="0" y1="56.49" x2="34.3" y2="56.49" gradientTransform="translate(0 73.89) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1867b2"/>
+      <stop offset="1" stop-color="#b6489b"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient1" x1="76.5" y1="56.48" x2="110.7" y2="56.48" gradientTransform="translate(0 73.89) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1867b2"/>
+      <stop offset="1" stop-color="#b6489b"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient2" x1="112.2" y1="56.49" x2="146.5" y2="56.49" gradientTransform="translate(0 73.89) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1867b2"/>
+      <stop offset="1" stop-color="#b6489b"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient3" x1="0" y1="17.54" x2="34.4" y2="17.54" gradientTransform="translate(0 73.89) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1867b2"/>
+      <stop offset="1" stop-color="#b6489b"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient4" x1="35.8" y1="17.43" x2="70.09" y2="17.43" gradientTransform="translate(0 73.89) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1867b2"/>
+      <stop offset="1" stop-color="#b6489b"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient5" x1="71.5" y1="17.49" x2="105.9" y2="17.49" gradientTransform="translate(0 73.89) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1867b2"/>
+      <stop offset="1" stop-color="#b6489b"/>
+    </linearGradient>
+    <radialGradient id="radial-gradient2" cx="129.3" cy="56.46" fx="129.3" fy="56.46" r="17.25" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#19469b"/>
+      <stop offset=".56" stop-color="#884d9e"/>
+    </radialGradient>
+  </defs>
+  <g>
+    <path class="st2" d="M63.7,13c2,3.6,1.6,7.2-.3,10.6-3.8,6.7-12.1,9.1-18.7,5.4-4.9-2.8-7.5-8.4-6.7-14.2.3-2.3,1.1-4.4,2.2-6.3.1-.2.1-.7,0-1-.3-.8-.2-1.6.3-2.3.6-.7,1.4-1,2.3-.8.6.2.9,0,1.3-.4,2-1.8,4.4-3,7-3.7.3,0,.6-.1.8-.1-1.7,1.1-3.5,2.3-5.2,3.5-1,.8-2.2,1.5-2.2,3.1,0,.6-.7,1.1-1.2,1.7-.2.2-.6.4-.7.6-2.2,4.9-1.4,11,3.3,14.4,5,3.6,12.8,1.2,14.6-4.5,1.2-3.7-1.2-6.8-4.9-6.5-1.3,0-2.5.6-3.6,1.4-.6.5-1.1,1-1.7,1.5.4-4.1,4.7-8.1,9-8.3,6.7-.4,11.9,5.3,11.2,12.3-.5,5.2-3.2,9.1-7.5,12-6.1,4-14.6,4.1-20,1.1-4.6-3.2-4.2-5-4.2-5,0,0,2.6,2.6,4.4,3.3,9,4.4,20.4.4,22.8-9.7.7-3.1-.3-6.3-2.6-8.7"/>
+    <path class="st3" d="M73.6,19.4c-.4-2.6-.9-5.1-2.1-7.3-2.9-5.4-8.8-8.4-15-6.4-4.9,1.6-8.1,5.6-8.1,10.2,0,2.6,1.5,4.6,4,5,1.9.3,3.4-.5,4.8-1.7.6-.5,1.1-1.2,1.5-1.8.2,1.2-.8,3.2-2.2,4.4-3.1,2.6-8.1,2-10.6-1.3-2.4-3.1-2.6-6.6-1.3-10.1,3.9-10.7,17.2-13.9,25.5-5.3,3.6,3.8,4.7,8.4,3.8,13.6,0,.3-.2.6-.2.9l-.1-.2Z"/>
+  </g>
+  <path class="st8" d="M17.2.2C12.4.2,8.4,1.9,5,5.3,1.7,8.7,0,12.8,0,17.4v17.2h8.6v-17.2c0-2.3.8-4.4,2.5-6.1,1.7-1.7,3.7-2.5,6.1-2.5s4.4.8,6.1,2.5,2.5,3.7,2.5,6.1v17.2h8.5v-17.2c0-4.7-1.7-8.7-5-12.1C25.9,1.9,21.9.2,17.2.2Z"/>
+  <path class="st1" d="M108.3.6c-1.1-.5-2.2-.5-3.3,0-1.1.4-1.9,1.2-2.4,2.2l-9,19.2-9-19.2c-.5-1-1.3-1.8-2.5-2.2-1.2-.4-2.2-.4-3.2,0-1.1.5-1.9,1.3-2.2,2.5-.4,1.2-.3,2.3.2,3.3l13.1,28.2h7.2l13.2-28.4c.5-1,.5-2,.1-3.2s-1.1-2-2.2-2.5v.1Z"/>
+  <path class="st0" d="M141.4,5.3c-3.4-3.4-7.4-5.1-12.1-5.1s-8.8,1.7-12.2,5.1c-3.4,3.4-5,7.4-5,12.1s1.7,8.8,5,12.2c3.4,3.4,7.4,5,12.2,5h17.1v-17.2c0-4.7-1.7-8.7-5-12.1ZM135.4,23.6c-1.7,1.7-3.7,2.5-6.1,2.5s-4.5-.8-6.1-2.5c-1.7-1.7-2.5-3.7-2.5-6.1s.8-4.4,2.5-6.1c1.7-1.7,3.7-2.5,6.1-2.5s4.4.8,6.1,2.5c1.7,1.7,2.5,3.7,2.5,6.1s-.8,4.5-2.5,6.1Z"/>
+  <g>
+    <path class="st6" d="M10.8,60.6c-3,0-5.5-1-7.6-3.1S0,52.9,0,49.9s1-5.4,3.2-7.6c2.1-2.1,4.6-3.2,7.6-3.2h23.6v8.6H10.8c-1.5,0-2.2.7-2.2,2.2s.2,1.1.6,1.5c.4.4.9.6,1.6.6h12.8c2.9,0,5.4,1.1,7.5,3.2,2.1,2.1,3.2,4.7,3.2,7.6s-1.1,5.5-3.2,7.6c-2.1,2.1-4.6,3.2-7.5,3.2H0v-8.7h23.6c.5,0,.9-.2,1.4-.6.4-.4.7-.9.7-1.5s-.2-1.1-.7-1.5c-.4-.4-.9-.7-1.4-.7,0,0-12.8,0-12.8,0Z"/>
+    <path class="st4" d="M49.3,73.6l-13.1-28.2c-.5-1-.5-2.2-.2-3.3.4-1.2,1.1-2,2.2-2.5,1-.5,2-.5,3.2,0,1.2.4,2,1.2,2.5,2.2l9,19.2,9-19.2c.5-1,1.3-1.8,2.4-2.2s2.2-.4,3.3,0c1,.5,1.8,1.3,2.2,2.5.4,1.2.4,2.2-.1,3.2l-13.2,28.4h-7.2v-.1Z"/>
+    <path class="st5" d="M105.9,56.4v17.2h-17.2c-4.8,0-8.8-1.7-12.2-5-3.4-3.4-5-7.4-5-12.2s1.7-8.7,5-12.1c3.4-3.4,7.4-5.1,12.2-5.1h17.1v8.6h-17.1c-2.4,0-4.5.8-6.1,2.5-1.7,1.7-2.5,3.7-2.5,6.1s.8,4.5,2.5,6.1c1.7,1.7,3.7,2.5,6.1,2.5h8.6v-8.6h8.6Z"/>
+  </g>
+  <polygon class="st7" points="138.12 52.78 141.55 44.22 132.99 47.64 129.3 39.21 125.61 47.64 117.05 44.22 120.48 52.78 112.05 56.46 120.48 60.15 117.05 68.71 125.61 65.28 129.3 73.71 132.99 65.28 141.55 68.71 138.12 60.15 146.55 56.46 138.12 52.78"/>
+</svg>
