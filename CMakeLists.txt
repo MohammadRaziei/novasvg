@@ -29,7 +29,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Include optimization flags
+# Optimization flags (default build type, LTO, per-compiler -O flags).
+# Must come after project(). The library is header-only, so every target that
+# compiles NovaSVG code has to opt in with novasvg_optimize(<target>).
 include(Optimize)
 
 # Project options
@@ -56,7 +58,7 @@ target_include_directories(novasvg INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
 add_executable(novasvg_cli src/novasvg_cli.cpp)
 target_link_libraries(novasvg_cli PRIVATE novasvg::novasvg)
 set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg)
-apply_optimization_flags(novasvg_cli)
+novasvg_optimize(novasvg_cli)
 
 
 # target_compile_features(novasvg INTERFACE cxx_std_17)
@@ -108,6 +110,7 @@ if(NOVASVG_BUILD_EXAMPLES)
         get_filename_component(TARGET_NAME ${SOURCE_FILE} NAME_WE)
         add_executable(${TARGET_NAME} ${SOURCE_FILE})
         target_link_libraries(${TARGET_NAME} PRIVATE novasvg)
+        novasvg_optimize(${TARGET_NAME})
         message(STATUS "Added example target: ${TARGET_NAME}")
         add_dependencies(novasvg_build_examples ${TARGET_NAME})
     endforeach()

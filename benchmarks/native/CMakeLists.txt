@@ -1,5 +1,10 @@
 add_executable(novasvg_native_bench novasvg_native_bench.cpp)
 target_link_libraries(novasvg_native_bench PRIVATE novasvg::novasvg)
+# novasvg is header-only: this driver is what actually compiles it, so it must
+# get the optimisation flags itself (no-op if Optimize.cmake wasn't loaded).
+if(COMMAND novasvg_optimize)
+    novasvg_optimize(novasvg_native_bench)
+endif()
 
 add_executable(lunasvg_native_bench lunasvg_native_bench.cpp)
 target_link_libraries(lunasvg_native_bench PRIVATE lunasvg::lunasvg)

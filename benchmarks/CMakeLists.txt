@@ -43,6 +43,16 @@ set(NOVASVG_BENCH_OUTPUT_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/outputs" CACHE
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+# Timings are only meaningful for optimised builds: with an empty
+# CMAKE_BUILD_TYPE the compilers add no -O flag at all. Optimize.cmake defaults
+# the build type to Release (this is a top-level project) and provides
+# novasvg_optimize(), which native/CMakeLists.txt applies to the novasvg driver.
+# Skipped when this directory has been copied out of a novasvg checkout.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Optimize.cmake")
+    include("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Optimize.cmake")
+endif()
+
 include(FetchNovasvg)
 include(FetchLunasvg)
 include(FetchNanosvg)
