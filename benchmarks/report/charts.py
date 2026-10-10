@@ -29,13 +29,19 @@ def _ms(text):
     return float(m.group(1)) if m else None
 
 
+def _caption_label(fig):
+    """Engine label from a gallery <figcaption>; handles both the old (`Label<br>`) and new (`<b>Label</b>`) markup."""
+    m = re.search(r"<figcaption>(?:<b>(.*?)</b>|(.*?)<br>)", fig, flags=re.S)
+    return html.unescape(m.group(1) or m.group(2)) if m else None
+
+
 def parse_report_html(path):
     """Return {engine_key: {label, version, ok, total, avg_ms, rmse}} + meta, or None."""
     try:
         s = open(path, encoding="utf-8").read()
     except OSError:
         return None
-    rows = re.findall(r"<tr><td>(.*?)</td><td>(.*?)</td><td>(\d+)/(\d+)</td><td>(.*?)</td><td>(.*?)</td></tr>", s)
+    rows = re.findall(r"<tr[^>]*><td>(.*?)</td><td>(.*?)</td><td>(\d+)/(\d+)</td><td>(.*?)</td><td>(.*?)</td></tr>", s)
     if not rows:
         return None
     out = {}
@@ -45,10 +51,11 @@ def parse_report_html(path):
                     "ok": int(ok), "total": int(total), "avg_ms": _ms(avg), "rmse": None}
     # per-engine mean RMSE against the reference, from the gallery captions
     acc = {}
-    for fig in re.findall(r"<figure>.*?</figure>", s, flags=re.S):
-        m = re.search(r"<figcaption>(.*?)<br>.*?RMSE ([\d.]+)", fig, flags=re.S)
-        if m:
-            acc.setdefault(html.unescape(m.group(1)).lower(), []).append(float(m.group(2)))
+    for fig in re.findall(r"<figure[^>]*>.*?</figure>", s, flags=re.S):
+        label = _caption_label(fig)
+        m = re.search(r"RMSE ([\d.]+)", fig)
+        if label and m:
+            acc.setdefault(label.lower(), []).append(float(m.group(1)))
     for key, vals in acc.items():
         if key in out and vals:
             out[key]["rmse"] = sum(vals) / len(vals)
@@ -57,7 +64,7 @@ def parse_report_html(path):
     meta["samples"] = int(m.group(1)) if m else None
     m = re.search(r"median of (\d+) runs", s)
     meta["runs"] = int(m.group(1)) if m else None
-    m = re.search(r"Generated ([^.<]+?)\.", s)
+    m = re.search(r"[Gg]enerated (\d{4}-\d\d-\d\d \d\d:\d\d UTC)", s)
     meta["generated"] = m.group(1).strip() if m else None
     return {"engines": out, "meta": meta}
 

@@ -160,7 +160,7 @@ body::after {
 .stage-box .views, .stage-box .seg { order: 0; }
 
 /* ── Start: install + example side by side ── */
-.start { margin-top: 2.2rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; align-items: start; }
+.start { margin-top: 2.2rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; }
 .start h3 { font: 600 .8rem var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--fg3); margin-bottom: .7rem; }
 .start .tabbed-panel { margin: 0; }
 
@@ -200,7 +200,7 @@ body::after {
     .stage-render { width: min(24rem, 90%); margin: 0 auto; }
     .stage-render figcaption { position: static; text-align: center; margin-top: .5rem; }
     .stage-halo { inset: 0 10%; }
-    .restyle, .start, .charts { grid-template-columns: 1fr; }
+    .restyle, .charts { grid-template-columns: 1fr; }
     .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 12rem; }
     .t-tiger { grid-column: 1 / span 2; grid-row: span 2; }
     .t-sankey { grid-column: 1 / span 2; grid-row: auto; }
@@ -414,7 +414,7 @@ doc.render_to_bitmap(720, 720, 0).write_to_png("star-gold.png")</code></pre>
 
     const state = {
         theme: 'dark',
-        lang:  'cli',
+        lang:  '@DEFAULT_LANG@',
     };
 
     function setState(patch) {

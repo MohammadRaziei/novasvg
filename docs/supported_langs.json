@@ -27,6 +27,7 @@
     "'layers', the generic block/document glyph used for C++, which has",
     "no suitable brand icon in Font Awesome's free set)."
   ],
+  "default": "python",
   "languages": [
     { "folder": "cli",    "name": "CLI",    "role": "tool", "icon": { "kind": "fa",  "value": "fa-solid fa-terminal" } },
     { "folder": "cpp",    "name": "C++",    "role": "core", "icon": { "kind": "svg", "value": "layers" } },

@@ -209,13 +209,14 @@ def build(args: argparse.Namespace) -> str:
         sys.exit(f"generate_index.py: failed to read {langs_file}: {exc}")
 
     languages = registry["languages"]
+    default_lang = registry.get("default", languages[0]["folder"])
     tabs = {panel: [] for panel in PANELS}
     content = {panel: [] for panel in PANELS}
 
     for i, lang in enumerate(languages):
         folder, name, icon = lang["folder"], lang["name"], lang["icon"]
         lang_dir = langs_dir / folder
-        active = i == 0  # CLI, first in the registry, opens active
+        active = folder == default_lang  # the registry's "default" language opens active
 
         for panel in PANELS:
             tabs[panel].append(tab_button(panel, folder, name, icon, active))
@@ -238,6 +239,7 @@ def build(args: argparse.Namespace) -> str:
     logo_content = Path(args.logo_svg).read_text(encoding="utf-8") if args.logo_svg else ""
     index_content = index_content.replace("@LOGO_CONTENT@", logo_content)
     index_content = index_content.replace("@FAVICON@", args.favicon)
+    index_content = index_content.replace("@DEFAULT_LANG@", default_lang)
 
     hero_svg = Path(args.hero_svg).read_text(encoding="utf-8") if args.hero_svg else ""
     index_content = index_content.replace("@HERO_SVG_CODE@", highlight_svg(hero_svg))

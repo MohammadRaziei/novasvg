@@ -398,10 +398,10 @@ def report_from_html(path):
             f["render_w"], f["render_h"] = int(d.group(1)), int(d.group(2))
         files.append(f)
         row = {}
-        for fig in re.findall(r"<figure>.*?</figure>", sec, flags=re.S):
-            label = html.unescape(re.search(r"<figcaption>(.*?)<br>", fig, flags=re.S).group(1))
+        for fig in re.findall(r"<figure[^>]*>.*?</figure>", sec, flags=re.S):
+            label = charts._caption_label(fig)
             b64 = re.search(r'base64,([A-Za-z0-9+/=]+)"', fig)
-            sec_ms = re.search(r"<br>([\d.]+) ms", fig)
+            sec_ms = re.search(r"([\d.]+) ms", fig[fig.index("<figcaption>"):])
             rm = re.search(r"RMSE ([\d.]+)", fig)
             cell = {"ok": bool(b64), "png_b64": b64.group(1) if b64 else None,
                     "seconds": float(sec_ms.group(1)) / 1000 if sec_ms else None,
