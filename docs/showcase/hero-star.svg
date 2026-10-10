@@ -1,0 +1,14 @@
+<svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="nova" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1867b2"/>
+      <stop offset="1" stop-color="#b6489b"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="9"/></filter>
+  </defs>
+  <circle class="orbit" cx="120" cy="120" r="108" fill="none" stroke="url(#nova)"
+          stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round"/>
+  <circle cx="120" cy="120" r="58" fill="url(#nova)" opacity=".55" filter="url(#glow)"/>
+  <path class="star" fill="url(#nova)" d="M120 36 L133 89 L179 61 L151 107 L204 120 L151 133 L179 179 L133 151 L120 204 L107 151 L61 179 L89 133 L36 120 L89 107 L61 61 L107 89Z"/>
+  <circle cx="120" cy="120" r="9" fill="#fff" opacity=".92"/>
+</svg>

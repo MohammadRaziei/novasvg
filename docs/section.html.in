@@ -7,7 +7,7 @@
     <link rel="icon" href="@FAVICON@" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" id="hljs-theme-dark"  href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <link rel="stylesheet" id="hljs-theme-light" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css" disabled>
@@ -61,7 +61,7 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: var(--fg3);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     margin-bottom: 0.6rem;
 }
 
@@ -83,7 +83,7 @@
 
 .section-nav-list li a:hover        { color: var(--fg); background: var(--bg2); }
 .section-nav-list li a.active       { color: var(--accent); border-left-color: var(--accent); background: var(--accent-glow2); font-weight: 600; }
-.section-nav-list li a .nav-index   { font-size: 0.68rem; color: var(--fg3); font-family: 'IBM Plex Mono', monospace; min-width: 18px; }
+.section-nav-list li a .nav-index   { font-size: 0.68rem; color: var(--fg3); font-family: var(--font-mono); min-width: 18px; }
 
 /* ── Right TOC panel ─────────────────────────────────────────────────────── */
 .page-toc {
@@ -98,7 +98,7 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: var(--fg3);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     margin-bottom: 0.6rem;
 }
 
@@ -126,10 +126,7 @@
     font-weight: 800;
     letter-spacing: -0.03em;
     margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, var(--accent) 0%, #22b8cf 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--fg);
 }
 
 .page-article h2 {
@@ -177,7 +174,7 @@
 .page-article li                { margin-bottom: 0.3rem; }
 
 .page-article code {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 0.82em;
     color: var(--accent);
     background: var(--accent-glow2);
@@ -214,7 +211,7 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--fg2);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
 }
 .page-article td {
     padding: 0.6rem 1rem;
@@ -259,7 +256,7 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: var(--fg3);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     display: flex;
     align-items: center;
     gap: 0.4rem;
@@ -269,7 +266,7 @@
 
 /* ── Admonitions ─────────────────────────────────────────────────────────── */
 .admonition             { border-left: 3px solid var(--accent); background: var(--bg2); padding: 0.85rem 1.1rem; margin: 1rem 0; font-size: 0.875rem; }
-.admonition-title       { font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.4rem; font-family: 'IBM Plex Mono', monospace; }
+.admonition-title       { font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.4rem; font-family: var(--font-mono); }
 .admonition.warning     { border-left-color: #fcc419; }
 .admonition.warning .admonition-title { color: #fcc419; }
 .admonition.danger      { border-left-color: #ff6b6b; }

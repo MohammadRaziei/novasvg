@@ -56,27 +56,30 @@
     <link rel="icon" href="../novasvg-sq.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="../novasvg-sq.svg" type="image/svg+xml">
     <title>@PROJECT_NAME@ Coverage Report</title>
     <style>
         :root {
-            --bg:           #0f0f12;
-            --bg2:          #1a1a1f;
-            --bg3:          #242429;
-            --fg:           #e8e8f0;
-            --fg2:          #9090a0;
-            --fg3:          #606070;
-            --border:       #2a2a35;
-            --accent:       #4dabf7;
-            --accent-glow:  rgba(77,171,247,0.15);
-            --accent-glow2: rgba(77,171,247,0.06);
+            --bg:           #0a0a13;
+            --bg2:          #11111d;
+            --bg3:          #191929;
+            --fg:           #ececf8;
+            --fg2:          #a0a0bd;
+            --fg3:          #6a6a88;
+            --border:       #23233a;
+            --accent:       #5aa7f0;
+            --accent-glow:  rgba(90,167,240,0.15);
+            --accent-glow2: rgba(90,167,240,0.06);
+            --font-display: 'Outfit', 'Figtree', system-ui, sans-serif;
+            --font-body:    'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            --font-mono:    'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
             --cov-high:     #40c057;
             --cov-med:      #fcc419;
             --cov-low:      #ff6b6b;
             --shadow-sm:    0 1px 3px rgba(0,0,0,0.4);
             --shadow-md:    0 4px 12px rgba(0,0,0,0.5);
-            --shadow-blue:  0 4px 20px rgba(77,171,247,0.2);
+            --shadow-blue:  0 4px 20px rgba(90,167,240,0.2);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -84,7 +87,7 @@
         body {
             background: var(--bg);
             color: var(--fg);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: var(--font-body);
             line-height: 1.6;
             min-height: 100vh;
             display: flex;
@@ -105,8 +108,8 @@
             z-index: 100;
         }
 
-        .navbar-logo { width: 32px; height: 32px; flex-shrink: 0; }
-        .navbar-logo > * { width: 100%; height: auto; }
+        .navbar-logo { height: 30px; aspect-ratio: 2 / 1; flex-shrink: 0; }
+        .navbar-logo > * { width: 100%; height: 100%; display: block; }
 
         .navbar-brand {
             font-size: 1rem;
@@ -170,7 +173,7 @@
             padding: 0.25rem 0.8rem;
             border-radius: 999px;
             margin-bottom: 1.2rem;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: var(--font-mono);
         }
 
         .hero h1 {
@@ -178,10 +181,7 @@
             font-weight: 800;
             letter-spacing: -0.04em;
             margin-bottom: 0.75rem;
-            background: linear-gradient(135deg, var(--accent) 0%, #22b8cf 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--fg);
         }
 
         .hero p {
@@ -207,7 +207,7 @@
             text-transform: uppercase;
             letter-spacing: 0.12em;
             color: var(--accent);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: var(--font-mono);
             margin-bottom: 1rem;
         }
 
@@ -284,18 +284,18 @@
         .card-icon {
             width: 46px;
             height: 46px;
-            background: linear-gradient(135deg, var(--accent) 0%, #339af0 100%);
+            background: linear-gradient(135deg, var(--accent) 0%, #3f8fe0 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 8px rgba(77,171,247,0.3);
+            box-shadow: 0 2px 8px rgba(90,167,240,0.3);
             flex-shrink: 0;
         }
 
         .card-icon svg { width: 22px; height: 22px; color: #fff; }
 
         .badge {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: var(--font-mono);
             font-size: 0.65rem;
             font-weight: 600;
             padding: 0.2rem 0.6rem;
@@ -331,7 +331,7 @@
             justify-content: space-between;
             font-size: 0.75rem;
             color: var(--fg2);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: var(--font-mono);
             margin-bottom: 0.4rem;
         }
 
@@ -410,7 +410,7 @@
             color: var(--fg3);
             font-size: 0.78rem;
             border-top: 1px solid var(--border);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: var(--font-mono);
         }
 
         footer a { color: var(--fg2); text-decoration: none; }
@@ -427,7 +427,7 @@
     <nav class="navbar">
         <a href="../index.html" class="navbar-brand-link">
             <div class="navbar-logo">@LOGO_CONTENT@</div>
-            <span class="navbar-brand">@PROJECT_NAME@</span>
+            <span class="navbar-brand" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">@PROJECT_NAME@</span>
         </a>
         <span class="navbar-title">Coverage Dashboard</span>
         <a href="https://github.com/MohammadRaziei/novasvg" target="_blank" class="navbar-back">

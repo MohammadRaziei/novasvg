@@ -6,6 +6,8 @@
 #   <folder>/index-docs.json + index-install.txt + index-example.txt — see
 #   supported_langs.json's own "_comment" field for the format),
 #   GENERATE_SCRIPT (docs/generate_index.py)
+#   SHOWCASE_DIR (docs/showcase: images NovaSVG rendered itself; copied next to index.html)
+#   BENCH_REPORT, CHARTS_PY (committed benchmark report + chart helper, for the landing teaser)
 #
 # The tab bars / tab panes themselves are built by GENERATE_SCRIPT, a small
 # Python helper — reading JSON and templating HTML fought CMake's own
@@ -26,6 +28,11 @@ if(DEFINED LOGO_SQ)
   file(COPY_FILE "${LOGO_SQ}" "${OUTPUT_DIR}/novasvg-sq.svg")
 endif()
 
+# ── Copy showcase images (rendered by NovaSVG itself, see docs/make_showcase.py) ──
+if(DEFINED SHOWCASE_DIR AND IS_DIRECTORY "${SHOWCASE_DIR}")
+  file(COPY "${SHOWCASE_DIR}" DESTINATION "${OUTPUT_DIR}")
+endif()
+
 # ── Generate index.html (tab bars / tab panes + placeholder fill) ──
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
@@ -38,6 +45,9 @@ execute_process(
           --project-version "${PROJECT_VERSION}"
           --logo-svg        "${LOGO_SQ}"
           --favicon         "novasvg-sq.svg"
+          --hero-svg        "${SHOWCASE_DIR}/hero-star.svg"
+          --bench-report    "${BENCH_REPORT}"
+          --charts-py       "${CHARTS_PY}"
   RESULT_VARIABLE GENERATE_RESULT
 )
 if(NOT GENERATE_RESULT EQUAL 0)

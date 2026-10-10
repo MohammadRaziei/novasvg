@@ -23,18 +23,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="../../novasvg-sq.svg" type="image/svg+xml">
     <title>@PROJECT_NAME@ — @SECTION_TITLE@ Coverage</title>
     <style>
         :root {
-            --bg-body:      #0f0f12;
-            --bg-sidebar:   #1a1a1f;
-            --text-main:    #e8e8f0;
-            --text-muted:   #9090a0;
-            --border-color: #2a2a35;
-            --accent-primary: #4dabf7;
-            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --bg-body:      #0a0a13;
+            --bg-sidebar:   #11111d;
+            --text-main:    #ececf8;
+            --text-muted:   #a0a0bd;
+            --border-color: #23233a;
+            --accent-primary: #5aa7f0;
+            --font-main: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
@@ -64,14 +64,15 @@
         }
 
         .navbar-logo {
-            width: 28px;
             height: 28px;
+            aspect-ratio: 2 / 1;
             flex-shrink: 0;
         }
 
         .navbar-logo > * {
             width: 100%;
-            height: auto;
+            height: 100%;
+            display: block;
         }
 
         .navbar-brand {

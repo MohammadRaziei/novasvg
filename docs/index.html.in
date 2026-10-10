@@ -7,15 +7,219 @@
     <link rel="icon" href="@FAVICON@" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" id="hljs-theme-dark" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <link rel="stylesheet" id="hljs-theme-light" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css" disabled>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cmake.min.js"></script>
     <link rel="stylesheet" href="novasvg-docs.css">
+    <script>document.documentElement.classList.add('js');</script>
+    <style>
+/* ═══════════ Landing page ═══════════ */
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { overflow-x: hidden; }
+
+/* quiet ambient backdrop: one soft glow per brand hue + a fading dot grid */
+body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+        radial-gradient(60rem 38rem at 12% -8%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+        radial-gradient(52rem 34rem at 96% 4%,  color-mix(in srgb, var(--accent3) 14%, transparent), transparent 70%);
+}
+body::after {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .5;
+    background-image: radial-gradient(color-mix(in srgb, var(--fg) 18%, transparent) 1px, transparent 1.2px);
+    background-size: 26px 26px;
+    -webkit-mask-image: linear-gradient(180deg, #000 0, transparent 62%);
+            mask-image: linear-gradient(180deg, #000 0, transparent 62%);
+}
+
+/* wordmark logo: the logo already spells the name, keep the text for screen readers only */
+.topbar-logo { width: auto; height: 32px; aspect-ratio: 2 / 1; }
+.topbar-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skip { position: absolute; left: -999px; top: 8px; z-index: 200; background: var(--accent); color: #fff; padding: .5rem .9rem; border-radius: 8px; }
+.skip:focus { left: 8px; }
+
+.lp { max-width: 1180px; margin: 0 auto; padding-inline: 1.5rem; }
+
+/* ── Hero ── */
+.lp-hero {
+    display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 3rem; align-items: center;
+    padding: 5.5rem 0 4.5rem;
+}
+.lp-title {
+    font-size: clamp(3rem, 6.4vw, 5.4rem); line-height: .98; font-weight: 800; letter-spacing: -0.045em;
+    color: var(--fg);
+}
+.lp-title span { display: block; }
+.lp-title .ink { position: relative; width: fit-content; }
+.lp-title .ink::after {      /* the logo ramp as an underline stroke, not as text fill */
+    content: ""; position: absolute; left: 0; right: 4%; bottom: .02em; height: .11em; border-radius: 99px;
+    background: var(--brand-grad); transform-origin: left; }
+.lp-sub { margin-top: 1.6rem; max-width: 30rem; font-size: 1.12rem; line-height: 1.6; color: var(--fg2); }
+.lp-cta { margin-top: 2rem; display: flex; flex-wrap: wrap; gap: .75rem; }
+.btn {
+    display: inline-flex; align-items: center; gap: .55rem; font: 600 .95rem/1 var(--font-body);
+    padding: .9rem 1.35rem; border-radius: 12px; text-decoration: none; cursor: pointer;
+    transition: transform .18s, box-shadow .18s, background .18s, border-color .18s;
+}
+.btn-primary { color: #fff; background: var(--icon-grad); box-shadow: var(--shadow-blue); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 32px color-mix(in srgb, var(--accent3) 35%, transparent); }
+.btn-ghost { color: var(--fg); border: 1px solid var(--border2); background: color-mix(in srgb, var(--bg) 70%, transparent); }
+.btn-ghost:hover { border-color: var(--accent); background: var(--accent-glow2); transform: translateY(-2px); }
+.btn:focus-visible, .chip button:focus-visible, .seg label:focus-within, .tab-btn:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.chip {
+    margin-top: 1.6rem; display: inline-flex; align-items: center; gap: .9rem; max-width: 100%;
+    padding: .55rem .6rem .55rem 1rem; border: 1px solid var(--border2); border-radius: 12px;
+    background: var(--code-bg); font: 500 .9rem var(--font-mono); color: var(--code-fg);
+}
+.chip .prompt { color: var(--accent2); user-select: none; }
+.chip button {
+    font: 600 .75rem var(--font-body); color: var(--fg2); background: var(--bg3); border: 0;
+    padding: .4rem .7rem; border-radius: 8px; cursor: pointer; transition: color .15s, background .15s;
+}
+.chip button:hover { color: var(--fg); background: var(--accent-glow); }
+
+/* stage: real renderer output next to the SVG that produced it */
+.lp-stage { position: relative; min-height: 33rem; }
+.stage-halo {
+    position: absolute; inset: 4% 2% 10% 24%; border-radius: 50%; filter: blur(64px); opacity: .38; z-index: 0;
+    background: conic-gradient(from 20deg, var(--accent), var(--accent2), var(--accent3), var(--accent));
+}
+.stage-render {
+    position: absolute; right: 0; top: 0; width: min(33rem, 92%); aspect-ratio: 1; z-index: 1; margin: 0;
+}
+.stage-render img { width: 100%; height: 100%; display: block; }
+.stage-render figcaption {
+    position: absolute; right: 6%; bottom: -1.4rem; font: 500 .72rem var(--font-mono); color: var(--fg3);
+}
+.stage-code {
+    position: absolute; left: -2%; bottom: 1.2rem; width: min(23rem, 66%); max-height: 15.5rem; z-index: 2;
+    border: 1px solid var(--border2); border-radius: 16px; overflow: hidden;
+    background: color-mix(in srgb, var(--code-bg) 92%, transparent);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-lg);
+}
+.stage-code header { display: flex; align-items: center; gap: .5rem; padding: .6rem .9rem; border-bottom: 1px solid var(--border); }
+.stage-code header i { width: .6rem; height: .6rem; border-radius: 50%; background: var(--border2); }
+.stage-code header span { margin-left: .4rem; font: 500 .72rem var(--font-mono); color: var(--fg3); }
+.stage-code pre {
+    margin: 0; padding: .9rem 1rem 1.1rem; overflow: hidden; font: 400 .7rem/1.65 var(--font-mono); color: var(--code-fg);
+    white-space: pre-wrap; word-break: break-word; tab-size: 2; max-height: 12.4rem;
+    -webkit-mask-image: linear-gradient(180deg, #000 62%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 62%, transparent 100%);
+}
+.tk-t { color: var(--accent); } .tk-a { color: var(--accent2); } .tk-s { color: var(--accent3); } .tk-p { color: var(--fg3); }
+
+/* ── Sections ── */
+.lp-sec { padding: 4.5rem 0; scroll-margin-top: 4.5rem; }
+.lp-sec > h2 { font-size: clamp(1.9rem, 3.4vw, 2.7rem); font-weight: 700; line-height: 1.08; letter-spacing: -0.035em; max-width: 30ch; text-wrap: balance; }
+.lp-sec > .lede { margin-top: .9rem; max-width: 44rem; color: var(--fg2); font-size: 1.05rem; line-height: 1.65; }
+.lp-sec > .lede code, .lp-sec .code-inline { font-family: var(--font-mono); font-size: .85em; color: var(--accent); background: var(--accent-glow2); padding: .1em .4em; border-radius: 5px; }
+
+/* ── Gallery bento ── */
+.bento { margin-top: 2.4rem; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 13rem; gap: 1rem; }
+.tile {
+    position: relative; display: flex; flex-direction: column; overflow: hidden; margin: 0;
+    border: 1px solid var(--border); border-radius: 18px; background: var(--card);
+    transition: transform .25s, border-color .25s, box-shadow .25s;
+}
+.tile:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); box-shadow: var(--shadow-lg); }
+.tile .paper {
+    flex: 1; min-height: 0; margin: .55rem .55rem 0; border-radius: 12px; background: #fff;
+    display: flex; align-items: center; justify-content: center; padding: .6rem;
+}
+.tile img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; }
+.tile figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; padding: .7rem 1rem .8rem; }
+.tile figcaption b { font: 600 .9rem var(--font-body); color: var(--fg); }
+.tile figcaption code { font: 400 .72rem var(--font-mono); color: var(--fg3); white-space: nowrap; }
+.t-tiger  { grid-column: 1 / span 2; grid-row: 1 / span 2; }
+.t-sankey { grid-column: 3 / span 2; grid-row: 1 / span 2; }
+.t-venn   { grid-column: 5 / span 2; grid-row: 1; }
+.t-arch   { grid-column: 5 / span 2; grid-row: 2; }
+.t-grad   { grid-column: 1 / span 3; }
+.t-pie    { grid-column: 4 / span 3; }
+
+/* ── Restyle (CSS-only segmented toggle) ── */
+.restyle { margin-top: 2.4rem; display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: 2rem; align-items: center; }
+.restyle .code-wrap { margin: 0; }
+.stage-box {
+    position: relative; border: 1px solid var(--border); border-radius: 20px; padding: 1.1rem;
+    background: radial-gradient(70% 70% at 50% 45%, color-mix(in srgb, var(--accent2) 14%, transparent), transparent 75%), var(--card);
+    display: flex; flex-direction: column; align-items: center; gap: 1rem;
+}
+.stage-box .views { position: relative; width: min(100%, 21rem); aspect-ratio: 1; }
+.stage-box .views img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .35s; }
+#v-a:checked ~ .views .img-a, #v-b:checked ~ .views .img-b { opacity: 1; }
+.seg { display: inline-flex; padding: .25rem; gap: .25rem; border-radius: 12px; background: var(--bg3); border: 1px solid var(--border); }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { font: 600 .82rem var(--font-body); color: var(--fg2); padding: .5rem .95rem; border-radius: 9px; cursor: pointer; transition: all .18s; }
+#v-a:checked ~ .seg label[for="v-a"], #v-b:checked ~ .seg label[for="v-b"] { color: #fff; background: var(--icon-grad); box-shadow: var(--shadow-sm); }
+.stage-box .views, .stage-box .seg { order: 0; }
+
+/* ── Start: install + example side by side ── */
+.start { margin-top: 2.2rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; align-items: start; }
+.start h3 { font: 600 .8rem var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--fg3); margin-bottom: .7rem; }
+.start .tabbed-panel { margin: 0; }
+
+/* ── Benchmarks: colourful bars ── */
+.charts { margin-top: 2.4rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+.chart { border: 1px solid var(--border); border-radius: 20px; background: var(--card); padding: 1.4rem 1.5rem 1.5rem; }
+.chart h3 { font: 700 1.05rem var(--font-display); letter-spacing: -0.01em; }
+.chart p { margin: .2rem 0 1.1rem; font-size: .82rem; color: var(--fg2); }
+/*@BARS_CSS@*/
+.bench-foot { margin-top: 1.3rem; display: flex; flex-wrap: wrap; gap: 1rem 1.6rem; align-items: center; }
+.bench-foot small { color: var(--fg3); font-size: .78rem; line-height: 1.5; max-width: 46rem; }
+
+/* ── Reference card ── */
+#reference .tabbed-panel { margin-top: 2rem; }
+
+/* ── Entrance (only when motion is welcome) ── */
+@media (prefers-reduced-motion: no-preference) {
+    @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes ink { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .lp-title span, .lp-sub, .lp-cta, .chip { animation: rise .8s cubic-bezier(.2,.7,.2,1) both; }
+    .lp-title span:nth-child(2) { animation-delay: .08s; }
+    .lp-sub { animation-delay: .16s; } .lp-cta { animation-delay: .24s; } .chip { animation-delay: .32s; }
+    .lp-title .ink::after { animation: ink .9s .5s cubic-bezier(.2,.7,.2,1) both; }
+    .stage-render { animation: rise 1s .15s cubic-bezier(.2,.7,.2,1) both; }
+    .stage-code { animation: rise 1s .35s cubic-bezier(.2,.7,.2,1) both; }
+    .stage-halo { animation: spin 38s linear infinite; }
+}
+
+/* ── Responsive ── */
+.restyle > *, .start > *, .charts > *, .bento > * { min-width: 0; }
+.code-wrap pre { overflow-x: auto; }
+@media (max-width: 980px) {
+    .lp-hero { grid-template-columns: 1fr; padding-top: 3rem; padding-bottom: 3rem; gap: 2.5rem; }
+    .lp-stage { min-height: 0; display: grid; gap: 1.2rem; }
+    .stage-render, .stage-code { position: relative; right: auto; left: auto; top: auto; bottom: auto; width: 100%; }
+    .stage-render { width: min(24rem, 90%); margin: 0 auto; }
+    .stage-render figcaption { position: static; text-align: center; margin-top: .5rem; }
+    .stage-halo { inset: 0 10%; }
+    .restyle, .start, .charts { grid-template-columns: 1fr; }
+    .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 12rem; }
+    .t-tiger { grid-column: 1 / span 2; grid-row: span 2; }
+    .t-sankey { grid-column: 1 / span 2; grid-row: auto; }
+    .t-venn, .t-arch { grid-row: auto; }
+    .t-venn, .t-arch, .t-grad, .t-pie { grid-column: span 1; }
+}
+@media (max-width: 520px) {
+    .lp { padding-inline: 1rem; }
+    .bento { grid-template-columns: 1fr; }
+    .t-tiger, .t-sankey, .t-venn, .t-arch, .t-grad, .t-pie { grid-column: 1; grid-row: auto; }
+    .bar-row { grid-template-columns: 4.4rem minmax(0, 1fr) 4.6rem; gap: .5rem; }
+}
+
+.stage-box > input { position: absolute; opacity: 0; pointer-events: none; }
+#v-a:focus-visible ~ .seg label[for="v-a"], #v-b:focus-visible ~ .seg label[for="v-b"] { outline: 2px solid var(--accent); outline-offset: 2px; }
+    </style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 
 <!-- Topbar -->
 <header class="topbar">
@@ -40,112 +244,120 @@
     </div>
 </header>
 
+<main id="main">
+
 <!-- Hero -->
-<div class="hero">
-    <div class="hero-eyebrow">
-        <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M6 4v4M4 6h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        @LANG_EYEBROW@
-    </div>
-    <h1>NovaSVG Documentation</h1>
-    <p class="hero-desc">
-        A lightweight, header-only C++17 library for parsing, manipulating and rasterizing SVG.
-        Exposing APIs for @LANG_LIST@.
-    </p>
-    <div class="hero-stats">
-        <div class="hero-stat">
-            <div class="hero-stat-num">C++17</div>
-            <div class="hero-stat-label">Core language</div>
+<section class="lp lp-hero">
+    <div class="lp-copy">
+        <h1 class="lp-title"><span>SVG in.</span><span class="ink">Pixels out.</span></h1>
+        <p class="lp-sub">A header-only C++17 library that parses, queries, restyles and rasterizes SVG. Use it from @LANG_LIST@, or the shell.</p>
+        <div class="lp-cta">
+            <a class="btn btn-primary" href="#start">Get started <i class="fa-solid fa-arrow-right"></i></a>
+            <a class="btn btn-ghost" href="#reference">API reference</a>
         </div>
-        <div class="hero-stat-div"></div>
-        <div class="hero-stat">
-            <div class="hero-stat-num">@BINDING_COUNT@</div>
-            <div class="hero-stat-label">Language bindings</div>
-        </div>
-        <div class="hero-stat-div"></div>
-        <div class="hero-stat">
-            <div class="hero-stat-num">MIT</div>
-            <div class="hero-stat-label">License</div>
-        </div>
-        <div class="hero-stat-div"></div>
-        <div class="hero-stat">
-            <div class="hero-stat-num">1</div>
-            <div class="hero-stat-label">Single header</div>
-        </div>
-    </div>
-</div>
-
-<div class="wrap">
-
-<!-- Overview -->
-<div class="section">
-    <div class="section-header">
-        <div class="section-label">Overview</div>
-        <div class="section-title">What is NovaSVG?</div>
-        <div class="section-desc">
-            <strong>NovaSVG</strong> is a lightweight, header-only C++17 library for parsing, manipulating and
-            rasterizing SVG files. Load a document from a file, a string or a memory buffer, query it with CSS
-            selectors, apply stylesheets, and render it to a bitmap or a PNG, from C++, Python or the command line.
-        </div>
+        <div class="chip"><span class="prompt">$</span><code>pip install novasvg</code><button type="button" onclick="copyChip(this)">Copy</button></div>
     </div>
 
-    <ul class="compare-notes">
-        <li><strong>Header-only</strong> &mdash; one include file, no linking required, and a single-header distribution is available.</li>
-        <li><strong>Rasterization</strong> &mdash; render to bitmaps with custom dimensions and backgrounds, or straight to PNG.</li>
-        <li><strong>Querying and styling</strong> &mdash; CSS selectors to find elements, and stylesheets to change how a document looks.</li>
-        <li><strong>Filters and text</strong> &mdash; the filter-primitive pipeline, <code>&lt;foreignObject&gt;</code> text with word-wrap, and built-in font substitution with an embedded fallback font.</li>
-        <li><strong>CLI and Python</strong> &mdash; a command-line tool for batch conversion and inspection, and nanobind-based Python bindings.</li>
-    </ul>
-</div>
-
-<div class="divider"></div>
-
-<!-- API References -->
-<div class="section">
-    <div class="section-header">
-        <div class="section-label">API References</div>
-        <div class="section-title">Language Documentation</div>
-        <div class="section-desc">Full API reference for the C++ library and the Python binding, plus the command-line tool.</div>
+    <div class="lp-stage">
+        <div class="stage-halo" aria-hidden="true"></div>
+        <figure class="stage-render">
+            <img src="showcase/hero-star.webp" width="720" height="720" alt="An eight-point star with a blue to magenta gradient, glowing, inside a dotted orbit ring. Rendered by NovaSVG from the SVG shown on the left.">
+            <figcaption>rendered by NovaSVG</figcaption>
+        </figure>
+        <div class="stage-code" aria-label="The SVG source of the star">
+            <header><i></i><i></i><i></i><span>star.svg</span></header>
+<pre><code>@HERO_SVG_CODE@</code></pre>
+        </div>
     </div>
+</section>
+
+<!-- Gallery -->
+<section class="lp lp-sec" id="showcase">
+    <h2>Real renders, straight from NovaSVG</h2>
+    <p class="lede">Every image here was drawn by NovaSVG from the files in the repository's <code>data</code> folder. Gradients, filters, text and Mermaid diagrams all go through the same renderer.</p>
+    <div class="bento">
+        <figure class="tile t-tiger"><div class="paper"><img src="showcase/tiger.webp" width="760" height="760" loading="lazy" alt="A roaring tiger head drawn with hundreds of paths"></div><figcaption><b>Tiger</b><code>tiger.svg</code></figcaption></figure>
+        <figure class="tile t-sankey"><div class="paper"><img src="showcase/sankey.webp" width="900" height="606" loading="lazy" alt="A Mermaid sankey diagram of energy flows"></div><figcaption><b>Sankey diagram</b><code>mermaid</code></figcaption></figure>
+        <figure class="tile t-venn"><div class="paper"><img src="showcase/venn.webp" width="800" height="450" loading="lazy" alt="A Venn diagram of three overlapping teams"></div><figcaption><b>Venn diagram</b><code>mermaid</code></figcaption></figure>
+        <figure class="tile t-arch"><div class="paper"><img src="showcase/architecture.webp" width="640" height="663" loading="lazy" alt="An architecture diagram with a server, a database and two storage nodes"></div><figcaption><b>Architecture</b><code>mermaid</code></figcaption></figure>
+        <figure class="tile t-grad"><div class="paper"><img src="showcase/gradient-filter.webp" width="600" height="300" loading="lazy" alt="A gradient filled rectangle next to a blurred radial gradient ellipse"></div><figcaption><b>Gradients and blur</b><code>feature-gradient-filter.svg</code></figcaption></figure>
+        <figure class="tile t-pie"><div class="paper"><img src="showcase/pie.webp" width="720" height="520" loading="lazy" alt="A Mermaid pie chart comparing rendering backends"></div><figcaption><b>Pie chart</b><code>mermaid</code></figcaption></figure>
+    </div>
+</section>
+
+<!-- Restyle -->
+<section class="lp lp-sec" id="restyle">
+    <h2>Restyle an SVG without editing it</h2>
+    <p class="lede">Apply a stylesheet when you load the document. The same file renders in a new palette and the original stays untouched. Find elements first with <code>query_selector_all</code>, CSS selectors included.</p>
+    <div class="restyle">
+        <div class="code-wrap">
+            <div class="code-label">
+                <div class="code-lang-row"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-lang">python</span></div>
+                <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> copy</button>
+            </div>
+            <pre><code class="language-python">import novasvg
+
+doc = novasvg.Document.load_from_file("star.svg")
+
+# find things with CSS selectors
+stars = doc.query_selector_all("path.star")
+
+# restyle, then render with a transparent background
+doc.apply_stylesheet(".star { fill: #ffb02e } .orbit { stroke: #ffb02e }")
+doc.render_to_bitmap(720, 720, 0).write_to_png("star-gold.png")</code></pre>
+        </div>
+        <div class="stage-box">
+            <input type="radio" name="view" id="v-a" checked>
+            <input type="radio" name="view" id="v-b">
+            <div class="views">
+                <img class="img-a" src="showcase/hero-star.webp" width="720" height="720" loading="lazy" alt="The star with its original blue to magenta gradient">
+                <img class="img-b" src="showcase/hero-star-styled.webp" width="720" height="720" loading="lazy" alt="The same star restyled to solid amber">
+            </div>
+            <div class="seg" role="group" aria-label="Choose a render">
+                <label for="v-a">Original</label>
+                <label for="v-b">With stylesheet</label>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Get started -->
+<section class="lp lp-sec" id="start">
+    <h2>Install it, render something</h2>
+    <p class="lede">Pick a language once. The install and example panels both follow your choice.</p>
+    <div class="start">
+        <div>
+            <h3>Install</h3>
+            <div class="tabbed-panel" id="install-panel">
+                <div class="tab-bar" id="install-tabs">
+@INSTALL_TABS@                </div>
+
+@INSTALL_CONTENT@            </div>
+        </div>
+        <div>
+            <h3>Example</h3>
+            <div class="tabbed-panel" id="example-panel">
+                <div class="tab-bar" id="example-tabs">
+@EXAMPLE_TABS@                </div>
+
+@EXAMPLE_CONTENT@            </div>
+        </div>
+    </div>
+</section>
+
+@BENCH_SECTION@
+<!-- API reference -->
+<section class="lp lp-sec" id="reference">
+    <h2>API reference</h2>
+    <p class="lede">Full references for the C++ library, the Python binding and the command-line tool.</p>
     <div class="tabbed-panel" id="docs-panel">
         <div class="tab-bar" id="docs-tabs">
 @DOCS_TABS@        </div>
 
 @DOCS_CONTENT@    </div>
-</div>
+</section>
 
-<div class="divider"></div>
-
-<!-- Installation -->
-<div class="section">
-    <div class="section-header">
-        <div class="section-label">Get Started</div>
-        <div class="section-title">Installation</div>
-        <div class="section-desc">Add NovaSVG to your project in seconds.</div>
-    </div>
-    <div class="tabbed-panel" id="install-panel">
-        <div class="tab-bar" id="install-tabs">
-@INSTALL_TABS@        </div>
-
-@INSTALL_CONTENT@    </div>
-</div>
-
-<div class="divider"></div>
-
-<!-- Examples -->
-<div class="section">
-    <div class="section-header">
-        <div class="section-label">Usage</div>
-        <div class="section-title">Quick Examples</div>
-        <div class="section-desc">Load an SVG and render it to PNG in a few lines of code.</div>
-    </div>
-    <div class="tabbed-panel" id="example-panel">
-        <div class="tab-bar" id="example-tabs">
-@EXAMPLE_TABS@        </div>
-
-@EXAMPLE_CONTENT@    </div>
-</div>
-
-</div><!-- /wrap -->
+</main>
 
 <!-- Footer -->
 <footer class="footer">
@@ -271,6 +483,23 @@
             setTimeout(() => { btn.innerHTML = '<i class="fa-regular fa-copy"></i> copy'; btn.classList.remove('copied'); }, 1800);
         });
     }
+</script>
+<script>
+    function copyChip(btn) {
+        navigator.clipboard.writeText('pip install novasvg').then(() => {
+            btn.textContent = 'Copied';
+            setTimeout(() => { btn.textContent = 'Copy'; }, 1600);
+        });
+    }
+    // grow the benchmark bars once they scroll into view
+    (function () {
+        const charts = document.querySelectorAll('.bars');
+        if (!('IntersectionObserver' in window)) { charts.forEach(c => c.classList.add('in')); return; }
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+        }, { threshold: 0.25 });
+        charts.forEach(c => io.observe(c));
+    })();
 </script>
 </body>
 </html>

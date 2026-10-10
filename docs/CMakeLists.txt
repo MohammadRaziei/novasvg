@@ -123,6 +123,9 @@ add_custom_command(
         -DLANGS_FILE=${NOVASVG_SUPPORTED_LANGS}
         -DLANGS_DIR=${CMAKE_CURRENT_SOURCE_DIR}
         -DGENERATE_SCRIPT=${NOVASVG_GENERATE_SCRIPT}
+        -DSHOWCASE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/showcase
+        -DBENCH_REPORT=${PROJECT_SOURCE_DIR}/benchmarks/outputs/report.html
+        -DCHARTS_PY=${PROJECT_SOURCE_DIR}/benchmarks/report/charts.py
         -P ${CMAKE_CURRENT_SOURCE_DIR}/CreateDocs.cmake
     DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/CreateDocs.cmake
@@ -132,6 +135,8 @@ add_custom_command(
         ${PROJECT_SOURCE_DIR}/docs/images/novasvg-sq.svg
         ${NOVASVG_SUPPORTED_LANGS}
         ${NOVASVG_LANG_FRAGMENTS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/showcase/hero-star.svg
+        ${PROJECT_SOURCE_DIR}/benchmarks/report/charts.py
     COMMENT "Creating documentation route index"
     VERBATIM
 )

@@ -22,16 +22,16 @@ body:not([data-theme="light"]) {
     --color-foreground-muted:       #606070;
     --color-foreground-border:      #2a2a35;
 
-    --color-brand-primary:          #4dabf7;
-    --color-brand-content:          #4dabf7;
-    --color-brand-visited:          #74c0fc;
+    --color-brand-primary:          var(--accent);
+    --color-brand-content:          var(--accent);
+    --color-brand-visited:          var(--accent-hover);
 
     --color-sidebar-background:             #1a1a1f;
     --color-sidebar-background-border:      #2a2a35;
     --color-sidebar-brand-text:             #e8e8f0;
     --color-sidebar-caption-text:           #606070;
     --color-sidebar-link-text:              #9090a0;
-    --color-sidebar-link-text--top-level:   #4dabf7;
+    --color-sidebar-link-text--top-level:   var(--accent);
     --color-sidebar-search-background:      #242429;
     --color-sidebar-search-background--focus: #2a2a35;
     --color-sidebar-search-border:          #2a2a35;
@@ -40,23 +40,23 @@ body:not([data-theme="light"]) {
     --color-toc-title-text:         #606070;
     --color-toc-item-text:          #9090a0;
     --color-toc-item-text--hover:   #e8e8f0;
-    --color-toc-item-text--active:  #4dabf7;
+    --color-toc-item-text--active:  var(--accent);
     --color-toc-background:         #0f0f12;
 
     --color-header-background:      #1a1a1f;
     --color-header-border:          #2a2a35;
     --color-header-text:            #e8e8f0;
 
-    --color-inline-code-background: rgba(77, 171, 247, 0.08);
-    --color-highlighted-background: rgba(77, 171, 247, 0.15);
-    --color-highlight-on-target:    rgba(77, 171, 247, 0.1);
+    --color-inline-code-background: color-mix(in srgb, var(--accent) 8%, transparent);
+    --color-highlighted-background: color-mix(in srgb, var(--accent) 15%, transparent);
+    --color-highlight-on-target:    color-mix(in srgb, var(--accent) 10%, transparent);
 
     --color-admonition-background:  #1a1a1f;
 
-    --color-api-background:         rgba(77, 171, 247, 0.05);
-    --color-api-background-hover:   rgba(77, 171, 247, 0.1);
-    --color-api-name:               #4dabf7;
-    --color-api-pre-name:           #74c0fc;
+    --color-api-background:         color-mix(in srgb, var(--accent) 5%, transparent);
+    --color-api-background-hover:   color-mix(in srgb, var(--accent) 10%, transparent);
+    --color-api-name:               var(--accent);
+    --color-api-pre-name:           var(--accent-hover);
     --color-api-overall:            #9090a0;
     --color-api-keyword:            #9090a0;
 }
@@ -116,42 +116,39 @@ body:not([data-theme="light"]) .sidebar-brand-text {
     font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: -0.02em;
-    background: linear-gradient(135deg, #4dabf7 0%, #22b8cf 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--fg);
 }
 
 body[data-theme="dark"] .sidebar-tree .current > .reference,
 body:not([data-theme="light"]) .sidebar-tree .current > .reference {
-    color: #4dabf7;
-    background: rgba(77, 171, 247, 0.08);
-    border-left: 2px solid #4dabf7;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border-left: 2px solid var(--accent);
 }
 
 body[data-theme="dark"] .toc-tree li.scroll-current > .reference,
 body:not([data-theme="light"]) .toc-tree li.scroll-current > .reference {
-    color: #4dabf7;
+    color: var(--accent);
     font-weight: 600;
 }
 
 /* ── API docs (autodoc) ──────────────────────────────────────────────────── */
 body[data-theme="dark"] dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple) > dt,
 body:not([data-theme="light"]) dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple) > dt {
-    background: rgba(77, 171, 247, 0.06);
-    border-left: 3px solid #4dabf7;
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+    border-left: 3px solid var(--accent);
     padding-left: 0.75rem;
     margin-left: -0.75rem;
 }
 
 body[data-theme="dark"] .sig-name,
 body:not([data-theme="light"]) .sig-name {
-    color: #4dabf7;
+    color: var(--accent);
 }
 
 body[data-theme="dark"] .sig-prename,
 body:not([data-theme="light"]) .sig-prename {
-    color: #74c0fc;
+    color: var(--accent-hover);
     opacity: 0.7;
 }
 
@@ -166,34 +163,34 @@ body[data-theme="dark"] code.literal,
 body[data-theme="dark"] .sig-inline,
 body:not([data-theme="light"]) code.literal,
 body:not([data-theme="light"]) .sig-inline {
-    color: #4dabf7;
-    background: rgba(77, 171, 247, 0.08);
-    border-color: rgba(77, 171, 247, 0.2);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 /* ── Admonitions ─────────────────────────────────────────────────────────── */
 body[data-theme="dark"] .admonition.note,
 body:not([data-theme="light"]) .admonition.note {
-    border-left-color: #4dabf7;
+    border-left-color: var(--accent);
 }
 
 body[data-theme="dark"] .admonition.note > .admonition-title,
 body:not([data-theme="light"]) .admonition.note > .admonition-title {
-    background: rgba(77, 171, 247, 0.1);
-    color: #4dabf7;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    color: var(--accent);
 }
 
 /* ── Links ───────────────────────────────────────────────────────────────── */
 body[data-theme="dark"] a,
 body:not([data-theme="light"]) a {
-    color: #4dabf7;
-    text-decoration-color: rgba(77, 171, 247, 0.3);
+    color: var(--accent);
+    text-decoration-color: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 body[data-theme="dark"] a:hover,
 body:not([data-theme="light"]) a:hover {
-    color: #74c0fc;
-    text-decoration-color: #74c0fc;
+    color: var(--accent-hover);
+    text-decoration-color: var(--accent-hover);
 }
 
 /* ── Tables ──────────────────────────────────────────────────────────────── */
@@ -228,6 +225,6 @@ body:not([data-theme="light"]) .related-pages a {
 
 body[data-theme="dark"] .related-pages a:hover,
 body:not([data-theme="light"]) .related-pages a:hover {
-    border-color: #4dabf7;
-    background: rgba(77, 171, 247, 0.06);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
