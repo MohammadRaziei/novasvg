@@ -94,6 +94,19 @@ body {
     transition: all 0.18s;
 }
 .topbar-gh:hover { color: var(--fg); border-color: var(--accent); background: var(--accent-glow2); }
+
+/* left-hand navigation next to the brand (e.g. Benchmarks) */
+.topbar { justify-content: flex-start; }
+.topbar-actions { margin-left: auto; }
+.topbar-nav { display: flex; align-items: center; gap: 0.25rem; margin-left: 1.25rem; }
+.topbar-link {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.8rem; font-weight: 500; color: var(--fg2);
+    text-decoration: none; padding: 0.3rem 0.7rem;
+    border-bottom: 2px solid transparent;
+    transition: all 0.18s;
+}
+.topbar-link:hover { color: var(--fg); border-bottom-color: var(--accent); }
 .theme-toggle {
     display: flex; align-items: center; justify-content: center;
     width: 34px; height: 34px;
