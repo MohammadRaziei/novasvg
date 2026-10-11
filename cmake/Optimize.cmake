@@ -1,13 +1,20 @@
 # Optimize.cmake -- cross-platform optimisation flags for NovaSVG.
 #
 #   include(Optimize)                 # once, AFTER project()
-#   novasvg_optimize(<target>)        # for every executable/library that compiles NovaSVG code
+#   novasvg_optimize(novasvg)         # the header-only INTERFACE target: its consumers inherit the flags
+#   novasvg_optimize(<target>)        # an executable/library: flags + LTO on that one target
 #
-# Why per-target and not just "the novasvg library"?
-#   NovaSVG is header-only: `novasvg::novasvg` is an INTERFACE target, so the
-#   code is compiled inside whatever links it (the CLI, examples, benchmarks,
-#   the Python module...). Flags set on the INTERFACE target would never apply
-#   to those, so each real target has to opt in.
+# NovaSVG is header-only: `novasvg::novasvg` is an INTERFACE target and the code is
+# compiled inside whatever links it (the CLI, examples, benchmarks, the Python module...).
+# Applying the flags to the INTERFACE target therefore optimises every consumer just by
+# linking `novasvg::novasvg` -- also through an installed package (find_package(novasvg)),
+# because they are ordinary usage requirements. They are config-specific
+# ($<CONFIG:Release> ...), so a consumer whose build type is empty or "None" is left alone.
+# Opting out: link `novasvg::noflag` instead of `novasvg::novasvg` (same headers and
+# definitions, no flags; works from the build tree and from an installed package), or
+# build novasvg itself with -DNOVASVG_OPTIMIZE=OFF.
+# LTO is a per-target property that cannot travel through an INTERFACE target; call
+# novasvg_optimize(<target>) on the consumer if you want it.
 #
 # What it does
 #   * Single-config generators (Makefiles, Ninja): if CMAKE_BUILD_TYPE is empty
@@ -125,27 +132,9 @@ function(_novasvg_native_arch_flag out)
 endfunction()
 
 # ---------------------------------------------------------------------------
-# novasvg_optimize(<target>)
+# Build the (config-specific) flag list for the current compiler into <out>.
 # ---------------------------------------------------------------------------
-function(novasvg_optimize target)
-    if(NOT NOVASVG_OPTIMIZE)
-        return()
-    endif()
-    if(NOT TARGET ${target})
-        message(FATAL_ERROR "novasvg_optimize(): '${target}' is not a target")
-    endif()
-
-    get_target_property(_type ${target} TYPE)
-    get_target_property(_imported ${target} IMPORTED)
-    if(_imported)
-        return()
-    endif()
-    if(_type STREQUAL "INTERFACE_LIBRARY")
-        message(WARNING "novasvg_optimize(): '${target}' is an INTERFACE library. NovaSVG is header-only, "
-                        "so apply this to the executable/library that actually compiles the code.")
-        return()
-    endif()
-
+function(_novasvg_collect_flags out)
     set(_flags "")
 
     if(MSVC) # cl.exe and clang-cl (checked first: clang-cl reports ID "Clang" but takes MSVC-style flags)
@@ -175,8 +164,40 @@ function(novasvg_optimize target)
         endif()
 
     else()
-        message(STATUS "NovaSVG: no optimisation flags known for compiler '${CMAKE_CXX_COMPILER_ID}' "
-                       "(target '${target}'); relying on CMake's defaults")
+        message(STATUS "NovaSVG: no optimisation flags known for compiler '${CMAKE_CXX_COMPILER_ID}', "
+                       "relying on CMake's defaults")
+    endif()
+
+    set(${out} "${_flags}" PARENT_SCOPE)
+endfunction()
+
+# ---------------------------------------------------------------------------
+# novasvg_optimize(<target>)
+#   INTERFACE library : flags go to INTERFACE_COMPILE_OPTIONS,
+#                       so every target linking it is optimised.
+#   anything else     : flags PRIVATE to the target, plus LTO when supported.
+# ---------------------------------------------------------------------------
+function(novasvg_optimize target)
+    if(NOT NOVASVG_OPTIMIZE)
+        return()
+    endif()
+    if(NOT TARGET ${target})
+        message(FATAL_ERROR "novasvg_optimize(): '${target}' is not a target")
+    endif()
+
+    get_target_property(_type ${target} TYPE)
+    get_target_property(_imported ${target} IMPORTED)
+    if(_imported)
+        return()
+    endif()
+
+    _novasvg_collect_flags(_flags)
+
+    if(_type STREQUAL "INTERFACE_LIBRARY")
+        foreach(_f IN LISTS _flags)
+            target_compile_options(${target} INTERFACE "${_f}")
+        endforeach()
+        return()
     endif()
 
     if(_flags)

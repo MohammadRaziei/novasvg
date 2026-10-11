@@ -24,7 +24,7 @@ Needs on `PATH`: a C++17 compiler, `meson` + `ninja` (for thorvg), `cargo`
 ground truth (`playwright install chromium` if you don't already have one
 — see below for pinning the pip package to match it). First build takes a
 few minutes (compiles resvg via cargo, thorvg via meson, lunasvg/nanosvg
-via CMake, novasvg from the local checkout this directory lives in). Open
+via CMake, novasvg via FetchContent). Open
 `outputs/report.html` afterwards — no server, no network needed, every
 render is a base64 `data:` URI embedded directly in the page; click any
 render to zoom in. Everything else (`results.json`, per-engine renders/)
@@ -58,17 +58,21 @@ the same fontconfig, e.g. `FONTCONFIG_FILE` pointing at a config that exposes on
 
 ## How it works
 
-- **novasvg** — `cmake/FetchNovasvg.cmake` builds the checkout this
-  `benchmarks/` directory already lives inside (`add_subdirectory(..)`),
-  falling back to fetching a fresh copy from GitHub only if this directory
-  has been copied out on its own. It does **not** fetch a second copy of
-  novasvg when run in place — that was a real bug here for a while: the
-  benchmark was compiling novasvg twice, once as the actual product
-  (`../CMakeLists.txt`'s own `novasvg_cli`) and once again as a throwaway
-  duplicate pulled fresh from GitHub master, which could even silently
-  drift from whatever local changes were sitting in `../src`/`../include`.
+- **novasvg** — `cmake/FetchNovasvg.cmake` fetches it with FetchContent
+  (`NOVASVG_BENCH_GIT_URL` @ `NOVASVG_BENCH_GIT_TAG`, default GitHub `master`).
+  This directory is self-contained: it never reads the directory it sits in
+  (only `data/` is shared). To benchmark a local tree, including uncommitted
+  changes, pass the standard FetchContent override
+  `-DFETCHCONTENT_SOURCE_DIR_NOVASVG_SRC=/path/to/novasvg` — **without it you
+  measure the fetched ref, not your working copy.**
+  novasvg is header-only, so the code is compiled inside the benchmark's own
+  target. novasvg puts its optimisation flags on the `novasvg::novasvg`
+  INTERFACE target, so linking it is enough. Those flags are config-specific
+  (they only apply to Release & co), so `cmake/DefaultBuildType.cmake` defaults
+  the whole benchmark to a Release build (an empty build type means no `-O`
+  flags at all) -- which also gives every other engine the same fair flags.
   `native/novasvg_native_bench.cpp` links `novasvg::novasvg` and calls
-  `novasvg::Document` / `novasvg::Bitmap` directly either way.
+  `novasvg::Document` / `novasvg::Bitmap` directly.
 - **lunasvg** — `cmake/FetchLunasvg.cmake` fetches it (a real CMake
   project, pulls in its own `plutovg` dependency via git submodule);
   `native/lunasvg_native_bench.cpp` links `lunasvg::lunasvg` and calls
@@ -168,7 +172,7 @@ costs that were getting conflated:
 
 ```
 cmake -S . -B build -DNOVASVG_BENCH_RUNS=10 -DNOVASVG_BENCH_WIDTH=512 -DNOVASVG_BENCH_HEIGHT=512
-# build different checkouts (novasvg itself uses the local tree by default -- see above):
+# build different checkouts (novasvg: NOVASVG_BENCH_GIT_TAG, or FETCHCONTENT_SOURCE_DIR_NOVASVG_SRC for a local tree):
 cmake -S . -B build -DNOVASVG_BENCH_LUNASVG_GIT_TAG=v3.5.0     # lunasvg
 cmake -S . -B build -DNOVASVG_BENCH_THORVG_GIT_TAG=v1.0.1      # thorvg
 cmake -S . -B build -DNOVASVG_BENCH_RESVG_GIT_TAG=v0.45.1      # resvg (rust-version bound, see above)

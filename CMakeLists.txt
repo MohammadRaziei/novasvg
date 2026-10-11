@@ -30,8 +30,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Optimization flags (default build type, LTO, per-compiler -O flags).
-# Must come after project(). The library is header-only, so every target that
-# compiles NovaSVG code has to opt in with novasvg_optimize(<target>).
+# Must come after project(). The library is header-only, so novasvg_optimize(novasvg)
+# below puts the flags on the INTERFACE target and every consumer inherits them.
 include(Optimize)
 
 # Project options
@@ -44,15 +44,26 @@ option(NOVASVG_BUILD_DOCS "Build documentation" OFF)
 
 set(NOVASVG_SOURCE_DIR ${PROJECT_SOURCE_DIR})
 
-# Header-only library (interface target)
-add_library(novasvg INTERFACE)
-add_library(novasvg::novasvg ALIAS novasvg)
+# Header-only library: two INTERFACE targets.
+#   novasvg::noflag   headers + compile definitions only
+#   novasvg::novasvg  noflag + optimisation flags (-O3 / /O2 ...): what nearly everybody wants.
+#                     Link novasvg::noflag instead to opt out of the flags.
+add_library(novasvg_noflag INTERFACE)
+add_library(novasvg::noflag ALIAS novasvg_noflag)
+set_target_properties(novasvg_noflag PROPERTIES EXPORT_NAME noflag)
 
 if(NOT NOVASVG_EMBED_DEFAULT_FONT)
-    target_compile_definitions(novasvg INTERFACE NOVASVG_DISABLE_EMBEDDED_FONT)
+    target_compile_definitions(novasvg_noflag INTERFACE NOVASVG_DISABLE_EMBEDDED_FONT)
 endif()
 
-target_include_directories(novasvg INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(novasvg_noflag INTERFACE
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:include>")
+
+add_library(novasvg INTERFACE)
+add_library(novasvg::novasvg ALIAS novasvg)
+target_link_libraries(novasvg INTERFACE novasvg_noflag)
+novasvg_optimize(novasvg)   # flags travel to every consumer of novasvg::novasvg
 
 # Add CLI executable
 add_executable(novasvg_cli src/novasvg_cli.cpp)
@@ -124,5 +135,36 @@ endif()
 
 
 # Installation
-install(DIRECTORY include DESTINATION include)
+install(DIRECTORY include/ DESTINATION include)
 
+# CMake package: find_package(novasvg) -> novasvg::novasvg (optimised) / novasvg::noflag.
+# Only the top-level project installs it by default, so that embedding novasvg through
+# FetchContent/add_subdirectory doesn't change the parent project's install tree.
+option(NOVASVG_INSTALL "Install the CMake package (novasvgConfig.cmake, novasvg::novasvg, novasvg::noflag)" ${PROJECT_IS_TOP_LEVEL})
+if(NOVASVG_INSTALL)
+    include(CMakePackageConfigHelpers)
+    include(GNUInstallDirs)
+    set(NOVASVG_INSTALL_CMAKEDIR "${CMAKE_INSTALL_DATADIR}/cmake/novasvg" CACHE STRING
+        "Where novasvgConfig.cmake is installed (relative to the install prefix)")
+
+    install(TARGETS novasvg_noflag novasvg EXPORT novasvgTargets)
+    install(EXPORT novasvgTargets
+        FILE novasvgTargets.cmake
+        NAMESPACE novasvg::
+        DESTINATION "${NOVASVG_INSTALL_CMAKEDIR}")
+
+    configure_package_config_file(
+        "${PROJECT_SOURCE_DIR}/cmake/novasvgConfig.cmake.in"
+        "${PROJECT_BINARY_DIR}/novasvgConfig.cmake"
+        INSTALL_DESTINATION "${NOVASVG_INSTALL_CMAKEDIR}")
+    # 0.x: the API is not frozen yet, so only the same minor version is considered compatible.
+    write_basic_package_version_file(
+        "${PROJECT_BINARY_DIR}/novasvgConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMinorVersion
+        ARCH_INDEPENDENT)
+    install(FILES
+        "${PROJECT_BINARY_DIR}/novasvgConfig.cmake"
+        "${PROJECT_BINARY_DIR}/novasvgConfigVersion.cmake"
+        DESTINATION "${NOVASVG_INSTALL_CMAKEDIR}")
+endif()

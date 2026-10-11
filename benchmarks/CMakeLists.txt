@@ -5,8 +5,9 @@ project(NovaSVGBenchmarks LANGUAGES CXX)
 # capability, rendered output, and speed -- and writes a single self-contained
 # report.html. 5 of the 6 engines are fetched and built from source here and
 # driven directly through their own C/C++ API, each in one process
-# (native/*_native_bench.cpp): novasvg reuses the local checkout this
-# directory lives inside (see cmake/FetchNovasvg.cmake -- no duplicate build);
+# (native/*_native_bench.cpp): novasvg is pulled in by
+# cmake/FetchNovasvg.cmake (FetchContent; point it at a local tree with
+# -DFETCHCONTENT_SOURCE_DIR_NOVASVG_SRC=...);
 # lunasvg is a real CMake project (FetchContent); nanosvg is a single-header
 # C library compiled straight in; thorvg ships only a meson build, so
 # cmake/FetchThorvg.cmake drives meson+ninja itself; resvg is Rust, so
@@ -32,8 +33,8 @@ project(NovaSVGBenchmarks LANGUAGES CXX)
 #   NOVASVG_BENCH_RUNS    renders per (engine, sample) cell, median reported (default 5)
 #   NOVASVG_BENCH_WIDTH / NOVASVG_BENCH_HEIGHT   shared output size in px (default 320x320)
 #   NOVASVG_BENCH_LUNASVG_GIT_TAG / _THORVG_GIT_TAG / _RESVG_GIT_TAG
-#     which checkout each fetched engine is built from (novasvg itself uses the
-#     local checkout, see above; README.md has resvg's rust-version caveat)
+#     which checkout each fetched engine is built from (novasvg itself:
+#     NOVASVG_BENCH_GIT_URL / _GIT_TAG, see above; README.md has resvg's rust-version caveat)
 # See README.md for the full rundown and what's still ponytail-scoped for later.
 
 set(NOVASVG_BENCH_RESULTS_DIR_DEFAULT "${CMAKE_CURRENT_BINARY_DIR}/results" CACHE PATH
@@ -43,16 +44,7 @@ set(NOVASVG_BENCH_OUTPUT_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/outputs" CACHE
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
-
-# Timings are only meaningful for optimised builds: with an empty
-# CMAKE_BUILD_TYPE the compilers add no -O flag at all. Optimize.cmake defaults
-# the build type to Release (this is a top-level project) and provides
-# novasvg_optimize(), which native/CMakeLists.txt applies to the novasvg driver.
-# Skipped when this directory has been copied out of a novasvg checkout.
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Optimize.cmake")
-    include("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Optimize.cmake")
-endif()
-
+include(DefaultBuildType)   # before any target is created
 include(FetchNovasvg)
 include(FetchLunasvg)
 include(FetchNanosvg)

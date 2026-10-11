@@ -1,0 +1,14 @@
+# novasvgConfig.cmake -- find_package(novasvg [version] CONFIG)
+#
+#   novasvg::novasvg   header-only library; consumers are compiled with NovaSVG's
+#                      optimisation flags (-O3 / /O2 ... in Release & co).
+#   novasvg::noflag    the same headers and definitions, without any flags.
+#
+#   target_link_libraries(app PRIVATE novasvg::novasvg)   # optimised (default)
+#   target_link_libraries(app PRIVATE novasvg::noflag)    # you control the flags
+
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/novasvgTargets.cmake")
+
+check_required_components(novasvg)
