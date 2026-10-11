@@ -602,18 +602,34 @@ static FontFace fontFaceFromBase64(std::string_view payload)
     return FontFace(decoded, decodedLength, [](void* closure) { free(closure); }, decoded);
 }
 
-NOVASVG_INLINE FontFace embeddedFallbackFont()
+NOVASVG_INLINE FontFace embeddedFallbackFont(bool bold, bool italic)
 {
 #ifdef NOVASVG_DISABLE_EMBEDDED_FONT
+    (void)bold;
+    (void)italic;
     return FontFace();
 #else
-    // Built on first use only: a machine with fonts never pays for the decode.
-    static const FontFace face = [] {
+    // Each face is built on first use only: a machine with fonts never pays for the decode, and a
+    // program that never asks for bold never decodes the bold face.
+    auto build = [](const char* const* chunks) {
         std::string payload;
-        for(auto chunk = detail::kEmbeddedFontBase64; *chunk; ++chunk)
+        for(auto chunk = chunks; *chunk; ++chunk)
             payload += *chunk;
         return fontFaceFromBase64(payload);
-    }();
+    };
+    if(bold && italic) {
+        static const FontFace face = build(detail::kEmbeddedFontBoldItalicBase64);
+        return face;
+    }
+    if(bold) {
+        static const FontFace face = build(detail::kEmbeddedFontBoldBase64);
+        return face;
+    }
+    if(italic) {
+        static const FontFace face = build(detail::kEmbeddedFontItalicBase64);
+        return face;
+    }
+    static const FontFace face = build(detail::kEmbeddedFontBase64);
     return face;
 #endif
 }

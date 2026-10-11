@@ -93,10 +93,11 @@ private:
     font_face_t* m_face = nullptr;
 };
 
-// The last-resort font: a Latin subset of DejaVu Sans compiled into the library
-// (see default_font.h), a null face when built with NOVASVG_DISABLE_EMBEDDED_FONT.
+// The last-resort fonts: Latin subsets of DejaVu Sans (regular, bold, oblique and bold oblique)
+// compiled into the library (see default_font.h); the face matching `bold` / `italic` is returned.
+// A null face when built with NOVASVG_DISABLE_EMBEDDED_FONT.
 // Defined in svgparser.hpp, next to the base64 decoding it shares with @font-face.
-FontFace embeddedFallbackFont();
+FontFace embeddedFallbackFont(bool bold = false, bool italic = false);
 
 class FontFaceCache {
 public:
@@ -359,7 +360,7 @@ NOVASVG_INLINE FontFace FontFaceCache::getFontFace(const std::string& family, bo
                 return face;
             // Not even the platform's stand-in is installed: use the embedded font
             // so text is still drawn (and drawn the same way) on a machine without fonts.
-            return embeddedFallbackFont();
+            return embeddedFallbackFont(bold, italic);
         }
     }
 

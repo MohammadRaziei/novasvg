@@ -1158,6 +1158,24 @@ public:
     void render(const SVGForeignObjectElement* element, SVGRenderState& state) const final;
 };
 
+/**
+ * @brief The faces a <foreignObject> can paint with: its own font plus the bold / italic variants
+ * of it that <b>, <strong>, <i>, <em> and inline `font-weight` / `font-style` ask for.
+ *
+ * Indexed by style bits (bit 0 = bold, bit 1 = italic), so `get(Bold | Italic)` is the bold italic
+ * face. Variants nothing asked for may stay null. Each one is looked up exactly like SVG <text>
+ * looks up its font for the same weight/style, so the result is whatever faces the machine (or an
+ * @font-face) provides -- there is no synthetic emboldening or slanting: with no bold face
+ * installed, bold text simply renders in the regular face, as it does for <text>.
+ */
+struct ForeignObjectFonts {
+    static constexpr unsigned char Bold = 1;
+    static constexpr unsigned char Italic = 2;
+
+    Font face[4];
+    const Font& get(unsigned char style) const { return face[style & 3]; }
+};
+
 class SVGForeignObjectElement final : public SVGGraphicsElement {
 public:
     SVGForeignObjectElement(Document* document);
@@ -1168,6 +1186,12 @@ public:
     const SVGLength& height() const { return m_height; }
     const Font& font() const { return m_font; }
     const SVGPaintServer& fill() const { return m_fill; }
+
+    /// Bold/italic bits (ForeignObjectFonts::Bold/Italic) the element itself inherits, i.e. the style of font().
+    unsigned char baseFontStyle() const { return m_baseFontStyle; }
+    /// font() plus the variants named by `usedStyles` (a bit mask: bit n set = style n is needed). Nothing
+    /// is looked up for styles that are not in the mask, so unstyled text costs nothing extra.
+    ForeignObjectFonts fontsFor(unsigned usedStyles) const;
 
     /**
      * @brief Raw markup captured between <foreignObject ...> and
@@ -1205,6 +1229,8 @@ private:
     SVGLength m_width;
     SVGLength m_height;
     Font m_font;
+    std::string m_fontFamily;
+    unsigned char m_baseFontStyle = 0;
     SVGPaintServer m_fill;
     std::string m_rawContent;
     ForeignObjectRenderer* m_renderer = nullptr;
@@ -4994,21 +5020,26 @@ NOVASVG_INLINE SVGLayoutState::SVGLayoutState(const SVGLayoutState& parent, cons
     }
 }
 
-NOVASVG_INLINE Font SVGLayoutState::font() const
+// The one place a (font-family stack, weight, style) triple becomes a Font, shared by SVG <text>
+// (SVGLayoutState::font()) and by the bold/italic runs inside a <foreignObject>, so both always
+// pick the very same face for the same request.
+NOVASVG_INLINE Font makeFont(const std::string& family, float size, bool bold, bool italic)
 {
-    auto bold = m_font_weight == FontWeight::Bold;
-    auto italic = m_font_style == FontStyle::Italic;
-
     // Walk the font-family stack name by name (see
     // FontFaceCache::getFontFaceForFamilyStack()): an @font-face-embedded
     // font wins under its exact declared name, an uninstalled name falls
     // back to a metric-compatible substitute, unresolvable names are skipped.
-    FontFace face = fontFaceCache()->getFontFaceForFamilyStack(m_font_family, bold, italic);
+    FontFace face = fontFaceCache()->getFontFaceForFamilyStack(family, bold, italic);
 
     // Absolute last resort: the hardcoded generic-family table.
     if(face.isNull())
         face = fontFaceCache()->getFontFace(emptyString, bold, italic);
-    return Font(face, m_font_size);
+    return Font(face, size);
+}
+
+NOVASVG_INLINE Font SVGLayoutState::font() const
+{
+    return makeFont(m_font_family, m_font_size, m_font_weight == FontWeight::Bold, m_font_style == FontStyle::Italic);
 }
 
 // ---- svgelement (impl) ----
@@ -6037,9 +6068,29 @@ NOVASVG_INLINE Rect SVGForeignObjectElement::strokeBoundingBox() const
     return fillBoundingBox();
 }
 
+NOVASVG_INLINE ForeignObjectFonts SVGForeignObjectElement::fontsFor(unsigned usedStyles) const
+{
+    ForeignObjectFonts fonts;
+    for(unsigned style = 0; style < 4; ++style) {
+        if(!(usedStyles & (1u << style)))
+            continue;
+        if(style == m_baseFontStyle) {
+            fonts.face[style] = m_font;
+            continue;
+        }
+        auto variant = makeFont(m_fontFamily, m_font.size(), (style & ForeignObjectFonts::Bold) != 0, (style & ForeignObjectFonts::Italic) != 0);
+        // A variant the machine can't provide at all must not blank the text: use the element's own face.
+        fonts.face[style] = variant.isNull() ? m_font : variant;
+    }
+    return fonts;
+}
+
 NOVASVG_INLINE void SVGForeignObjectElement::layoutElement(const SVGLayoutState& state)
 {
     m_font = state.font();
+    m_fontFamily = state.font_family();
+    m_baseFontStyle = (unsigned char)((state.font_weight() == FontWeight::Bold ? ForeignObjectFonts::Bold : 0)
+                                      | (state.font_style() == FontStyle::Italic ? ForeignObjectFonts::Italic : 0));
     m_fill = getPaintServer(state.fill(), state.fill_opacity());
     SVGGraphicsElement::layoutElement(state);
 }
@@ -6063,105 +6114,6 @@ NOVASVG_INLINE ForeignObjectSimple* ForeignObjectSimple::instance()
 }
 
 namespace {
-
-// Strips HTML/XML tags, decodes a handful of common entities, and
-// collapses runs of whitespace to a single space -- roughly
-// "element.innerText" for the tiny subset of HTML this cares about.
-// Deliberately not a real parser: no nesting/structure is kept, no
-// per-tag CSS (display:block vs inline, margins, ...) is applied. That
-// matches what Mermaid (and most SVG-generating tools) actually need,
-// since their foreignObject content is always a single short,
-// non-wrapping, already-pre-laid-out text run.
-inline std::string foreignObjectPlainText(std::string_view html)
-{
-    // Tag names that force a line break, matching their real-browser
-    // default of `display: block` (so a `<br>`/`<p>`/`<div>` boundary
-    // becomes '\n', preserved through the whitespace-collapse pass below,
-    // instead of collapsing into an ordinary space like inline tags do).
-    // Mermaid's own labels are `white-space: nowrap` by design (each is
-    // laid out to fit on one line at the font it expects) and only ever
-    // span multiple lines where it inserted an explicit `<br>` itself at
-    // a deliberate break point -- so honoring just these forced breaks
-    // reproduces real multi-line labels without needing general
-    // width-based word-wrap.
-    static const std::set<std::string_view> block_tags = {"br", "p", "div", "tr", "li"};
-
-    std::string out;
-    out.reserve(html.size());
-    bool inTag = false;
-    for(size_t i = 0; i < html.size();) {
-        char c = html[i];
-        if(inTag) {
-            if(c == '>')
-                inTag = false;
-            ++i;
-            continue;
-        }
-
-        if(c == '<') {
-            auto nameStart = i + 1;
-            if(nameStart < html.size() && html[nameStart] == '/')
-                ++nameStart;
-            auto nameEnd = nameStart;
-            while(nameEnd < html.size() && ((html[nameEnd] >= 'a' && html[nameEnd] <= 'z') || (html[nameEnd] >= 'A' && html[nameEnd] <= 'Z')))
-                ++nameEnd;
-            std::string tagName(html.substr(nameStart, nameEnd - nameStart));
-            for(auto& ch : tagName)
-                ch = char(std::tolower(static_cast<unsigned char>(ch)));
-
-            // ponytail: every OTHER tag boundary still becomes a plain
-            // space (over-inserting there is harmless, see below), only
-            // this small block-level set forces an actual line break.
-            out += block_tags.count(tagName) ? '\n' : ' ';
-            inTag = true;
-            ++i;
-            continue;
-        }
-
-        if(c == '&') {
-            if(html.compare(i, 5, "&amp;") == 0) { out += '&'; i += 5; continue; }
-            if(html.compare(i, 4, "&lt;") == 0) { out += '<'; i += 4; continue; }
-            if(html.compare(i, 4, "&gt;") == 0) { out += '>'; i += 4; continue; }
-            if(html.compare(i, 6, "&quot;") == 0) { out += '"'; i += 6; continue; }
-            if(html.compare(i, 6, "&apos;") == 0) { out += '\''; i += 6; continue; }
-            if(html.compare(i, 6, "&nbsp;") == 0) { out += ' '; i += 6; continue; }
-        }
-
-        out += c;
-        ++i;
-    }
-
-    // Collapse runs of ordinary whitespace into a single space (trimming
-    // leading/trailing), same as before -- but '\n' is preserved as its
-    // own line-break marker rather than being folded into that, and
-    // spaces immediately touching a '\n' are dropped rather than kept as
-    // a redundant space before/after the break.
-    std::string collapsed;
-    collapsed.reserve(out.size());
-    bool lastWasSpace = true; // trims leading whitespace too
-    for(char c : out) {
-        if(c == '\t' || c == '\r')
-            c = ' ';
-        if(c == '\n') {
-            while(!collapsed.empty() && collapsed.back() == ' ')
-                collapsed.pop_back();
-            collapsed += '\n';
-            lastWasSpace = true;
-            continue;
-        }
-        if(c == ' ') {
-            if(lastWasSpace)
-                continue;
-            lastWasSpace = true;
-        } else {
-            lastWasSpace = false;
-        }
-        collapsed += c;
-    }
-    while(!collapsed.empty() && (collapsed.back() == ' ' || collapsed.back() == '\n'))
-        collapsed.pop_back();
-    return collapsed;
-}
 
 inline std::u32string utf8ToU32(const std::string& text)
 {
@@ -6325,6 +6277,277 @@ inline std::optional<std::string_view> htmlAttribute(std::string_view tag, std::
     if(valueEnd == std::string_view::npos)
         return std::nullopt;
     return tag.substr(valueStart, valueEnd - valueStart);
+}
+
+// ---------------------------------------------------------------------------------------------------
+// <foreignObject> text as runs of one style each.
+//
+// Roughly "element.innerText" for the tiny subset of HTML this cares about, but keeping what a reader
+// can SEE of the markup: which stretches are bold and which are italic. Deliberately not a real HTML
+// engine -- no box model, no per-tag display, margins or sizes -- because mermaid (and most
+// SVG-generating tools) only put one short run of text, perhaps with <br>, <b>/<strong> and <i>/<em>
+// in it.
+//
+// Style bits (ForeignObjectFonts::Bold / Italic) come from, in this order:
+//   * the style the foreignObject itself inherits from the SVG around it (the `baseStyle` argument);
+//   * the tag: <b> <strong> = bold, <i> <em> <cite> <var> <dfn> = italic;
+//   * an inline style="font-weight: ..." / style="font-style: ...", which wins over the tag and may
+//     also turn a style OFF again (`font-weight: normal` inside a bold stretch).
+// Styles nest and are inherited by everything inside the element, and end with its closing tag.
+// ---------------------------------------------------------------------------------------------------
+struct ForeignObjectSegment {
+    std::string text; ///< UTF-8; '\n' marks a forced line break (<br>, <p>, <div>, ...)
+    unsigned char style = 0;
+};
+
+inline bool foreignObjectIsVoidTag(const std::string& tag)
+{
+    static const std::set<std::string_view> tags = {"area", "base", "br", "col", "embed", "hr", "img",
+                                                    "input", "link", "meta", "source", "track", "wbr"};
+    return tags.count(tag) > 0;
+}
+
+// Tags that sit INSIDE a line of text, so a boundary with them is not a boundary between words:
+// "un<b>believ</b>able" is one word. Every tag NOT in this set, and not a block tag, still counts as
+// a word boundary (a space), exactly as before styles existed -- see foreignObjectStyledText().
+inline bool foreignObjectIsInlineTag(const std::string& tag)
+{
+    static const std::set<std::string_view> tags = {"a", "abbr", "b", "bdi", "bdo", "big", "cite", "code", "data", "del",
+                                                    "dfn", "em", "font", "i", "ins", "kbd", "label", "mark", "q", "s",
+                                                    "samp", "small", "span", "strike", "strong", "sub", "sup", "time",
+                                                    "tt", "u", "var"};
+    return tags.count(tag) > 0;
+}
+
+// The value of the style="..." attribute inside a tag's text (after its name), or empty.
+inline std::string_view foreignObjectStyleAttribute(std::string_view attributes)
+{
+    size_t pos = 0;
+    while(pos < attributes.size()) {
+        while(pos < attributes.size() && (std::isspace(static_cast<unsigned char>(attributes[pos])) || attributes[pos] == '/'))
+            ++pos;
+        auto nameStart = pos;
+        while(pos < attributes.size() && !std::isspace(static_cast<unsigned char>(attributes[pos])) && attributes[pos] != '=' && attributes[pos] != '/')
+            ++pos;
+        auto name = attributes.substr(nameStart, pos - nameStart);
+        while(pos < attributes.size() && std::isspace(static_cast<unsigned char>(attributes[pos])))
+            ++pos;
+        std::string_view value;
+        if(pos < attributes.size() && attributes[pos] == '=') {
+            ++pos;
+            while(pos < attributes.size() && std::isspace(static_cast<unsigned char>(attributes[pos])))
+                ++pos;
+            if(pos < attributes.size() && (attributes[pos] == '"' || attributes[pos] == '\'')) {
+                auto quote = attributes[pos++];
+                auto end = attributes.find(quote, pos);
+                value = attributes.substr(pos, end == std::string_view::npos ? std::string_view::npos : end - pos);
+                pos = end == std::string_view::npos ? attributes.size() : end + 1;
+            } else {
+                auto valueStart = pos;
+                while(pos < attributes.size() && !std::isspace(static_cast<unsigned char>(attributes[pos])))
+                    ++pos;
+                value = attributes.substr(valueStart, pos - valueStart);
+            }
+        }
+        if(name.size() == 5 && (name[0] | 0x20) == 's' && (name[1] | 0x20) == 't' && (name[2] | 0x20) == 'y' && (name[3] | 0x20) == 'l' && (name[4] | 0x20) == 'e')
+            return value;
+    }
+    return {};
+}
+
+// The lower-cased value of one declaration, without a trailing `!important`; empty if it is absent.
+inline std::string foreignObjectDeclaration(std::string_view block, std::string_view property)
+{
+    auto value = findDeclarationValue(block, property);
+    if(!value)
+        return {};
+    std::string result;
+    for(char c : *value)
+        result += char(std::tolower(static_cast<unsigned char>(c)));
+    if(auto bang = result.find('!'); bang != std::string::npos)
+        result.erase(bang);
+    while(!result.empty() && std::isspace(static_cast<unsigned char>(result.back())))
+        result.pop_back();
+    return result;
+}
+
+// The style in effect inside an element that is being opened.
+inline unsigned char foreignObjectStyleOfOpening(const std::string& tag, std::string_view attributes, unsigned char inherited)
+{
+    unsigned char style = inherited;
+    if(tag == "b" || tag == "strong")
+        style |= ForeignObjectFonts::Bold;
+    else if(tag == "i" || tag == "em" || tag == "cite" || tag == "var" || tag == "dfn")
+        style |= ForeignObjectFonts::Italic;
+
+    auto inlineStyle = foreignObjectStyleAttribute(attributes);
+    if(!inlineStyle.empty()) {
+        if(auto weight = foreignObjectDeclaration(inlineStyle, "font-weight"); !weight.empty()) {
+            style &= (unsigned char)~ForeignObjectFonts::Bold;
+            if(parseFontWeight(weight) == FontWeight::Bold)
+                style |= ForeignObjectFonts::Bold;
+        }
+        if(auto fontStyle = foreignObjectDeclaration(inlineStyle, "font-style"); !fontStyle.empty()) {
+            style &= (unsigned char)~ForeignObjectFonts::Italic;
+            if(parseFontStyle(fontStyle) == FontStyle::Italic)
+                style |= ForeignObjectFonts::Italic;
+        }
+    }
+    return style;
+}
+
+inline std::vector<ForeignObjectSegment> foreignObjectStyledText(std::string_view html, unsigned char baseStyle = 0)
+{
+    // Tag names that force a line break, matching their real-browser default of `display: block` (so a
+    // `<br>`/`<p>`/`<div>` boundary becomes '\n', preserved through the whitespace-collapse pass below,
+    // instead of collapsing into an ordinary space like other tags do). Mermaid's own labels are
+    // `white-space: nowrap` by design (each is laid out to fit on one line at the font it expects) and
+    // only ever span multiple lines where it inserted an explicit `<br>` itself at a deliberate break
+    // point -- so honoring just these forced breaks reproduces real multi-line labels without needing
+    // general width-based word-wrap.
+    static const std::set<std::string_view> block_tags = {"br", "p", "div", "tr", "li"};
+
+    std::vector<ForeignObjectSegment> raw;
+    auto put = [&](char c, unsigned char style) {
+        if(raw.empty() || raw.back().style != style)
+            raw.push_back({std::string(), style});
+        raw.back().text += c;
+    };
+
+    struct OpenElement {
+        std::string tag;
+        unsigned char style;
+    };
+    std::vector<OpenElement> open;
+    unsigned char style = baseStyle;
+
+    for(size_t i = 0; i < html.size();) {
+        char c = html[i];
+
+        if(c == '<') {
+            if(html.compare(i, 4, "<!--") == 0) {
+                auto end = html.find("-->", i + 4);
+                i = end == std::string_view::npos ? html.size() : end + 3;
+                put(' ', style);
+                continue;
+            }
+
+            // the end of the tag: the first '>' that is not inside a quoted attribute value
+            size_t gt = i + 1;
+            char quote = 0;
+            while(gt < html.size() && (quote || html[gt] != '>')) {
+                if(quote) {
+                    if(html[gt] == quote)
+                        quote = 0;
+                } else if(html[gt] == '"' || html[gt] == '\'') {
+                    quote = html[gt];
+                }
+                ++gt;
+            }
+            auto inside = html.substr(i + 1, gt - i - 1);
+            i = NOVASVG_MIN(gt + 1, html.size());
+
+            const bool closing = !inside.empty() && inside.front() == '/';
+            const bool selfClosing = !inside.empty() && inside.back() == '/';
+            auto rest = closing ? inside.substr(1) : inside;
+            size_t nameLength = 0;
+            while(nameLength < rest.size() && std::isalnum(static_cast<unsigned char>(rest[nameLength])))
+                ++nameLength;
+            std::string name(rest.substr(0, nameLength));
+            for(auto& ch : name)
+                ch = char(std::tolower(static_cast<unsigned char>(ch)));
+
+            // Every tag boundary is a word boundary (a space), so "Hello<br/>world" and "a</td><td>b"
+            // never glue together; block tags force a line break instead; and the tags that sit inside
+            // a line of text (<b>, <span>, ...) are no boundary at all.
+            auto boundary = [&](unsigned char at) {
+                if(block_tags.count(name))
+                    put('\n', at);
+                else if(!foreignObjectIsInlineTag(name))
+                    put(' ', at);
+            };
+
+            if(closing) {
+                for(size_t k = open.size(); k-- > 0;) {
+                    if(open[k].tag == name) {
+                        open.resize(k);
+                        break;
+                    }
+                }
+                style = open.empty() ? baseStyle : open.back().style;
+                boundary(style);
+            } else {
+                boundary(style);
+                if(!selfClosing && !foreignObjectIsVoidTag(name)) {
+                    style = foreignObjectStyleOfOpening(name, rest.substr(nameLength), style);
+                    open.push_back({name, style});
+                }
+            }
+            continue;
+        }
+
+        if(c == '&') {
+            if(html.compare(i, 5, "&amp;") == 0) { put('&', style); i += 5; continue; }
+            if(html.compare(i, 4, "&lt;") == 0) { put('<', style); i += 4; continue; }
+            if(html.compare(i, 4, "&gt;") == 0) { put('>', style); i += 4; continue; }
+            if(html.compare(i, 6, "&quot;") == 0) { put('"', style); i += 6; continue; }
+            if(html.compare(i, 6, "&apos;") == 0) { put('\'', style); i += 6; continue; }
+            if(html.compare(i, 6, "&nbsp;") == 0) { put(' ', style); i += 6; continue; }
+        }
+
+        put(c, style);
+        ++i;
+    }
+
+    // Collapse runs of ordinary whitespace into a single space (trimming leading/trailing) -- across
+    // run boundaries, so "<b>a </b> b" has one space, not two -- but '\n' is preserved as its own
+    // line-break marker rather than being folded into that, and spaces immediately touching a '\n' are
+    // dropped rather than kept as a redundant space before/after the break.
+    std::vector<ForeignObjectSegment> collapsed;
+    auto append = [&](char c, unsigned char at) {
+        if(collapsed.empty() || collapsed.back().style != at)
+            collapsed.push_back({std::string(), at});
+        collapsed.back().text += c;
+    };
+    auto dropLast = [&]() {
+        collapsed.back().text.pop_back();
+        if(collapsed.back().text.empty())
+            collapsed.pop_back();
+    };
+    bool lastWasSpace = true; // trims leading whitespace too
+    for(const auto& segment : raw) {
+        for(char c : segment.text) {
+            if(c == '\t' || c == '\r')
+                c = ' ';
+            if(c == '\n') {
+                while(!collapsed.empty() && collapsed.back().text.back() == ' ')
+                    dropLast();
+                append('\n', segment.style);
+                lastWasSpace = true;
+                continue;
+            }
+            if(c == ' ') {
+                if(lastWasSpace)
+                    continue;
+                lastWasSpace = true;
+            } else {
+                lastWasSpace = false;
+            }
+            append(c, segment.style);
+        }
+    }
+    while(!collapsed.empty() && (collapsed.back().text.back() == ' ' || collapsed.back().text.back() == '\n'))
+        dropLast();
+    return collapsed;
+}
+
+// The same text with every style dropped: the plain "innerText" of the HTML ('\n' at forced breaks).
+inline std::string foreignObjectPlainText(std::string_view html)
+{
+    std::string text;
+    for(const auto& segment : foreignObjectStyledText(html))
+        text += segment.text;
+    return text;
 }
 
 // Real line-height for foreignObject text, read from the HTML's own
@@ -6496,6 +6719,174 @@ inline std::vector<std::u32string> wrapForeignObjectText(const std::string& text
     return lines;
 }
 
+// One stretch of a line in a single style; a line is a few of them in a row.
+struct ForeignObjectRun {
+    std::u32string text;
+    unsigned char style = 0;
+};
+using ForeignObjectLine = std::vector<ForeignObjectRun>;
+
+// The text of a segment list split at its forced breaks ('\n'), each paragraph as segments again.
+inline std::vector<std::vector<ForeignObjectSegment>> splitForeignObjectParagraphs(const std::vector<ForeignObjectSegment>& segments)
+{
+    std::vector<std::vector<ForeignObjectSegment>> paragraphs(1);
+    for(const auto& segment : segments) {
+        size_t pos = 0;
+        while(pos <= segment.text.size()) {
+            auto newline = segment.text.find('\n', pos);
+            auto piece = segment.text.substr(pos, newline == std::string::npos ? std::string::npos : newline - pos);
+            if(!piece.empty())
+                paragraphs.back().push_back({std::move(piece), segment.style});
+            if(newline == std::string::npos)
+                break;
+            paragraphs.emplace_back();
+            pos = newline + 1;
+        }
+    }
+    return paragraphs;
+}
+
+// Width of text whose characters each have a style: every stretch of one style is measured on its own
+// with that style's face (kerning is not applied ACROSS a style change, which no face could do anyway).
+inline float measureForeignObjectCells(const std::u32string& chars, const std::vector<unsigned char>& styles, const ForeignObjectFonts& fonts)
+{
+    float width = 0.f;
+    size_t begin = 0;
+    while(begin < chars.size()) {
+        size_t end = begin + 1;
+        while(end < chars.size() && styles[end] == styles[begin])
+            ++end;
+        width += fonts.get(styles[begin]).measureText(std::u32string_view(chars).substr(begin, end - begin));
+        begin = end;
+    }
+    return width;
+}
+
+inline ForeignObjectLine makeForeignObjectLine(const std::u32string& chars, const std::vector<unsigned char>& styles)
+{
+    ForeignObjectLine line;
+    for(size_t i = 0; i < chars.size(); ++i) {
+        if(line.empty() || line.back().style != styles[i])
+            line.push_back({std::u32string(), styles[i]});
+        line.back().text += chars[i];
+    }
+    return line;
+}
+
+// Lays ONE paragraph out into lines (appended to `lines`). With maxWidth <= 0 it never soft-wraps.
+inline void wrapForeignObjectStyledParagraph(const std::vector<ForeignObjectSegment>& paragraph, const ForeignObjectFonts& fonts, float maxWidth, std::vector<ForeignObjectLine>& lines)
+{
+    bool uniform = true;
+    for(const auto& segment : paragraph)
+        uniform = uniform && segment.style == paragraph.front().style;
+
+    if(uniform) {
+        // One style all the way: exactly the layout text had before it could carry styles (a candidate
+        // line is measured as ONE string, so kerning across the space counts).
+        const auto style = paragraph.front().style;
+        std::string text;
+        for(const auto& segment : paragraph)
+            text += segment.text;
+        auto chars = utf8ToU32(text);
+        const auto& font = fonts.get(style);
+        if(maxWidth > 0.f && !font.isNull()) {
+            std::vector<std::u32string> wrapped;
+            wrapForeignObjectParagraph(chars, font, maxWidth, wrapped);
+            for(auto& line : wrapped)
+                lines.push_back(ForeignObjectLine{ForeignObjectRun{std::move(line), style}});
+        } else {
+            lines.push_back(ForeignObjectLine{ForeignObjectRun{std::move(chars), style}});
+        }
+        return;
+    }
+
+    std::u32string chars;
+    std::vector<unsigned char> styles;
+    for(const auto& segment : paragraph) {
+        auto piece = utf8ToU32(segment.text);
+        chars += piece;
+        styles.insert(styles.end(), piece.size(), segment.style);
+    }
+    if(!(maxWidth > 0.f)) {
+        lines.push_back(makeForeignObjectLine(chars, styles));
+        return;
+    }
+
+    // Same greedy word-wrap as wrapForeignObjectParagraph(), a word at a time, but a candidate line is
+    // measured style stretch by style stretch. A space takes the style it has in the source.
+    const float limit = maxWidth + 1.f / 128.f;
+    std::u32string current;
+    std::vector<unsigned char> currentStyles;
+    size_t i = 0;
+    while(i < chars.size()) {
+        unsigned char spaceStyle = 0;
+        while(i < chars.size() && (chars[i] == U' ' || chars[i] == U'\t')) {
+            spaceStyle = styles[i];
+            ++i;
+        }
+        auto wordEnd = i;
+        while(wordEnd < chars.size() && chars[wordEnd] != U' ' && chars[wordEnd] != U'\t')
+            ++wordEnd;
+        if(wordEnd == i)
+            break;
+        auto word = chars.substr(i, wordEnd - i);
+        std::vector<unsigned char> wordStyles(styles.begin() + long(i), styles.begin() + long(wordEnd));
+        i = wordEnd;
+
+        if(current.empty()) {
+            current = std::move(word);
+            currentStyles = std::move(wordStyles);
+            continue;
+        }
+        auto candidate = current;
+        auto candidateStyles = currentStyles;
+        candidate += U' ';
+        candidateStyles.push_back(spaceStyle);
+        candidate += word;
+        candidateStyles.insert(candidateStyles.end(), wordStyles.begin(), wordStyles.end());
+        if(measureForeignObjectCells(candidate, candidateStyles, fonts) <= limit) {
+            current = std::move(candidate);
+            currentStyles = std::move(candidateStyles);
+        } else {
+            lines.push_back(makeForeignObjectLine(current, currentStyles));
+            current = std::move(word);
+            currentStyles = std::move(wordStyles);
+        }
+    }
+    if(!current.empty())
+        lines.push_back(makeForeignObjectLine(current, currentStyles));
+}
+
+// Lines of a styled text, honouring its forced breaks; wrapWidth <= 0 = no soft wrapping. Never empty.
+inline std::vector<ForeignObjectLine> layoutForeignObjectText(const std::vector<ForeignObjectSegment>& segments, const ForeignObjectFonts& fonts, float wrapWidth)
+{
+    std::vector<ForeignObjectLine> lines;
+    for(const auto& paragraph : splitForeignObjectParagraphs(segments)) {
+        if(!paragraph.empty())
+            wrapForeignObjectStyledParagraph(paragraph, fonts, wrapWidth, lines);
+    }
+    if(lines.empty())
+        lines.emplace_back();
+    return lines;
+}
+
+inline float measureForeignObjectLine(const ForeignObjectLine& line, const ForeignObjectFonts& fonts)
+{
+    float width = 0.f;
+    for(const auto& run : line)
+        width += fonts.get(run.style).measureText(std::u32string_view(run.text));
+    return width;
+}
+
+// Bit n set = style n appears somewhere in the text.
+inline unsigned foreignObjectStylesUsed(const std::vector<ForeignObjectSegment>& segments)
+{
+    unsigned used = 0;
+    for(const auto& segment : segments)
+        used |= 1u << (segment.style & 3);
+    return used;
+}
+
 } // namespace
 
 /**
@@ -6541,12 +6932,12 @@ struct ForeignObjectMetrics {
  * size it to, and the widest line at this exact font is the only figure
  * that guarantees render() never needs to condense anything afterward.
  */
-inline ForeignObjectMetrics measureForeignObjectContent(std::string_view rawHtml, const Font& font, float maxWidth = -1.f)
+inline ForeignObjectMetrics measureForeignObjectSegments(std::string_view rawHtml, const std::vector<ForeignObjectSegment>& segments, const ForeignObjectFonts& fonts, unsigned char baseStyle, float maxWidth)
 {
     ForeignObjectMetrics metrics;
+    const auto& font = fonts.get(baseStyle);
     if(font.isNull())
         return metrics;
-    auto text = foreignObjectPlainText(rawHtml);
     // Same rule render() applies, so layout and paint agree: soft-wrap only if
     // the HTML's own `white-space` allows it, at the explicit maxWidth if one
     // was given, else at the width the HTML itself declares (px).
@@ -6557,7 +6948,7 @@ inline ForeignObjectMetrics measureForeignObjectContent(std::string_view rawHtml
         else if(auto declared = foreignObjectDeclaredWidth(rawHtml))
             wrapWidth = *declared;
     }
-    auto lines = wrapForeignObjectText(text, &font, wrapWidth);
+    auto lines = layoutForeignObjectText(segments, fonts, wrapWidth);
     metrics.lineCount = int(lines.size());
     metrics.lineHeight = foreignObjectLineHeight(rawHtml, font.size()).value_or(font.height() * 1.2f);
     metrics.height = metrics.lineHeight * float(metrics.lineCount);
@@ -6566,23 +6957,53 @@ inline ForeignObjectMetrics measureForeignObjectContent(std::string_view rawHtml
         // comment on why this codebase avoids std::max/std::min entirely
         // rather than special-casing each call site against the
         // Windows.h max/min macro collision.
-        metrics.width = NOVASVG_MAX(metrics.width, font.measureText(std::u32string_view(line)));
+        metrics.width = NOVASVG_MAX(metrics.width, measureForeignObjectLine(line, fonts));
     return metrics;
+}
+
+/**
+ * @brief measureForeignObjectContent() for text that may carry bold and italic: `fonts` supplies the face
+ * for each style (see ForeignObjectFonts; SVGForeignObjectElement::fontsFor() builds it the way painting
+ * does), `baseStyle` is the style the foreignObject itself has. This is exactly what painting does, so the
+ * metrics and the painted box cannot disagree about a bold label being wider than a regular one.
+ */
+inline ForeignObjectMetrics measureForeignObjectContent(std::string_view rawHtml, const ForeignObjectFonts& fonts, float maxWidth = -1.f, unsigned char baseStyle = 0)
+{
+    return measureForeignObjectSegments(rawHtml, foreignObjectStyledText(rawHtml, baseStyle), fonts, baseStyle, maxWidth);
+}
+
+/**
+ * @brief measureForeignObjectContent() with a single face: every style is measured with `font`, i.e. as
+ * if the text had no bold or italic in it. Line breaks and heights are unaffected by bold or italic;
+ * only the widths of styled stretches can differ from what painting produces, by however much the real
+ * bold/italic faces differ from `font`. Use the ForeignObjectFonts overload when that matters.
+ */
+inline ForeignObjectMetrics measureForeignObjectContent(std::string_view rawHtml, const Font& font, float maxWidth = -1.f)
+{
+    auto segments = foreignObjectStyledText(rawHtml);
+    for(auto& segment : segments)
+        segment.style = 0; // one face for everything: measured exactly like plain text
+    ForeignObjectFonts fonts;
+    fonts.face[0] = font;
+    return measureForeignObjectSegments(rawHtml, segments, fonts, 0, maxWidth);
 }
 
 NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* element, SVGRenderState& state) const
 {
-    auto text = foreignObjectPlainText(element->rawContent());
-    if(text.empty())
+    auto segments = foreignObjectStyledText(element->rawContent(), element->baseFontStyle());
+    if(segments.empty())
         return;
 
     const auto& font = element->font();
     if(font.isNull())
         return;
 
+    // One face per style that actually occurs (just font() for unstyled text, nothing else is looked up).
+    const auto fonts = element->fontsFor(foreignObjectStylesUsed(segments));
+
     auto box = element->fillBoundingBox();
     // A browser wraps HTML text at its box's edge unless CSS says nowrap/pre.
-    auto lines = wrapForeignObjectText(text, &font, foreignObjectAllowsWrap(element->rawContent()) ? box.w : 0.f);
+    auto lines = layoutForeignObjectText(segments, fonts, foreignObjectAllowsWrap(element->rawContent()) ? box.w : 0.f);
 
     // Real line-height from the HTML's own `line-height:` (mermaid's
     // content usually says 1.5) when present and parseable; falls back
@@ -6602,8 +7023,21 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
     state->setColor(element->htmlTextColor().value_or(Color(0, 0, 0)));
 
     for(size_t i = 0; i < lines.size(); ++i) {
-        std::u32string_view lineView(lines[i]);
-        auto lineWidth = font.measureText(lineView);
+        const auto& line = lines[i];
+        auto lineWidth = measureForeignObjectLine(line, fonts);
+
+        // A line is as tall as its tallest face (bold or italic can differ a little from the regular one);
+        // a line of one style, the usual case, is simply that style's face.
+        float ascent = font.ascent();
+        float fontHeight = font.height();
+        if(!line.empty()) {
+            ascent = 0.f;
+            fontHeight = 0.f;
+            for(const auto& run : line) {
+                ascent = NOVASVG_MAX(ascent, fonts.get(run.style).ascent());
+                fontHeight = NOVASVG_MAX(fontHeight, fonts.get(run.style).height());
+            }
+        }
 
         // A real Trebuchet-MS-metrics render always fits each wrapped
         // line with room to spare -- so overflow here only ever means
@@ -6626,7 +7060,7 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
             // term, text sits noticeably above center (font.height() is
             // usually well under a 1.5x line-height, so the omitted term
             // isn't a rounding-sized error).
-            topY + float(i) * lineHeight + (lineHeight - font.height()) / 2.f + font.ascent()
+            topY + float(i) * lineHeight + (lineHeight - fontHeight) / 2.f + ascent
         );
 
         auto textTransform = state.currentTransform();
@@ -6636,7 +7070,15 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
             // (and therefore this line's vertical position) is untouched.
             textTransform = textTransform * Transform::translated(origin.x, 0.f) * Transform::scaled(scale, 1.f) * Transform::translated(-origin.x, 0.f);
         }
-        state->fillText(lineView, font, origin, textTransform);
+
+        // The runs of the line side by side on the one baseline, each in its own face.
+        float x = origin.x;
+        for(const auto& run : line) {
+            const std::u32string_view runView(run.text);
+            const auto& runFont = fonts.get(run.style);
+            state->fillText(runView, runFont, Point(x, origin.y), textTransform);
+            x += runFont.measureText(runView);
+        }
     }
 }
 

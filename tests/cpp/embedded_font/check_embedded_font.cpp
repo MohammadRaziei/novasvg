@@ -66,3 +66,63 @@ TEST_CASE("the embedded font lays text out exactly like the full DejaVu Sans")
         }
     }
 }
+
+namespace {
+// The directory the regular test font lives in; the bold/oblique faces sit beside it.
+std::string font_dir()
+{
+    std::string path = NOVASVG_TEST_FONT_PATH;
+    return path.substr(0, path.find_last_of("/\\") + 1);
+}
+} // namespace
+
+TEST_CASE("bold and italic requests get the bold / oblique embedded faces, laid out like the full fonts")
+{
+    struct Face { const char* file; bool bold; bool italic; };
+    const Face faces[] = {
+        {"DejaVuSans-Bold.ttf", true, false},
+        {"DejaVuSans-Oblique.ttf", false, true},
+        {"DejaVuSans-BoldOblique.ttf", true, true},
+    };
+    auto* cache = novasvg::fontFaceCache();
+    const auto regular = cache->getFontFace("sans-serif", false, false);
+    REQUIRE(!regular.isNull());
+    const std::u32string samples[] = {U"Hello World", U"AV To LT Ty Yo WA", U"fi fl ffi ffl office", U"The quick brown fox jumps over the lazy dog"};
+
+    for(const auto& spec : faces) {
+        CAPTURE(spec.file);
+        const std::string family = std::string("Full ") + spec.file;
+        REQUIRE(novasvg::addFontFaceFromFile(family.c_str(), spec.bold, spec.italic, (font_dir() + spec.file).c_str()));
+        const auto full = cache->getFontFace(family, spec.bold, spec.italic);
+        const auto embedded = cache->getFontFace("sans-serif", spec.bold, spec.italic);
+        REQUIRE(!full.isNull());
+        REQUIRE(!embedded.isNull());
+        CHECK(embedded.get() != regular.get()); // not just the regular face under another request
+        for(const auto& text : samples)
+            CHECK(novasvg::Font(embedded, 16.f).measureText(text) == novasvg::Font(full, 16.f).measureText(text));
+        // and it is a different design from the regular face (bold is wider, oblique has other advances)
+        CHECK(novasvg::Font(embedded, 16.f).measureText(samples[3]) != novasvg::Font(regular, 16.f).measureText(samples[3]));
+    }
+}
+
+TEST_CASE("bold text is drawn heavier than regular text although the machine has no fonts")
+{
+    auto text = [](const char* attrs) {
+        return std::string("<svg xmlns='http://www.w3.org/2000/svg' width='200' height='60'><text x='5' y='40' font-size='32' font-family='sans-serif' ") + attrs + ">Hello</text></svg>";
+    };
+    const auto regular = inked_pixels(text(""));
+    CHECK(inked_pixels(text("font-weight='bold'")) > regular * 11 / 10);
+    CHECK(inked_pixels(text("font-style='italic'")) != regular);
+}
+
+TEST_CASE("bold and italic runs inside a foreignObject use the embedded faces")
+{
+    auto label = [](const char* inner) {
+        return std::string("<svg xmlns='http://www.w3.org/2000/svg' width='300' height='60'><foreignObject x='0' y='0' width='300' height='60'>"
+                           "<div xmlns='http://www.w3.org/1999/xhtml' style='font-size:24px;font-family:sans-serif;text-align:center'>") + inner + "</div></foreignObject></svg>";
+    };
+    const auto plain = inked_pixels(label("Hello world"));
+    CHECK(inked_pixels(label("<b>Hello world</b>")) > plain * 11 / 10);
+    CHECK(inked_pixels(label("<i>Hello world</i>")) != plain);
+    CHECK(inked_pixels(label("Hello <b>world</b>")) > plain);
+}
