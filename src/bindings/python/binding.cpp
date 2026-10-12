@@ -193,15 +193,35 @@ NB_MODULE(novasvg_py, m) {
         "Per-glyph (pen_x, ink_left, ink_right, ink_top, ink_bottom) in pixels (top/bottom relative to the baseline, y down) for every glyph that has an outline "
         "(spaces are skipped), using the same ligature + kerning walk as measure_text().");
 
-    m.def("measure_foreign_object", [](const std::string& html, const novasvg::Font& font, std::optional<float> max_width) {
-        auto metrics = novasvg::measureForeignObjectContent(html, font, max_width.value_or(-1.f));
+    m.def("measure_foreign_object", [](const std::string& html, const novasvg::Font& font, std::optional<float> max_width,
+                                       std::optional<std::string> family, bool bold, bool italic) {
+        novasvg::ForeignObjectMetrics metrics;
+        if(!family) {
+            metrics = novasvg::measureForeignObjectContent(html, font, max_width.value_or(-1.f));
+        } else {
+            // The same faces ForeignObjectSimple::render() paints with (SVGForeignObjectElement::fontsFor()):
+            // `font` is the base style, every other bold/italic variant comes from the family.
+            const unsigned char base = (unsigned char)((bold ? novasvg::ForeignObjectFonts::Bold : 0)
+                                                       | (italic ? novasvg::ForeignObjectFonts::Italic : 0));
+            novasvg::ForeignObjectFonts fonts;
+            for(unsigned style = 0; style < 4; ++style) {
+                if(style == base) {
+                    fonts.face[style] = font;
+                    continue;
+                }
+                auto variant = novasvg::makeFont(*family, font.size(), (style & novasvg::ForeignObjectFonts::Bold) != 0,
+                                                 (style & novasvg::ForeignObjectFonts::Italic) != 0);
+                fonts.face[style] = variant.isNull() ? font : variant;
+            }
+            metrics = novasvg::measureForeignObjectContent(html, fonts, max_width.value_or(-1.f), base);
+        }
         nb::dict result;
         result["height"] = metrics.height;
         result["width"] = metrics.width;
         result["line_count"] = metrics.lineCount;
         result["line_height"] = metrics.lineHeight;
         return result;
-    }, "html"_a, "font"_a, "max_width"_a = nb::none(),
+    }, "html"_a, "font"_a, "max_width"_a = nb::none(), "family"_a = nb::none(), "bold"_a = false, "italic"_a = false,
        "Height/width (and line count/line-height) novasvg will use when painting <foreignObject> "
        "content, computed WITHOUT rendering -- the exact same logic ForeignObjectSimple::render() "
        "itself uses (see measureForeignObjectContent() in svgelement.h), so a caller building the "
@@ -210,7 +230,12 @@ NB_MODULE(novasvg_py, m) {
        "Text soft-wraps only if the HTML's own CSS `white-space` allows it (not `nowrap`/`pre`), "
        "at `max_width` (px) if given, else at the px `width`/`max-width` the HTML itself declares "
        "-- the same rule render() applies at the foreignObject's own width, so layout and paint "
-       "agree. Returns {'height': float, 'width': float, 'line_count': int, 'line_height': float}; "
+       "agree. Bold and italic runs (<b>, <strong>, <i>, <em>, inline font-weight / font-style) are "
+       "measured with the faces they are painted with when `family` is given: `font` is then the face of "
+       "the base style (`bold` / `italic` say which it is) and the other variants are looked up in `family` "
+       "exactly as SVG <text> looks them up. Without `family` every run is measured with `font` alone, as "
+       "if it had no bold or italic in it. "
+       "Returns {'height': float, 'width': float, 'line_count': int, 'line_height': float}; "
        "'width' is the widest resulting line.");
 
     // --- Bind Color Class ---

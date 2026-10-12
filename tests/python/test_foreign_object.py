@@ -94,3 +94,61 @@ class TestLigatures:
     def test_text_without_f_sequences_is_unchanged(self, font):
         assert font.measure_text("Design") == pytest.approx(
             sum(font.measure_text(c) for c in "Design"), abs=1.0)
+
+
+@pytest.fixture(scope="module")
+def faces():
+    """The four DejaVu Sans faces of FAMILY (regular, bold, oblique, bold oblique), 16px."""
+    data = Path(__file__).resolve().parents[2] / "data" / "fonts"
+    for bold, italic, name in [(False, False, "DejaVuSans"), (True, False, "DejaVuSans-Bold"),
+                               (False, True, "DejaVuSans-Oblique"), (True, True, "DejaVuSans-BoldOblique")]:
+        fonts.add_font_face_from_file(FAMILY, bold, italic, str(data / f"{name}.ttf"))
+    return {(b, i): fonts.Font(fonts.get_font_face(FAMILY, b, i), 16.0) for b in (False, True) for i in (False, True)}
+
+
+class TestMeasureStyledRuns:
+    """`measure_foreign_object(..., family=...)` measures <b>/<i> runs with the family's bold/italic faces --
+    the faces render() paints them with -- instead of measuring everything with the one `font` it is given."""
+
+    @staticmethod
+    def _width(html, font, **kw):
+        return fonts.measure_foreign_object(f"<div>{html}</div>", font, **kw)["width"]
+
+    def test_bold_run_uses_the_bold_face(self, faces):
+        regular, bold = faces[(False, False)], faces[(True, False)]
+        plain = self._width("Group one", regular, family=FAMILY)
+        mixed = self._width("<b>Group</b> one", regular, family=FAMILY)
+        assert mixed > plain
+        assert mixed == pytest.approx(bold.measure_text("Group") + regular.measure_text(" one"))
+
+    @pytest.mark.parametrize("tag", ["b", "strong"])
+    def test_b_and_strong_are_the_same(self, faces, tag):
+        regular, bold = faces[(False, False)], faces[(True, False)]
+        assert self._width(f"<{tag}>Group</{tag}> one", regular, family=FAMILY) == pytest.approx(
+            bold.measure_text("Group") + regular.measure_text(" one"))
+
+    def test_italic_run_uses_the_italic_face(self, faces):
+        regular, italic = faces[(False, False)], faces[(False, True)]
+        assert self._width("<em>Group</em> one", regular, family=FAMILY) == pytest.approx(
+            italic.measure_text("Group") + regular.measure_text(" one"))
+
+    def test_bold_italic_nesting(self, faces):
+        regular, both = faces[(False, False)], faces[(True, True)]
+        assert self._width("<b><i>Group</i></b> one", regular, family=FAMILY) == pytest.approx(
+            both.measure_text("Group") + regular.measure_text(" one"))
+
+    def test_a_bold_base_style_applies_to_unstyled_text(self, faces):
+        bold = faces[(True, False)]
+        assert self._width("Group one", bold, family=FAMILY, bold=True) == pytest.approx(bold.measure_text("Group one"))
+
+    def test_without_family_everything_is_measured_with_the_one_font(self, faces):
+        regular = faces[(False, False)]
+        assert self._width("<b>Group</b> one", regular) == pytest.approx(regular.measure_text("Group one"))
+
+    def test_a_line_is_the_plain_sum_of_its_runs(self, faces):
+        """No rounding: a browser's 1/64 px LayoutUnit grain is left to the caller, which knows its own layout."""
+        regular, bold, italic = faces[(False, False)], faces[(True, False)], faces[(False, True)]
+        runs = [(bold, "Bold"), (regular, " and "), (italic, "italic"), (regular, " text")]
+        got = self._width("<b>Bold</b> and <i>italic</i> text", regular, family=FAMILY)
+        assert got == pytest.approx(sum(f.measure_text(t) for f, t in runs), abs=1e-6)
+        assert got * 64 != int(got * 64)  # not on the 1/64 grid: nothing was rounded
