@@ -314,8 +314,8 @@ plain text: `<b>`/`<strong>` (bold), `<i>`/`<em>`/`<cite>`/`<var>`/`<dfn>` (ital
 in its own face, and soft-wrapping measures them with their own faces. Faces come from the same lookup as
 SVG `<text>`: there is no synthetic bold/slant. A machine with no suitable font falls back to the embedded
 DejaVu Sans subsets, which now include bold, oblique and bold oblique (`data/fonts/DejaVuSans-*.ttf`, regenerate
-with `tools/gen_default_font.py`; about +100 KB of binary, each face decoded only on first use).
-Inline tags (`<b>`, `<span>`, ...) no longer count as word boundaries (`un<b>believ</b>able` is one word);
+with `tools/gen_default_font.py`). They are stored zlib-compressed and base64-encoded, and each face is decoded only on
+first use. Inline tags (`<b>`, `<span>`, ...) no longer count as word boundaries (`un<b>believ</b>able` is one word);
 every other tag still does. Not covered: weight/style set through a stylesheet rule that targets the
 HTML elements themselves (it works when it reaches the `<foreignObject>` through the SVG cascade), and
 headings / `<th>`, which a browser makes bold but also resizes.
