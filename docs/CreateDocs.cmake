@@ -7,7 +7,7 @@
 #   supported_langs.json's own "_comment" field for the format),
 #   GENERATE_SCRIPT (docs/generate_index.py)
 #   SHOWCASE_DIR (docs/showcase: images NovaSVG rendered itself; copied next to index.html)
-#   BENCH_REPORT, CHARTS_PY (committed benchmark report + chart helper, for the landing teaser)
+#   CHARTS_PY (benchmarks/report/charts.py: the bar-chart CSS shared with the benchmark report)
 #
 # The tab bars / tab panes themselves are built by GENERATE_SCRIPT, a small
 # Python helper — reading JSON and templating HTML fought CMake's own
@@ -46,7 +46,6 @@ execute_process(
           --logo-svg        "${LOGO_SQ}"
           --favicon         "novasvg-sq.svg"
           --hero-svg        "${SHOWCASE_DIR}/hero-star.svg"
-          --bench-report    "${BENCH_REPORT}"
           --charts-py       "${CHARTS_PY}"
   RESULT_VARIABLE GENERATE_RESULT
 )

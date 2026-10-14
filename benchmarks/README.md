@@ -52,7 +52,8 @@ python report/gather.py outputs && python report/generate_report.py outputs/rend
 
 The renders are ordinary PNG files the page loads by relative path, not base64 inside the HTML, and
 `index.html` -- its "At a glance" charts and engine table included -- holds no data of its own: it is
-drawn from `render_benchmark.json`, the one place to read the results from. An engine that could not run
+drawn from `render_benchmark.json`, the one place to read the results from. The docs landing page's accuracy/speed teaser reads the same file in the browser
+(`docs/bench-teaser.js`), averages the per-sample numbers itself, and stays hidden if the file is not there. An engine that could not run
 (a native binary that was not built, no Chromium) leaves a `result.json` that says why and is listed
 in the report as unavailable.
 Every sample in the gallery has an `id` equal to its name and a link icon beside its heading (shown on hover), so

@@ -491,15 +491,8 @@ doc.render_to_bitmap(720, 720, 0).write_to_png("star-gold.png")</code></pre>
             setTimeout(() => { btn.textContent = 'Copy'; }, 1600);
         });
     }
-    // grow the benchmark bars once they scroll into view
-    (function () {
-        const charts = document.querySelectorAll('.bars');
-        if (!('IntersectionObserver' in window)) { charts.forEach(c => c.classList.add('in')); return; }
-        const io = new IntersectionObserver((entries) => {
-            entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
-        }, { threshold: 0.25 });
-        charts.forEach(c => io.observe(c));
-    })();
+    // benchmark teaser: fetched, averaged and drawn in the browser (docs/bench-teaser.js)
+    @BENCH_JS@
 </script>
 </body>
 </html>

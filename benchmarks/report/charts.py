@@ -1,15 +1,10 @@
 """Shared benchmark-chart helpers.
 
-Used by generate_report.py (the full report) and by docs/generate_index.py
-(the teaser on the docs landing page), so both draw the same colourful charts
-from the same numbers.
-
-load_summary() reads those numbers from render_benchmark.json -- the file gather.py
-merges out of the per-engine renders/<engine>/result.json -- which is how both the
-report's "At a glance" section and the landing page get them.
+Used by generate_report.py (the full report, drawn at generation time). BARS_CSS is also
+injected into the docs landing page, whose benchmark teaser draws the same markup in the
+browser from render_benchmark.json (docs/bench-teaser.js, which mirrors _bars() and ENGINE_COLORS).
 """
 import html
-import json
 
 # Engine key -> (label, colour). Colours are sampled from the NovaSVG logo ramp
 # (blue #1867b2 -> violet #884d9e -> magenta #b6489b); novasvg itself is drawn
@@ -25,23 +20,6 @@ ENGINE_COLORS = {
 REFERENCE = "ground_truth"
 # Display order everywhere (report, tables, gallery); an engine not listed here is appended after these.
 ENGINE_ORDER = [REFERENCE, "novasvg", "resvg", "lunasvg", "cairosvg", "thorvg", "nanosvg"]
-
-
-def load_summary(path):
-    """Return {"engines": {key: {label, version, ok, total, avg_ms, rmse}}, "meta": {samples, runs, generated}}
-    read from a render_benchmark.json, or None if it is missing, unreadable or has no engines."""
-    try:
-        with open(path, encoding="utf-8") as fh:
-            data = json.load(fh)
-    except (OSError, ValueError):
-        return None
-    engines = data.get("summary") or {}
-    if not engines:
-        return None
-    meta = {"samples": len(data.get("files") or []) or None,
-            "runs": data.get("runs"),
-            "generated": data.get("generated")}
-    return {"engines": engines, "meta": meta}
 
 
 def _bars(rows, unit, fmt, aria):

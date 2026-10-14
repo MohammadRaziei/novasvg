@@ -154,13 +154,6 @@ def test_at_a_glance_is_drawn_from_the_json_not_from_the_run(out):
     assert "123.45" in (out / "index.html").read_text(encoding="utf-8")
 
 
-def test_load_summary_feeds_the_docs_landing_page(out):
-    s = charts.load_summary(gt.gather(out))
-    assert set(s["engines"]) == {"ground_truth", "novasvg", "resvg"}
-    assert s["meta"] == {"samples": 2, "runs": 5, "generated": "2026-01-02 03:04 UTC"}
-    assert charts.load_summary(out / "missing.json") is None
-
-
 # --- run_benchmark.py: what one engine's run leaves behind ------------------------------------------
 
 def _args():
@@ -198,3 +191,86 @@ def test_an_engine_that_cannot_run_leaves_a_folder_saying_why(tmp_path):
     rb.write_unavailable(tmp_path, "thorvg", "thorvg_native_bench not built/provided")
     doc = json.loads((tmp_path / "renders" / "thorvg" / "result.json").read_text(encoding="utf-8"))
     assert doc == {"engine": "thorvg", "unavailable": "thorvg_native_bench not built/provided"}
+
+
+# --- docs/bench-teaser.js: the landing page's teaser, averaged and drawn in the browser -----------------
+# The averaging exists twice on purpose (gather.py for the static report, the JS for the landing page), so
+# this runs the real script in Chromium and checks it against gather.py. Skipped where Playwright/Chromium is absent.
+
+import contextlib  # noqa: E402
+import functools  # noqa: E402
+import http.server  # noqa: E402
+import importlib.util  # noqa: E402
+import socketserver  # noqa: E402
+import threading  # noqa: E402
+
+_DOCS = ROOT / "docs"
+_spec = importlib.util.spec_from_file_location("novasvg_generate_index", _DOCS / "generate_index.py")
+gi = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(gi)
+
+
+@pytest.fixture(scope="module")
+def browser():
+    sync_api = pytest.importorskip("playwright.sync_api")
+    with sync_api.sync_playwright() as p:
+        try:
+            b = p.chromium.launch()
+        except Exception as exc:  # noqa: BLE001 - no browser installed
+            pytest.skip(f"Chromium not available: {exc}")
+        yield b
+        b.close()
+
+
+@contextlib.contextmanager
+def _site(tmp_path, bench_json=None):
+    """A tiny site: index.html = the real teaser shell + script, plus benchmarks/render_benchmark.json if given."""
+    js = (_DOCS / "bench-teaser.js").read_text(encoding="utf-8")
+    (tmp_path / "index.html").write_text(
+        f'<!doctype html><html class="js"><body>{gi.bench_shell()}<script>{js}</script></body></html>', encoding="utf-8")
+    if bench_json is not None:
+        (tmp_path / "benchmarks").mkdir()
+        (tmp_path / "benchmarks" / "render_benchmark.json").write_text(bench_json, encoding="utf-8")
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(tmp_path))
+    handler.log_message = lambda *a, **k: None
+    with socketserver.TCPServer(("127.0.0.1", 0), handler) as srv:
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            yield f"http://127.0.0.1:{srv.server_address[1]}/"
+        finally:
+            srv.shutdown()
+
+
+_READ_BARS = """c => [...document.querySelectorAll(`#benchmarks [data-chart="${c}"] .bar-row`)]
+    .map(r => [r.querySelector('.bar-label').textContent, r.querySelector('.bar-value').firstChild.textContent])"""
+
+
+def test_the_teaser_averages_in_the_browser_exactly_as_gather_does(out, tmp_path, browser):
+    summary = json.loads(gt.gather(out).read_text(encoding="utf-8"))["summary"]
+    site = tmp_path / "site"
+    site.mkdir()
+    with _site(site, (out / "render_benchmark.json").read_text(encoding="utf-8")) as url:
+        page = browser.new_page()
+        page.goto(url)
+        page.wait_for_function("!document.getElementById('benchmarks').hidden", timeout=5000)
+        contenders = {k: v for k, v in summary.items() if k != charts.REFERENCE}
+        want_acc = [[v["label"], f"{v['rmse']:.1f}"] for v in sorted(contenders.values(), key=lambda v: v["rmse"])]
+        want_spd = [[v["label"], f"{v['avg_ms']:.2f}"] for v in sorted(contenders.values(), key=lambda v: v["avg_ms"])]
+        assert page.evaluate(_READ_BARS, "accuracy") == want_acc
+        assert page.evaluate(_READ_BARS, "speed") == want_spd
+        assert page.inner_text("#benchmarks h2") == "Closest to Chromium"
+        assert "also the fastest" in page.inner_text("#benchmarks .lede")
+        assert "2 samples, median of 5 runs, generated 2026-01-02 03:04 UTC" in page.inner_text("#benchmarks .bench-foot small")
+        # the first bar's unit <small> must stay empty: the footer sentence belongs to .bench-foot only
+        assert page.inner_text("#benchmarks [data-chart='accuracy'] .bar-value small") == ""
+
+
+@pytest.mark.parametrize("bench_json", [None, "{not json", '{"matrix": {"circle": {"resvg": {"ok": true, "seconds": 0.1}}}}'],
+                         ids=["file-missing", "invalid-json", "no-novasvg"])
+def test_the_teaser_is_skipped_when_there_is_no_usable_data(tmp_path, browser, bench_json):
+    with _site(tmp_path, bench_json) as url:
+        page = browser.new_page()
+        page.goto(url)
+        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(300)
+        assert page.evaluate("document.getElementById('benchmarks').hidden") is True

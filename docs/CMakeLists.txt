@@ -124,7 +124,6 @@ add_custom_command(
         -DLANGS_DIR=${CMAKE_CURRENT_SOURCE_DIR}
         -DGENERATE_SCRIPT=${NOVASVG_GENERATE_SCRIPT}
         -DSHOWCASE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/showcase
-        -DBENCH_REPORT=${PROJECT_SOURCE_DIR}/benchmarks/outputs/render_benchmark.json
         -DCHARTS_PY=${PROJECT_SOURCE_DIR}/benchmarks/report/charts.py
         -P ${CMAKE_CURRENT_SOURCE_DIR}/CreateDocs.cmake
     DEPENDS
@@ -137,6 +136,7 @@ add_custom_command(
         ${NOVASVG_LANG_FRAGMENTS}
         ${CMAKE_CURRENT_SOURCE_DIR}/showcase/hero-star.svg
         ${PROJECT_SOURCE_DIR}/benchmarks/report/charts.py
+        ${CMAKE_CURRENT_SOURCE_DIR}/bench-teaser.js
     COMMENT "Creating documentation route index"
     VERBATIM
 )
@@ -194,7 +194,8 @@ add_custom_command(TARGET novasvg_docs POST_BUILD
 # benchmarks/outputs/ is generated on a developer machine (see benchmarks/README.md) and
 # committed; it is only copied here, never rebuilt. It is published as it is, folder and all:
 # index.html (the page), render_benchmark.json (its data) and renders/<engine>/ (the PNGs it
-# loads by relative path), so it needs no renaming and no per-file bookkeeping. Runs after
+# loads by relative path), so it needs no renaming and no per-file bookkeeping. The landing page's
+# benchmark teaser fetches benchmarks/render_benchmark.json from here in the browser (docs/bench-teaser.js). Runs after
 # InjectComment above so the page is published byte-for-byte as committed.
 set(NOVASVG_BENCH_OUTDIR ${PROJECT_SOURCE_DIR}/benchmarks/outputs)
 if(EXISTS ${NOVASVG_BENCH_OUTDIR}/index.html)

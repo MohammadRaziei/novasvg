@@ -157,44 +157,23 @@ def highlight_svg(source: str) -> str:
     return "".join(parts).rstrip("\n")
 
 
-def bench_section(bench_json: str, charts_py: str) -> str:
-    """The landing page's benchmark teaser, drawn from the committed render_benchmark.json. '' if unavailable."""
-    import html as _html, importlib.util
-    if not (bench_json and charts_py and Path(bench_json).is_file() and Path(charts_py).is_file()):
-        return ""
-    spec = importlib.util.spec_from_file_location("novasvg_bench_charts", charts_py)
-    charts = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(charts)
-    data = charts.load_summary(bench_json)
-    if not data:
-        return ""
-    eng = {k: v for k, v in data["engines"].items() if k != charts.REFERENCE}
-    nova = eng.get("novasvg")
-    if not nova:
-        return ""
-    meta = data["meta"]
-    n = meta.get("samples") or "all"
-    by_err = sorted((v["rmse"], k) for k, v in eng.items() if v["rmse"] is not None)
-    by_time = sorted((v["avg_ms"], k) for k, v in eng.items() if v["avg_ms"] is not None)
-    closest = bool(by_err) and by_err[0][1] == "novasvg"
-    fastest = bool(by_time) and by_time[0][1] == "novasvg"
-    title = "Closest to Chromium" if closest else "How it compares"
-    lede = (f"Across {n} sample SVGs, NovaSVG's output has the lowest mean error against Chromium. " if closest
-            else f"Across {n} sample SVGs, each renderer is compared with Chromium on accuracy and speed. ")
-    lede += ("It is also the fastest." if fastest else "It is not the fastest renderer, and the full report shows where it wins and where it loses.")
-    versions = ", ".join(f"{_html.escape(v['label'])} {_html.escape(v['version'].split(' (')[0])}" for v in eng.values())
-    foot = f"{n} samples, median of {meta.get('runs') or '?'} runs" + (f", generated {_html.escape(meta['generated'])}" if meta.get("generated") else "") + f". Measured with {versions}."
-    return f'''<!-- Benchmarks -->
-<section class="lp lp-sec" id="benchmarks">
-    <h2>{title}</h2>
-    <p class="lede">{lede}</p>
+BENCH_DATA = "benchmarks/render_benchmark.json"  # where docs/CMakeLists.txt publishes it, relative to the landing page
+
+
+def bench_shell() -> str:
+    """The landing page's benchmark teaser: an empty, hidden section. bench-teaser.js fetches BENCH_DATA in
+    the browser, averages the numbers itself, fills this in and reveals it; with no usable data it stays hidden."""
+    return f'''<!-- Benchmarks: drawn in the browser by bench-teaser.js from {BENCH_DATA}; stays hidden if that is missing -->
+<section class="lp lp-sec" id="benchmarks" data-src="{BENCH_DATA}" hidden>
+    <h2></h2>
+    <p class="lede"></p>
     <div class="charts">
-        <div class="chart"><h3>Accuracy</h3><p>Mean RMSE against a Chromium render. Lower is closer.</p>{charts.fidelity_chart(data)}</div>
-        <div class="chart"><h3>Speed</h3><p>Average render time per sample. Lower is faster.</p>{charts.speed_chart(data)}</div>
+        <div class="chart"><h3>Accuracy</h3><p>Mean RMSE against a Chromium render. Lower is closer.</p><div data-chart="accuracy"></div></div>
+        <div class="chart"><h3>Speed</h3><p>Average render time per sample. Lower is faster.</p><div data-chart="speed"></div></div>
     </div>
     <div class="bench-foot">
         <a class="btn btn-ghost" href="benchmarks/index.html">Open the full report <i class="fa-solid fa-arrow-right"></i></a>
-        <small>{foot}</small>
+        <small></small>
     </div>
 </section>
 '''
@@ -243,7 +222,8 @@ def build(args: argparse.Namespace) -> str:
 
     hero_svg = Path(args.hero_svg).read_text(encoding="utf-8") if args.hero_svg else ""
     index_content = index_content.replace("@HERO_SVG_CODE@", highlight_svg(hero_svg))
-    index_content = index_content.replace("@BENCH_SECTION@", bench_section(args.bench_report, args.charts_py))
+    index_content = index_content.replace("@BENCH_SECTION@", bench_shell())
+    index_content = index_content.replace("@BENCH_JS@", (Path(__file__).resolve().parent / "bench-teaser.js").read_text(encoding="utf-8"))
     bars_css = ""
     if args.charts_py and Path(args.charts_py).is_file():
         import importlib.util
@@ -263,8 +243,7 @@ def main() -> None:
     ap.add_argument("--project-version", required=True)
     ap.add_argument("--logo-svg", default="", help="path to the inline logo SVG (embedded verbatim)")
     ap.add_argument("--hero-svg", default="", help="SVG source shown (highlighted) in the hero code card")
-    ap.add_argument("--bench-report", default="", help="committed benchmarks/outputs/render_benchmark.json, for the landing teaser charts")
-    ap.add_argument("--charts-py", default="", help="benchmarks/report/charts.py")
+    ap.add_argument("--charts-py", default="", help="benchmarks/report/charts.py, for the bar-chart CSS shared with the benchmark report")
     ap.add_argument("--favicon", default="novasvg-sq.svg")
     args = ap.parse_args()
 
