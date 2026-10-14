@@ -3,7 +3,7 @@
 Compares **novasvg** against **resvg**, **lunasvg**, **thorvg**, **nanosvg**
 and **cairosvg** — with **Chromium** rendered alongside as visual ground
 truth — on capability, rendered output, and speed. Driven entirely by
-CMake, ending in one self-contained `outputs/report.html`.
+CMake, ending in `outputs/report.html` plus the data and renders it is built from.
 
 5 of the 6 compared engines are driven **directly through their own C/C++
 API**, in one process each, built from source by this CMake project. Only
@@ -25,10 +25,36 @@ ground truth (`playwright install chromium` if you don't already have one
 — see below for pinning the pip package to match it). First build takes a
 few minutes (compiles resvg via cargo, thorvg via meson, lunasvg/nanosvg
 via CMake, novasvg via FetchContent). Open
-`outputs/report.html` afterwards — no server, no network needed, every
-render is a base64 `data:` URI embedded directly in the page; click any
-render to zoom in. Everything else (`results.json`, per-engine renders/)
-stays inside `build/` — `outputs/` holds only that one file.
+`outputs/report.html` afterwards -- no server, no network needed; click any render to zoom in.
+`outputs/` holds what the three steps below leave behind, and it belongs together:
+
+```
+outputs/
+  renders/<engine>/       one folder per engine (novasvg, resvg, ..., ground_truth):
+    <sample>.png            its renders
+    result.json             that engine's run alone: version, per-sample time, which samples failed
+  render_benchmark.json   every engine's result.json merged, plus RMSE vs Chromium and a per-engine summary
+  report.html             the page, built from render_benchmark.json
+```
+
+| step | script | reads -> writes |
+|---|---|---|
+| run | `python/run_benchmark.py` | corpus -> `renders/<engine>/` (only renders and times; knows nothing of the other engines) |
+| gather | `report/gather.py` | every `renders/*/result.json` -> `render_benchmark.json` (only merges and scores; renders nothing) |
+| report | `report/generate_report.py` | `render_benchmark.json` -> `report.html` |
+
+Because each engine is a self-contained folder, one engine can be redone without touching the rest
+(delete or rerun its folder), and the last two steps are quick re-runs that never render anything:
+
+```
+python report/gather.py outputs && python report/generate_report.py outputs/render_benchmark.json
+```
+
+The renders are ordinary PNG files the page loads by relative path, not base64 inside the HTML, and
+`report.html` -- its "At a glance" charts and engine table included -- holds no data of its own: it is
+drawn from `render_benchmark.json`, the one place to read the results from. An engine that could not run
+(a native binary that was not built, no Chromium) leaves a `result.json` that says why and is listed
+in the report as unavailable.
 
 ## What gets rendered
 
@@ -106,10 +132,10 @@ the same fontconfig, e.g. `FONTCONFIG_FILE` pointing at a config that exposes on
   says as much). `requirements.txt` pins `playwright==1.56.0` to match
   whatever Chromium build is already on the machine; on a fresh machine,
   `playwright install chromium` first.
-- **RMSE against ground truth** — `python/compare.py` computes root mean
+- **RMSE against ground truth** — `report/gather.py` (using `python/compare.py`) computes root mean
   squared error (back on the 0-255 scale, all 4 RGBA channels) between
-  every engine's render and Chromium's render of the same sample, shown
-  under each render's time in the gallery. Squaring before the square
+  every engine's render and Chromium's render of the same sample, read back from the
+  PNGs on disk and shown under each render's time in the gallery. Squaring before the square
   root weights a handful of badly-wrong pixels (a missing filter, a wrong
   fill, a shifted shape) far more than the routine anti-aliasing noise
   along every edge — low single digits is essentially imperceptible, tens
@@ -134,13 +160,13 @@ the same fontconfig, e.g. `FONTCONFIG_FILE` pointing at a config that exposes on
   up front (`corpus.py`'s `fit_box()`, same logic as CSS
   `object-fit: contain` — most of the corpus isn't square, so forcing a
   fixed square render would stretch the artwork itself), then calls each
-  native binary once and cairosvg per-file, merging everything into
-  `build/results/results.json` (an intermediate build artifact, not
-  something meant to be committed -- see Tunables below to relocate it).
-- `report/generate_report.py` turns that JSON into the single `report.html`:
-  an engine-version table, a capability+speed matrix (green = ok + timing,
-  red = failed + hover for the error), and a visual gallery with every
-  engine's render of every sample side by side.
+  native binary once and cairosvg per-file and Chromium once. Each engine's PNGs and
+  `result.json` go straight into its own `outputs/renders/<engine>/` folder.
+- `report/gather.py` merges those `result.json` files into `outputs/render_benchmark.json`
+  (the sample list is the union of what the engines ran) and scores each render against Chromium's.
+  `report/generate_report.py` then builds `report.html` from that JSON -- an "At a glance"
+  accuracy/speed chart pair, an engine-version table, and a visual gallery with every engine's render of
+  every sample side by side.
 - `native/novasvg_native_bench.cpp` pays novasvg's one-time process-wide
   font-cache warm-up (see below) with a throwaway 1×1 text render before
   timing anything, so that cost doesn't land arbitrarily on whichever
@@ -176,8 +202,8 @@ cmake -S . -B build -DNOVASVG_BENCH_RUNS=10 -DNOVASVG_BENCH_WIDTH=512 -DNOVASVG_
 cmake -S . -B build -DNOVASVG_BENCH_LUNASVG_GIT_TAG=v3.5.0     # lunasvg
 cmake -S . -B build -DNOVASVG_BENCH_THORVG_GIT_TAG=v1.0.1      # thorvg
 cmake -S . -B build -DNOVASVG_BENCH_RESVG_GIT_TAG=v0.45.1      # resvg (rust-version bound, see above)
-# relocate either output (both default to sensible build/ vs. source-tree locations, see above):
-cmake -S . -B build -DNOVASVG_BENCH_RESULTS_DIR=/tmp/novasvg-bench-results -DNOVASVG_BENCH_OUTPUT_DIR=/tmp/novasvg-bench-outputs
+# relocate everything the benchmark writes (defaults to outputs/ next to this README):
+cmake -S . -B build -DNOVASVG_BENCH_OUTPUT_DIR=/tmp/novasvg-bench-outputs
 ```
 
 ## ponytail-scoped (not done here, upgrade path if it matters later)

@@ -157,15 +157,15 @@ def highlight_svg(source: str) -> str:
     return "".join(parts).rstrip("\n")
 
 
-def bench_section(report_html: str, charts_py: str) -> str:
-    """The landing page's benchmark teaser, drawn from the committed report. '' if unavailable."""
+def bench_section(bench_json: str, charts_py: str) -> str:
+    """The landing page's benchmark teaser, drawn from the committed render_benchmark.json. '' if unavailable."""
     import html as _html, importlib.util
-    if not (report_html and charts_py and Path(report_html).is_file() and Path(charts_py).is_file()):
+    if not (bench_json and charts_py and Path(bench_json).is_file() and Path(charts_py).is_file()):
         return ""
     spec = importlib.util.spec_from_file_location("novasvg_bench_charts", charts_py)
     charts = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(charts)
-    data = charts.parse_report_html(report_html)
+    data = charts.load_summary(bench_json)
     if not data:
         return ""
     eng = {k: v for k, v in data["engines"].items() if k != charts.REFERENCE}
@@ -263,7 +263,7 @@ def main() -> None:
     ap.add_argument("--project-version", required=True)
     ap.add_argument("--logo-svg", default="", help="path to the inline logo SVG (embedded verbatim)")
     ap.add_argument("--hero-svg", default="", help="SVG source shown (highlighted) in the hero code card")
-    ap.add_argument("--bench-report", default="", help="committed benchmarks/outputs/report.html, for the landing teaser charts")
+    ap.add_argument("--bench-report", default="", help="committed benchmarks/outputs/render_benchmark.json, for the landing teaser charts")
     ap.add_argument("--charts-py", default="", help="benchmarks/report/charts.py")
     ap.add_argument("--favicon", default="novasvg-sq.svg")
     args = ap.parse_args()

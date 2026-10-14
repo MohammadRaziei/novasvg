@@ -53,13 +53,18 @@ def render_ground_truth(jobs, timeout_ms=30000):
                 page.goto(Path(svg_path).resolve().as_uri())
                 # A raw .svg navigation has no <body> -- the <svg> root IS
                 # documentElement. Force it to our target size so every
-                # engine's output lands at the same pixel dimensions.
+                # engine's output lands at the same pixel dimensions. mermaid
+                # writes `style="max-width: Npx"` on the root, which would cap
+                # the forced width and leave a small graphic in the corner of
+                # the canvas, so lift that cap too.
                 page.evaluate(
                     """([w, h]) => {
                         const el = document.documentElement;
                         if (el && el.tagName.toLowerCase() === 'svg') {
                             el.style.width = w + 'px';
                             el.style.height = h + 'px';
+                            el.style.maxWidth = 'none';
+                            el.style.maxHeight = 'none';
                         }
                     }""",
                     [w, h],

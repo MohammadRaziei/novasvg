@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Turns results.json (from ../python/run_benchmark.py) into a single
-self-contained report.html: capability+speed matrix, per-engine summary,
-and a base64-embedded render gallery. No template engine -- plain f-strings
-are enough for one page (ponytail: pulling in jinja2 for this would just be
-YAGNI).
+"""Builds report.html from render_benchmark.json (the file ../report/gather.py writes).
 
-Usage: generate_report.py <results.json> <out.html>
-       generate_report.py --from-html <old report.html> <out.html>
-           (re-themes an existing report without re-running the benchmarks)
+    outputs/
+      report.html             <- this script; loads every render from renders/ by relative path
+      render_benchmark.json   <- gather.py; every number on the page, "At a glance" included, comes from it
+      renders/<engine>/       <- run_benchmark.py; one folder per engine: its PNGs and its own result.json
+
+The page holds no data of its own and embeds nothing: edit the JSON (or re-gather) and re-run this to
+change it, no benchmark run needed.
+
+Usage: generate_report.py <render_benchmark.json>      (writes report.html next to it)
 
 The page shares its look with the docs site: the brand tokens are read from
 docs/novasvg-docs.css and the colourful charts come from charts.py, which the
@@ -15,7 +17,6 @@ docs landing page also uses.
 """
 import html
 import json
-import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,32 +26,23 @@ import charts  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 
-ENGINE_ORDER = ["ground_truth", "novasvg", "resvg", "lunasvg", "cairosvg", "thorvg", "nanosvg"]
+
+def fmt_ms(ms):
+    return f"{ms:.2f} ms" if ms is not None else "-"
 
 
-def fmt_ms(seconds):
-    return f"{seconds * 1000:.2f} ms" if seconds is not None else "-"
-
-
-def build_summary_table(report):
-    engines = [k for k in ENGINE_ORDER if k in report["engines"]]
+def build_summary_table(data):
+    # engine order = the JSON's own `summary` order (gather.py already put it in display order)
+    summary = data["summary"]
     rows = []
-    n_files = len(report["files"])
-    for k in engines:
-        times = [
-            report["matrix"][f["name"]][k]["seconds"]
-            for f in report["files"]
-            if report["matrix"][f["name"]].get(k, {}).get("ok")
-        ]
-        n_ok = len(times)
-        avg = sum(times) / n_ok if n_ok else None
-        total = sum(times) if n_ok else None
+    for k in list(summary):
+        e = summary[k]
         rows.append(
-            f"<tr{' class=\"is-nova\"' if k == 'novasvg' else ''}><td>{html.escape(report['engines'][k]['label'])}</td>"
-            f"<td>{html.escape(report['engines'][k]['version'])}</td>"
-            f"<td>{n_ok}/{n_files}</td>"
-            f"<td>{fmt_ms(avg)}</td>"
-            f"<td>{fmt_ms(total)}</td></tr>"
+            f"<tr{' class=\"is-nova\"' if k == 'novasvg' else ''}><td>{html.escape(e['label'])}</td>"
+            f"<td>{html.escape(e['version'])}</td>"
+            f"<td>{e['ok']}/{e['total']}</td>"
+            f"<td>{fmt_ms(e['avg_ms'])}</td>"
+            f"<td>{fmt_ms(e['total_ms'])}</td></tr>"
         )
     return f"""
     <div class="tablewrap"><table class="summary">
@@ -70,22 +62,23 @@ def fmt_rmse(cell, is_ground_truth):
     return f'<span class="rmse {cls}">RMSE {rmse:.2f}</span>'
 
 
-def build_gallery(report):
-    engines = [k for k in ENGINE_ORDER if k in report["engines"]]
+def build_gallery(data):
+    summary = data["summary"]
+    engines = list(summary)
     blocks = []
-    for f in report["files"]:
+    for f in data["files"]:
         name = f["name"]
         thumbs = []
         for k in engines:
-            cell = report["matrix"][name].get(k, {})
-            label = html.escape(report["engines"][k]["label"])
-            if cell.get("ok") and cell.get("png_b64"):
+            cell = data["matrix"][name].get(k, {})
+            label = html.escape(summary[k]["label"])
+            if cell.get("ok") and cell.get("png"):
                 img = (
-                    f'<img src="data:image/png;base64,{cell["png_b64"]}" '
+                    f'<img src="{html.escape(cell["png"], quote=True)}" '
                     f'alt="{label} render of {html.escape(name)}" loading="lazy" '
                     f'class="zoomable" onclick="openLightbox(this)">'
                 )
-                caption = f'{fmt_ms(cell["seconds"])}<br>{fmt_rmse(cell, k == "ground_truth")}'
+                caption = f'{fmt_ms(cell["seconds"] * 1000)}<br>{fmt_rmse(cell, k == "ground_truth")}'
             else:
                 img = '<div class="missing">no render</div>'
                 caption = "FAIL"
@@ -261,40 +254,25 @@ function toggleTheme() {
 """
 
 
-def build_html(report):
-    engines = [k for k in ENGINE_ORDER if k in report["engines"]]
-    engine_list = ", ".join(html.escape(report["engines"][k]["label"]) for k in engines if k not in ("ground_truth", "novasvg"))
-    unavailable = report.get("engine_load_errors") or {}
+def build_html(data):
+    """data: the dict loaded from render_benchmark.json. Every number on the page comes from it."""
+    summary = data["summary"]
+    engines = list(summary)
+    engine_list = ", ".join(html.escape(summary[k]["label"]) for k in engines if k not in ("ground_truth", "novasvg"))
+    unavailable = data.get("engine_load_errors") or {}
     unavailable_note = (
         f'<p class="meta">Not available in this build environment: {html.escape(", ".join(unavailable))}.</p>'
         if unavailable
         else ""
     )
-    now = report.get("generated") or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = data.get("generated") or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    # colourful charts from the same numbers as the table
-    data = {"engines": {}, "meta": {}}
-    for k in engines:
-        times = [
-            report["matrix"][f["name"]][k]["seconds"]
-            for f in report["files"]
-            if report["matrix"][f["name"]].get(k, {}).get("ok")
-        ]
-        rm = [
-            report["matrix"][f["name"]][k]["rmse"]
-            for f in report["files"]
-            if report["matrix"][f["name"]].get(k, {}).get("ok") and report["matrix"][f["name"]][k].get("rmse") is not None
-        ]
-        data["engines"][k] = {
-            "label": report["engines"][k]["label"],
-            "version": report["engines"][k]["version"],
-            "avg_ms": (sum(times) / len(times) * 1000) if times else None,
-            "rmse": (sum(rm) / len(rm)) if rm else None,
-        }
+    # "At a glance": the charts are drawn from the JSON's per-engine summary
+    chart_data = {"engines": summary}
     chart_block = (
         '<div class="charts">'
-        f'<div class="chart"><h3>Accuracy</h3><p>Mean RMSE against the Chromium render. Lower is closer.</p>{charts.fidelity_chart(data)}</div>'
-        f'<div class="chart"><h3>Speed</h3><p>Average render time per sample. Lower is faster.</p>{charts.speed_chart(data)}</div>'
+        f'<div class="chart"><h3>Accuracy</h3><p>Mean RMSE against the Chromium render. Lower is closer.</p>{charts.fidelity_chart(chart_data)}</div>'
+        f'<div class="chart"><h3>Speed</h3><p>Average render time per sample. Lower is faster.</p>{charts.speed_chart(chart_data)}</div>'
         "</div>"
     )
     css = CSS.replace("/*@BARS_CSS@*/", charts.BARS_CSS)
@@ -316,9 +294,9 @@ def build_html(report):
 <div class="wrap">
   <section class="intro">
     <h1>SVG renderer <span class="ink">benchmark</span></h1>
-    <p class="lede">novasvg against {engine_list}. Each of the {len(report['files'])} samples is rendered at its own aspect ratio,
-      fit within {report['width']}&times;{report['height']}px, and timed as the median of {report['runs']} runs.</p>
-    <div class="facts"><span>{len(report['files'])} samples</span><span>median of {report['runs']} runs</span><span>generated {now}</span></div>
+    <p class="lede">novasvg against {engine_list}. Each of the {len(data['files'])} samples is rendered at its own aspect ratio,
+      fit within {data['width']}&times;{data['height']}px, and timed as the median of {data['runs']} runs.</p>
+    <div class="facts"><span>{len(data['files'])} samples</span><span>median of {data['runs']} runs</span><span>generated {now}</span></div>
   </section>
   {unavailable_note}
 
@@ -332,16 +310,17 @@ def build_html(report):
      anti-aliasing noise along every edge, so low single digits is essentially imperceptible and anything in
      the tens or higher usually means something structural differs.</p>
   {chart_block}
+  <p class="meta">These charts and the table below are drawn from <a href="render_benchmark.json"><code>render_benchmark.json</code></a>, which sits next to this page.</p>
   <p class="meta">nanosvg is included as a lightweight baseline, not a fair fight with the other 5. It is a
      minimal path and gradient rasterizer with no CSS, no filters and no text layout, so its FAILs and blank
      renders on filter or text heavy samples below are expected scope, not bugs.</p>
 
   <h2>Engine versions</h2>
-  {build_summary_table(report)}
+  {build_summary_table(data)}
 
   <h2>Rendered output</h2>
-  <p class="meta">Same size (that sample's own aspect ratio, fit within {report['width']}&times;{report['height']}px) from every engine, side by side, so visual differences (missing text, wrong fills, unapplied filters, ...) are easy to spot. Click any render to zoom in.</p>
-  {build_gallery(report)}
+  <p class="meta">Same size (that sample's own aspect ratio, fit within {data['width']}&times;{data['height']}px) from every engine, side by side, so visual differences (missing text, wrong fills, unapplied filters, ...) are easy to spot. Click any render to zoom in.</p>
+  {build_gallery(data)}
 
   <footer>
     Built entirely by <code>benchmarks/CMakeLists.txt</code> (<code>cmake --build build --target novasvg_benchmark</code>)
@@ -349,8 +328,9 @@ def build_html(report):
     directly through their own C/C++ API in one process (<code>native/*_native_bench.cpp</code>), with no CLI, no
     per-render subprocess and no Python bindings. cairosvg is the one exception (it has no native library of its
     own to link against) and runs through its Python binding instead. Chromium (ground truth) is driven through
-    Playwright. This report is fully self-contained: every image is a base64 data URI, so no external files or
-    network access are required to view it, apart from the web fonts, which fall back to system fonts offline.
+    Playwright. Every render is a plain PNG under <code>renders/</code> next to this page and the numbers are in
+    <code>render_benchmark.json</code>; keep the three together, no server or network is needed to view them, apart
+    from the web fonts, which fall back to system fonts offline.
   </footer>
 </div>
 
@@ -380,53 +360,21 @@ document.addEventListener('keydown', (e) => {{ if (e.key === 'Escape') closeLigh
 """
 
 
-def report_from_html(path):
-    """Rebuild the `report` dict from an already generated report.html (for re-theming)."""
-    s = Path(path).read_text(encoding="utf-8")
-    key_of = lambda label: "ground_truth" if "ground truth" in label else label.lower()
-    parsed = charts.parse_report_html(path)
-    engines = {k: {"label": v["label"], "version": v["version"]} for k, v in parsed["engines"].items()}
-    m = re.search(r"fit within (\d+)&times;(\d+)px", s)
-    width, height = (int(m.group(1)), int(m.group(2))) if m else (320, 320)
-    files, matrix = [], {}
-    for sec in re.findall(r'<section class="sample">.*?</section>', s, flags=re.S):
-        name = html.unescape(re.search(r"<h3>(.*?)(?: <span|</h3>)", sec, flags=re.S).group(1))
-        desc = html.unescape(re.search(r'<p class="desc">(.*?)</p>', sec, flags=re.S).group(1))
-        f = {"name": name, "desc": desc}
-        d = re.search(r"\((\d+)&times;(\d+)px\)", sec)
-        if d:
-            f["render_w"], f["render_h"] = int(d.group(1)), int(d.group(2))
-        files.append(f)
-        row = {}
-        for fig in re.findall(r"<figure[^>]*>.*?</figure>", sec, flags=re.S):
-            label = charts._caption_label(fig)
-            b64 = re.search(r'base64,([A-Za-z0-9+/=]+)"', fig)
-            sec_ms = re.search(r"([\d.]+) ms", fig[fig.index("<figcaption>"):])
-            rm = re.search(r"RMSE ([\d.]+)", fig)
-            cell = {"ok": bool(b64), "png_b64": b64.group(1) if b64 else None,
-                    "seconds": float(sec_ms.group(1)) / 1000 if sec_ms else None,
-                    "rmse": float(rm.group(1)) if rm else None}
-            row[key_of(label)] = cell
-        matrix[name] = row
-    runs = parsed["meta"].get("runs") or 5
-    return {"engines": engines, "files": files, "matrix": matrix, "width": width, "height": height,
-            "runs": runs, "generated": parsed["meta"].get("generated")}
+def write_report(json_path):
+    """render_benchmark.json -> report.html next to it, built only from what the JSON says."""
+    json_path = Path(json_path)
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    html_path = json_path.with_name("report.html")
+    html_path.write_text(build_html(data), encoding="utf-8")
+    return html_path
 
 
 def main():
-    args = sys.argv[1:]
-    if len(args) == 3 and args[0] == "--from-html":
-        report, out_path = report_from_html(args[1]), Path(args[2])
-    elif len(args) == 2:
-        results_path, out_path = Path(args[0]), Path(args[1])
-        report = json.loads(results_path.read_text())
-    else:
-        print("usage: generate_report.py <results.json> <out.html>\n"
-              "       generate_report.py --from-html <old report.html> <out.html>", file=sys.stderr)
+    if len(sys.argv) != 2:
+        print("usage: generate_report.py <render_benchmark.json>", file=sys.stderr)
         sys.exit(1)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(build_html(report))
-    print(f"Wrote {out_path} ({out_path.stat().st_size} bytes)")
+    html_path = write_report(sys.argv[1])
+    print(f"Wrote {html_path} ({html_path.stat().st_size} bytes)")
 
 
 if __name__ == "__main__":

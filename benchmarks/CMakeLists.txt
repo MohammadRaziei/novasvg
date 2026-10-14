@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.19)
 project(NovaSVGBenchmarks LANGUAGES CXX)
 
 # Compares novasvg against resvg, lunasvg, thorvg, nanosvg and cairosvg on
-# capability, rendered output, and speed -- and writes a single self-contained
-# report.html. 5 of the 6 engines are fetched and built from source here and
+# capability, rendered output, and speed -- and writes report.html plus
+# render_benchmark.json and the renders/ PNGs it loads. 5 of the 6 engines are fetched and built from source here and
 # driven directly through their own C/C++ API, each in one process
 # (native/*_native_bench.cpp): novasvg is pulled in by
 # cmake/FetchNovasvg.cmake (FetchContent; point it at a local tree with
@@ -24,10 +24,10 @@ project(NovaSVGBenchmarks LANGUAGES CXX)
 # Needs on PATH: a C++17 compiler, meson + ninja (thorvg), cargo (resvg),
 # Python 3.
 #
-# Result: outputs/report.html (self-contained, safe to open with no server
-# and no network -- every render is a base64 data: URI). Everything else
-# (results.json, per-engine PNGs) stays in build/ -- outputs/ holds only
-# that one file.
+# Result, in outputs/ (keep them together; no server or network needed):
+#   renders/<engine>/<sample>.png + result.json   one folder per engine, written by python/run_benchmark.py
+#   render_benchmark.json                         report/gather.py merging those result.json files, plus RMSE vs Chromium
+#   report.html                                   report/generate_report.py, built from render_benchmark.json
 #
 # Tunables (cmake -D<name>=<value>):
 #   NOVASVG_BENCH_RUNS    renders per (engine, sample) cell, median reported (default 5)
@@ -37,10 +37,8 @@ project(NovaSVGBenchmarks LANGUAGES CXX)
 #     NOVASVG_BENCH_GIT_URL / _GIT_TAG, see above; README.md has resvg's rust-version caveat)
 # See README.md for the full rundown and what's still ponytail-scoped for later.
 
-set(NOVASVG_BENCH_RESULTS_DIR_DEFAULT "${CMAKE_CURRENT_BINARY_DIR}/results" CACHE PATH
-    "Where intermediate build artifacts (results.json + per-engine renders/) land -- inside build/, not committed")
-set(NOVASVG_BENCH_OUTPUT_DIR_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/outputs" CACHE PATH
-    "Where the final deliverable (report.html, and nothing else) is written -- the one thing meant to be committed/shared")
+set(NOVASVG_BENCH_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/outputs" CACHE PATH
+    "Where everything lands: renders/<engine>/ (PNGs + that engine's result.json), render_benchmark.json and report.html -- what is meant to be committed/shared")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Python3 COMPONENTS Interpreter REQUIRED)

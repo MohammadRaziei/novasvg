@@ -124,7 +124,7 @@ add_custom_command(
         -DLANGS_DIR=${CMAKE_CURRENT_SOURCE_DIR}
         -DGENERATE_SCRIPT=${NOVASVG_GENERATE_SCRIPT}
         -DSHOWCASE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/showcase
-        -DBENCH_REPORT=${PROJECT_SOURCE_DIR}/benchmarks/outputs/report.html
+        -DBENCH_REPORT=${PROJECT_SOURCE_DIR}/benchmarks/outputs/render_benchmark.json
         -DCHARTS_PY=${PROJECT_SOURCE_DIR}/benchmarks/report/charts.py
         -P ${CMAKE_CURRENT_SOURCE_DIR}/CreateDocs.cmake
     DEPENDS
@@ -191,16 +191,18 @@ add_custom_command(TARGET novasvg_docs POST_BUILD
 )
 
 # ── Benchmarks page ───────────────────────────────────────────
-# benchmarks/outputs/report.html is generated on a developer machine
-# (see benchmarks/README.md) and committed; it is only copied here, never
-# rebuilt. Runs after InjectComment above so the standalone file is
-# published byte-for-byte as committed.
-set(NOVASVG_BENCH_REPORT ${PROJECT_SOURCE_DIR}/benchmarks/outputs/report.html)
-if(EXISTS ${NOVASVG_BENCH_REPORT})
+# benchmarks/outputs/ (report.html + render_benchmark.json + renders/) is generated on a
+# developer machine (see benchmarks/README.md) and committed; it is only copied here, never
+# rebuilt. report.html loads its PNGs by relative path, so renders/ goes next to it. Runs after
+# InjectComment above so the page is published byte-for-byte as committed.
+set(NOVASVG_BENCH_OUTDIR ${PROJECT_SOURCE_DIR}/benchmarks/outputs)
+if(EXISTS ${NOVASVG_BENCH_OUTDIR}/report.html)
     add_custom_command(TARGET novasvg_docs POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_DOCS_OUT}/benchmarks
-        COMMAND ${CMAKE_COMMAND} -E copy ${NOVASVG_BENCH_REPORT} ${NOVASVG_DOCS_OUT}/benchmarks/index.html
-        COMMENT "Publishing committed benchmark report -> ${NOVASVG_DOCS_OUT}/benchmarks/index.html"
+        COMMAND ${CMAKE_COMMAND} -E copy ${NOVASVG_BENCH_OUTDIR}/report.html ${NOVASVG_DOCS_OUT}/benchmarks/index.html
+        COMMAND ${CMAKE_COMMAND} -E copy ${NOVASVG_BENCH_OUTDIR}/render_benchmark.json ${NOVASVG_DOCS_OUT}/benchmarks/render_benchmark.json
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${NOVASVG_BENCH_OUTDIR}/renders ${NOVASVG_DOCS_OUT}/benchmarks/renders
+        COMMENT "Publishing committed benchmark report -> ${NOVASVG_DOCS_OUT}/benchmarks/"
         VERBATIM
     )
 else()

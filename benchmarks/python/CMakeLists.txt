@@ -1,8 +1,9 @@
 # Sets up an isolated venv with cairosvg (the one engine with no native
 # counterpart) and runs the actual timing/rendering pass, which also drives
-# the 5 native_*_bench binaries built under ../native. Kept separate from
-# report/ so `novasvg_bench_run` can be re-run on its own (e.g. with a
-# different --runs) without regenerating anything else until you ask for it.
+# the 5 native_*_bench binaries built under ../native. Every engine writes its
+# own renders/<engine>/ folder (PNGs + result.json) into NOVASVG_BENCH_OUTPUT_DIR.
+# Kept separate from report/ so `novasvg_bench_run` can be re-run on its own
+# (e.g. with a different --runs) without regenerating the report.
 
 set(NOVASVG_BENCH_VENV "${CMAKE_CURRENT_BINARY_DIR}/venv" CACHE PATH
     "Python venv used to install and run cairosvg")
@@ -15,9 +16,6 @@ if(WIN32)
 else()
     set(NOVASVG_BENCH_PYTHON "${NOVASVG_BENCH_VENV}/bin/python")
 endif()
-
-set(NOVASVG_BENCH_RESULTS_DIR "${NOVASVG_BENCH_RESULTS_DIR_DEFAULT}" CACHE PATH
-    "Where results.json + per-engine renders/ land (build/ by default -- intermediate, not committed)")
 
 add_custom_command(
     OUTPUT "${NOVASVG_BENCH_PYTHON}"
@@ -38,9 +36,10 @@ add_custom_command(
 )
 add_custom_target(novasvg_bench_deps DEPENDS "${NOVASVG_BENCH_DEPS_STAMP}")
 
-set(NOVASVG_BENCH_RESULTS_JSON "${NOVASVG_BENCH_RESULTS_DIR}/results.json")
+# run_benchmark.py writes many files into outputs/, so a stamp in the build tree tracks "has it run".
+set(NOVASVG_BENCH_RUN_STAMP "${CMAKE_CURRENT_BINARY_DIR}/run.stamp")
 add_custom_command(
-    OUTPUT "${NOVASVG_BENCH_RESULTS_JSON}"
+    OUTPUT "${NOVASVG_BENCH_RUN_STAMP}"
     DEPENDS novasvg_bench_deps
             novasvg_native_bench resvg_native_bench lunasvg_native_bench
             thorvg_native_bench nanosvg_native_bench
@@ -49,9 +48,8 @@ add_custom_command(
             "${CMAKE_CURRENT_SOURCE_DIR}/corpus.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/native_bench.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/ground_truth.py"
-            "${CMAKE_CURRENT_SOURCE_DIR}/compare.py"
     COMMAND "${NOVASVG_BENCH_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/run_benchmark.py"
-            "${NOVASVG_BENCH_RESULTS_DIR}"
+            "${NOVASVG_BENCH_OUTPUT_DIR}"
             --runs "${NOVASVG_BENCH_RUNS}"
             --width "${NOVASVG_BENCH_WIDTH}"
             --height "${NOVASVG_BENCH_HEIGHT}"
@@ -60,11 +58,11 @@ add_custom_command(
             --lunasvg-native-bench "$<TARGET_FILE:lunasvg_native_bench>"
             --thorvg-native-bench "$<TARGET_FILE:thorvg_native_bench>"
             --nanosvg-native-bench "$<TARGET_FILE:nanosvg_native_bench>"
-    COMMENT "novasvg_bench: rendering every (engine, sample) pair and timing it"
+    COMMAND "${CMAKE_COMMAND}" -E touch "${NOVASVG_BENCH_RUN_STAMP}"
+    COMMENT "novasvg_bench: rendering every (engine, sample) pair and timing it -> ${NOVASVG_BENCH_OUTPUT_DIR}/renders/<engine>/"
     VERBATIM
 )
-add_custom_target(novasvg_bench_run DEPENDS "${NOVASVG_BENCH_RESULTS_JSON}")
+add_custom_target(novasvg_bench_run DEPENDS "${NOVASVG_BENCH_RUN_STAMP}")
 
-set(NOVASVG_BENCH_RESULTS_JSON "${NOVASVG_BENCH_RESULTS_JSON}" PARENT_SCOPE)
+set(NOVASVG_BENCH_RUN_STAMP "${NOVASVG_BENCH_RUN_STAMP}" PARENT_SCOPE)
 set(NOVASVG_BENCH_PYTHON "${NOVASVG_BENCH_PYTHON}" PARENT_SCOPE)
-set(NOVASVG_BENCH_RESULTS_DIR "${NOVASVG_BENCH_RESULTS_DIR}" PARENT_SCOPE)

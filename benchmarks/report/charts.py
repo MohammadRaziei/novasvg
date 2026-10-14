@@ -4,11 +4,12 @@ Used by generate_report.py (the full report) and by docs/generate_index.py
 (the teaser on the docs landing page), so both draw the same colourful charts
 from the same numbers.
 
-parse_report_html() reads the numbers back out of a generated report.html,
-which is how the landing page gets them without needing results.json.
+load_summary() reads those numbers from render_benchmark.json -- the file gather.py
+merges out of the per-engine renders/<engine>/result.json -- which is how both the
+report's "At a glance" section and the landing page get them.
 """
 import html
-import re
+import json
 
 # Engine key -> (label, colour). Colours are sampled from the NovaSVG logo ramp
 # (blue #1867b2 -> violet #884d9e -> magenta #b6489b); novasvg itself is drawn
@@ -22,51 +23,25 @@ ENGINE_COLORS = {
     "nanosvg":  "#e8739f",
 }
 REFERENCE = "ground_truth"
+# Display order everywhere (report, tables, gallery); an engine not listed here is appended after these.
+ENGINE_ORDER = [REFERENCE, "novasvg", "resvg", "lunasvg", "cairosvg", "thorvg", "nanosvg"]
 
 
-def _ms(text):
-    m = re.search(r"([\d.]+)\s*ms", text)
-    return float(m.group(1)) if m else None
-
-
-def _caption_label(fig):
-    """Engine label from a gallery <figcaption>; handles both the old (`Label<br>`) and new (`<b>Label</b>`) markup."""
-    m = re.search(r"<figcaption>(?:<b>(.*?)</b>|(.*?)<br>)", fig, flags=re.S)
-    return html.unescape(m.group(1) or m.group(2)) if m else None
-
-
-def parse_report_html(path):
-    """Return {engine_key: {label, version, ok, total, avg_ms, rmse}} + meta, or None."""
+def load_summary(path):
+    """Return {"engines": {key: {label, version, ok, total, avg_ms, rmse}}, "meta": {samples, runs, generated}}
+    read from a render_benchmark.json, or None if it is missing, unreadable or has no engines."""
     try:
-        s = open(path, encoding="utf-8").read()
-    except OSError:
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
         return None
-    rows = re.findall(r"<tr[^>]*><td>(.*?)</td><td>(.*?)</td><td>(\d+)/(\d+)</td><td>(.*?)</td><td>(.*?)</td></tr>", s)
-    if not rows:
+    engines = data.get("summary") or {}
+    if not engines:
         return None
-    out = {}
-    for label, version, ok, total, avg, tot in rows:
-        key = REFERENCE if "ground truth" in label else label.lower()
-        out[key] = {"label": html.unescape(label), "version": html.unescape(version),
-                    "ok": int(ok), "total": int(total), "avg_ms": _ms(avg), "rmse": None}
-    # per-engine mean RMSE against the reference, from the gallery captions
-    acc = {}
-    for fig in re.findall(r"<figure[^>]*>.*?</figure>", s, flags=re.S):
-        label = _caption_label(fig)
-        m = re.search(r"RMSE ([\d.]+)", fig)
-        if label and m:
-            acc.setdefault(label.lower(), []).append(float(m.group(1)))
-    for key, vals in acc.items():
-        if key in out and vals:
-            out[key]["rmse"] = sum(vals) / len(vals)
-    meta = {}
-    m = re.search(r"(\d+) samples", s)
-    meta["samples"] = int(m.group(1)) if m else None
-    m = re.search(r"median of (\d+) runs", s)
-    meta["runs"] = int(m.group(1)) if m else None
-    m = re.search(r"[Gg]enerated (\d{4}-\d\d-\d\d \d\d:\d\d UTC)", s)
-    meta["generated"] = m.group(1).strip() if m else None
-    return {"engines": out, "meta": meta}
+    meta = {"samples": len(data.get("files") or []) or None,
+            "runs": data.get("runs"),
+            "generated": data.get("generated")}
+    return {"engines": engines, "meta": meta}
 
 
 def _bars(rows, unit, fmt, aria):
