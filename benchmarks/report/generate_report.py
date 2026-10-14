@@ -38,8 +38,9 @@ def build_summary_table(data):
     rows = []
     for k in list(summary):
         e = summary[k]
+        row_cls = ' class="is-nova"' if k == "novasvg" else ""  # not inline: no backslashes in f-string expressions before 3.12
         rows.append(
-            f"<tr{' class=\"is-nova\"' if k == 'novasvg' else ''}><td>{html.escape(e['label'])}</td>"
+            f"<tr{row_cls}><td>{html.escape(e['label'])}</td>"
             f"<td>{html.escape(e['version'])}</td>"
             f"<td>{e['ok']}/{e['total']}</td>"
             f"<td>{fmt_ms(e['avg_ms'])}</td>"
@@ -92,8 +93,9 @@ def build_gallery(data):
             else:
                 img = '<div class="missing">no render</div>'
                 caption = "FAIL"
+            fig_cls = ' class="is-nova"' if k == "novasvg" else ""
             thumbs.append(
-                f'<figure{" class=\"is-nova\"" if k == "novasvg" else ""}><div class="thumb">{img}</div>'
+                f'<figure{fig_cls}><div class="thumb">{img}</div>'
                 f'<figcaption><b>{label}</b>{caption}</figcaption></figure>'
             )
         dims = f' <span class="dims">({f["render_w"]}&times;{f["render_h"]}px)</span>' if "render_w" in f else ""
