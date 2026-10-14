@@ -20,6 +20,7 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import charts  # noqa: E402
@@ -62,6 +63,15 @@ def fmt_rmse(cell, is_ground_truth):
     return f'<span class="rmse {cls}">RMSE {rmse:.2f}</span>'
 
 
+# GitHub-style "link to this example" icon, shown next to a sample's name on hover
+ANCHOR_ICON = (
+    '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" '
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    '<path d="M6.5 9.5a3 3 0 0 0 4.2 0l2.3-2.3a3 3 0 0 0-4.2-4.2l-.8.8"/>'
+    '<path d="M9.5 6.5a3 3 0 0 0-4.2 0L3 8.8a3 3 0 0 0 4.2 4.2l.8-.8"/></svg>'
+)
+
+
 def build_gallery(data):
     summary = data["summary"]
     engines = list(summary)
@@ -88,7 +98,9 @@ def build_gallery(data):
             )
         dims = f' <span class="dims">({f["render_w"]}&times;{f["render_h"]}px)</span>' if "render_w" in f else ""
         blocks.append(
-            f'<section class="sample"><h3>{html.escape(name)}{dims}</h3>'
+            f'<section class="sample" id="{html.escape(name, quote=True)}"><h3>{html.escape(name)}{dims}'
+            f'<a class="anchor" href="#{quote(name, safe="")}" title="Link to this example" '
+            f'aria-label="Link to {html.escape(name, quote=True)}">{ANCHOR_ICON}</a></h3>'
             f'<p class="desc">{html.escape(f["desc"])}</p>'
             f'<div class="thumbs">{"".join(thumbs)}</div></section>'
         )
@@ -198,6 +210,13 @@ tr.is-nova td:first-child { box-shadow: inset 3px 0 0 var(--accent2); }
 .sample { margin-top: 1.25rem; padding: 1.2rem 1.3rem 1.3rem; border: 1px solid var(--border); border-radius: 18px; background: var(--card); }
 .sample h3 { font-size: 1.05rem; font-weight: 700; }
 .sample h3 .dims { font: 400 .76rem var(--font-mono); color: var(--fg3); margin-left: .4rem; }
+.sample { scroll-margin-top: 4.5rem; }  /* the sticky 56px topbar must not cover the heading after a #fragment jump */
+.sample h3 .anchor { display: inline-flex; vertical-align: -2px; margin-left: .45rem; padding: 2px; border-radius: 6px;
+  color: var(--fg3); text-decoration: none; opacity: 0; transition: opacity .15s, color .15s; }
+.sample h3:hover .anchor, .sample h3 .anchor:focus-visible, .sample:target h3 .anchor { opacity: 1; }
+.sample h3 .anchor:hover { color: var(--accent2); }
+@media (hover: none) { .sample h3 .anchor { opacity: .6; } }  /* touch screens have no hover: keep it visible */
+.sample:target { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2), 0 8px 24px color-mix(in srgb, var(--accent2) 18%, transparent); }
 .sample .desc { color: var(--fg2); font-size: .85rem; margin-top: .1rem; }
 .thumbs { display: flex; gap: .75rem; margin-top: 1rem; overflow-x: auto; padding-bottom: .4rem; }
 figure { margin: 0; text-align: center; width: 128px; flex: 0 0 auto; }

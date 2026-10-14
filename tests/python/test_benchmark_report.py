@@ -128,6 +128,23 @@ def test_the_page_embeds_nothing_and_every_image_is_a_file_next_to_it(out):
     assert all(s.startswith("renders/") and (out / s).is_file() for s in srcs)
 
 
+def test_every_sample_has_an_id_equal_to_its_name_and_a_link_icon_to_it(out):
+    gr.write_report(gt.gather(out))
+    page = (out / "index.html").read_text(encoding="utf-8")
+    ids = re.findall(r'\sid="([^"]+)"', page)
+    assert len(ids) == len(set(ids))  # a fragment must hit exactly one element (the lightbox ids included)
+    for name in ("circle", "tiger"):
+        assert f'<section class="sample" id="{name}">' in page
+        assert f'<a class="anchor" href="#{name}"' in page
+
+
+def test_an_unusual_sample_name_is_escaped_in_the_id_and_encoded_in_the_fragment(tmp_path):
+    make_engine(tmp_path, "ground_truth", {"a b&c": (0.5, BLACK)})
+    gr.write_report(gt.gather(tmp_path))
+    page = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert 'id="a b&amp;c"' in page and 'href="#a%20b%26c"' in page
+
+
 def test_at_a_glance_is_drawn_from_the_json_not_from_the_run(out):
     path = gt.gather(out)
     data = json.loads(path.read_text(encoding="utf-8"))

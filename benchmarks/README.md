@@ -55,6 +55,8 @@ The renders are ordinary PNG files the page loads by relative path, not base64 i
 drawn from `render_benchmark.json`, the one place to read the results from. An engine that could not run
 (a native binary that was not built, no Chromium) leaves a `result.json` that says why and is listed
 in the report as unavailable.
+Every sample in the gallery has an `id` equal to its name and a link icon beside its heading (shown on hover), so
+`index.html#mermaid-47-flowchart-br-bold-label` opens straight on that example and the URL can be shared.
 
 ## What gets rendered
 
