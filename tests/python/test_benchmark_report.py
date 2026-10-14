@@ -2,7 +2,7 @@
 
     run_benchmark.py   renders/<engine>/<sample>.png + result.json, one folder per engine
     gather.py          merges the result.json files -> render_benchmark.json (+ RMSE vs Chromium, + summary)
-    generate_report.py render_benchmark.json -> report.html, which embeds nothing and holds no data of its own
+    generate_report.py render_benchmark.json -> index.html, which embeds nothing and holds no data of its own
 """
 import json
 import re
@@ -121,7 +121,7 @@ def test_gather_refuses_to_write_an_empty_benchmark(tmp_path):
 
 def test_the_page_embeds_nothing_and_every_image_is_a_file_next_to_it(out):
     gr.write_report(gt.gather(out))
-    page = (out / "report.html").read_text(encoding="utf-8")
+    page = (out / "index.html").read_text(encoding="utf-8")
     assert "data:image" not in page and "base64" not in page
     srcs = re.findall(r'<img src="([^"]+)"', page)
     assert len(srcs) == 5  # 2 + 2 + 1; resvg's failed cell has no image
@@ -134,7 +134,7 @@ def test_at_a_glance_is_drawn_from_the_json_not_from_the_run(out):
     data["summary"]["novasvg"]["avg_ms"] = 123.45  # edit the JSON only ...
     path.write_text(json.dumps(data), encoding="utf-8")
     gr.write_report(path)  # ... and rebuild the page from it
-    assert "123.45" in (out / "report.html").read_text(encoding="utf-8")
+    assert "123.45" in (out / "index.html").read_text(encoding="utf-8")
 
 
 def test_load_summary_feeds_the_docs_landing_page(out):

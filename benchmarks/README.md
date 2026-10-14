@@ -3,7 +3,7 @@
 Compares **novasvg** against **resvg**, **lunasvg**, **thorvg**, **nanosvg**
 and **cairosvg** — with **Chromium** rendered alongside as visual ground
 truth — on capability, rendered output, and speed. Driven entirely by
-CMake, ending in `outputs/report.html` plus the data and renders it is built from.
+CMake, ending in `outputs/index.html` plus the data and renders it is built from.
 
 5 of the 6 compared engines are driven **directly through their own C/C++
 API**, in one process each, built from source by this CMake project. Only
@@ -25,7 +25,7 @@ ground truth (`playwright install chromium` if you don't already have one
 — see below for pinning the pip package to match it). First build takes a
 few minutes (compiles resvg via cargo, thorvg via meson, lunasvg/nanosvg
 via CMake, novasvg via FetchContent). Open
-`outputs/report.html` afterwards -- no server, no network needed; click any render to zoom in.
+`outputs/index.html` afterwards -- no server, no network needed; click any render to zoom in.
 `outputs/` holds what the three steps below leave behind, and it belongs together:
 
 ```
@@ -34,14 +34,14 @@ outputs/
     <sample>.png            its renders
     result.json             that engine's run alone: version, per-sample time, which samples failed
   render_benchmark.json   every engine's result.json merged, plus RMSE vs Chromium and a per-engine summary
-  report.html             the page, built from render_benchmark.json
+  index.html             the page, built from render_benchmark.json
 ```
 
 | step | script | reads -> writes |
 |---|---|---|
 | run | `python/run_benchmark.py` | corpus -> `renders/<engine>/` (only renders and times; knows nothing of the other engines) |
 | gather | `report/gather.py` | every `renders/*/result.json` -> `render_benchmark.json` (only merges and scores; renders nothing) |
-| report | `report/generate_report.py` | `render_benchmark.json` -> `report.html` |
+| report | `report/generate_report.py` | `render_benchmark.json` -> `index.html` |
 
 Because each engine is a self-contained folder, one engine can be redone without touching the rest
 (delete or rerun its folder), and the last two steps are quick re-runs that never render anything:
@@ -51,7 +51,7 @@ python report/gather.py outputs && python report/generate_report.py outputs/rend
 ```
 
 The renders are ordinary PNG files the page loads by relative path, not base64 inside the HTML, and
-`report.html` -- its "At a glance" charts and engine table included -- holds no data of its own: it is
+`index.html` -- its "At a glance" charts and engine table included -- holds no data of its own: it is
 drawn from `render_benchmark.json`, the one place to read the results from. An engine that could not run
 (a native binary that was not built, no Chromium) leaves a `result.json` that says why and is listed
 in the report as unavailable.
@@ -164,7 +164,7 @@ the same fontconfig, e.g. `FONTCONFIG_FILE` pointing at a config that exposes on
   `result.json` go straight into its own `outputs/renders/<engine>/` folder.
 - `report/gather.py` merges those `result.json` files into `outputs/render_benchmark.json`
   (the sample list is the union of what the engines ran) and scores each render against Chromium's.
-  `report/generate_report.py` then builds `report.html` from that JSON -- an "At a glance"
+  `report/generate_report.py` then builds `index.html` from that JSON -- an "At a glance"
   accuracy/speed chart pair, an engine-version table, and a visual gallery with every engine's render of
   every sample side by side.
 - `native/novasvg_native_bench.cpp` pays novasvg's one-time process-wide

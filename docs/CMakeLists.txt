@@ -191,22 +191,20 @@ add_custom_command(TARGET novasvg_docs POST_BUILD
 )
 
 # ── Benchmarks page ───────────────────────────────────────────
-# benchmarks/outputs/ (report.html + render_benchmark.json + renders/) is generated on a
-# developer machine (see benchmarks/README.md) and committed; it is only copied here, never
-# rebuilt. report.html loads its PNGs by relative path, so renders/ goes next to it. Runs after
+# benchmarks/outputs/ is generated on a developer machine (see benchmarks/README.md) and
+# committed; it is only copied here, never rebuilt. It is published as it is, folder and all:
+# index.html (the page), render_benchmark.json (its data) and renders/<engine>/ (the PNGs it
+# loads by relative path), so it needs no renaming and no per-file bookkeeping. Runs after
 # InjectComment above so the page is published byte-for-byte as committed.
 set(NOVASVG_BENCH_OUTDIR ${PROJECT_SOURCE_DIR}/benchmarks/outputs)
-if(EXISTS ${NOVASVG_BENCH_OUTDIR}/report.html)
+if(EXISTS ${NOVASVG_BENCH_OUTDIR}/index.html)
     add_custom_command(TARGET novasvg_docs POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_DOCS_OUT}/benchmarks
-        COMMAND ${CMAKE_COMMAND} -E copy ${NOVASVG_BENCH_OUTDIR}/report.html ${NOVASVG_DOCS_OUT}/benchmarks/index.html
-        COMMAND ${CMAKE_COMMAND} -E copy ${NOVASVG_BENCH_OUTDIR}/render_benchmark.json ${NOVASVG_DOCS_OUT}/benchmarks/render_benchmark.json
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${NOVASVG_BENCH_OUTDIR}/renders ${NOVASVG_DOCS_OUT}/benchmarks/renders
-        COMMENT "Publishing committed benchmark report -> ${NOVASVG_DOCS_OUT}/benchmarks/"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${NOVASVG_BENCH_OUTDIR} ${NOVASVG_DOCS_OUT}/benchmarks
+        COMMENT "Publishing committed benchmarks/outputs/ -> ${NOVASVG_DOCS_OUT}/benchmarks/"
         VERBATIM
     )
 else()
-    message(WARNING "benchmarks/outputs/report.html not found -- the docs site "
+    message(WARNING "benchmarks/outputs/index.html not found -- the docs site "
                     "will have no /benchmarks/ page. Generate it as described in "
                     "benchmarks/README.md and commit it.")
 endif()

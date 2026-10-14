@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Builds report.html from render_benchmark.json (the file ../report/gather.py writes).
+"""Builds index.html from render_benchmark.json (the file ../report/gather.py writes).
 
     outputs/
-      report.html             <- this script; loads every render from renders/ by relative path
+      index.html             <- this script; loads every render from renders/ by relative path
       render_benchmark.json   <- gather.py; every number on the page, "At a glance" included, comes from it
       renders/<engine>/       <- run_benchmark.py; one folder per engine: its PNGs and its own result.json
 
 The page holds no data of its own and embeds nothing: edit the JSON (or re-gather) and re-run this to
 change it, no benchmark run needed.
 
-Usage: generate_report.py <render_benchmark.json>      (writes report.html next to it)
+Usage: generate_report.py <render_benchmark.json>      (writes index.html next to it)
 
 The page shares its look with the docs site: the brand tokens are read from
 docs/novasvg-docs.css and the colourful charts come from charts.py, which the
@@ -361,10 +361,10 @@ document.addEventListener('keydown', (e) => {{ if (e.key === 'Escape') closeLigh
 
 
 def write_report(json_path):
-    """render_benchmark.json -> report.html next to it, built only from what the JSON says."""
+    """render_benchmark.json -> index.html next to it, built only from what the JSON says."""
     json_path = Path(json_path)
     data = json.loads(json_path.read_text(encoding="utf-8"))
-    html_path = json_path.with_name("report.html")
+    html_path = json_path.with_name("index.html")
     html_path.write_text(build_html(data), encoding="utf-8")
     return html_path
 

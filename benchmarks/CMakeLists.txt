@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.19)
 project(NovaSVGBenchmarks LANGUAGES CXX)
 
 # Compares novasvg against resvg, lunasvg, thorvg, nanosvg and cairosvg on
-# capability, rendered output, and speed -- and writes report.html plus
+# capability, rendered output, and speed -- and writes index.html plus
 # render_benchmark.json and the renders/ PNGs it loads. 5 of the 6 engines are fetched and built from source here and
 # driven directly through their own C/C++ API, each in one process
 # (native/*_native_bench.cpp): novasvg is pulled in by
@@ -27,7 +27,7 @@ project(NovaSVGBenchmarks LANGUAGES CXX)
 # Result, in outputs/ (keep them together; no server or network needed):
 #   renders/<engine>/<sample>.png + result.json   one folder per engine, written by python/run_benchmark.py
 #   render_benchmark.json                         report/gather.py merging those result.json files, plus RMSE vs Chromium
-#   report.html                                   report/generate_report.py, built from render_benchmark.json
+#   index.html                                   report/generate_report.py, built from render_benchmark.json
 #
 # Tunables (cmake -D<name>=<value>):
 #   NOVASVG_BENCH_RUNS    renders per (engine, sample) cell, median reported (default 5)
@@ -38,7 +38,7 @@ project(NovaSVGBenchmarks LANGUAGES CXX)
 # See README.md for the full rundown and what's still ponytail-scoped for later.
 
 set(NOVASVG_BENCH_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/outputs" CACHE PATH
-    "Where everything lands: renders/<engine>/ (PNGs + that engine's result.json), render_benchmark.json and report.html -- what is meant to be committed/shared")
+    "Where everything lands: renders/<engine>/ (PNGs + that engine's result.json), render_benchmark.json and index.html -- what is meant to be committed/shared")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
