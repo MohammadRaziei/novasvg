@@ -314,8 +314,17 @@ NB_MODULE(novasvg_py, m) {
     nb::class_<novasvg::Bitmap>(m, "Bitmap")
         .def(nb::init<>(), "Construct a null bitmap.")
         .def(nb::init<int, int>(), "width"_a, "height"_a, "Construct a bitmap with specified dimensions.")
-        // Expose data as a NumPy array (read-only reference to internal data)
+        // Expose data as a NumPy array (read-only reference to internal data).
+        // NumPy is not a dependency of novasvg: nanobind only imports it when an array is
+        // actually built, i.e. here. So check for it first and say what is wrong if it is missing.
         .def("numpy", [](const novasvg::Bitmap &bmp) {
+            try {
+                nb::module_::import_("numpy");
+            } catch (nb::python_error &) {
+                throw nb::import_error(
+                    "Bitmap.numpy() needs NumPy, which is not installed (pip install numpy). "
+                    "Everything else in novasvg works without it.");
+            }
             if (bmp.isNull()) return nb::ndarray<nb::numpy, uint8_t>();
             // Shape: {height, width, 4} for ARGB32
             return nb::ndarray<nb::numpy, uint8_t>(bmp.data(), {(uint64_t) bmp.height(), (uint64_t) bmp.width(), 4});

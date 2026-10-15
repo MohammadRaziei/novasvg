@@ -1,8 +1,7 @@
 [build-system]
 requires = [
     "scikit-build-core>=0.8.0",
-    "nanobind>=2.0.0",
-    "numpy>=1.20.0"
+    "nanobind>=2.0.0"
 ]
 build-backend = "scikit_build_core.build"
 
@@ -28,15 +27,14 @@ classifiers = [
     "Topic :: Multimedia :: Graphics",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = [
-    # "numpy>=1.20.0",
-    "numpy"
-]
+# No runtime dependencies. NumPy is only needed if you call Bitmap.numpy(), which raises a clear
+# ImportError when it is missing.
+dependencies = []
 scripts.novasvg = "novasvg.__main__:main"
 scripts.novasvg-cli = "novasvg.native_cli:run"
 
 [project.optional-dependencies]
-test = ["pytest-xdist", "fonttools", "pillow"]
+test = ["pytest-xdist", "fonttools", "pillow", "numpy>=1.20.0"]
 
 
 [project.urls]

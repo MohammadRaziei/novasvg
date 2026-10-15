@@ -1,7 +1,6 @@
 # build dependencies
 scikit-build-core
 nanobind
-numpy
 
 # development dependencies
 build
@@ -12,6 +11,7 @@ pytest
 pytest-cov
 fonttools
 pillow
+numpy
 
 # documentation dependencies (doxygen/graphviz themselves are installed via
 # apt in cmake.yml, not here)

@@ -1,14 +1,14 @@
-# NovaSVG Python Bindings
+# NovaSVG for Python
 
-Python bindings for NovaSVG library using nanobind and scikit-build-core.
-
-## Installation
+Python bindings for [NovaSVG](README.md), built with nanobind and scikit-build-core.
 
 ```bash
-pip install -e .
+pip install novasvg
 ```
 
-Or install from source:
+**No runtime dependencies.** NovaSVG renders and encodes PNG, JPEG, BMP and TGA on its own, with no Pillow and no NumPy. NumPy is only needed if you call `Bitmap.numpy()`; if it is missing, that one call raises an `ImportError` that says so, and everything else keeps working.
+
+Requires Python 3.9 or newer. Building from source also needs a C++17 compiler and CMake:
 
 ```bash
 git clone https://github.com/mohammadraziei/novasvg
@@ -16,187 +16,128 @@ cd novasvg
 pip install .
 ```
 
-## Requirements
-
-- Python >= 3.7
-- numpy >= 1.20.0
-- C++17 compiler
-- CMake >= 3.15
-
-## Quick Start
+## Quick start
 
 ```python
 import novasvg
-import numpy as np
-import matplotlib.pyplot as plt
+from novasvg import Color
 
-# Load SVG from file or string
-svg_string = """
-<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-    <rect x="20" y="20" width="160" height="160" fill="red" stroke="blue" stroke-width="4"/>
-    <circle cx="100" cy="100" r="60" fill="green" opacity="0.7"/>
-</svg>
-"""
+# One call: SVG file, string, bytes or file object -> PNG
+novasvg.svg2png("artwork.svg", "artwork.png", width=800, background_color=Color.white())
 
-# Load document
-doc = novasvg.Document.load_from_data(svg_string)
+# Or keep the parsed document and render it as many times as you like
+doc = novasvg.Document.load_from_file("artwork.svg")
+print(doc.width, doc.height)
 
-# Render to numpy array
-image = doc.render_to_array()  # shape: (200, 200, 4) RGBA
-
-# Display with matplotlib
-plt.imshow(image)
-plt.axis('off')
-plt.show()
-
-# Save to PNG
-bitmap = doc.render_to_bitmap()
-bitmap.write_to_png("output.png")
+bitmap = doc.render_to_bitmap(width=800)      # height follows the aspect ratio
+bitmap.write_to_png("artwork.png")
+png_bytes = bitmap.to_png()                   # or in memory, no temp file
 ```
 
-## API Reference
+## API
 
-### Core Classes
-
-#### `Document`
-Main class for SVG documents.
+### `Document`
 
 ```python
-# Load from file
-doc = novasvg.load("image.svg")
+doc = novasvg.Document.load_from_file("image.svg")
+doc = novasvg.Document.load_from_data(svg_string)     # str or bytes
 
-# Load from string
-doc = novasvg.Document.load_from_data(svg_string)
+doc.width, doc.height                  # floats
+doc.bounding_box()                     # Box
 
-# Properties
-width = doc.width()      # float
-height = doc.height()    # float
-bbox = doc.bounding_box() # Box object
-
-# Rendering
 bitmap = doc.render_to_bitmap(width=400, height=300)
-array = doc.render_to_array(width=400, height=300)
+bitmap = doc.render_to_bitmap(400, 300, Color.white())    # with a background
+bitmap = doc.render_to_bitmap(400, 300, 0xFFFFFFFF)       # packed 0xRRGGBBAA also works
 
-# Element access
-root = doc.document_element()
-element = doc.get_element_by_id("my-element")
-elements = doc.query_selector_all("rect, circle")
+root     = doc.document_element()
+element  = doc.get_element_by_id("my-element")
+elements = doc.query_selector_all("rect, circle")         # CSS selectors
+doc.apply_stylesheet("circle { fill: purple; }")
 ```
 
-#### `Bitmap`
-Image buffer class with numpy integration and built-in encoders (PNG, BMP, TGA, JPEG) -- no Pillow needed.
+### `Bitmap`
 
 ```python
-# Create / render
 bitmap = novasvg.Bitmap(800, 600)
-bitmap = doc.render_to_bitmap(width=400, height=300)
-
-# Pixel access (ARGB32 premultiplied, shape (height, width, 4))
-array = bitmap.numpy()
+bitmap.clear(Color.white())
 bitmap.width, bitmap.height, bitmap.stride
 
-# Encode to bytes in memory (no temp file)
+# Encode in memory
 png  = bitmap.to_png()
 bmp  = bitmap.to_bmp()
 tga  = bitmap.to_tga()
-jpg  = bitmap.to_jpg(quality=90)          # 1-100, default 80
-data = bitmap.to_bytes("jpeg", quality=90) # or "png" (default), "bmp", "tga"; ".JPG"/"PNG" also accepted
+jpg  = bitmap.to_jpg(quality=90)                 # 1-100, default 80
+data = bitmap.to_bytes("jpeg", quality=90)       # "png" (default), "bmp", "tga", "jpeg"
 
 # Or write to a file; each returns True on success
 bitmap.write_to_png("out.png")
-bitmap.write_to_bmp("out.bmp")
-bitmap.write_to_tga("out.tga")
 bitmap.write_to_jpg("out.jpg", quality=90)
-bitmap.write("out.jpg")                    # format picked from the extension (PNG if unrecognized)
+bitmap.write("out.jpg")                          # format picked from the extension
 ```
 
 Notes:
 
-- The `to_*` methods raise `ValueError` for a null bitmap and `RuntimeError` if encoding fails -- they never return empty `bytes`.
-- **Don't call `convert_to_rgba()` before encoding.** The encoders already convert from premultiplied ARGB to straight RGBA themselves (on a scratch copy); converting the bitmap in place first makes them convert a second time, which swaps red/blue and corrupts semi-transparent pixels. `convert_to_rgba()` is only for handing the raw buffer to something else.
-- JPEG has no alpha channel. Render onto an opaque background (`doc.render_to_bitmap(w, h, 0xFFFFFFFF)`) before `to_jpg()`/`write_to_jpg()`, otherwise transparent areas come out black.
+- The `to_*` methods raise `ValueError` for a null bitmap and `RuntimeError` if encoding fails. They never return empty `bytes`.
+- **Don't call `convert_to_rgba()` before encoding.** The encoders already convert from premultiplied ARGB to straight RGBA themselves, on a scratch copy. Converting the bitmap in place first makes them convert a second time, which swaps red and blue and corrupts semi-transparent pixels. `convert_to_rgba()` is only for handing the raw buffer to something else.
+- JPEG has no alpha channel. Render onto an opaque background (`doc.render_to_bitmap(w, h, 0xFFFFFFFF)`) before `to_jpg()`, otherwise transparent areas come out black.
 
-#### `Matrix`
-2D transformation matrix.
-
-```python
-# Create matrices
-identity = novasvg.Matrix()
-translated = novasvg.Matrix.translated(100, 50)
-scaled = novasvg.Matrix.scaled(2.0, 2.0)
-rotated = novasvg.Matrix.rotated(45, 100, 100)
-
-# Combine transformations
-transform = translated * scaled * rotated
-
-# Apply to elements
-element.render(bitmap, transform)
-```
-
-#### `Element`
-SVG element with manipulation capabilities.
+#### NumPy (optional)
 
 ```python
-# Get/set attributes
-if element.has_attribute("fill"):
-    color = element.get_attribute("fill")
-    element.set_attribute("fill", "#FF0000")
-
-# Bounding boxes
-local_bbox = element.get_local_bounding_box()
-global_bbox = element.get_global_bounding_box()
-
-# Transformations
-matrix = element.get_local_matrix()
-
-# Render individual element
-element.render_to_bitmap(width=200, height=200)
+array = bitmap.numpy()      # shape (height, width, 4), dtype uint8, a view of the bitmap's memory
 ```
 
-### Utility Functions
+The pixels are premultiplied and in BGRA byte order until you call `bitmap.convert_to_rgba()`, which converts the buffer in place to straight RGBA. If NumPy is not installed, this call raises:
+
+```
+ImportError: Bitmap.numpy() needs NumPy, which is not installed (pip install numpy). ...
+```
+
+### `Element`
 
 ```python
-# Convenience functions
-doc = novasvg.load("image.svg")  # Alias for Document.load_from_file
-array = novasvg.render_svg(svg_string, width=400, height=300)
-array = novasvg.svg_to_array(svg_string)  # Same as render_svg
+rect = doc.get_element_by_id("rect1")
 
-# Matrix creation
-matrix = novasvg.create_matrix(a=1, b=0, c=0, d=1, e=100, f=50)
+if rect.has_attribute("fill"):
+    color = rect.get_attribute("fill")
+rect.set_attribute("fill", "#00FF00")
 
-# Bitmap from array
-bitmap = novasvg.create_bitmap_from_array(numpy_array)
+rect.get_local_bounding_box()      # Box
+rect.get_global_bounding_box()     # Box
+rect.get_local_matrix()            # Matrix
+rect.children()
+
+rect.render_to_bitmap(width=200, height=200)       # render just this element
+rect.render(bitmap, matrix)                        # or onto an existing bitmap
 ```
 
-## Examples
-
-### Batch Processing
+### `Matrix`, `Box`, `Color`
 
 ```python
-import novasvg
-import numpy as np
-from pathlib import Path
+from novasvg import Matrix, Color
 
-# Process multiple SVG files
-svg_dir = Path("svgs")
-output_dir = Path("rendered")
+m = Matrix.translated(100, 50).multiply(Matrix.scaled(2.0, 2.0))
+r = Matrix.rotated(45, 100, 100)          # angle, cx, cy
+m.inverse()
 
-for svg_file in svg_dir.glob("*.svg"):
-    doc = novasvg.load(str(svg_file))
-    
-    # Render at different sizes
-    for size in [256, 512, 1024]:
-        image = doc.render_to_array(width=size, height=size)
-        
-        # Convert to RGB (remove alpha if needed)
-        rgb = image[..., :3]
-        
-        # Save or process further
-        output_file = output_dir / f"{svg_file.stem}_{size}.png"
-        # ... save using PIL or other library
+Color(255, 0, 0, 255)
+Color.from_name("orange")
+Color.from_hash("#336699")
+Color.white(), Color.transparent()
 ```
 
-### Element Manipulation
+### Fonts
+
+Font loading and text measurement live in `novasvg.fonts`:
+
+```python
+import novasvg.fonts as fonts
+
+fonts.add_font_face_from_file("Inter", False, False, "Inter-Regular.ttf")   # family, bold, italic, path
+face = fonts.get_font_face("Inter", False, False)
+```
+
+## Example: edit, then render
 
 ```python
 import novasvg
@@ -210,60 +151,26 @@ svg = """
 
 doc = novasvg.Document.load_from_data(svg)
 
-# Modify element attributes
 rect = doc.get_element_by_id("rect1")
 rect.set_attribute("fill", "#00FF00")
 rect.set_attribute("stroke", "black")
 rect.set_attribute("stroke-width", "3")
 
-# Render modified SVG
-image = doc.render_to_array()
+doc.render_to_bitmap(600).write_to_png("edited.png")
 ```
 
-### Integration with NumPy and SciPy
+## Command line
 
-```python
-import novasvg
-import numpy as np
-from scipy import ndimage
-
-# Render SVG
-doc = novasvg.load("image.svg")
-image = doc.render_to_array()
-
-# Process with numpy/scipy
-gray = np.mean(image[..., :3], axis=2)  # Convert to grayscale
-edges = ndimage.sobel(gray)  # Edge detection
-blurred = ndimage.gaussian_filter(image, sigma=2)
-
-# Create new bitmap from processed image
-processed_bitmap = novasvg.Bitmap.from_numpy(blurred)
-```
-
-## Performance Tips
-
-1. **Reuse Bitmaps**: Create bitmap once and reuse for multiple renders
-2. **Batch Operations**: Process multiple SVGs in sequence
-3. **Appropriate Sizes**: Render at required size, not larger
-4. **Memory Management**: Large bitmaps consume significant memory
+The native `novasvg` command-line tool (convert, info, query, batch) is documented in the [main README](README.md#command-line).
 
 ## Troubleshooting
 
-### Build Issues
-- Ensure CMake >= 3.15 is installed
-- C++17 compiler required (GCC >= 7, Clang >= 5, MSVC >= 2017)
-- Python development headers needed (`python3-dev` on Ubuntu)
+**Build fails.** You need a C++17 compiler (GCC 7+, Clang 5+, MSVC 2017+), CMake, and the Python development headers (`python3-dev` on Ubuntu).
 
-### Runtime Issues
-- Check SVG file validity
-- Ensure sufficient memory for large renders
-- Verify numpy array shapes (height, width, 4)
+**`ImportError` from `numpy()`.** Install NumPy (`pip install numpy`). Nothing else needs it.
+
+**Text looks wrong.** Install a metric-compatible font family such as `fonts-liberation`, or register your own with `fonts.add_font_face_from_file`. See the [Fonts section](README.md#fonts) of the main README.
 
 ## License
 
-MIT License - see LICENSE file for details.
-
-## Support
-
-- GitHub Issues: https://github.com/mohammadraziei/novasvg/issues
-- Documentation: https://mohammadraziei.github.io/novasvg
+MIT, see [LICENSE.txt](LICENSE.txt). Issues: https://github.com/mohammadraziei/novasvg/issues. Docs: https://mohammadraziei.github.io/novasvg

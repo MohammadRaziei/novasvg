@@ -29,7 +29,7 @@
 - **Renders what real diagrams contain.** Gradients, patterns, clip paths, masks, markers, a full SVG filter pipeline, CSS styling, embedded fonts, and `<foreignObject>` text, which is what Mermaid uses for every label.
 - **Close to a browser.** Compared against Chromium on a 60-sample corpus, including 49 Mermaid diagrams. See [how it stacks up](#how-it-compares).
 - **More than a renderer.** Query elements with CSS selectors, rewrite styles, read bounding boxes and matrices, and render a single element on its own.
-- **Three ways in.** C++ library, a `novasvg` command-line tool, and Python bindings with NumPy output.
+- **Three ways in.** C++ library, a `novasvg` command-line tool, and Python bindings with no dependencies.
 - **Portable.** Windows, Linux and macOS, with the same text layout on every platform.
 
 ## Quick start
@@ -74,17 +74,17 @@ novasvg batch svg_dir/ png_dir/                    # convert a whole folder
 ### Python
 
 ```bash
-pip install novasvg
+pip install novasvg        # no dependencies; NumPy is only needed for Bitmap.numpy()
 ```
 
 ```python
 import novasvg
 
-doc = novasvg.load("artwork.svg")
+novasvg.svg2png("artwork.svg", "artwork.png", width=800)     # one call
+
+doc = novasvg.Document.load_from_file("artwork.svg")         # or keep the document
 bitmap = doc.render_to_bitmap(width=800)
 bitmap.write_to_png("artwork.png")
-
-pixels = doc.render_to_array()        # NumPy array, shape (h, w, 4)
 ```
 
 More in [README_PYTHON.md](README_PYTHON.md).

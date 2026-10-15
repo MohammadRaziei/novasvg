@@ -1,1 +1,2 @@
-numpy
+# novasvg has no runtime dependencies.
+# NumPy is only needed if you call Bitmap.numpy() -- install it yourself if you do.
