@@ -1,4 +1,5 @@
 #include <cassert>
+#include <unordered_map>
 
 #ifndef NOVASVG_DISABLE_EMBEDDED_FONT
 #include "default_font.h"
@@ -681,8 +682,18 @@ static void parseFontFaceRule(std::string_view block)
     if(!srcValue)
         return;
 
+    // The src value is where the megabytes are (the font itself, base64). font-weight/font-style are never
+    // inside it, so look for them in what lies before and after it.
+    const auto srcOffset = size_t(srcValue->data() - block.data());
+    const auto before = block.substr(0, srcOffset);
+    const auto after = block.substr(srcOffset + srcValue->size());
+    auto findOutsideSrc = [&](std::string_view property) {
+        auto value = findRawDeclarationValue(before, property);
+        return value ? value : findRawDeclarationValue(after, property);
+    };
+
     auto bold = false;
-    if(auto weightValue = findRawDeclarationValue(block, "font-weight")) {
+    if(auto weightValue = findOutsideSrc("font-weight")) {
         std::string weight(*weightValue);
         for(auto& ch : weight)
             ch = char(std::tolower(static_cast<unsigned char>(ch)));
@@ -690,7 +701,7 @@ static void parseFontFaceRule(std::string_view block)
     }
 
     auto italic = false;
-    if(auto styleValue = findRawDeclarationValue(block, "font-style")) {
+    if(auto styleValue = findOutsideSrc("font-style")) {
         std::string style(*styleValue);
         for(auto& ch : style)
             ch = char(std::tolower(static_cast<unsigned char>(ch)));
@@ -740,6 +751,17 @@ static RuleDataList parseStyleSheet(std::string_view input)
                     int depth = 1;
                     size_t blockLength = 0;
                     auto block = input;
+                    // An embedded font makes this block hundreds of kilobytes, with no brace inside it but the
+                    // last: look for that one with memchr, and only walk character by character if a `{`
+                    // shows up before it.
+                    if(auto* close = static_cast<const char*>(std::memchr(input.data(), '}', input.size()))) {
+                        const size_t n = size_t(close - input.data());
+                        if(std::memchr(input.data(), '{', n) == nullptr) {
+                            blockLength = n + 1;
+                            depth = 0;
+                        }
+                    }
+
                     while(blockLength < input.size() && depth > 0) {
                         auto ch = input[blockLength];
                         if(ch == '{') ++depth;
@@ -865,12 +887,16 @@ inline bool decodeText(std::string_view input, std::string& output)
 {
     output.clear();
     while(!input.empty()) {
-        auto ch = input.front();
-        input.remove_prefix(1);
-        if(ch != '&') {
-            output.push_back(ch);
-            continue;
+        // Copy the plain text up to the next `&` in one go; a style sheet with an embedded font is hundreds
+        // of kilobytes with no entity in it at all.
+        auto amp = input.find('&');
+        if(amp == std::string_view::npos) {
+            output.append(input.data(), input.size());
+            return true;
         }
+
+        output.append(input.data(), amp);
+        input.remove_prefix(amp + 1);
 
         if(skipDelimiter(input, '#')) {
             int base = 10;
@@ -1515,13 +1541,86 @@ static RuleDataList parseStyleSheets(const std::vector<std::string>& sheets)
     return all;
 }
 
+// Which rules can possibly match a given element, so that applyStyleSheet() does not have to try every rule on
+// every element. A rule is filed under what its *rightmost* compound selector demands of the element itself:
+// a tag name (`rect`), else a class (`.node`), else nothing in particular. An element then only has to try the
+// rules filed under its own tag, under each of its own classes, and the unfiled ones -- which are the only
+// rules that could match it. The index only prunes; each candidate still goes through RuleData::match(), and
+// candidates are visited in rule order, so the result is the same as trying every rule.
+class RuleIndex {
+public:
+    explicit RuleIndex(const RuleDataList& rules) : m_byTag(256)
+    {
+        for(size_t i = 0; i < rules.size(); ++i) {
+            const auto& selector = rules[i].selector();
+            if(selector.empty())
+                continue; // can never match
+            const auto& last = selector.back();
+            if(last.id != ElementID::Star) {
+                m_byTag[size_t(last.id)].push_back(uint32_t(i));
+                continue;
+            }
+
+            const std::string* className = nullptr;
+            for(const auto& attribute : last.attributeSelectors) {
+                if(attribute.id == PropertyID::Class && attribute.matchType == AttributeSelector::MatchType::Includes
+                    && !attribute.value.empty()) {
+                    className = &attribute.value;
+                    break;
+                }
+            }
+
+            if(className)
+                m_byClass[*className].push_back(uint32_t(i));
+            else
+                m_other.push_back(uint32_t(i));
+        }
+    }
+
+    // Indices (ascending) of the rules that might match `element`.
+    void candidates(const SVGElement* element, std::vector<uint32_t>& out) const
+    {
+        out.clear();
+        const auto& tagged = m_byTag[size_t(element->id())];
+        out.insert(out.end(), tagged.begin(), tagged.end());
+        out.insert(out.end(), m_other.begin(), m_other.end());
+        if(!m_byClass.empty()) {
+            std::string_view classes(element->getAttribute(PropertyID::Class));
+            while(!classes.empty()) {
+                skipOptionalSpaces(classes);
+                size_t n = 0;
+                while(n < classes.size() && !IS_WS(classes[n]))
+                    ++n;
+                if(n > 0) {
+                    auto it = m_byClass.find(std::string(classes.substr(0, n)));
+                    if(it != m_byClass.end())
+                        out.insert(out.end(), it->second.begin(), it->second.end());
+                }
+                classes.remove_prefix(n);
+            }
+        }
+
+        std::sort(out.begin(), out.end());
+        out.erase(std::unique(out.begin(), out.end()), out.end());
+    }
+
+private:
+    std::vector<std::vector<uint32_t>> m_byTag;
+    std::unordered_map<std::string, std::vector<uint32_t>> m_byClass;
+    std::vector<uint32_t> m_other;
+};
+
 NOVASVG_INLINE void Document::applyStyleSheet(const std::string& content)
 {
     auto rules = parseStyleSheet(content);
+    std::sort(rules.begin(), rules.end());
     if(!rules.empty()) {
-        std::sort(rules.begin(), rules.end());
-        m_rootElement->transverse([&rules](SVGElement* element) {
-            for(const auto& rule : rules) {
+        const RuleIndex index(rules);
+        std::vector<uint32_t> candidates;
+        m_rootElement->transverse([&](SVGElement* element) {
+            index.candidates(element, candidates);
+            for(auto i : candidates) {
+                const auto& rule = rules[i];
                 if(rule.match(element)) {
                     for(const auto& declaration : rule.declarations()) {
                         if(declaration.id != PropertyID::Unknown)
@@ -1537,10 +1636,23 @@ NOVASVG_INLINE void Document::applyStyleSheet(const std::string& content)
 
     // The HTML in a foreignObject is not part of the element tree above, so it is styled here, from every
     // sheet applied so far (a stylesheet given later than the one in the file sits after it in the cascade).
-    const auto htmlRules = parseStyleSheets(m_rootElement->styleSheets());
-    m_rootElement->transverse([&htmlRules](SVGElement* element) {
-        if(element->id() == ElementID::ForeignObject)
-            resolveForeignObjectStyle(static_cast<SVGForeignObjectElement*>(element), htmlRules);
+    // Built only if there is a foreignObject to style; and when `content` is the only sheet so far those
+    // rules are exactly the ones just parsed and sorted, so they are not parsed a second time.
+    RuleDataList htmlRules;
+    bool haveHtmlRules = false;
+    m_rootElement->transverse([&](SVGElement* element) {
+        if(element->id() != ElementID::ForeignObject)
+            return;
+        if(!haveHtmlRules) {
+            const auto& sheets = m_rootElement->styleSheets();
+            if(!content.empty() && sheets.size() == 1)
+                htmlRules = std::move(rules);
+            else
+                htmlRules = parseStyleSheets(sheets);
+            haveHtmlRules = true;
+        }
+
+        resolveForeignObjectStyle(static_cast<SVGForeignObjectElement*>(element), htmlRules);
     });
 }
 

@@ -6203,9 +6203,21 @@ inline std::optional<std::string_view> findRawDeclarationValue(std::string_view 
         int parenDepth = 0;
         while(end < block.size()) {
             auto ch = block[end];
-            if(ch == '(')
+            if(ch == '(') {
+                // `url(data:...)` holds the whole embedded font. Nothing inside it ends the value, so when
+                // the run up to the next `)` has no `(` in it, jump over it in one go.
+                if(parenDepth == 0) {
+                    const char* base = block.data() + end + 1;
+                    const size_t remaining = block.size() - end - 1;
+                    if(auto* close = static_cast<const char*>(std::memchr(base, ')', remaining))) {
+                        if(std::memchr(base, '(', size_t(close - base)) == nullptr) {
+                            end = size_t(close - block.data()) + 1;
+                            continue;
+                        }
+                    }
+                }
                 ++parenDepth;
-            else if(ch == ')') {
+            } else if(ch == ')') {
                 if(parenDepth > 0)
                     --parenDepth;
             } else if((ch == ';' || ch == '}') && parenDepth == 0) {

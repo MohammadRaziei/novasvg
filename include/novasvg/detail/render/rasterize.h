@@ -194,7 +194,23 @@ NOVASVG_INLINE void ft_outline_destroy(PVG_FT_Outline* outline)
     free(outline);
 }
 
-#define FT_COORD(x) (PVG_FT_Pos)(roundf(x * 64))
+// roundf() without the libm call: nearest integer, halves away from zero -- exactly roundf's result. This runs
+// twice for every point of every path. `v - float(t)` is exact (t is v's integer part), so the comparison with
+// one half is exact too; anything too big for an int, or not a number, goes to roundf itself.
+NOVASVG_INLINE PVG_FT_Pos ft_coord_round(float v)
+{
+    if(!(v > -1e9f && v < 1e9f))
+        return (PVG_FT_Pos)roundf(v);
+    const int t = int(v);
+    const float diff = v - float(t);
+    if(diff >= 0.5f)
+        return PVG_FT_Pos(t) + 1;
+    if(diff <= -0.5f)
+        return PVG_FT_Pos(t) - 1;
+    return PVG_FT_Pos(t);
+}
+
+#define FT_COORD(x) ft_coord_round((x) * 64)
 NOVASVG_INLINE void ft_outline_move_to(PVG_FT_Outline* ft, float x, float y)
 {
     ft->points[ft->n_points].x = FT_COORD(x);

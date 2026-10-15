@@ -7821,55 +7821,85 @@ static const uint8_t base64_table[128] = {
 // on any malformed input (bad character, wrong padding, ...).
 NOVASVG_INLINE uint8_t* base64_decode(const char* data, int length, size_t* out_length)
 {
-    uint8_t* output_data = NULL;
-    size_t output_length = 0;
-    size_t equals_sign_count = 0;
-    size_t sidx = 0;
-    size_t didx = 0;
+    // 0..63 = the sextet a character stands for; kWs = whitespace (skipped); kPad = '='; kBad = anything else.
+    enum : uint8_t { kWs = 0xFD, kPad = 0xFE, kBad = 0xFF };
+    static const struct Table {
+        uint8_t v[256];
+        Table()
+        {
+            for(int i = 0; i < 256; ++i)
+                v[i] = kBad;
+            for(int i = 0; i < 26; ++i) {
+                v['A' + i] = uint8_t(i);
+                v['a' + i] = uint8_t(26 + i);
+            }
+            for(int i = 0; i < 10; ++i)
+                v['0' + i] = uint8_t(52 + i);
+            v[uint8_t('+')] = 62;
+            v[uint8_t('/')] = 63;
+            v[uint8_t('=')] = kPad;
+            for(int c : {' ', '\t', '\n', '\r', '\f', '\v'})
+                v[c] = kWs;
+        }
+    } table;
 
     *out_length = 0;
     if(length == -1)
-        length = strlen(data);
-    output_data = static_cast<decltype(output_data)>(malloc(length));
+        length = int(strlen(data));
+    if(length <= 0)
+        return NULL;
+    // Every 4 input characters make 3 bytes, so `length` bytes is always enough room.
+    auto* output_data = static_cast<uint8_t*>(malloc(size_t(length)));
     if(output_data == NULL)
         return NULL;
+
+    // Collect sextets and write finished bytes straight away. `acc` holds the bits not yet written.
+    size_t didx = 0;
+    size_t count = 0;        // sextets seen
+    size_t pads = 0;         // '=' seen
+    uint32_t acc = 0;
+    int bits = 0;
     for(int i = 0; i < length; ++i) {
-        uint8_t cc = data[i];
-        if(cc == '=') {
-            ++equals_sign_count;
-        } else if(cc == '+' || cc == '/' || NOVASVG_IS_ALNUM(cc)) {
-            if(equals_sign_count > 0)
-                goto cleanup;
-            output_data[output_length++] = base64_table[cc];
-        } else if(!NOVASVG_IS_WS(cc)) {
+        // Fast path: a clean group of four sextets (no padding or whitespace so far, bits aligned) is
+        // three bytes, with nothing to track between them.
+        if(bits == 0 && pads == 0 && i + 4 <= length) {
+            const uint8_t a = table.v[uint8_t(data[i])], b = table.v[uint8_t(data[i + 1])];
+            const uint8_t c = table.v[uint8_t(data[i + 2])], d = table.v[uint8_t(data[i + 3])];
+            if((a | b | c | d) < 64) {
+                output_data[didx] = uint8_t((a << 2) | (b >> 4));
+                output_data[didx + 1] = uint8_t((b << 4) | (c >> 2));
+                output_data[didx + 2] = uint8_t((c << 6) | d);
+                didx += 3;
+                count += 4;
+                i += 3;
+                continue;
+            }
+        }
+
+        const uint8_t v = table.v[uint8_t(data[i])];
+        if(v < 64) {
+            if(pads > 0)
+                goto cleanup; // data after padding
+            acc = (acc << 6) | v;
+            bits += 6;
+            ++count;
+            if(bits >= 8) {
+                bits -= 8;
+                output_data[didx++] = uint8_t(acc >> bits);
+            }
+        } else if(v == kPad) {
+            ++pads;
+        } else if(v == kBad) {
             goto cleanup;
         }
     }
 
-    if(output_length == 0 || equals_sign_count > 2 || (output_length % 4) == 1)
+    if(count == 0 || pads > 2 || (count % 4) == 1)
         goto cleanup;
-    output_length -= (output_length + 3) / 4;
-    if(output_length == 0) {
+    if(didx == 0)
         goto cleanup;
-    }
 
-    if(output_length > 1) {
-        while(didx < output_length - 2) {
-            output_data[didx + 0] = (((output_data[sidx + 0] << 2) & 255) | ((output_data[sidx + 1] >> 4) & 003));
-            output_data[didx + 1] = (((output_data[sidx + 1] << 4) & 255) | ((output_data[sidx + 2] >> 2) & 017));
-            output_data[didx + 2] = (((output_data[sidx + 2] << 6) & 255) | ((output_data[sidx + 3] >> 0) & 077));
-            sidx += 4;
-            didx += 3;
-        }
-    }
-
-    if(didx < output_length)
-        output_data[didx] = (((output_data[sidx + 0] << 2) & 255) | ((output_data[sidx + 1] >> 4) & 003));
-    if(++didx < output_length) {
-        output_data[didx] = (((output_data[sidx + 1] << 4) & 255) | ((output_data[sidx + 2] >> 2) & 017));
-    }
-
-    *out_length = output_length;
+    *out_length = didx;
     return output_data;
 cleanup:
     free(output_data);

@@ -1076,54 +1076,84 @@ NOVASVG_INLINE void Canvas::convertToLuminanceMask()
 // on premultiplied ARGB. Blurring premultiplied channels directly (rather
 // than un-premultiplying first) is correct and is what real
 // implementations do too.
+// One box-blur pass over an ARGB32 surface: every pixel becomes the average of the (2*radius+1) pixels along its
+// row (horizontal) or column, with the edge pixel standing in for anything past the edge.
+//
+// Runs a sliding window -- add the pixel entering the window, drop the one leaving -- so the cost per pixel does
+// not depend on the radius. The sums are exact integers, and each is converted back with the same
+// `uint32_t(float(sum) * (1 / (2*radius+1)))` as a window summed from scratch would be, so the output is
+// identical to the straightforward version.
 static void boxBlurPass(unsigned char* data, int width, int height, int stride, int radius, bool horizontal)
 {
-    if(radius <= 0)
+    if(radius <= 0 || width <= 0 || height <= 0)
         return;
     auto* scratch = static_cast<unsigned char*>(malloc(size_t(stride) * size_t(height)));
     if(!scratch)
         return;
     memcpy(scratch, data, size_t(stride) * size_t(height));
 
-    auto sampleAt = [&](int x, int y) -> uint32_t* {
-        return reinterpret_cast<uint32_t*>(scratch + y * stride) + x;
+    const float iarr = 1.f / float(radius * 2 + 1);
+    auto pack = [iarr](int32_t a, int32_t r, int32_t g, int32_t b) {
+        return (uint32_t(float(a) * iarr) << 24) | (uint32_t(float(r) * iarr) << 16) | (uint32_t(float(g) * iarr) << 8)
+            | uint32_t(float(b) * iarr);
     };
 
-    auto iarr = 1.f / float(radius * 2 + 1);
     if(horizontal) {
         for(int y = 0; y < height; ++y) {
-            auto* out = reinterpret_cast<uint32_t*>(data + y * stride);
+            const auto* in = reinterpret_cast<const uint32_t*>(scratch + size_t(y) * size_t(stride));
+            auto* out = reinterpret_cast<uint32_t*>(data + size_t(y) * size_t(stride));
+            auto at = [in, width](int x) { return in[x < 0 ? 0 : (x >= width ? width - 1 : x)]; };
+
+            int32_t a = 0, r = 0, g = 0, b = 0;
+            for(int k = -radius; k <= radius; ++k) {
+                const uint32_t pixel = at(k);
+                a += (pixel >> 24) & 0xFF;
+                r += (pixel >> 16) & 0xFF;
+                g += (pixel >> 8) & 0xFF;
+                b += pixel & 0xFF;
+            }
+
             for(int x = 0; x < width; ++x) {
-                float sum[4] = {0, 0, 0, 0};
-                for(int k = -radius; k <= radius; ++k) {
-                    int sx = x + k;
-                    if(sx < 0) sx = 0;
-                    if(sx >= width) sx = width - 1;
-                    auto pixel = *sampleAt(sx, y);
-                    sum[0] += (pixel >> 24) & 0xFF;
-                    sum[1] += (pixel >> 16) & 0xFF;
-                    sum[2] += (pixel >> 8) & 0xFF;
-                    sum[3] += pixel & 0xFF;
-                }
-                out[x] = (uint32_t(sum[0] * iarr) << 24) | (uint32_t(sum[1] * iarr) << 16) | (uint32_t(sum[2] * iarr) << 8) | uint32_t(sum[3] * iarr);
+                out[x] = pack(a, r, g, b);
+                const uint32_t leaving = at(x - radius);
+                const uint32_t entering = at(x + radius + 1);
+                a += int32_t((entering >> 24) & 0xFF) - int32_t((leaving >> 24) & 0xFF);
+                r += int32_t((entering >> 16) & 0xFF) - int32_t((leaving >> 16) & 0xFF);
+                g += int32_t((entering >> 8) & 0xFF) - int32_t((leaving >> 8) & 0xFF);
+                b += int32_t(entering & 0xFF) - int32_t(leaving & 0xFF);
             }
         }
     } else {
-        for(int x = 0; x < width; ++x) {
-            for(int y = 0; y < height; ++y) {
-                float sum[4] = {0, 0, 0, 0};
-                for(int k = -radius; k <= radius; ++k) {
-                    int sy = y + k;
-                    if(sy < 0) sy = 0;
-                    if(sy >= height) sy = height - 1;
-                    auto pixel = *sampleAt(x, sy);
-                    sum[0] += (pixel >> 24) & 0xFF;
-                    sum[1] += (pixel >> 16) & 0xFF;
-                    sum[2] += (pixel >> 8) & 0xFF;
-                    sum[3] += pixel & 0xFF;
-                }
-                auto* out = reinterpret_cast<uint32_t*>(data + y * stride) + x;
-                *out = (uint32_t(sum[0] * iarr) << 24) | (uint32_t(sum[1] * iarr) << 16) | (uint32_t(sum[2] * iarr) << 8) | uint32_t(sum[3] * iarr);
+        // Column sums for the whole row at once, so memory is read row by row rather than down a column.
+        std::vector<int32_t> sums(size_t(width) * 4, 0);
+        auto row = [&](int y) {
+            y = y < 0 ? 0 : (y >= height ? height - 1 : y);
+            return reinterpret_cast<const uint32_t*>(scratch + size_t(y) * size_t(stride));
+        };
+
+        for(int k = -radius; k <= radius; ++k) {
+            const uint32_t* p = row(k);
+            for(int x = 0; x < width; ++x) {
+                const uint32_t pixel = p[x];
+                sums[size_t(x) * 4 + 0] += (pixel >> 24) & 0xFF;
+                sums[size_t(x) * 4 + 1] += (pixel >> 16) & 0xFF;
+                sums[size_t(x) * 4 + 2] += (pixel >> 8) & 0xFF;
+                sums[size_t(x) * 4 + 3] += pixel & 0xFF;
+            }
+        }
+
+        for(int y = 0; y < height; ++y) {
+            auto* out = reinterpret_cast<uint32_t*>(data + size_t(y) * size_t(stride));
+            const uint32_t* leaving = row(y - radius);
+            const uint32_t* entering = row(y + radius + 1);
+            for(int x = 0; x < width; ++x) {
+                int32_t* sum = &sums[size_t(x) * 4];
+                out[x] = pack(sum[0], sum[1], sum[2], sum[3]);
+                const uint32_t lp = leaving[x], ep = entering[x];
+                sum[0] += int32_t((ep >> 24) & 0xFF) - int32_t((lp >> 24) & 0xFF);
+                sum[1] += int32_t((ep >> 16) & 0xFF) - int32_t((lp >> 16) & 0xFF);
+                sum[2] += int32_t((ep >> 8) & 0xFF) - int32_t((lp >> 8) & 0xFF);
+                sum[3] += int32_t(ep & 0xFF) - int32_t(lp & 0xFF);
             }
         }
     }
