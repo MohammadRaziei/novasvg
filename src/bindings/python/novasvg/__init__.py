@@ -26,6 +26,7 @@ from .novasvg_py import TextNode
 from .novasvg_py import version_string
 
 from . import fonts
+from . import interop as _interop  # adds Bitmap.to_pil / Bitmap.from_pil
 from .utils import svg2png
 
 __version__ = version_string()

@@ -34,6 +34,9 @@ scripts.novasvg = "novasvg.__main__:main"
 scripts.novasvg-cli = "novasvg.native_cli:run"
 
 [project.optional-dependencies]
+numpy = ["numpy"]
+pillow = ["pillow"]
+stb = ["libstb"]
 test = ["pytest-xdist", "fonttools", "pillow", "numpy>=1.20.0"]
 
 

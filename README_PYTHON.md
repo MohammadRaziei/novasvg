@@ -6,7 +6,7 @@ Python bindings for [NovaSVG](README.md), built with nanobind and scikit-build-c
 pip install novasvg
 ```
 
-**No runtime dependencies.** NovaSVG renders and encodes PNG, JPEG, BMP and TGA on its own, with no Pillow and no NumPy. NumPy is only needed if you call `Bitmap.numpy()`; if it is missing, that one call raises an `ImportError` that says so, and everything else keeps working.
+**No runtime dependencies.** NovaSVG renders and encodes PNG, JPEG, BMP and TGA on its own, with no Pillow and no NumPy. NumPy is only needed for `Bitmap.numpy()` and Pillow only for `to_pil()` / `from_pil()`; if one is missing, that call raises an `ImportError` that says so, and everything else keeps working.
 
 Requires Python 3.9 or newer. Building from source also needs a C++17 compiler and CMake:
 
@@ -81,17 +81,44 @@ Notes:
 - **Don't call `convert_to_rgba()` before encoding.** The encoders already convert from premultiplied ARGB to straight RGBA themselves, on a scratch copy. Converting the bitmap in place first makes them convert a second time, which swaps red and blue and corrupts semi-transparent pixels. `convert_to_rgba()` is only for handing the raw buffer to something else.
 - JPEG has no alpha channel. Render onto an opaque background (`doc.render_to_bitmap(w, h, 0xFFFFFFFF)`) before `to_jpg()`, otherwise transparent areas come out black.
 
-#### NumPy (optional)
+#### Interop: memoryview, NumPy, DLPack, Pillow
+
+NumPy, Pillow and [libstb](https://github.com/MohammadRaziei/libstb) are optional extras (`pip install "novasvg[numpy]"`, `"novasvg[pillow]"`, `"novasvg[stb]"`); `import novasvg` never loads them.
 
 ```python
-array = bitmap.numpy()      # shape (height, width, 4), dtype uint8, a view of the bitmap's memory
+import numpy as np
+import novasvg
+
+bm = novasvg.Document.load_from_file("art.svg").render_to_bitmap(400)
+
+# Zero-copy views of the Bitmap's own memory (raw, see "Pixel format" below)
+bm.shape                       # (height, width, 4)
+memoryview(bm)                 # writable 3-D uint8 view, no NumPy needed
+bm.numpy()                     # ndarray view; np.asarray(bm) is the same
+np.from_dlpack(bm)             # DLPack: also torch / jax / cupy.from_dlpack(bm)
+bm.__array_interface__         # NumPy's array interface
+
+# Copies in ordinary straight-alpha RGBA
+bm.tobytes()                   # bytes, (height, width, 4), tightly packed, no NumPy needed
+bm.numpy(rgba=True)            # ndarray
+pil = bm.to_pil()              # Pillow RGBA image
+img = bm.to_stb()              # libstb.Image, 4 channels: resize, convert, write jpg / png / bmp / tga
+
+# Import (always a copy): uint8 (H, W) or (H, W, 1..4), straight alpha
+bm = novasvg.Bitmap.from_array(arr)       # any buffer, DLPack object or __array_interface__ object
+bm = novasvg.Bitmap(arr)                  # same thing
+bm = novasvg.Bitmap.from_dlpack(tensor)   # numpy / torch / jax / cupy (CPU) -> Bitmap
+bm = novasvg.Bitmap.from_pil(pil_image)   # L, LA, RGB, RGBA, 1, P, ... (see the docstring)
+bm = novasvg.Bitmap.from_stb(stb_image)   # libstb.Image of 1 to 4 channels
+bm = novasvg.Bitmap.from_array(raw, raw=True)   # (H, W, 4) in the Bitmap's own layout, as the views give it
+bm.copy()                                 # an independent Bitmap (a deep copy)
 ```
 
-The pixels are premultiplied and in BGRA byte order until you call `bitmap.convert_to_rgba()`, which converts the buffer in place to straight RGBA. If NumPy is not installed, this call raises:
+**Pixel format.** A `Bitmap` always stores *premultiplied* ARGB32, because that is what the renderer draws in: on little-endian machines the bytes are B, G, R, A. Everything zero-copy (`memoryview`, `numpy()`, DLPack, `__array_interface__`) shows exactly that memory, so the colours are in BGR order and scaled by alpha. Everything that gives ordinary RGBA converts and therefore copies: `tobytes()`, `numpy(rgba=True)`, `to_pil()`. Do not pass the Bitmap straight to `PIL.Image.fromarray()` or `libstb.Image()`; use `to_pil()` / `to_stb()`. `convert_to_rgba()` rewrites the buffer in place to straight RGBA, after which the views are RGBA too; do not combine it with `numpy(rgba=True)` or `tobytes()`, which would convert a second time.
 
-```
-ImportError: Bitmap.numpy() needs NumPy, which is not installed (pip install numpy). ...
-```
+**Import copies.** The Bitmap never views Python memory, so nothing has to be kept alive and writing to the array afterwards does not change it. Both `from_array` and `from_pil` take straight alpha and premultiply while copying. Sizes must stay below 32768 pixels per side.
+
+If NumPy is missing, `numpy()` and `np.asarray(bitmap)` raise an `ImportError` that says so; everything else keeps working.
 
 ### `Element`
 
@@ -167,7 +194,7 @@ The native `novasvg` command-line tool (convert, info, query, batch) is document
 
 **Build fails.** You need a C++17 compiler (GCC 7+, Clang 5+, MSVC 2017+), CMake, and the Python development headers (`python3-dev` on Ubuntu).
 
-**`ImportError` from `numpy()`.** Install NumPy (`pip install numpy`). Nothing else needs it.
+**`ImportError` from `numpy()` or `to_pil()`.** Install NumPy (`pip install numpy`) or Pillow (`pip install pillow`). Nothing else needs them.
 
 **Text looks wrong.** Install a metric-compatible font family such as `fonts-liberation`, or register your own with `fonts.add_font_face_from_file`. See the [Fonts section](README.md#fonts) of the main README.
 

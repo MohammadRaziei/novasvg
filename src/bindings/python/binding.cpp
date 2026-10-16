@@ -14,6 +14,7 @@
 
 // Include the main library header
 #include "novasvg/novasvg.h"
+#include "bitmap_interop.hpp"
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -311,24 +312,12 @@ NB_MODULE(novasvg_py, m) {
         .def("transformed", &novasvg::Box::transformed, "matrix"_a, "Return a new transformed box.");
 
     // --- Bind Bitmap Class ---
-    nb::class_<novasvg::Bitmap>(m, "Bitmap")
+    // The buffer protocol, DLPack, NumPy, __array_interface__ and array import all live in
+    // bitmap_interop.hpp; bind_bitmap_interop() adds them below, after the chain.
+    nb::class_<novasvg::Bitmap> bitmap_cls(m, "Bitmap", nb::type_slots(novasvg_py_interop::bitmap_slots));
+    bitmap_cls
         .def(nb::init<>(), "Construct a null bitmap.")
         .def(nb::init<int, int>(), "width"_a, "height"_a, "Construct a bitmap with specified dimensions.")
-        // Expose data as a NumPy array (read-only reference to internal data).
-        // NumPy is not a dependency of novasvg: nanobind only imports it when an array is
-        // actually built, i.e. here. So check for it first and say what is wrong if it is missing.
-        .def("numpy", [](const novasvg::Bitmap &bmp) {
-            try {
-                nb::module_::import_("numpy");
-            } catch (nb::python_error &) {
-                throw nb::import_error(
-                    "Bitmap.numpy() needs NumPy, which is not installed (pip install numpy). "
-                    "Everything else in novasvg works without it.");
-            }
-            if (bmp.isNull()) return nb::ndarray<nb::numpy, uint8_t>();
-            // Shape: {height, width, 4} for ARGB32
-            return nb::ndarray<nb::numpy, uint8_t>(bmp.data(), {(uint64_t) bmp.height(), (uint64_t) bmp.width(), 4});
-        }, nb::rv_policy::reference_internal, "Get pixel data as a NumPy array.")
         .def_prop_ro("width", &novasvg::Bitmap::width, "Get the width of the bitmap.")
         .def_prop_ro("height", &novasvg::Bitmap::height, "Get the height of the bitmap.")
         .def_prop_ro("stride", &novasvg::Bitmap::stride, "Get the stride (bytes per row) of the bitmap.")
@@ -405,6 +394,8 @@ NB_MODULE(novasvg_py, m) {
            "Encode the bitmap in the given format ('png', 'bmp', 'tga', 'jpg'/'jpeg'; a leading '.' "
            "and any letter case are accepted) and return the file contents as bytes. `quality` "
            "(1-100) is used only for JPEG.");
+
+    novasvg_py_interop::bind_bitmap_interop(bitmap_cls);
 
     // --- Bind Node Class ---
     nb::class_<novasvg::Node>(m, "Node")
