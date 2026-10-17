@@ -13,8 +13,8 @@ from pathlib import Path
 import pytest
 
 pytest.importorskip("numpy")
-PIL = pytest.importorskip("PIL")
-from PIL import Image  # noqa: E402
+libstb = pytest.importorskip("libstb")
+import numpy as np  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "benchmarks" / "report"))
@@ -28,6 +28,12 @@ import run_benchmark as rb  # noqa: E402
 BLACK, OFF_BY_10 = (0, 0, 0, 255), (10, 0, 0, 255)  # RMSE between them = sqrt(10^2 / 4) = 5
 
 
+def _solid_png(path, size, colour):
+    pixels = np.empty((size[1], size[0], 4), dtype=np.uint8)
+    pixels[:] = colour
+    libstb.imwrite(str(path), pixels)
+
+
 def make_engine(out, key, samples, label=None, generated="2026-01-02 03:04 UTC", version="1.0"):
     """Write what run_benchmark.py would: renders/<key>/<name>.png and result.json.
     samples: {name: (seconds, colour)}; colour None = the sample failed."""
@@ -36,7 +42,7 @@ def make_engine(out, key, samples, label=None, generated="2026-01-02 03:04 UTC",
     rows = []
     for name, (seconds, colour) in samples.items():
         if colour is not None:
-            Image.new("RGBA", (4, 3), colour).save(d / f"{name}.png")
+            _solid_png(d / f"{name}.png", (4, 3), colour)
         rows.append({"name": name, "filename": f"{name}.svg", "desc": f"{name} desc", "render_w": 4, "render_h": 3,
                      "ok": colour is not None, "seconds": seconds if colour is not None else None,
                      "error": None if colour is not None else "boom",
@@ -166,7 +172,7 @@ def _resolved():
 
 def test_write_result_describes_one_engine_and_links_only_pngs_that_exist(tmp_path):
     d = rb.fresh_dir(tmp_path, "novasvg")
-    Image.new("RGBA", (2, 2)).save(d / "circle.png")
+    _solid_png(d / "circle.png", (2, 2), (0, 0, 0, 0))
     results = {"circle": {"ok": True, "seconds": 0.002, "error": None},
                "tiger": {"ok": True, "seconds": 0.003, "error": None}}  # claims OK but wrote no PNG
     rb.write_result(d, "novasvg", "novasvg", "v1", _args(), _resolved(), results)

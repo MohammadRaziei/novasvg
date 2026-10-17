@@ -37,7 +37,7 @@ scripts.novasvg-cli = "novasvg.native_cli:run"
 numpy = ["numpy"]
 pillow = ["pillow"]
 stb = ["libstb"]
-test = ["pytest-xdist", "fonttools", "pillow", "numpy>=1.20.0"]
+test = ["pytest-xdist", "fonttools", "pillow", "libstb", "numpy>=1.20.0"]
 
 
 [project.urls]

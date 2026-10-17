@@ -172,20 +172,24 @@ def test_fit_box_keeps_the_aspect_ratio_inside_the_box():
 
 # --- the RMSE metric -------------------------------------------------------------------------------
 
+def _png_of(array):
+    import libstb
+
+    return libstb.Image(array).to_png()
+
+
 def _png(color, size=(4, 3)):
-    import io
+    import numpy as np
 
-    from PIL import Image
-
-    buf = io.BytesIO()
-    Image.new("RGBA", size, color).save(buf, format="PNG")
-    return buf.getvalue()
+    pixels = np.empty((size[1], size[0], 4), dtype=np.uint8)
+    pixels[:] = color
+    return _png_of(pixels)
 
 
 @pytest.fixture(scope="module")
 def compute_rmse():
     pytest.importorskip("numpy")
-    pytest.importorskip("PIL")
+    pytest.importorskip("libstb")
     import compare
 
     return compare.compute_rmse
@@ -208,17 +212,14 @@ def test_rmse_is_symmetric(compute_rmse):
 
 
 def test_rmse_weights_a_few_badly_wrong_pixels_more_than_widespread_noise(compute_rmse):
-    import io
-
-    from PIL import Image
+    import numpy as np
 
     def with_pixels(changes):
-        img = Image.new("RGBA", (10, 10), (0, 0, 0, 255))
-        for xy, value in changes.items():
-            img.putpixel(xy, value)
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        return buf.getvalue()
+        pixels = np.empty((10, 10, 4), dtype=np.uint8)
+        pixels[:] = (0, 0, 0, 255)
+        for (x, y), value in changes.items():
+            pixels[y, x] = value
+        return _png_of(pixels)
 
     base = with_pixels({})
     one_bad_pixel = with_pixels({(0, 0): (255, 255, 255, 255)})  # 1 pixel completely wrong

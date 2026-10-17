@@ -11,10 +11,8 @@ closer to "did this engine get the image structurally right" than a flat
 per-pixel average -- but the final number reads on the same 0-255 scale
 as the pixels themselves.
 """
-import io
-
+import libstb
 import numpy as np
-from PIL import Image
 
 
 def compute_rmse(png_bytes_a, png_bytes_b):
@@ -22,10 +20,10 @@ def compute_rmse(png_bytes_a, png_bytes_b):
     Raises if the two images differ in pixel dimensions (shouldn't happen
     here -- every engine renders each sample at the same
     corpus.py-computed size)."""
-    img_a = Image.open(io.BytesIO(png_bytes_a)).convert("RGBA")
-    img_b = Image.open(io.BytesIO(png_bytes_b)).convert("RGBA")
-    if img_a.size != img_b.size:
-        raise ValueError(f"size mismatch: {img_a.size} vs {img_b.size}")
-    a = np.asarray(img_a, dtype=np.float64)
-    b = np.asarray(img_b, dtype=np.float64)
+    img_a = libstb.imread(png_bytes_a, channels=4)  # (height, width, 4) uint8, straight RGBA
+    img_b = libstb.imread(png_bytes_b, channels=4)
+    if img_a.shape != img_b.shape:
+        raise ValueError(f"size mismatch: {img_a.shape[1]}x{img_a.shape[0]} vs {img_b.shape[1]}x{img_b.shape[0]}")
+    a = img_a.astype(np.float64)
+    b = img_b.astype(np.float64)
     return float(np.sqrt(np.mean((a - b) ** 2)))
