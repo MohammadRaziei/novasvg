@@ -40,10 +40,16 @@ struct PseudoClassSelector {
         OnlyChild,
         FirstOfType,
         LastOfType,
-        OnlyOfType
+        OnlyOfType,
+        NthChild,
+        NthLastChild,
+        NthOfType,
+        NthLastOfType
     };
 
     Type type{Type::Unknown};
+    int nthA{0}; // An+B formula of the :nth-*() pseudo-classes
+    int nthB{0};
     SelectorList subSelectors;
 };
 
@@ -238,6 +244,30 @@ static bool matchPseudoClassSelector(const PseudoClassSelector& selector, const 
         return true;
     }
 
+    if(selector.type == PseudoClassSelector::Type::NthChild
+        || selector.type == PseudoClassSelector::Type::NthLastChild
+        || selector.type == PseudoClassSelector::Type::NthOfType
+        || selector.type == PseudoClassSelector::Type::NthLastOfType) {
+        const bool fromEnd = selector.type == PseudoClassSelector::Type::NthLastChild
+            || selector.type == PseudoClassSelector::Type::NthLastOfType;
+        const bool ofType = selector.type == PseudoClassSelector::Type::NthOfType
+            || selector.type == PseudoClassSelector::Type::NthLastOfType;
+        long position = 1;
+        auto sibling = fromEnd ? element->nextElement() : element->previousElement();
+        while(sibling) {
+            if(!ofType || sibling->id() == element->id())
+                ++position;
+            sibling = fromEnd ? sibling->nextElement() : sibling->previousElement();
+        }
+
+        // is there an n >= 0 with a*n + b == position ?
+        const long a = selector.nthA;
+        const long diff = position - selector.nthB;
+        if(a == 0)
+            return diff == 0;
+        return diff % a == 0 && diff / a >= 0;
+    }
+
     return false;
 }
 
@@ -404,6 +434,71 @@ static bool parseAttributeSelector(std::string_view& input, SimpleSelector& simp
 
 static bool parseSelectors(std::string_view& input, SelectorList& selectors);
 
+// Parses the `An+B` micro-syntax of :nth-child() & co: `odd`, `even`, `3`, `2n`, `-n+3`, `2n + 1`...
+static bool parseNthFormula(std::string_view text, int& a, int& b)
+{
+    std::string f;
+    for(char ch : text) {
+        if(!IS_WS(ch))
+            f.push_back(char(std::tolower(static_cast<unsigned char>(ch))));
+    }
+
+    if(f.empty())
+        return false;
+    if(f == "odd") {
+        a = 2;
+        b = 1;
+        return true;
+    }
+
+    if(f == "even") {
+        a = 2;
+        b = 0;
+        return true;
+    }
+
+    auto parseInt = [](const std::string& t, int& out) {
+        size_t i = 0;
+        bool negative = false;
+        if(i < t.size() && (t[i] == '+' || t[i] == '-'))
+            negative = t[i++] == '-';
+        if(i >= t.size() || t.size() - i > 6)
+            return false;
+        int v = 0;
+        for(; i < t.size(); ++i) {
+            if(t[i] < '0' || t[i] > '9')
+                return false;
+            v = v * 10 + (t[i] - '0');
+        }
+
+        out = negative ? -v : v;
+        return true;
+    };
+
+    auto n = f.find('n');
+    if(n == std::string::npos) {
+        a = 0;
+        return parseInt(f, b);
+    }
+
+    auto aPart = f.substr(0, n);
+    auto bPart = f.substr(n + 1);
+    if(aPart.empty() || aPart == "+")
+        a = 1;
+    else if(aPart == "-")
+        a = -1;
+    else if(!parseInt(aPart, a))
+        return false;
+    if(bPart.empty()) {
+        b = 0;
+        return true;
+    }
+
+    if(bPart[0] != '+' && bPart[0] != '-')
+        return false;
+    return parseInt(bPart, b);
+}
+
 static bool parsePseudoClassSelector(std::string_view& input, SimpleSelector& simpleSelector)
 {
     std::string name;
@@ -428,6 +523,29 @@ static bool parsePseudoClassSelector(std::string_view& input, SimpleSelector& si
         selector.type = PseudoClassSelector::Type::LastOfType;
     else if(name.compare("only-of-type") == 0)
         selector.type = PseudoClassSelector::Type::OnlyOfType;
+    else if(name.compare("nth-child") == 0)
+        selector.type = PseudoClassSelector::Type::NthChild;
+    else if(name.compare("nth-last-child") == 0)
+        selector.type = PseudoClassSelector::Type::NthLastChild;
+    else if(name.compare("nth-of-type") == 0)
+        selector.type = PseudoClassSelector::Type::NthOfType;
+    else if(name.compare("nth-last-of-type") == 0)
+        selector.type = PseudoClassSelector::Type::NthLastOfType;
+    if(selector.type == PseudoClassSelector::Type::NthChild
+        || selector.type == PseudoClassSelector::Type::NthLastChild
+        || selector.type == PseudoClassSelector::Type::NthOfType
+        || selector.type == PseudoClassSelector::Type::NthLastOfType) {
+        skipOptionalSpaces(input);
+        if(!skipDelimiter(input, '('))
+            return false;
+        auto close = input.find(')');
+        if(close == std::string_view::npos)
+            return false;
+        if(!parseNthFormula(input.substr(0, close), selector.nthA, selector.nthB))
+            return false;
+        input.remove_prefix(close + 1);
+    }
+
     if(selector.type == PseudoClassSelector::Type::Is || selector.type == PseudoClassSelector::Type::Not) {
         skipOptionalSpaces(input);
         if(!skipDelimiter(input, '('))
@@ -792,8 +910,30 @@ static RuleDataList parseStyleSheet(std::string_view input)
         }
 
         Rule rule;
-        if(!parseRule(input, rule))
-            break;
+        const auto ruleStart = input;
+        if(!parseRule(input, rule)) {
+            // Invalid or unsupported rule: drop only this rule (CSS error recovery) and carry on with the
+            // next one, instead of discarding the rest of the stylesheet.
+            input = ruleStart;
+            int depth = 0;
+            bool inBlock = false;
+            while(!input.empty()) {
+                auto ch = input.front();
+                input.remove_prefix(1);
+                if(ch == '{') {
+                    ++depth;
+                    inBlock = true;
+                } else if(ch == '}' && depth > 0) {
+                    if(--depth == 0)
+                        break;
+                } else if(ch == ';' && !inBlock) {
+                    break;
+                }
+            }
+
+            continue;
+        }
+
         for(const auto& selector : rule.selectors) {
             size_t specificity = 0;
             for(const auto& simpleSelector : selector) {
