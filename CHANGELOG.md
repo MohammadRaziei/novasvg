@@ -1,3 +1,19 @@
+## [Unreleased]
+
+### Changed
+
+- Benchmarks: the RMSE comparison against the Chromium ground truth (`benchmarks/python/compare.py`)
+  decodes the PNGs with [libstb](https://github.com/MohammadRaziei/libstb) instead of Pillow. It is
+  lighter and about 5x faster to decode, and the pixels it reads are identical, so the RMSE values do
+  not change. `benchmarks/python/requirements.txt` lists `libstb` in place of `Pillow`. Pillow stays an
+  optional extra for `Bitmap.to_pil()` / `Bitmap.from_pil()`.
+
+### Tests
+
+- The benchmark tests (`test_benchmark_corpus.py`, `test_benchmark_report.py`) build their PNGs with
+  libstb instead of Pillow. `libstb` joins the `test` extra and `requirements-dev.txt`; Pillow is kept
+  there for the Bitmap interop tests.
+
 ## [0.11.2] - 2026-10-17
 
 ### Added
