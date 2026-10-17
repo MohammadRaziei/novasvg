@@ -1100,7 +1100,12 @@ NOVASVG_INLINE void Document::render(Bitmap& bitmap, const Matrix& matrix) const
         color_t color;
         if(color_parse(&color, bg.data(), static_cast<int>(bg.length())) > 0) {
             auto argb = color_to_argb32(&color);
-            bitmap.clear(Color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff));
+            // A fully transparent `background-color` (Mermaid emits `transparent`) paints nothing, so it must
+            // not wipe the caller's `backgroundColor` argument -- that made every PNG come out transparent.
+            // ponytail: a *semi*-transparent root color still replaces the argument instead of compositing
+            // over it; upgrade path is to fill a rect through the canvas instead of clear().
+            if((argb >> 24) & 0xff)
+                bitmap.clear(Color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff));
         }
     }
 
