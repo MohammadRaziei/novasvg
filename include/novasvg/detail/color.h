@@ -34,6 +34,18 @@ namespace novasvg {
 struct ColorBlend;
 
 /**
+ * @brief Thrown when a color string cannot be parsed (bad hex digits or length, unknown name).
+ *
+ * Derives from std::invalid_argument, so existing `catch (const std::invalid_argument&)` code
+ * keeps working. In Python it is `novasvg.InvalidColorError`, a subclass of `ValueError`.
+ */
+class InvalidColorError : public std::invalid_argument {
+public:
+    using std::invalid_argument::invalid_argument;
+};
+
+
+/**
  * @class Color
  * @brief Represents a color in RGBA format (0xRRGGBBAA).
  * 
@@ -123,7 +135,7 @@ public:
      * @param str Hex color string (e.g., "#FF0000", "#F00") or 
      *            color name (e.g., "red", "skyblue")
      * 
-     * @throws std::invalid_argument If the format is invalid or 
+     * @throws InvalidColorError (a std::invalid_argument) If the format is invalid or 
      *         the color name is not recognized.
      * 
      * @par Example
@@ -131,7 +143,7 @@ public:
      * Color c1("#FF0000");   // Red from hex
      * Color c2("#F00");      // Red from shorthand hex
      * Color c3("blue");      // Blue from name
-     * Color c4("invalid");   // throws std::invalid_argument
+     * Color c4("invalid");   // throws InvalidColorError
      * @endcode
      * 
      * @see fromString()
@@ -492,7 +504,7 @@ public:
      * 
      * @return A Color instance.
      * 
-     * @throws std::invalid_argument If the format is invalid or 
+     * @throws InvalidColorError (a std::invalid_argument) If the format is invalid or 
      *         the color name is not recognized.
      * 
      * @par Supported Hex Formats
@@ -518,7 +530,7 @@ public:
      */
     static Color fromString(const std::string& str) {
         if (str.empty()) {
-            throw std::invalid_argument("Empty string provided");
+            throw InvalidColorError("Empty string provided");
         }
         bool is_hex = std::all_of(str.begin(), str.end(), [](unsigned char c) { return std::isxdigit(c); });
         return (str[0] == '#') ? fromHash(str) : ( is_hex ? fromHash("#" + str) : fromName(str));
@@ -555,7 +567,7 @@ public:
      * 
      * @return A Color instance.
      * 
-     * @throws std::invalid_argument If the hex string format is invalid.
+     * @throws InvalidColorError (a std::invalid_argument) If the hex string format is invalid.
      * 
      * @par Supported Formats
      * | Format    | Example    | Description                          |
@@ -574,14 +586,24 @@ public:
      */
     static Color fromHash(const std::string& hex_code) {
         if (hex_code.empty() || hex_code[0] != '#') {
-            throw std::invalid_argument("Hex color string must start with '#'");
+            throw InvalidColorError("Hex color string must start with '#'");
         }
 
         std::string hex_body = hex_code.substr(1);
         
         if (hex_body.length() != 3 && hex_body.length() != 4 &&
             hex_body.length() != 6 && hex_body.length() != 8) {
-            throw std::invalid_argument("Invalid hex color format");
+            throw InvalidColorError("Invalid hex color '" + hex_code +
+                                        "': expected 3, 4, 6 or 8 hex digits after '#' (#RGB, #RGBA, #RRGGBB, #RRGGBBAA)");
+        }
+
+        // Check every digit up front: std::stoi would throw a bare "stoi" on a leading bad
+        // character and silently stop at a trailing one ("1g" parses as 1).
+        for (char c : hex_body) {
+            if (!std::isxdigit(static_cast<unsigned char>(c))) {
+                throw InvalidColorError("Invalid hex color '" + hex_code + "': '" + std::string(1, c) +
+                                            "' is not a hex digit (0-9, a-f, A-F)");
+            }
         }
 
         // Expand shorthand: #RGB -> #RRGGBB
@@ -617,7 +639,7 @@ public:
      * 
      * @return A Color instance.
      * 
-     * @throws std::invalid_argument If the color name is not recognized.
+     * @throws InvalidColorError (a std::invalid_argument) If the color name is not recognized.
      * 
      * @par Supported Colors
      * - Basic: black, white, red, green, blue, yellow, cyan, magenta
@@ -658,7 +680,7 @@ public:
         if (name_lower == "brown")       return brown();
         if (name_lower == "transparent") return transparent();
 
-        throw std::invalid_argument("Unknown color name: '" + name + "'");
+        throw InvalidColorError("Unknown color name: '" + name + "'");
     }
 
     /**
@@ -999,7 +1021,7 @@ namespace novasvg::color_literals {
  * 
  * @return Color instance parsed from the string.
  * 
- * @throws std::invalid_argument If the format is invalid or 
+ * @throws InvalidColorError (a std::invalid_argument) If the format is invalid or 
  *         the color name is not recognized.
  * 
  * @par Example

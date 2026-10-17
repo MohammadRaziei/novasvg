@@ -1,3 +1,20 @@
+## [Unreleased]
+
+### Added
+
+- `novasvg::InvalidColorError` (C++, derives from `std::invalid_argument`) and `novasvg.InvalidColorError`
+  (Python, a `ValueError` subclass), raised for every color parse failure: empty string, missing `#`,
+  wrong length, non-hex digit and unknown color name. Existing `except ValueError` /
+  `catch (const std::invalid_argument&)` code keeps working.
+
+### Fixed
+
+- `Color("#gggggg")` raised a bare `ValueError: stoi`. The message now names the problem, e.g.
+  `Invalid hex color '#gggggg': 'g' is not a hex digit (0-9, a-f, A-F)`, and a wrong length lists the
+  accepted forms.
+- `Color::fromHash` silently accepted a bad trailing digit: `#12345g` parsed as a valid color because
+  `std::stoi` stops at the first invalid character. Every digit is now checked.
+
 ## [0.11.0] - 2026-10-17
 
 ### Added

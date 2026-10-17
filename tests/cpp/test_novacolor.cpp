@@ -102,6 +102,11 @@ TEST_CASE("Color - fromHash()") {
         CHECK_THROWS_AS(Color::fromHash("FF0000"), std::invalid_argument);
         CHECK_THROWS_AS(Color::fromHash("#GG0000"), std::invalid_argument);
         CHECK_THROWS_AS(Color::fromHash("#FF000"), std::invalid_argument);
+        CHECK_THROWS_AS(Color::fromHash("#12345g"), std::invalid_argument);  // used to parse as valid
+        CHECK_THROWS_AS(Color::fromHash("#12345g"), InvalidColorError);
+        CHECK_THROWS_WITH_AS(Color::fromHash("#gggggg"),
+                             "Invalid hex color '#gggggg': 'g' is not a hex digit (0-9, a-f, A-F)",
+                             std::invalid_argument);
     }
 }
 

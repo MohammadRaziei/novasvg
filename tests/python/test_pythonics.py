@@ -62,6 +62,22 @@ class TestColor:
         with pytest.raises(ValueError):
             novasvg.Color.from_hash("#12345") # Invalid length
 
+    def test_invalid_color_error_type(self):
+        assert issubclass(novasvg.InvalidColorError, ValueError)  # old `except ValueError` keeps working
+        for bad in ("#gggggg", "#12345", "notacolor", ""):
+            with pytest.raises(novasvg.InvalidColorError):
+                novasvg.Color(bad)
+        with pytest.raises(novasvg.InvalidColorError, match="Unknown color name"):
+            novasvg.Color.from_name("notacolor")
+
+    def test_invalid_hash_message_is_clear(self):
+        with pytest.raises(ValueError, match=r"Invalid hex color '#gggggg'.*'g' is not a hex digit"):
+            novasvg.Color("#gggggg")
+        with pytest.raises(ValueError, match=r"'g' is not a hex digit"):
+            novasvg.Color("#12345g")  # std::stoi would have accepted this as 0x12 0x34 0x5
+        with pytest.raises(ValueError, match=r"expected 3, 4, 6 or 8 hex digits"):
+            novasvg.Color("#12345")
+
 
 # --- Tests for Core Module (svg2png) ---
 

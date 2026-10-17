@@ -60,6 +60,9 @@ std::string lowercase(std::string text)
 NB_MODULE(novasvg_py, m) {
     m.doc() = "Python bindings for NovaSVG using nanobind";
 
+    // Color parse errors: novasvg.InvalidColorError, a ValueError subclass.
+    nb::exception<novasvg::InvalidColorError>(m, "InvalidColorError", PyExc_ValueError);
+
     // --- Bind Static Utility Functions ---
     m.def("version_string", &novasvg::versionString, "Get the library version as a string (e.g., '0.1.0').");
     m.def("add_font_face_from_file", &novasvg::addFontFaceFromFile, 

@@ -20,6 +20,7 @@ from .novasvg_py import Box
 from .novasvg_py import Color
 from .novasvg_py import Document
 from .novasvg_py import Element
+from .novasvg_py import InvalidColorError
 from .novasvg_py import Matrix
 from .novasvg_py import Node
 from .novasvg_py import TextNode
@@ -33,7 +34,7 @@ __version__ = version_string()
 __author__ = "Mohammad Raziei"
 
 __all__ = [
-    "Bitmap", "Box", "Color", "Document", "Element", "Matrix", "Node", "TextNode",
+    "Bitmap", "Box", "Color", "Document", "Element", "InvalidColorError", "Matrix", "Node", "TextNode",
     "fonts",
     "svg2png",
     "__version__", "__author__",
