@@ -156,7 +156,7 @@ def build_gallery(data):
 
 
 FALLBACK_TOKENS = """
-:root { --ok:#2e8b57; --warn:#b36b00; --bad:#c23b3b; --bg:#fbfbfe; --bg2:#f3f3fa; --bg3:#ebebf5; --fg:#14142b; --fg2:#55556e; --fg3:#8a8aa3; --border:#e4e4f0;
+:root { --bg:#fbfbfe; --bg2:#f3f3fa; --bg3:#ebebf5; --fg:#14142b; --fg2:#55556e; --fg3:#8a8aa3; --border:#e4e4f0;
   --border2:#d3d3e6; --accent:#1867b2; --accent2:#884d9e; --accent3:#b6489b; --accent-glow:rgba(24,103,178,.16);
   --accent-glow2:rgba(24,103,178,.07); --card:#fff; --code-bg:#f4f4fb; --code-fg:#1d1d3a;
   --font-display:'Outfit',system-ui,sans-serif; --font-body:'Figtree',system-ui,sans-serif; --font-mono:ui-monospace,Menlo,monospace;
@@ -164,7 +164,7 @@ FALLBACK_TOKENS = """
   --icon-grad:linear-gradient(135deg,#1867b2,#b6489b);
   --chart-nova:linear-gradient(90deg,#19469b,#1867b2 35%,#884d9e 70%,#b6489b);
   --shadow-sm:0 1px 3px rgba(20,20,60,.08); --shadow-lg:0 16px 40px rgba(40,30,90,.14); }
-[data-theme="dark"] { --ok:#4cc38a; --warn:#e5a93d; --bad:#ef6b6b; --bg:#0a0a13; --bg2:#11111d; --bg3:#191929; --fg:#ececf8; --fg2:#a0a0bd; --fg3:#6a6a88;
+[data-theme="dark"] { --bg:#0a0a13; --bg2:#11111d; --bg3:#191929; --fg:#ececf8; --fg2:#a0a0bd; --fg3:#6a6a88;
   --border:#23233a; --border2:#30304c; --accent:#5aa7f0; --accent2:#b07dd0; --accent3:#e06bbd;
   --accent-glow:rgba(90,167,240,.18); --accent-glow2:rgba(90,167,240,.07); --card:#11111d; --code-bg:#0d0d19;
   --code-fg:#e4e4f6; --brand-grad:linear-gradient(100deg,#3f8fe0,#5aa7f0 28%,#a468c0 64%,#e06bbd);
@@ -279,9 +279,13 @@ figcaption { font-size: .75rem; color: var(--fg2); margin-top: .45rem; line-heig
 figcaption b { display: block; color: var(--fg); font-weight: 600; }
 figcaption .rmse { font-weight: 600; } figcaption .rmse.good { color: var(--accent); } figcaption .rmse.mid { color: var(--accent2); } figcaption .rmse.far { color: var(--accent3); }
 figcaption .rmse-ref { font-style: italic; color: var(--fg3); }
+/* HDG colours live here, not in the brand tokens (those are read from docs/novasvg-docs.css). Green / amber / red. */
+:root { --ok:#1f8a4c; --warn:#b97a00; --bad:#d03a3a; }
+[data-theme="dark"] { --ok:#4cd68a; --warn:#f2c14e; --bad:#ff6b6b; }
 figcaption .hdg { display: inline-flex; align-items: center; gap: .3rem; font-weight: 600; margin-top: .15rem; cursor: help; border-radius: 6px; }
 figcaption .hdg svg { flex: none; }
 .hdg.g0, .hdgnums .g0 { color: var(--ok); } .hdg.g1, .hdgnums .g1 { color: var(--warn); } .hdg.g2, .hdgnums .g2 { color: var(--bad); }
+.hdg.g0, .hdg.g1, .hdg.g2 { padding: .1rem .45rem .1rem .3rem; border: 1px solid currentColor; background: color-mix(in srgb, currentColor 13%, transparent); }
 .hdg.g-none { color: var(--fg3); font-weight: 500; font-style: italic; }
 .hdg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .hdgbar { display: inline-flex; width: 7rem; height: .6rem; border-radius: 3px; overflow: hidden; vertical-align: middle; margin-right: .6rem; background: var(--bg3); }
