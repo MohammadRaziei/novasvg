@@ -1,3 +1,28 @@
+## [0.11.2] - 2026-10-17
+
+### Added
+
+- CSS: the structural pseudo-classes `:nth-child()`, `:nth-last-child()`, `:nth-of-type()` and
+  `:nth-last-of-type()`, with the full `An+B` syntax (`odd`, `even`, `3`, `2n`, `2n+1`, `-n+3`,
+  `2n + 1`...). They are matched against the element's siblings, counted from the first or the last one,
+  all siblings or only those of the same element type.
+
+### Fixed
+
+- A single rule the CSS parser could not handle discarded **every following rule** of the `<style>`
+  sheet. An unsupported pseudo-class with an argument, such as `:nth-of-type(2)` (which was not
+  recognised until now), made `parseStyleSheet` stop at that rule, so rules that came after it, such
+  as `#id .node rect{fill:#fff}`, were never applied. Shapes then fell back to an inherited value, e.g.
+  the dark root `fill`. This is how SVGs written by merman (mermaid-rs) came out as solid dark boxes.
+  An invalid or unsupported rule is now skipped on its own, up to its closing `}`, and parsing carries
+  on with the next rule, as CSS error recovery prescribes.
+
+### Tests
+
+- `tests/python/test_css_nth_and_recovery.py`: `An+B` formulas, `nth-last-*`, `nth-of-type` counting
+  only same-type siblings, the merman regression (rules after an `:nth-of-type()` rule still apply),
+  and dropping an invalid rule without losing the rules before or after it.
+
 ## [0.11.1] - 2026-10-17
 
 ### Added
