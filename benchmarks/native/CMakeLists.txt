@@ -8,6 +8,7 @@ target_link_libraries(lunasvg_native_bench PRIVATE lunasvg::lunasvg)
 
 add_executable(nanosvg_native_bench nanosvg_native_bench.cpp)
 target_include_directories(nanosvg_native_bench PRIVATE "${nanosvg_src_SOURCE_DIR}/src")
+target_compile_definitions(nanosvg_native_bench PRIVATE NANOSVG_COMMIT="${NOVASVG_BENCH_NANOSVG_COMMIT}")
 
 add_executable(thorvg_native_bench thorvg_native_bench.cpp)
 target_include_directories(thorvg_native_bench PRIVATE "${THORVG_INCLUDE_DIR}")

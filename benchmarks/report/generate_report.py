@@ -285,7 +285,6 @@ figcaption .rmse-ref { font-style: italic; color: var(--fg3); }
 figcaption .hdg { display: inline-flex; align-items: center; gap: .3rem; font-weight: 600; margin-top: .15rem; cursor: help; border-radius: 6px; }
 figcaption .hdg svg { flex: none; }
 .hdg.g0, .hdgnums .g0 { color: var(--ok); } .hdg.g1, .hdgnums .g1 { color: var(--warn); } .hdg.g2, .hdgnums .g2 { color: var(--bad); }
-.hdg.g0, .hdg.g1, .hdg.g2 { padding: .1rem .45rem .1rem .3rem; border: 1px solid currentColor; background: color-mix(in srgb, currentColor 13%, transparent); }
 .hdg.g-none { color: var(--fg3); font-weight: 500; font-style: italic; }
 .hdg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .hdgbar { display: inline-flex; width: 7rem; height: .6rem; border-radius: 3px; overflow: hidden; vertical-align: middle; margin-right: .6rem; background: var(--bg3); }

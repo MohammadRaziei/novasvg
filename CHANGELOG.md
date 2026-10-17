@@ -1,7 +1,5 @@
 ## [Unreleased]
 
-## [0.11.3] - 2026-10-17
-
 ### Added
 
 - Benchmarks: a **Human defect grade (HDG)** next to RMSE, which counts pixels rather than what a person
@@ -15,27 +13,17 @@
 
 ### Changed
 
+- Benchmarks: nanosvg has no version macro and no release tags, so the report now shows the commit the
+  bench was built against (`git 239e102`) instead of a placeholder. CMake reads it from the fetched checkout
+  and passes it to `nanosvg_native_bench` as `NANOSVG_COMMIT`.
 - Benchmarks: the RMSE comparison against the Chromium ground truth (`benchmarks/python/compare.py`)
   decodes the PNGs with [libstb](https://github.com/MohammadRaziei/libstb) instead of Pillow. It is
   lighter and about 5x faster to decode, and the pixels it reads are identical, so the RMSE values do
   not change. `benchmarks/python/requirements.txt` lists `libstb>=0.7.0` in place of `Pillow`. Pillow stays an
   optional extra for `Bitmap.to_pil()` / `Bitmap.from_pil()`.
 
-### Fixed
-
-- A root `<svg style="background-color: transparent">` wiped the `background_color` passed to
-  `render_to_bitmap()` (and the `background` of `svg2png()` and mermaidx's `.png(background=...)`).
-  `Document::render` clears the bitmap to the root's own `background-color` after the caller's background has
-  been applied, and it did so even when that color was fully transparent, so the PNG came out transparent
-  instead of white. Mermaid writes exactly this `transparent` on every diagram it generates. A fully
-  transparent root `background-color` now paints nothing and leaves the caller's background in place; an
-  opaque one still wins, as before. A semi-transparent root color still replaces the caller's background
-  rather than being composited over it.
-
 ### Tests
 
-- `test_root_background.py` covers a transparent, an opaque and a missing root `background-color` against the
-  `background_color` argument.
 - `test_benchmark_report.py` covers the HDG merge, the per-engine counts, the "not rated" and invalid-grade
   cases and the icons in the page.
 - The benchmark tests (`test_benchmark_corpus.py`, `test_benchmark_report.py`) build their PNGs with

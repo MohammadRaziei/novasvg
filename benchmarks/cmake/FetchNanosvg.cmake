@@ -20,3 +20,13 @@ FetchContent_Declare(
 )
 FetchContent_Populate(nanosvg_src)
 # ${nanosvg_src_SOURCE_DIR}/src now holds nanosvg.h / nanosvgrast.h.
+
+# nanosvg has no version macro and no release tags: the commit is its only real version, so record that.
+execute_process(
+    COMMAND git -C "${nanosvg_src_SOURCE_DIR}" rev-parse --short=7 HEAD
+    OUTPUT_VARIABLE NOVASVG_BENCH_NANOSVG_COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+if(NOT NOVASVG_BENCH_NANOSVG_COMMIT)
+    set(NOVASVG_BENCH_NANOSVG_COMMIT "${NOVASVG_BENCH_NANOSVG_GIT_TAG}")  # not a git checkout: fall back to the ref asked for
+endif()

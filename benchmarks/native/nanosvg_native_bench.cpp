@@ -26,7 +26,13 @@ int main(int argc, char** argv)
     }
     const auto jobs = bench::readManifest(argv[1]);
     const int runs = std::max(1, std::stoi(argv[2]));
-    std::cout << "@@VERSION\tgit-master (no version macro upstream)\n";
+    // nanosvg has no version macro and no release tags, so the version is the commit the bench was built against
+    // (CMake passes it in; see cmake/FetchNanosvg.cmake).
+#ifdef NANOSVG_COMMIT
+    std::cout << "@@VERSION\tgit " NANOSVG_COMMIT "\n";
+#else
+    std::cout << "@@VERSION\tgit (unknown commit)\n";
+#endif
 
     bench::runAll(jobs, runs, [](const bench::Job& job, bool isLast) {
         NSVGimage* image = nsvgParseFromFile(job.svg_path.c_str(), "px", 96.0f);
