@@ -1,0 +1,494 @@
+{
+ "metric": "hdg",
+ "name": "Human defect grade",
+ "abbr": "HDG",
+ "scale": {
+  "0": "accurate: looks the same as the Chromium render to the eye (anti-aliasing or a slightly different font are fine)",
+  "1": "defective: still usable, but something is wrong (text gone, shadow/blur missing, one wrong colour or shape)",
+  "2": "broken: not usable (solid black or gray blocks, blank render, large parts missing)"
+ },
+ "reference": "ground_truth",
+ "rated_by": "draft by Claude from side-by-side thumbnails; a human is expected to review and correct it",
+ "ratings": {
+  "circle": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 0},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 0},
+   "nanosvg": {"hdg": 0}
+  },
+  "rect": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 0},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 0},
+   "nanosvg": {"hdg": 0}
+  },
+  "tiger": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 0},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 0},
+   "nanosvg": {"hdg": 0}
+  },
+  "nova-logo": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 0},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 0},
+   "nanosvg": {"hdg": 0}
+  },
+  "clip-mask": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 0},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 2, "note": "right half (teal clipped/masked shape) missing"},
+   "thorvg": {"hdg": 0},
+   "nanosvg": {"hdg": 2, "note": "whole render is a flat gray block; clip/mask content missing"}
+  },
+  "gradient-filter": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 0},
+   "lunasvg": {"hdg": 1, "note": "drop shadow and blur filter missing"},
+   "cairosvg": {"hdg": 1, "note": "drop shadow and blur filter missing"},
+   "thorvg": {"hdg": 0},
+   "nanosvg": {"hdg": 1, "note": "gradient flattened to one colour; shadow and blur missing"}
+  },
+  "filter-primitives": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 0},
+   "lunasvg": {"hdg": 1, "note": "drop shadows missing"},
+   "cairosvg": {"hdg": 1, "note": "drop shadows missing"},
+   "thorvg": {"hdg": 1, "note": "shapes blurred instead of getting a drop shadow"},
+   "nanosvg": {"hdg": 1, "note": "drop shadows missing"}
+  },
+  "css-use-symbol": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "CSS rotation of the rectangle not applied"},
+   "lunasvg": {"hdg": 1, "note": "CSS rotation of the rectangle not applied"},
+   "cairosvg": {"hdg": 1, "note": "CSS rotation of the rectangle not applied"},
+   "thorvg": {"hdg": 1, "note": "CSS rotation of the rectangle not applied"},
+   "nanosvg": {"hdg": 2, "note": "stars missing and rectangle clipped by the edge"}
+  },
+  "base64-image": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "caption text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 1, "note": "embedded raster images blurred"},
+   "thorvg": {"hdg": 2, "note": "blank render"},
+   "nanosvg": {"hdg": 2, "note": "blank render"}
+  },
+  "mermaid-flowchart": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "nodes and edges drawn as black blobs and wedges, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "embedded-font": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 2, "note": "blank render"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 2, "note": "blank render"},
+   "nanosvg": {"hdg": 2, "note": "blank render"}
+  },
+  "embedded-font-distinctive": {
+   "novasvg": {"hdg": 1, "note": "unresolvable font name falls back to a sans font instead of the serif fallback"},
+   "resvg": {"hdg": 2, "note": "blank render"},
+   "lunasvg": {"hdg": 1, "note": "embedded monospace font not used; both lines in sans"},
+   "cairosvg": {"hdg": 1, "note": "embedded monospace font not used; both lines in sans"},
+   "thorvg": {"hdg": 2, "note": "blank render"},
+   "nanosvg": {"hdg": 2, "note": "blank render"}
+  },
+  "mermaid-01-venn": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 1, "note": "all label text missing"},
+   "nanosvg": {"hdg": 2, "note": "text missing and circle colours lost (flat gray)"}
+  },
+  "mermaid-02-flowchart": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "large black blobs instead of nodes, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-03-block": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "black bands instead of blocks, text missing"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-04-simple-flowchart": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "black blobs instead of nodes, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-05-data-flow": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "nodes drawn as black blobs, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-06-simple-sequence": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 1, "note": "all label text and message arrows missing"},
+   "nanosvg": {"hdg": 1, "note": "all label text and message arrows missing"}
+  },
+  "mermaid-07-simple-state": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "states drawn as black blocks, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-08-simple-mindmap": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 2, "note": "nodes filled black, no text"},
+   "thorvg": {"hdg": 2, "note": "nodes filled black, no text"},
+   "nanosvg": {"hdg": 2, "note": "text missing and colours lost (gray)"}
+  },
+  "mermaid-09-complex-sequence": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 1, "note": "sequence-number badges drawn far too large and covering the text"},
+   "thorvg": {"hdg": 2, "note": "text, arrows and activations missing; black artifacts"},
+   "nanosvg": {"hdg": 1, "note": "all label text and message arrows missing"}
+  },
+  "mermaid-10-complex-erd": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 2, "note": "table rows filled black"},
+   "thorvg": {"hdg": 1, "note": "text and cell separators missing"},
+   "nanosvg": {"hdg": 2, "note": "table rows filled gray, text missing"}
+  },
+  "mermaid-11-flowchart-multiline-entities": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "nodes drawn as black blobs, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-12-flowchart-subgraphs": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 2, "note": "nodes filled black, no text"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "nodes and subgraph filled black, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-13-flowchart-long-label": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "nodes filled black, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-14-class-diagram": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 1, "note": "text, row dividers and several lines missing"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-15-pie-chart": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all text (title, percentages, legend) missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 1, "note": "one slice filled black"},
+   "thorvg": {"hdg": 1, "note": "all text missing"},
+   "nanosvg": {"hdg": 1, "note": "text missing; one slice gray instead of green"}
+  },
+  "mermaid-16-gantt": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 2, "note": "render is a solid black band"},
+   "nanosvg": {"hdg": 1, "note": "text missing; colours flattened"}
+  },
+  "mermaid-17-journey": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "dark blocks and black dots instead of cards, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-18-timeline": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 2, "note": "event boxes filled black"},
+   "thorvg": {"hdg": 2, "note": "event boxes filled black"},
+   "nanosvg": {"hdg": 2, "note": "event boxes gray, text missing, colours lost"}
+  },
+  "mermaid-19-sequence-notes-activation": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 1, "note": "all label text and message arrows missing"},
+   "nanosvg": {"hdg": 1, "note": "all label text and message arrows missing"}
+  },
+  "mermaid-20-state-composite": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "nodes drawn as black blobs, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-21-flowchart-shapes-styles": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "label text missing; end node filled black"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "shapes drawn as black blobs, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-22-gitgraph": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "branch and commit labels missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 2, "note": "everything drawn in black"},
+   "thorvg": {"hdg": 2, "note": "only black fragments, lines missing"},
+   "nanosvg": {"hdg": 2, "note": "colours lost (gray) and stray lines"}
+  },
+  "mermaid-23-quadrant-chart": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 1, "note": "all label text missing"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-24-xychart": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "title and axis text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 1, "note": "title and axis text missing"},
+   "nanosvg": {"hdg": 1, "note": "title and axis text missing"}
+  },
+  "mermaid-25-sankey": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 2, "note": "flows washed out almost to white, no text"},
+   "nanosvg": {"hdg": 1, "note": "text missing; flow transparency lost (opaque colours)"}
+  },
+  "mermaid-26-block": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "blocks drawn as black shapes, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-27-c4-context": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 1, "note": "all label text missing"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-28-requirement": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 1, "note": "text, row dividers and arrows missing"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-29-kanban": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all card text missing"},
+   "lunasvg": {"hdg": 1, "note": "all card text missing"},
+   "cairosvg": {"hdg": 2, "note": "cards filled black"},
+   "thorvg": {"hdg": 2, "note": "cards filled black"},
+   "nanosvg": {"hdg": 2, "note": "card colours lost (gray outlines), text missing"}
+  },
+  "mermaid-30-architecture": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 1, "note": "group border drawn solid black instead of light dashed"},
+   "thorvg": {"hdg": 2, "note": "diagram covered by one black rectangle"},
+   "nanosvg": {"hdg": 2, "note": "blank render"}
+  },
+  "mermaid-31-packet": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 2, "note": "rows drawn as solid black bars"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-32-radar": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 2, "note": "data area filled solid black"},
+   "thorvg": {"hdg": 2, "note": "whole radar a solid black disc"},
+   "nanosvg": {"hdg": 2, "note": "series colours lost (gray), text missing"}
+  },
+  "mermaid-33-treemap": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "one block dark olive instead of orange"},
+   "cairosvg": {"hdg": 2, "note": "blocks filled black"},
+   "thorvg": {"hdg": 1, "note": "all label text missing"},
+   "nanosvg": {"hdg": 2, "note": "blocks filled black"}
+  },
+  "mermaid-34-venn": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 1, "note": "all label text missing"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-35-ishikawa": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 2, "note": "text and branches missing; black blobs"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-36-wardley": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 1, "note": "all label text missing"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-37-state-fork-choice": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "states drawn as black blocks, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-38-sequence-control": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 1, "note": "sequence-number badges drawn far too large"},
+   "thorvg": {"hdg": 2, "note": "text, arrows and box fills missing; black artifacts"},
+   "nanosvg": {"hdg": 2, "note": "box colours lost (gray block), text missing"}
+  },
+  "mermaid-39-gantt-advanced": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 2, "note": "render is a solid black band"},
+   "nanosvg": {"hdg": 1, "note": "text missing; bar colours flattened"}
+  },
+  "mermaid-40-erd-relations": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 2, "note": "table rows filled black"},
+   "thorvg": {"hdg": 2, "note": "text missing; black wedges and blocks"},
+   "nanosvg": {"hdg": 2, "note": "table rows gray, text missing"}
+  },
+  "mermaid-41-class-advanced": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing; one node filled black"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing; black wedge artifacts"},
+   "thorvg": {"hdg": 1, "note": "all label text missing; stretched arrow artifacts"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-42-mindmap-shapes": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 2, "note": "nodes filled black"},
+   "thorvg": {"hdg": 2, "note": "nodes filled black"},
+   "nanosvg": {"hdg": 2, "note": "node colours lost (gray), text missing"}
+  },
+  "mermaid-43-timeline-sections": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 2, "note": "event boxes filled black"},
+   "thorvg": {"hdg": 2, "note": "event boxes filled black"},
+   "nanosvg": {"hdg": 2, "note": "event boxes gray, text missing"}
+  },
+  "mermaid-44-pie-basic": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 1, "note": "one slice filled black"},
+   "thorvg": {"hdg": 1, "note": "all text missing"},
+   "nanosvg": {"hdg": 1, "note": "text missing; two slices gray"}
+  },
+  "mermaid-45-flowchart-markdown-labels": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "nodes filled black, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-46-sequence-actors-misc": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 0},
+   "cairosvg": {"hdg": 0},
+   "thorvg": {"hdg": 2, "note": "text and arrows missing; black blobs"},
+   "nanosvg": {"hdg": 2, "note": "text and arrows missing; black blobs"}
+  },
+  "mermaid-47-flowchart-br-bold-label": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "node filled black, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  },
+  "mermaid-48-flowchart-bold-italic-runs": {
+   "novasvg": {"hdg": 0},
+   "resvg": {"hdg": 1, "note": "all label text missing"},
+   "lunasvg": {"hdg": 1, "note": "all label text missing"},
+   "cairosvg": {"hdg": 1, "note": "all label text missing"},
+   "thorvg": {"hdg": 2, "note": "nodes filled black, no text"},
+   "nanosvg": {"hdg": 1, "note": "all label text missing"}
+  }
+ }
+}

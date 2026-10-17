@@ -1,17 +1,30 @@
 ## [Unreleased]
 
+### Added
+
+- Benchmarks: a **Human defect grade (HDG)** next to RMSE, which counts pixels rather than what a person
+  sees. Every render is graded against the Chromium one on an ordinal scale where lower is better:
+  `0` accurate, `1` defective, `2` broken. The grades are kept by hand in `benchmarks/ratings.json`
+  (`{"hdg": 0|1|2, "note": ...}` per sample and engine; a first draft covers the 60 samples x 6 engines),
+  merged by `report/gather.py` into `render_benchmark.json` (`hdg` / `hdg_note` per cell, per-engine counts
+  in `summary`, the metric's description under `metrics.hdg`) and shown in the report as a check / warning /
+  stop icon under each render, a legend, and an HDG column in the engine table. An unrated render shows as
+  "not rated"; a grade that is not 0, 1 or 2 is reported and ignored.
+
 ### Changed
 
 - Benchmarks: the RMSE comparison against the Chromium ground truth (`benchmarks/python/compare.py`)
   decodes the PNGs with [libstb](https://github.com/MohammadRaziei/libstb) instead of Pillow. It is
   lighter and about 5x faster to decode, and the pixels it reads are identical, so the RMSE values do
-  not change. `benchmarks/python/requirements.txt` lists `libstb` in place of `Pillow`. Pillow stays an
+  not change. `benchmarks/python/requirements.txt` lists `libstb>=0.7.0` in place of `Pillow`. Pillow stays an
   optional extra for `Bitmap.to_pil()` / `Bitmap.from_pil()`.
 
 ### Tests
 
+- `test_benchmark_report.py` covers the HDG merge, the per-engine counts, the "not rated" and invalid-grade
+  cases and the icons in the page.
 - The benchmark tests (`test_benchmark_corpus.py`, `test_benchmark_report.py`) build their PNGs with
-  libstb instead of Pillow. `libstb` joins the `test` extra and `requirements-dev.txt`; Pillow is kept
+  libstb instead of Pillow. `libstb>=0.7.0` joins the `test` extra and `requirements-dev.txt`; Pillow is kept
   there for the Bitmap interop tests.
 
 ## [0.11.2] - 2026-10-17

@@ -143,6 +143,19 @@ the same fontconfig, e.g. `FONTCONFIG_FILE` pointing at a config that exposes on
   fill, a shifted shape) far more than the routine anti-aliasing noise
   along every edge — low single digits is essentially imperceptible, tens
   or higher usually means something structural differs.
+- **Human defect grade (HDG)** — RMSE counts pixels, not what a person sees: a label that vanished
+  barely moves it, a slightly different font moves it a lot. So every render is also graded by hand
+  against Chromium's on a three-step ordinal scale where **lower is better**: `0` accurate (the same to
+  the eye), `1` defective (usable, but text gone, a shadow missing, a wrong colour), `2` broken (solid
+  black or gray blocks, a blank render, large parts missing). The grades live in
+  [`ratings.json`](ratings.json), one `{"hdg": 0|1|2, "note": "why"}` per sample and engine (the note is
+  optional for a `0`), under the metric's own `abbr` (`hdg`). `report/gather.py` merges them into
+  `render_benchmark.json` (`hdg` / `hdg_note` per cell, `{"0": n, "1": n, "2": n}` counts per engine in the
+  summary), so the page and the JSON need nothing else; the gallery shows a check / warning / stop icon under
+  each render (hover or focus it for the note) and the engine table counts them. A render without an
+  entry shows as "not rated". The first set was drafted by Claude from side-by-side thumbnails and is
+  meant to be corrected by a person: edit `ratings.json`, then
+  `python report/gather.py outputs && python report/generate_report.py outputs/render_benchmark.json`.
 - Every native engine speaks the same tiny protocol (`native/manifest.h`):
   read a tab-separated job list (name, svg path, out PNG path, w, h), time
   `runs` load+render passes per job with `std::chrono`, print

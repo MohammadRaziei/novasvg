@@ -32,23 +32,66 @@ def fmt_ms(ms):
     return f"{ms:.2f} ms" if ms is not None else "-"
 
 
+# Human defect grade (HDG) icons. Shape differs per grade (circle+check, triangle, octagon+cross), so the grade
+# never depends on colour alone.
+_SVG = '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+HDG_ICONS = {
+    0: _SVG + '<circle cx="8" cy="8" r="6.4"/><path d="M5 8.2l2.2 2.2L11.2 6"/></svg>',
+    1: _SVG + '<path d="M8 2.2L14.2 13H1.8z"/><path d="M8 6.4v3.2M8 11.6v.1"/></svg>',
+    2: _SVG + '<path d="M5.2 1.6h5.6l3.6 3.6v5.6l-3.6 3.6H5.2L1.6 10.8V5.2z"/><path d="M5.6 5.6l4.8 4.8M10.4 5.6l-4.8 4.8"/></svg>',
+}
+HDG_NONE_ICON = _SVG + '<circle cx="8" cy="8" r="6.4" stroke-dasharray="2 2.4"/></svg>'
+HDG_SHORT = {0: "accurate", 1: "defective", 2: "broken"}
+
+
+def hdg_metric(data):
+    return (data.get("metrics") or {}).get("hdg")
+
+
+def fmt_hdg(cell, abbr="HDG"):
+    """The grade icon shown under a render's caption; its tooltip / aria-label carries the grade and the note."""
+    grade = cell.get("hdg")
+    if grade not in HDG_ICONS:
+        return f'<span class="hdg g-none" title="{html.escape(abbr)}: not rated" aria-label="{html.escape(abbr)}: not rated" role="img" tabindex="0">{HDG_NONE_ICON}<span>not rated</span></span>'
+    note = cell.get("hdg_note")
+    text = f"{abbr} {grade}: {HDG_SHORT[grade]}" + (f" - {note}" if note else "")
+    return (f'<span class="hdg g{grade}" title="{html.escape(text, quote=True)}" aria-label="{html.escape(text, quote=True)}" '
+            f'role="img" tabindex="0">{HDG_ICONS[grade]}<span>{abbr} {grade}</span></span>')
+
+
+def fmt_hdg_summary(counts):
+    """'59 / 1 / 0' with a stacked bar, for the engine table; '-' when the engine has no grades."""
+    if not counts or not counts.get("rated"):
+        return "-"
+    n = counts["rated"]
+    segs = "".join(f'<i class="g{g}" style="width:{counts[str(g)] / n * 100:.2f}%"></i>' for g in (0, 1, 2))
+    nums = " / ".join(f'<span class="g{g}">{counts[str(g)]}</span>' for g in (0, 1, 2))
+    unrated = f' <small>({counts["total"] - n} unrated)</small>' if counts["total"] > n else ""
+    return f'<span class="hdgbar" aria-hidden="true">{segs}</span><span class="hdgnums">{nums}</span>{unrated}'
+
+
 def build_summary_table(data):
     # engine order = the JSON's own `summary` order (gather.py already put it in display order)
     summary = data["summary"]
+    metric = hdg_metric(data)
     rows = []
     for k in list(summary):
         e = summary[k]
+        hdg_cell = f"<td>{fmt_hdg_summary(e.get('hdg'))}</td>" if metric else ""
         row_cls = ' class="is-nova"' if k == "novasvg" else ""  # not inline: no backslashes in f-string expressions before 3.12
         rows.append(
             f"<tr{row_cls}><td>{html.escape(e['label'])}</td>"
             f"<td>{html.escape(e['version'])}</td>"
             f"<td>{e['ok']}/{e['total']}</td>"
+            f"{hdg_cell}"
             f"<td>{fmt_ms(e['avg_ms'])}</td>"
             f"<td>{fmt_ms(e['total_ms'])}</td></tr>"
         )
+    hdg_head = (f'<th title="Human defect grade: samples graded 0 accurate / 1 defective / 2 broken">'
+                f'{html.escape(metric.get("abbr", "HDG"))} 0 / 1 / 2</th>') if metric else ""
     return f"""
     <div class="tablewrap"><table class="summary">
-      <thead><tr><th>Engine</th><th>Version</th><th>Rendered OK</th><th>Avg time / sample</th><th>Total time</th></tr></thead>
+      <thead><tr><th>Engine</th><th>Version</th><th>Rendered OK</th>{hdg_head}<th>Avg time / sample</th><th>Total time</th></tr></thead>
       <tbody>{"".join(rows)}</tbody>
     </table></div>
     """
@@ -75,6 +118,7 @@ ANCHOR_ICON = (
 
 def build_gallery(data):
     summary = data["summary"]
+    metric = hdg_metric(data)
     engines = list(summary)
     blocks = []
     for f in data["files"]:
@@ -90,6 +134,8 @@ def build_gallery(data):
                     f'class="zoomable" onclick="openLightbox(this)">'
                 )
                 caption = f'{fmt_ms(cell["seconds"] * 1000)}<br>{fmt_rmse(cell, k == "ground_truth")}'
+                if metric and k != "ground_truth":
+                    caption += f'<br>{fmt_hdg(cell, metric.get("abbr", "HDG"))}'
             else:
                 img = '<div class="missing">no render</div>'
                 caption = "FAIL"
@@ -110,7 +156,7 @@ def build_gallery(data):
 
 
 FALLBACK_TOKENS = """
-:root { --bg:#fbfbfe; --bg2:#f3f3fa; --bg3:#ebebf5; --fg:#14142b; --fg2:#55556e; --fg3:#8a8aa3; --border:#e4e4f0;
+:root { --ok:#2e8b57; --warn:#b36b00; --bad:#c23b3b; --bg:#fbfbfe; --bg2:#f3f3fa; --bg3:#ebebf5; --fg:#14142b; --fg2:#55556e; --fg3:#8a8aa3; --border:#e4e4f0;
   --border2:#d3d3e6; --accent:#1867b2; --accent2:#884d9e; --accent3:#b6489b; --accent-glow:rgba(24,103,178,.16);
   --accent-glow2:rgba(24,103,178,.07); --card:#fff; --code-bg:#f4f4fb; --code-fg:#1d1d3a;
   --font-display:'Outfit',system-ui,sans-serif; --font-body:'Figtree',system-ui,sans-serif; --font-mono:ui-monospace,Menlo,monospace;
@@ -118,7 +164,7 @@ FALLBACK_TOKENS = """
   --icon-grad:linear-gradient(135deg,#1867b2,#b6489b);
   --chart-nova:linear-gradient(90deg,#19469b,#1867b2 35%,#884d9e 70%,#b6489b);
   --shadow-sm:0 1px 3px rgba(20,20,60,.08); --shadow-lg:0 16px 40px rgba(40,30,90,.14); }
-[data-theme="dark"] { --bg:#0a0a13; --bg2:#11111d; --bg3:#191929; --fg:#ececf8; --fg2:#a0a0bd; --fg3:#6a6a88;
+[data-theme="dark"] { --ok:#4cc38a; --warn:#e5a93d; --bad:#ef6b6b; --bg:#0a0a13; --bg2:#11111d; --bg3:#191929; --fg:#ececf8; --fg2:#a0a0bd; --fg3:#6a6a88;
   --border:#23233a; --border2:#30304c; --accent:#5aa7f0; --accent2:#b07dd0; --accent3:#e06bbd;
   --accent-glow:rgba(90,167,240,.18); --accent-glow2:rgba(90,167,240,.07); --card:#11111d; --code-bg:#0d0d19;
   --code-fg:#e4e4f6; --brand-grad:linear-gradient(100deg,#3f8fe0,#5aa7f0 28%,#a468c0 64%,#e06bbd);
@@ -233,6 +279,17 @@ figcaption { font-size: .75rem; color: var(--fg2); margin-top: .45rem; line-heig
 figcaption b { display: block; color: var(--fg); font-weight: 600; }
 figcaption .rmse { font-weight: 600; } figcaption .rmse.good { color: var(--accent); } figcaption .rmse.mid { color: var(--accent2); } figcaption .rmse.far { color: var(--accent3); }
 figcaption .rmse-ref { font-style: italic; color: var(--fg3); }
+figcaption .hdg { display: inline-flex; align-items: center; gap: .3rem; font-weight: 600; margin-top: .15rem; cursor: help; border-radius: 6px; }
+figcaption .hdg svg { flex: none; }
+.hdg.g0, .hdgnums .g0 { color: var(--ok); } .hdg.g1, .hdgnums .g1 { color: var(--warn); } .hdg.g2, .hdgnums .g2 { color: var(--bad); }
+.hdg.g-none { color: var(--fg3); font-weight: 500; font-style: italic; }
+.hdg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hdgbar { display: inline-flex; width: 7rem; height: .6rem; border-radius: 3px; overflow: hidden; vertical-align: middle; margin-right: .6rem; background: var(--bg3); }
+.hdgbar i { display: block; height: 100%; } .hdgbar .g0 { background: var(--ok); } .hdgbar .g1 { background: var(--warn); } .hdgbar .g2 { background: var(--bad); }
+.hdgnums { font-weight: 600; white-space: nowrap; } .hdgnums small, td small { font-weight: 400; color: var(--fg3); }
+.hdglegend { list-style: none; padding: 0; margin: .4rem 0 1rem; display: grid; gap: .35rem; }
+.hdglegend li { display: flex; gap: .55rem; align-items: flex-start; color: var(--fg2); font-size: .85rem; }
+.hdglegend .hdg { flex: none; min-width: 5.2rem; }
 figure.is-nova .thumb { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2), 0 8px 24px color-mix(in srgb, var(--accent2) 28%, transparent); }
 
 footer { margin-top: 4rem; padding-top: 1.2rem; border-top: 1px solid var(--border); color: var(--fg3); font-size: .8rem; max-width: 60rem; }
@@ -296,6 +353,25 @@ def build_html(data):
         f'<div class="chart"><h3>Speed</h3><p>Average render time per sample. Lower is faster.</p>{charts.speed_chart(chart_data)}</div>'
         "</div>"
     )
+    metric = hdg_metric(data)
+    if metric:
+        abbr = html.escape(metric.get("abbr", "HDG"))
+        scale = metric.get("scale", {})
+        legend = "".join(
+            f'<li><span class="hdg g{g}">{HDG_ICONS[g]}<span>{abbr} {g}</span></span><span>{html.escape(scale.get(str(g), HDG_SHORT[g]))}</span></li>'
+            for g in (0, 1, 2)
+        )
+        hdg_block = (
+            f'<h3>{html.escape(metric.get("name", "Human defect grade"))} ({abbr})</h3>'
+            f'<p class="meta">RMSE says how many pixels differ, not how bad it looks: a missing label barely moves it, a few pixels of '
+            f'font difference move it a lot. So every render is also graded by a person against the Chromium render, on a three-step '
+            f'scale where <strong>lower is better</strong>. The grade shows under each render below (hover or focus it for the reason), '
+            f'and the table counts them per engine. Source: <code>benchmarks/ratings.json</code>, merged into <a href="render_benchmark.json"><code>render_benchmark.json</code></a>'
+            f'{" (" + html.escape(metric["rated_by"]) + ")" if metric.get("rated_by") else ""}.</p>'
+            f'<ul class="hdglegend">{legend}</ul>'
+        )
+    else:
+        hdg_block = ""
     css = CSS.replace("/*@BARS_CSS@*/", charts.BARS_CSS)
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="dark">
@@ -330,6 +406,7 @@ def build_html(data):
      of badly wrong pixels (a missing filter, a wrong fill, a shifted shape) far more than the routine
      anti-aliasing noise along every edge, so low single digits is essentially imperceptible and anything in
      the tens or higher usually means something structural differs.</p>
+  {hdg_block}
   {chart_block}
   <p class="meta">These charts and the table below are drawn from <a href="render_benchmark.json"><code>render_benchmark.json</code></a>, which sits next to this page.</p>
   <p class="meta">nanosvg is included as a lightweight baseline, not a fair fight with the other 5. It is a

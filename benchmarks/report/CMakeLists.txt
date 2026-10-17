@@ -16,6 +16,7 @@ add_custom_command(
             "${CMAKE_CURRENT_SOURCE_DIR}/generate_report.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/charts.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/../python/compare.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../ratings.json"
     COMMAND "${NOVASVG_BENCH_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/gather.py" "${NOVASVG_BENCH_OUTPUT_DIR}"
     COMMAND "${NOVASVG_BENCH_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/generate_report.py" "${NOVASVG_BENCH_REPORT_JSON}"
     COMMENT "novasvg_bench: gathering renders/*/result.json -> render_benchmark.json -> index.html in ${NOVASVG_BENCH_OUTPUT_DIR}"

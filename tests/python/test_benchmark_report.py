@@ -280,3 +280,54 @@ def test_the_teaser_is_skipped_when_there_is_no_usable_data(tmp_path, browser, b
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(300)
         assert page.evaluate("document.getElementById('benchmarks').hidden") is True
+
+
+# --- Human defect grade (HDG) ------------------------------------------------------------------------
+
+
+def _ratings(tmp_path, ratings, **extra):
+    path = tmp_path / "ratings_in.json"
+    path.write_text(json.dumps({"metric": "hdg", "name": "Human defect grade", "abbr": "HDG",
+                                "scale": {"0": "accurate", "1": "defective", "2": "broken"},
+                                "ratings": ratings, **extra}), encoding="utf-8")
+    return path
+
+
+def test_gather_merges_the_human_grades_into_the_cells_and_counts_them_per_engine(out, tmp_path):
+    rated = _ratings(tmp_path, {"circle": {"novasvg": {"hdg": 0}, "resvg": {"hdg": 1, "note": "text gone"}},
+                                "tiger": {"novasvg": {"hdg": 2, "note": "blank"}}})
+    data = json.loads(gt.gather(out, rated).read_text(encoding="utf-8"))
+    assert data["metrics"]["hdg"]["abbr"] == "HDG"
+    assert data["matrix"]["circle"]["resvg"]["hdg"] == 1 and data["matrix"]["circle"]["resvg"]["hdg_note"] == "text gone"
+    assert "hdg_note" not in data["matrix"]["circle"]["novasvg"]
+    assert data["summary"]["novasvg"]["hdg"] == {"0": 1, "1": 0, "2": 1, "rated": 2, "total": 2}
+    assert data["summary"]["resvg"]["hdg"]["rated"] == 1 and data["summary"]["resvg"]["hdg"]["total"] == 2
+    assert "hdg" not in data["summary"]["ground_truth"]  # the reference is not graded
+    assert not (out / "ratings.json").exists()  # everything the page needs is already in render_benchmark.json
+
+
+def test_without_ratings_the_json_has_no_grades_and_the_page_no_grade_icons(out):
+    data = json.loads(gt.gather(out).read_text(encoding="utf-8"))
+    assert data["metrics"] == {} and all("hdg" not in c for row in data["matrix"].values() for c in row.values())
+    gr.write_report(out / "render_benchmark.json")
+    assert 'class="hdg' not in (out / "index.html").read_text(encoding="utf-8")
+
+
+def test_a_grade_that_is_not_0_1_2_or_for_an_unknown_render_is_reported_and_ignored(out, tmp_path, capsys):
+    rated = _ratings(tmp_path, {"circle": {"novasvg": {"hdg": 3}, "nope": {"hdg": 0}}, "ghost": {"novasvg": {"hdg": 0}}})
+    data = json.loads(gt.gather(out, rated).read_text(encoding="utf-8"))
+    err = capsys.readouterr().err
+    assert "hdg must be 0, 1 or 2" in err and "ghost/novasvg" in err
+    assert "hdg" not in data["matrix"]["circle"]["novasvg"]
+    assert data["summary"]["novasvg"]["hdg"]["rated"] == 0
+
+
+def test_the_page_shows_a_grade_icon_under_each_graded_render_with_the_reason_as_its_tooltip(out, tmp_path):
+    rated = _ratings(tmp_path, {"circle": {"novasvg": {"hdg": 0}, "resvg": {"hdg": 1, "note": 'text "gone"'}}})
+    gr.write_report(gt.gather(out, rated))
+    page = (out / "index.html").read_text(encoding="utf-8")
+    assert 'class="hdg g0"' in page and 'class="hdg g1"' in page
+    assert "HDG 1: defective - text &quot;gone&quot;" in page  # escaped
+    assert page.count("not rated") >= 1  # tiger has no grade yet, and shows it
+    assert "hdglegend" in page and "ratings.json" in page
+    assert page.count('class="hdg g-none"') == 1  # novasvg's tiger; resvg's tiger failed, so it has no render to grade

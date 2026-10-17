@@ -1,10 +1,24 @@
 {
  "schema": 1,
- "generated": "2026-10-15 02:17 UTC",
+ "generated": "2026-10-17 14:19 UTC",
  "width": 320,
  "height": 320,
  "runs": 5,
  "engine_load_errors": {},
+ "metrics": {
+  "hdg": {
+   "metric": "hdg",
+   "name": "Human defect grade",
+   "abbr": "HDG",
+   "scale": {
+    "0": "accurate: looks the same as the Chromium render to the eye (anti-aliasing or a slightly different font are fine)",
+    "1": "defective: still usable, but something is wrong (text gone, shadow/blur missing, one wrong colour or shape)",
+    "2": "broken: not usable (solid black or gray blocks, blank render, large parts missing)"
+   },
+   "reference": "ground_truth",
+   "rated_by": "draft by Claude from side-by-side thumbnails; a human is expected to review and correct it"
+  }
+ },
  "summary": {
   "ground_truth": {
    "label": "Chromium (ground truth)",
@@ -17,12 +31,19 @@
   },
   "novasvg": {
    "label": "novasvg",
-   "version": "0.10.0",
+   "version": "0.11.2",
    "ok": 60,
    "total": 60,
-   "avg_ms": 2.276234933333334,
-   "total_ms": 136.574096,
-   "rmse": 15.401715426176962
+   "avg_ms": 1.2771693166666667,
+   "total_ms": 76.630159,
+   "rmse": 15.401715426176962,
+   "hdg": {
+    "0": 59,
+    "1": 1,
+    "2": 0,
+    "rated": 60,
+    "total": 60
+   }
   },
   "resvg": {
    "label": "resvg",
@@ -31,7 +52,14 @@
    "total": 60,
    "avg_ms": 3.3756867333333336,
    "total_ms": 202.541204,
-   "rmse": 19.20367753029193
+   "rmse": 19.20367753029193,
+   "hdg": {
+    "0": 7,
+    "1": 51,
+    "2": 2,
+    "rated": 60,
+    "total": 60
+   }
   },
   "lunasvg": {
    "label": "lunasvg",
@@ -40,7 +68,14 @@
    "total": 60,
    "avg_ms": 1.8458611166666667,
    "total_ms": 110.751667,
-   "rmse": 30.868284685556997
+   "rmse": 30.868284685556997,
+   "hdg": {
+    "0": 31,
+    "1": 28,
+    "2": 1,
+    "rated": 60,
+    "total": 60
+   }
   },
   "cairosvg": {
    "label": "cairosvg",
@@ -49,7 +84,14 @@
    "total": 60,
    "avg_ms": 42.924456233333785,
    "total_ms": 2575.467374000027,
-   "rmse": 46.047943386472724
+   "rmse": 46.047943386472724,
+   "hdg": {
+    "0": 19,
+    "1": 30,
+    "2": 11,
+    "rated": 60,
+    "total": 60
+   }
   },
   "thorvg": {
    "label": "thorvg",
@@ -58,7 +100,14 @@
    "total": 60,
    "avg_ms": 0.6358812,
    "total_ms": 38.152871999999995,
-   "rmse": 76.41187361832846
+   "rmse": 76.41187361832846,
+   "hdg": {
+    "0": 6,
+    "1": 17,
+    "2": 37,
+    "rated": 60,
+    "total": 60
+   }
   },
   "nanosvg": {
    "label": "nanosvg",
@@ -67,7 +116,14 @@
    "total": 60,
    "avg_ms": 2.1590352833333335,
    "total_ms": 129.54211700000002,
-   "rmse": 48.340557127608896
+   "rmse": 48.340557127608896,
+   "hdg": {
+    "0": 4,
+    "1": 37,
+    "2": 19,
+    "rated": 60,
+    "total": 60
+   }
   }
  },
  "files": [
@@ -503,45 +559,51 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.000487648,
+    "seconds": 0.000260189,
     "rmse": 1.8107662774965603,
     "error": null,
-    "png": "renders/novasvg/circle.png"
+    "png": "renders/novasvg/circle.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.000895621,
     "rmse": 1.3797618184966745,
     "error": null,
-    "png": "renders/resvg/circle.png"
+    "png": "renders/resvg/circle.png",
+    "hdg": 0
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000499161,
     "rmse": 1.8107662774965603,
     "error": null,
-    "png": "renders/lunasvg/circle.png"
+    "png": "renders/lunasvg/circle.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.007859866999979204,
     "rmse": 1.7950459440934234,
     "error": null,
-    "png": "renders/cairosvg/circle.png"
+    "png": "renders/cairosvg/circle.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000430811,
     "rmse": 1.617432801444159,
     "error": null,
-    "png": "renders/thorvg/circle.png"
+    "png": "renders/thorvg/circle.png",
+    "hdg": 0
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00174031,
     "rmse": 2.3885969747557874,
     "error": null,
-    "png": "renders/nanosvg/circle.png"
+    "png": "renders/nanosvg/circle.png",
+    "hdg": 0
    }
   },
   "rect": {
@@ -554,45 +616,51 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.000214368,
+    "seconds": 0.000116342,
     "rmse": 0.0,
     "error": null,
-    "png": "renders/novasvg/rect.png"
+    "png": "renders/novasvg/rect.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.000157069,
     "rmse": 0.0,
     "error": null,
-    "png": "renders/resvg/rect.png"
+    "png": "renders/resvg/rect.png",
+    "hdg": 0
    },
    "lunasvg": {
     "ok": true,
     "seconds": 7.6998e-05,
     "rmse": 0.0,
     "error": null,
-    "png": "renders/lunasvg/rect.png"
+    "png": "renders/lunasvg/rect.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.00650621299996601,
     "rmse": 0.0,
     "error": null,
-    "png": "renders/cairosvg/rect.png"
+    "png": "renders/cairosvg/rect.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000162098,
     "rmse": 0.0,
     "error": null,
-    "png": "renders/thorvg/rect.png"
+    "png": "renders/thorvg/rect.png",
+    "hdg": 0
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00204234,
     "rmse": 1.5669623778987165,
     "error": null,
-    "png": "renders/nanosvg/rect.png"
+    "png": "renders/nanosvg/rect.png",
+    "hdg": 0
    }
   },
   "tiger": {
@@ -605,45 +673,51 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.0116811,
+    "seconds": 0.00645816,
     "rmse": 5.959714201148826,
     "error": null,
-    "png": "renders/novasvg/tiger.png"
+    "png": "renders/novasvg/tiger.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.0104577,
     "rmse": 5.240334294262628,
     "error": null,
-    "png": "renders/resvg/tiger.png"
+    "png": "renders/resvg/tiger.png",
+    "hdg": 0
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.0105599,
     "rmse": 5.959714201148826,
     "error": null,
-    "png": "renders/lunasvg/tiger.png"
+    "png": "renders/lunasvg/tiger.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.09638786400000754,
     "rmse": 5.612194408091968,
     "error": null,
-    "png": "renders/cairosvg/tiger.png"
+    "png": "renders/cairosvg/tiger.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.0073222,
     "rmse": 5.9089415989932155,
     "error": null,
-    "png": "renders/thorvg/tiger.png"
+    "png": "renders/thorvg/tiger.png",
+    "hdg": 0
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.0153025,
     "rmse": 11.475897913024333,
     "error": null,
-    "png": "renders/nanosvg/tiger.png"
+    "png": "renders/nanosvg/tiger.png",
+    "hdg": 0
    }
   },
   "nova-logo": {
@@ -656,45 +730,51 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.000888141,
+    "seconds": 0.000409829,
     "rmse": 10.133421369363278,
     "error": null,
-    "png": "renders/novasvg/nova-logo.png"
+    "png": "renders/novasvg/nova-logo.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00152823,
     "rmse": 8.398469941617249,
     "error": null,
-    "png": "renders/resvg/nova-logo.png"
+    "png": "renders/resvg/nova-logo.png",
+    "hdg": 0
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000786317,
     "rmse": 10.133421369363278,
     "error": null,
-    "png": "renders/lunasvg/nova-logo.png"
+    "png": "renders/lunasvg/nova-logo.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.01387686600003235,
     "rmse": 9.221912356326316,
     "error": null,
-    "png": "renders/cairosvg/nova-logo.png"
+    "png": "renders/cairosvg/nova-logo.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000679664,
     "rmse": 9.02758104513039,
     "error": null,
-    "png": "renders/thorvg/nova-logo.png"
+    "png": "renders/thorvg/nova-logo.png",
+    "hdg": 0
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00239823,
     "rmse": 25.050436119299015,
     "error": null,
-    "png": "renders/nanosvg/nova-logo.png"
+    "png": "renders/nanosvg/nova-logo.png",
+    "hdg": 0
    }
   },
   "clip-mask": {
@@ -707,45 +787,53 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.000529956,
+    "seconds": 0.000232792,
     "rmse": 4.348978418117294,
     "error": null,
-    "png": "renders/novasvg/clip-mask.png"
+    "png": "renders/novasvg/clip-mask.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00149745,
     "rmse": 6.264227556131721,
     "error": null,
-    "png": "renders/resvg/clip-mask.png"
+    "png": "renders/resvg/clip-mask.png",
+    "hdg": 0
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000486007,
     "rmse": 4.348978418117294,
     "error": null,
-    "png": "renders/lunasvg/clip-mask.png"
+    "png": "renders/lunasvg/clip-mask.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.00514510400000745,
     "rmse": 97.46066163538113,
     "error": null,
-    "png": "renders/cairosvg/clip-mask.png"
+    "png": "renders/cairosvg/clip-mask.png",
+    "hdg": 2,
+    "hdg_note": "right half (teal clipped/masked shape) missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000380383,
     "rmse": 4.167041910186409,
     "error": null,
-    "png": "renders/thorvg/clip-mask.png"
+    "png": "renders/thorvg/clip-mask.png",
+    "hdg": 0
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00138655,
     "rmse": 117.99905831688605,
     "error": null,
-    "png": "renders/nanosvg/clip-mask.png"
+    "png": "renders/nanosvg/clip-mask.png",
+    "hdg": 2,
+    "hdg_note": "whole render is a flat gray block; clip/mask content missing"
    }
   },
   "gradient-filter": {
@@ -758,45 +846,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00284272,
+    "seconds": 0.00134242,
     "rmse": 8.171129865645877,
     "error": null,
-    "png": "renders/novasvg/gradient-filter.png"
+    "png": "renders/novasvg/gradient-filter.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.0232582,
     "rmse": 13.364600951534243,
     "error": null,
-    "png": "renders/resvg/gradient-filter.png"
+    "png": "renders/resvg/gradient-filter.png",
+    "hdg": 0
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000177204,
     "rmse": 42.82084755526871,
     "error": null,
-    "png": "renders/lunasvg/gradient-filter.png"
+    "png": "renders/lunasvg/gradient-filter.png",
+    "hdg": 1,
+    "hdg_note": "drop shadow and blur filter missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.00730542200005857,
     "rmse": 42.84143929536492,
     "error": null,
-    "png": "renders/cairosvg/gradient-filter.png"
+    "png": "renders/cairosvg/gradient-filter.png",
+    "hdg": 1,
+    "hdg_note": "drop shadow and blur filter missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000587656,
     "rmse": 15.630160710246232,
     "error": null,
-    "png": "renders/thorvg/gradient-filter.png"
+    "png": "renders/thorvg/gradient-filter.png",
+    "hdg": 0
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00149881,
     "rmse": 49.63429138065109,
     "error": null,
-    "png": "renders/nanosvg/gradient-filter.png"
+    "png": "renders/nanosvg/gradient-filter.png",
+    "hdg": 1,
+    "hdg_note": "gradient flattened to one colour; shadow and blur missing"
    }
   },
   "filter-primitives": {
@@ -809,45 +906,55 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00202787,
+    "seconds": 0.0010433,
     "rmse": 2.412267907661447,
     "error": null,
-    "png": "renders/novasvg/filter-primitives.png"
+    "png": "renders/novasvg/filter-primitives.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.0143195,
     "rmse": 2.072416187489054,
     "error": null,
-    "png": "renders/resvg/filter-primitives.png"
+    "png": "renders/resvg/filter-primitives.png",
+    "hdg": 0
    },
    "lunasvg": {
     "ok": true,
     "seconds": 4.4734e-05,
     "rmse": 9.066396073436051,
     "error": null,
-    "png": "renders/lunasvg/filter-primitives.png"
+    "png": "renders/lunasvg/filter-primitives.png",
+    "hdg": 1,
+    "hdg_note": "drop shadows missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.006434297999931005,
     "rmse": 36.91909007870567,
     "error": null,
-    "png": "renders/cairosvg/filter-primitives.png"
+    "png": "renders/cairosvg/filter-primitives.png",
+    "hdg": 1,
+    "hdg_note": "drop shadows missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000306356,
     "rmse": 38.915026536860836,
     "error": null,
-    "png": "renders/thorvg/filter-primitives.png"
+    "png": "renders/thorvg/filter-primitives.png",
+    "hdg": 1,
+    "hdg_note": "shapes blurred instead of getting a drop shadow"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.000436678,
     "rmse": 17.48084703384917,
     "error": null,
-    "png": "renders/nanosvg/filter-primitives.png"
+    "png": "renders/nanosvg/filter-primitives.png",
+    "hdg": 1,
+    "hdg_note": "drop shadows missing"
    }
   },
   "css-use-symbol": {
@@ -860,45 +967,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.000313124,
+    "seconds": 0.000202206,
     "rmse": 1.5351560512086384,
     "error": null,
-    "png": "renders/novasvg/css-use-symbol.png"
+    "png": "renders/novasvg/css-use-symbol.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.000634714,
     "rmse": 26.32166018551784,
     "error": null,
-    "png": "renders/resvg/css-use-symbol.png"
+    "png": "renders/resvg/css-use-symbol.png",
+    "hdg": 1,
+    "hdg_note": "CSS rotation of the rectangle not applied"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000225269,
     "rmse": 26.355885587058633,
     "error": null,
-    "png": "renders/lunasvg/css-use-symbol.png"
+    "png": "renders/lunasvg/css-use-symbol.png",
+    "hdg": 1,
+    "hdg_note": "CSS rotation of the rectangle not applied"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.010254138999925999,
     "rmse": 26.347870007009107,
     "error": null,
-    "png": "renders/cairosvg/css-use-symbol.png"
+    "png": "renders/cairosvg/css-use-symbol.png",
+    "hdg": 1,
+    "hdg_note": "CSS rotation of the rectangle not applied"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000138864,
     "rmse": 26.32999835694189,
     "error": null,
-    "png": "renders/thorvg/css-use-symbol.png"
+    "png": "renders/thorvg/css-use-symbol.png",
+    "hdg": 1,
+    "hdg_note": "CSS rotation of the rectangle not applied"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.000381784,
     "rmse": 69.538679940106,
     "error": null,
-    "png": "renders/nanosvg/css-use-symbol.png"
+    "png": "renders/nanosvg/css-use-symbol.png",
+    "hdg": 2,
+    "hdg_note": "stars missing and rectangle clipped by the edge"
    }
   },
   "base64-image": {
@@ -911,45 +1029,55 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.000841,
+    "seconds": 0.000663437,
     "rmse": 24.612733005023284,
     "error": null,
-    "png": "renders/novasvg/base64-image.png"
+    "png": "renders/novasvg/base64-image.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00243221,
     "rmse": 18.9786550024791,
     "error": null,
-    "png": "renders/resvg/base64-image.png"
+    "png": "renders/resvg/base64-image.png",
+    "hdg": 1,
+    "hdg_note": "caption text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000909149,
     "rmse": 24.667961611736892,
     "error": null,
-    "png": "renders/lunasvg/base64-image.png"
+    "png": "renders/lunasvg/base64-image.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.005826812999998765,
     "rmse": 28.859485144619264,
     "error": null,
-    "png": "renders/cairosvg/base64-image.png"
+    "png": "renders/cairosvg/base64-image.png",
+    "hdg": 1,
+    "hdg_note": "embedded raster images blurred"
    },
    "thorvg": {
     "ok": true,
     "seconds": 5.2516e-05,
     "rmse": 93.30427272944317,
     "error": null,
-    "png": "renders/thorvg/base64-image.png"
+    "png": "renders/thorvg/base64-image.png",
+    "hdg": 2,
+    "hdg_note": "blank render"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.000795288,
     "rmse": 93.30427272944317,
     "error": null,
-    "png": "renders/nanosvg/base64-image.png"
+    "png": "renders/nanosvg/base64-image.png",
+    "hdg": 2,
+    "hdg_note": "blank render"
    }
   },
   "mermaid-flowchart": {
@@ -962,45 +1090,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00135124,
+    "seconds": 0.00118594,
     "rmse": 11.719408192749256,
     "error": null,
-    "png": "renders/novasvg/mermaid-flowchart.png"
+    "png": "renders/novasvg/mermaid-flowchart.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.0016518,
     "rmse": 23.898697617759247,
     "error": null,
-    "png": "renders/resvg/mermaid-flowchart.png"
+    "png": "renders/resvg/mermaid-flowchart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00086909,
     "rmse": 25.245987434139415,
     "error": null,
-    "png": "renders/lunasvg/mermaid-flowchart.png"
+    "png": "renders/lunasvg/mermaid-flowchart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.03491666799993709,
     "rmse": 25.318591554363827,
     "error": null,
-    "png": "renders/cairosvg/mermaid-flowchart.png"
+    "png": "renders/cairosvg/mermaid-flowchart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000404381,
     "rmse": 39.77479119270241,
     "error": null,
-    "png": "renders/thorvg/mermaid-flowchart.png"
+    "png": "renders/thorvg/mermaid-flowchart.png",
+    "hdg": 2,
+    "hdg_note": "nodes and edges drawn as black blobs and wedges, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00157161,
     "rmse": 31.110294218545555,
     "error": null,
-    "png": "renders/nanosvg/mermaid-flowchart.png"
+    "png": "renders/nanosvg/mermaid-flowchart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "embedded-font": {
@@ -1013,45 +1152,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00409816,
+    "seconds": 0.00279104,
     "rmse": 37.413565230825704,
     "error": null,
-    "png": "renders/novasvg/embedded-font.png"
+    "png": "renders/novasvg/embedded-font.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00352178,
     "rmse": 39.27621275876628,
     "error": null,
-    "png": "renders/resvg/embedded-font.png"
+    "png": "renders/resvg/embedded-font.png",
+    "hdg": 2,
+    "hdg_note": "blank render"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00397697,
     "rmse": 44.29381305554987,
     "error": null,
-    "png": "renders/lunasvg/embedded-font.png"
+    "png": "renders/lunasvg/embedded-font.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.18091409299995576,
     "rmse": 45.962273613292076,
     "error": null,
-    "png": "renders/cairosvg/embedded-font.png"
+    "png": "renders/cairosvg/embedded-font.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000255586,
     "rmse": 39.27621275876628,
     "error": null,
-    "png": "renders/thorvg/embedded-font.png"
+    "png": "renders/thorvg/embedded-font.png",
+    "hdg": 2,
+    "hdg_note": "blank render"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00119615,
     "rmse": 39.27621275876628,
     "error": null,
-    "png": "renders/nanosvg/embedded-font.png"
+    "png": "renders/nanosvg/embedded-font.png",
+    "hdg": 2,
+    "hdg_note": "blank render"
    }
   },
   "embedded-font-distinctive": {
@@ -1064,45 +1212,57 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00605137,
+    "seconds": 0.00243251,
     "rmse": 55.8318725377488,
     "error": null,
-    "png": "renders/novasvg/embedded-font-distinctive.png"
+    "png": "renders/novasvg/embedded-font-distinctive.png",
+    "hdg": 1,
+    "hdg_note": "unresolvable font name falls back to a sans font instead of the serif fallback"
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00292067,
     "rmse": 48.424981101109964,
     "error": null,
-    "png": "renders/resvg/embedded-font-distinctive.png"
+    "png": "renders/resvg/embedded-font-distinctive.png",
+    "hdg": 2,
+    "hdg_note": "blank render"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00413458,
     "rmse": 58.278374953023345,
     "error": null,
-    "png": "renders/lunasvg/embedded-font-distinctive.png"
+    "png": "renders/lunasvg/embedded-font-distinctive.png",
+    "hdg": 1,
+    "hdg_note": "embedded monospace font not used; both lines in sans"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.14572887099996024,
     "rmse": 58.51732378804359,
     "error": null,
-    "png": "renders/cairosvg/embedded-font-distinctive.png"
+    "png": "renders/cairosvg/embedded-font-distinctive.png",
+    "hdg": 1,
+    "hdg_note": "embedded monospace font not used; both lines in sans"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000212887,
     "rmse": 48.424981101109964,
     "error": null,
-    "png": "renders/thorvg/embedded-font-distinctive.png"
+    "png": "renders/thorvg/embedded-font-distinctive.png",
+    "hdg": 2,
+    "hdg_note": "blank render"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00140347,
     "rmse": 48.424981101109964,
     "error": null,
-    "png": "renders/nanosvg/embedded-font-distinctive.png"
+    "png": "renders/nanosvg/embedded-font-distinctive.png",
+    "hdg": 2,
+    "hdg_note": "blank render"
    }
   },
   "mermaid-01-venn": {
@@ -1115,45 +1275,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.0019168,
+    "seconds": 0.00082955,
     "rmse": 6.9868906263802355,
     "error": null,
-    "png": "renders/novasvg/mermaid-01-venn.png"
+    "png": "renders/novasvg/mermaid-01-venn.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00111047,
     "rmse": 16.275762297602395,
     "error": null,
-    "png": "renders/resvg/mermaid-01-venn.png"
+    "png": "renders/resvg/mermaid-01-venn.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00096812,
     "rmse": 198.511905374768,
     "error": null,
-    "png": "renders/lunasvg/mermaid-01-venn.png"
+    "png": "renders/lunasvg/mermaid-01-venn.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.02056559400000424,
     "rmse": 198.3865018894795,
     "error": null,
-    "png": "renders/cairosvg/mermaid-01-venn.png"
+    "png": "renders/cairosvg/mermaid-01-venn.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000438822,
     "rmse": 198.80450229949173,
     "error": null,
-    "png": "renders/thorvg/mermaid-01-venn.png"
+    "png": "renders/thorvg/mermaid-01-venn.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00134595,
     "rmse": 207.5357922297347,
     "error": null,
-    "png": "renders/nanosvg/mermaid-01-venn.png"
+    "png": "renders/nanosvg/mermaid-01-venn.png",
+    "hdg": 2,
+    "hdg_note": "text missing and circle colours lost (flat gray)"
    }
   },
   "mermaid-02-flowchart": {
@@ -1166,45 +1335,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00356048,
+    "seconds": 0.00153321,
     "rmse": 4.990118627320265,
     "error": null,
-    "png": "renders/novasvg/mermaid-02-flowchart.png"
+    "png": "renders/novasvg/mermaid-02-flowchart.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00252532,
     "rmse": 8.574443517663225,
     "error": null,
-    "png": "renders/resvg/mermaid-02-flowchart.png"
+    "png": "renders/resvg/mermaid-02-flowchart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00133653,
     "rmse": 201.8405360038506,
     "error": null,
-    "png": "renders/lunasvg/mermaid-02-flowchart.png"
+    "png": "renders/lunasvg/mermaid-02-flowchart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.041519923999999264,
     "rmse": 202.10285918714317,
     "error": null,
-    "png": "renders/cairosvg/mermaid-02-flowchart.png"
+    "png": "renders/cairosvg/mermaid-02-flowchart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000595584,
     "rmse": 231.27740115001183,
     "error": null,
-    "png": "renders/thorvg/mermaid-02-flowchart.png"
+    "png": "renders/thorvg/mermaid-02-flowchart.png",
+    "hdg": 2,
+    "hdg_note": "large black blobs instead of nodes, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00201666,
     "rmse": 198.7767417013983,
     "error": null,
-    "png": "renders/nanosvg/mermaid-02-flowchart.png"
+    "png": "renders/nanosvg/mermaid-02-flowchart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-03-block": {
@@ -1217,45 +1397,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00132623,
+    "seconds": 0.000500061,
     "rmse": 3.768358067428127,
     "error": null,
-    "png": "renders/novasvg/mermaid-03-block.png"
+    "png": "renders/novasvg/mermaid-03-block.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00122252,
     "rmse": 8.478884199747469,
     "error": null,
-    "png": "renders/resvg/mermaid-03-block.png"
+    "png": "renders/resvg/mermaid-03-block.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00089369,
     "rmse": 203.35267734634962,
     "error": null,
-    "png": "renders/lunasvg/mermaid-03-block.png"
+    "png": "renders/lunasvg/mermaid-03-block.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.023685415000045396,
     "rmse": 203.3489995298252,
     "error": null,
-    "png": "renders/cairosvg/mermaid-03-block.png"
+    "png": "renders/cairosvg/mermaid-03-block.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000256583,
     "rmse": 235.73711909927476,
     "error": null,
-    "png": "renders/thorvg/mermaid-03-block.png"
+    "png": "renders/thorvg/mermaid-03-block.png",
+    "hdg": 2,
+    "hdg_note": "black bands instead of blocks, text missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00117764,
     "rmse": 201.18893453231158,
     "error": null,
-    "png": "renders/nanosvg/mermaid-03-block.png"
+    "png": "renders/nanosvg/mermaid-03-block.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-04-simple-flowchart": {
@@ -1268,45 +1459,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.0018676,
+    "seconds": 0.000775802,
     "rmse": 17.032153081488843,
     "error": null,
-    "png": "renders/novasvg/mermaid-04-simple-flowchart.png"
+    "png": "renders/novasvg/mermaid-04-simple-flowchart.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00195587,
     "rmse": 24.29094889897672,
     "error": null,
-    "png": "renders/resvg/mermaid-04-simple-flowchart.png"
+    "png": "renders/resvg/mermaid-04-simple-flowchart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00114215,
     "rmse": 24.593328526974837,
     "error": null,
-    "png": "renders/lunasvg/mermaid-04-simple-flowchart.png"
+    "png": "renders/lunasvg/mermaid-04-simple-flowchart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.03152062799995292,
     "rmse": 24.636427682365248,
     "error": null,
-    "png": "renders/cairosvg/mermaid-04-simple-flowchart.png"
+    "png": "renders/cairosvg/mermaid-04-simple-flowchart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000327976,
     "rmse": 103.14245096453847,
     "error": null,
-    "png": "renders/thorvg/mermaid-04-simple-flowchart.png"
+    "png": "renders/thorvg/mermaid-04-simple-flowchart.png",
+    "hdg": 2,
+    "hdg_note": "black blobs instead of nodes, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00176252,
     "rmse": 29.3460962578568,
     "error": null,
-    "png": "renders/nanosvg/mermaid-04-simple-flowchart.png"
+    "png": "renders/nanosvg/mermaid-04-simple-flowchart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-05-data-flow": {
@@ -1319,45 +1521,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00191856,
+    "seconds": 0.00118743,
     "rmse": 20.950245858583326,
     "error": null,
-    "png": "renders/novasvg/mermaid-05-data-flow.png"
+    "png": "renders/novasvg/mermaid-05-data-flow.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00234478,
     "rmse": 28.186442631974934,
     "error": null,
-    "png": "renders/resvg/mermaid-05-data-flow.png"
+    "png": "renders/resvg/mermaid-05-data-flow.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00248036,
     "rmse": 19.021813424721426,
     "error": null,
-    "png": "renders/lunasvg/mermaid-05-data-flow.png"
+    "png": "renders/lunasvg/mermaid-05-data-flow.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.03479526800003896,
     "rmse": 19.415863811426462,
     "error": null,
-    "png": "renders/cairosvg/mermaid-05-data-flow.png"
+    "png": "renders/cairosvg/mermaid-05-data-flow.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000710221,
     "rmse": 115.38306914484936,
     "error": null,
-    "png": "renders/thorvg/mermaid-05-data-flow.png"
+    "png": "renders/thorvg/mermaid-05-data-flow.png",
+    "hdg": 2,
+    "hdg_note": "nodes drawn as black blobs, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00147351,
     "rmse": 34.38142902400155,
     "error": null,
-    "png": "renders/nanosvg/mermaid-05-data-flow.png"
+    "png": "renders/nanosvg/mermaid-05-data-flow.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-06-simple-sequence": {
@@ -1370,45 +1583,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00111269,
+    "seconds": 0.000681678,
     "rmse": 11.368658870925834,
     "error": null,
-    "png": "renders/novasvg/mermaid-06-simple-sequence.png"
+    "png": "renders/novasvg/mermaid-06-simple-sequence.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00157849,
     "rmse": 19.773896088164438,
     "error": null,
-    "png": "renders/resvg/mermaid-06-simple-sequence.png"
+    "png": "renders/resvg/mermaid-06-simple-sequence.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00160318,
     "rmse": 17.82019219389477,
     "error": null,
-    "png": "renders/lunasvg/mermaid-06-simple-sequence.png"
+    "png": "renders/lunasvg/mermaid-06-simple-sequence.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.026338085000020328,
     "rmse": 19.401284523459292,
     "error": null,
-    "png": "renders/cairosvg/mermaid-06-simple-sequence.png"
+    "png": "renders/cairosvg/mermaid-06-simple-sequence.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000317801,
     "rmse": 24.96197522597762,
     "error": null,
-    "png": "renders/thorvg/mermaid-06-simple-sequence.png"
+    "png": "renders/thorvg/mermaid-06-simple-sequence.png",
+    "hdg": 1,
+    "hdg_note": "all label text and message arrows missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00110923,
     "rmse": 25.176489168896186,
     "error": null,
-    "png": "renders/nanosvg/mermaid-06-simple-sequence.png"
+    "png": "renders/nanosvg/mermaid-06-simple-sequence.png",
+    "hdg": 1,
+    "hdg_note": "all label text and message arrows missing"
    }
   },
   "mermaid-07-simple-state": {
@@ -1421,45 +1643,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00139384,
+    "seconds": 0.000888208,
     "rmse": 23.090405865029982,
     "error": null,
-    "png": "renders/novasvg/mermaid-07-simple-state.png"
+    "png": "renders/novasvg/mermaid-07-simple-state.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00259791,
     "rmse": 54.126879990899276,
     "error": null,
-    "png": "renders/resvg/mermaid-07-simple-state.png"
+    "png": "renders/resvg/mermaid-07-simple-state.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00141814,
     "rmse": 54.052433095088475,
     "error": null,
-    "png": "renders/lunasvg/mermaid-07-simple-state.png"
+    "png": "renders/lunasvg/mermaid-07-simple-state.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.0332543340000484,
     "rmse": 54.14911559171726,
     "error": null,
-    "png": "renders/cairosvg/mermaid-07-simple-state.png"
+    "png": "renders/cairosvg/mermaid-07-simple-state.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000402105,
     "rmse": 69.61993105037278,
     "error": null,
-    "png": "renders/thorvg/mermaid-07-simple-state.png"
+    "png": "renders/thorvg/mermaid-07-simple-state.png",
+    "hdg": 2,
+    "hdg_note": "states drawn as black blocks, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00121264,
     "rmse": 55.413849772012036,
     "error": null,
-    "png": "renders/nanosvg/mermaid-07-simple-state.png"
+    "png": "renders/nanosvg/mermaid-07-simple-state.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-08-simple-mindmap": {
@@ -1472,45 +1705,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00140305,
+    "seconds": 0.000803366,
     "rmse": 14.055553499726486,
     "error": null,
-    "png": "renders/novasvg/mermaid-08-simple-mindmap.png"
+    "png": "renders/novasvg/mermaid-08-simple-mindmap.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00628639,
     "rmse": 13.356597224340685,
     "error": null,
-    "png": "renders/resvg/mermaid-08-simple-mindmap.png"
+    "png": "renders/resvg/mermaid-08-simple-mindmap.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00180057,
     "rmse": 14.681250950252355,
     "error": null,
-    "png": "renders/lunasvg/mermaid-08-simple-mindmap.png"
+    "png": "renders/lunasvg/mermaid-08-simple-mindmap.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.07842340000001968,
     "rmse": 66.61401910599662,
     "error": null,
-    "png": "renders/cairosvg/mermaid-08-simple-mindmap.png"
+    "png": "renders/cairosvg/mermaid-08-simple-mindmap.png",
+    "hdg": 2,
+    "hdg_note": "nodes filled black, no text"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000488449,
     "rmse": 68.4318445617795,
     "error": null,
-    "png": "renders/thorvg/mermaid-08-simple-mindmap.png"
+    "png": "renders/thorvg/mermaid-08-simple-mindmap.png",
+    "hdg": 2,
+    "hdg_note": "nodes filled black, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00194335,
     "rmse": 38.28856470099454,
     "error": null,
-    "png": "renders/nanosvg/mermaid-08-simple-mindmap.png"
+    "png": "renders/nanosvg/mermaid-08-simple-mindmap.png",
+    "hdg": 2,
+    "hdg_note": "text missing and colours lost (gray)"
    }
   },
   "mermaid-09-complex-sequence": {
@@ -1523,45 +1767,55 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00207356,
+    "seconds": 0.00131484,
     "rmse": 12.50285208020108,
     "error": null,
-    "png": "renders/novasvg/mermaid-09-complex-sequence.png"
+    "png": "renders/novasvg/mermaid-09-complex-sequence.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00274708,
     "rmse": 17.034505290838272,
     "error": null,
-    "png": "renders/resvg/mermaid-09-complex-sequence.png"
+    "png": "renders/resvg/mermaid-09-complex-sequence.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00192097,
     "rmse": 17.353447245287146,
     "error": null,
-    "png": "renders/lunasvg/mermaid-09-complex-sequence.png"
+    "png": "renders/lunasvg/mermaid-09-complex-sequence.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.036817014000007475,
     "rmse": 41.79781643110407,
     "error": null,
-    "png": "renders/cairosvg/mermaid-09-complex-sequence.png"
+    "png": "renders/cairosvg/mermaid-09-complex-sequence.png",
+    "hdg": 1,
+    "hdg_note": "sequence-number badges drawn far too large and covering the text"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000496653,
     "rmse": 37.84797925993212,
     "error": null,
-    "png": "renders/thorvg/mermaid-09-complex-sequence.png"
+    "png": "renders/thorvg/mermaid-09-complex-sequence.png",
+    "hdg": 2,
+    "hdg_note": "text, arrows and activations missing; black artifacts"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00198546,
     "rmse": 33.755809851653794,
     "error": null,
-    "png": "renders/nanosvg/mermaid-09-complex-sequence.png"
+    "png": "renders/nanosvg/mermaid-09-complex-sequence.png",
+    "hdg": 1,
+    "hdg_note": "all label text and message arrows missing"
    }
   },
   "mermaid-10-complex-erd": {
@@ -1574,45 +1828,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00217534,
+    "seconds": 0.00137425,
     "rmse": 23.98656391773414,
     "error": null,
-    "png": "renders/novasvg/mermaid-10-complex-erd.png"
+    "png": "renders/novasvg/mermaid-10-complex-erd.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00407325,
     "rmse": 27.654666428725747,
     "error": null,
-    "png": "renders/resvg/mermaid-10-complex-erd.png"
+    "png": "renders/resvg/mermaid-10-complex-erd.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00116734,
     "rmse": 29.43603318580663,
     "error": null,
-    "png": "renders/lunasvg/mermaid-10-complex-erd.png"
+    "png": "renders/lunasvg/mermaid-10-complex-erd.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.05242889900000591,
     "rmse": 146.8252505444591,
     "error": null,
-    "png": "renders/cairosvg/mermaid-10-complex-erd.png"
+    "png": "renders/cairosvg/mermaid-10-complex-erd.png",
+    "hdg": 2,
+    "hdg_note": "table rows filled black"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000889176,
     "rmse": 31.972098653819167,
     "error": null,
-    "png": "renders/thorvg/mermaid-10-complex-erd.png"
+    "png": "renders/thorvg/mermaid-10-complex-erd.png",
+    "hdg": 1,
+    "hdg_note": "text and cell separators missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00225838,
     "rmse": 77.0622015772442,
     "error": null,
-    "png": "renders/nanosvg/mermaid-10-complex-erd.png"
+    "png": "renders/nanosvg/mermaid-10-complex-erd.png",
+    "hdg": 2,
+    "hdg_note": "table rows filled gray, text missing"
    }
   },
   "mermaid-11-flowchart-multiline-entities": {
@@ -1625,45 +1890,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00255925,
+    "seconds": 0.00153278,
     "rmse": 14.341706872661337,
     "error": null,
-    "png": "renders/novasvg/mermaid-11-flowchart-multiline-entities.png"
+    "png": "renders/novasvg/mermaid-11-flowchart-multiline-entities.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00305201,
     "rmse": 16.986017496645335,
     "error": null,
-    "png": "renders/resvg/mermaid-11-flowchart-multiline-entities.png"
+    "png": "renders/resvg/mermaid-11-flowchart-multiline-entities.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.0019111,
     "rmse": 18.25743654346687,
     "error": null,
-    "png": "renders/lunasvg/mermaid-11-flowchart-multiline-entities.png"
+    "png": "renders/lunasvg/mermaid-11-flowchart-multiline-entities.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.05126532100007353,
     "rmse": 17.674647764239577,
     "error": null,
-    "png": "renders/cairosvg/mermaid-11-flowchart-multiline-entities.png"
+    "png": "renders/cairosvg/mermaid-11-flowchart-multiline-entities.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000884829,
     "rmse": 86.41762018318371,
     "error": null,
-    "png": "renders/thorvg/mermaid-11-flowchart-multiline-entities.png"
+    "png": "renders/thorvg/mermaid-11-flowchart-multiline-entities.png",
+    "hdg": 2,
+    "hdg_note": "nodes drawn as black blobs, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00214251,
     "rmse": 24.53740815201552,
     "error": null,
-    "png": "renders/nanosvg/mermaid-11-flowchart-multiline-entities.png"
+    "png": "renders/nanosvg/mermaid-11-flowchart-multiline-entities.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-12-flowchart-subgraphs": {
@@ -1676,45 +1952,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00121904,
+    "seconds": 0.000739617,
     "rmse": 16.437546626010782,
     "error": null,
-    "png": "renders/novasvg/mermaid-12-flowchart-subgraphs.png"
+    "png": "renders/novasvg/mermaid-12-flowchart-subgraphs.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00181865,
     "rmse": 16.181422665447194,
     "error": null,
-    "png": "renders/resvg/mermaid-12-flowchart-subgraphs.png"
+    "png": "renders/resvg/mermaid-12-flowchart-subgraphs.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000754336,
     "rmse": 44.025244933511686,
     "error": null,
-    "png": "renders/lunasvg/mermaid-12-flowchart-subgraphs.png"
+    "png": "renders/lunasvg/mermaid-12-flowchart-subgraphs.png",
+    "hdg": 2,
+    "hdg_note": "nodes filled black, no text"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.03798096100001658,
     "rmse": 11.719451772236283,
     "error": null,
-    "png": "renders/cairosvg/mermaid-12-flowchart-subgraphs.png"
+    "png": "renders/cairosvg/mermaid-12-flowchart-subgraphs.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000351536,
     "rmse": 149.6679851381599,
     "error": null,
-    "png": "renders/thorvg/mermaid-12-flowchart-subgraphs.png"
+    "png": "renders/thorvg/mermaid-12-flowchart-subgraphs.png",
+    "hdg": 2,
+    "hdg_note": "nodes and subgraph filled black, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00109585,
     "rmse": 34.254698294124836,
     "error": null,
-    "png": "renders/nanosvg/mermaid-12-flowchart-subgraphs.png"
+    "png": "renders/nanosvg/mermaid-12-flowchart-subgraphs.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-13-flowchart-long-label": {
@@ -1727,45 +2014,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.0025342,
+    "seconds": 0.00171582,
     "rmse": 32.76050509352249,
     "error": null,
-    "png": "renders/novasvg/mermaid-13-flowchart-long-label.png"
+    "png": "renders/novasvg/mermaid-13-flowchart-long-label.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00152434,
     "rmse": 30.092389250294225,
     "error": null,
-    "png": "renders/resvg/mermaid-13-flowchart-long-label.png"
+    "png": "renders/resvg/mermaid-13-flowchart-long-label.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000852409,
     "rmse": 25.81783445535461,
     "error": null,
-    "png": "renders/lunasvg/mermaid-13-flowchart-long-label.png"
+    "png": "renders/lunasvg/mermaid-13-flowchart-long-label.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.03000112100005481,
     "rmse": 25.819260664150534,
     "error": null,
-    "png": "renders/cairosvg/mermaid-13-flowchart-long-label.png"
+    "png": "renders/cairosvg/mermaid-13-flowchart-long-label.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000227804,
     "rmse": 163.35971835629942,
     "error": null,
-    "png": "renders/thorvg/mermaid-13-flowchart-long-label.png"
+    "png": "renders/thorvg/mermaid-13-flowchart-long-label.png",
+    "hdg": 2,
+    "hdg_note": "nodes filled black, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00163424,
     "rmse": 34.805474158761626,
     "error": null,
-    "png": "renders/nanosvg/mermaid-13-flowchart-long-label.png"
+    "png": "renders/nanosvg/mermaid-13-flowchart-long-label.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-14-class-diagram": {
@@ -1778,45 +2076,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00190204,
+    "seconds": 0.0011048,
     "rmse": 29.13783072218692,
     "error": null,
-    "png": "renders/novasvg/mermaid-14-class-diagram.png"
+    "png": "renders/novasvg/mermaid-14-class-diagram.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00315113,
     "rmse": 28.493930002998283,
     "error": null,
-    "png": "renders/resvg/mermaid-14-class-diagram.png"
+    "png": "renders/resvg/mermaid-14-class-diagram.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00167516,
     "rmse": 29.46470907373004,
     "error": null,
-    "png": "renders/lunasvg/mermaid-14-class-diagram.png"
+    "png": "renders/lunasvg/mermaid-14-class-diagram.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.0427209719999837,
     "rmse": 29.628961073900207,
     "error": null,
-    "png": "renders/cairosvg/mermaid-14-class-diagram.png"
+    "png": "renders/cairosvg/mermaid-14-class-diagram.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000512133,
     "rmse": 30.885223373063923,
     "error": null,
-    "png": "renders/thorvg/mermaid-14-class-diagram.png"
+    "png": "renders/thorvg/mermaid-14-class-diagram.png",
+    "hdg": 1,
+    "hdg_note": "text, row dividers and several lines missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00164661,
     "rmse": 34.60431151696365,
     "error": null,
-    "png": "renders/nanosvg/mermaid-14-class-diagram.png"
+    "png": "renders/nanosvg/mermaid-14-class-diagram.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-15-pie-chart": {
@@ -1829,45 +2138,55 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00137987,
+    "seconds": 0.00072348,
     "rmse": 3.648127911202334,
     "error": null,
-    "png": "renders/novasvg/mermaid-15-pie-chart.png"
+    "png": "renders/novasvg/mermaid-15-pie-chart.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00186474,
     "rmse": 11.409253703716013,
     "error": null,
-    "png": "renders/resvg/mermaid-15-pie-chart.png"
+    "png": "renders/resvg/mermaid-15-pie-chart.png",
+    "hdg": 1,
+    "hdg_note": "all text (title, percentages, legend) missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00169923,
     "rmse": 10.870893512383228,
     "error": null,
-    "png": "renders/lunasvg/mermaid-15-pie-chart.png"
+    "png": "renders/lunasvg/mermaid-15-pie-chart.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.021068220999950427,
     "rmse": 50.30543674036166,
     "error": null,
-    "png": "renders/cairosvg/mermaid-15-pie-chart.png"
+    "png": "renders/cairosvg/mermaid-15-pie-chart.png",
+    "hdg": 1,
+    "hdg_note": "one slice filled black"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000304452,
     "rmse": 29.01342304617055,
     "error": null,
-    "png": "renders/thorvg/mermaid-15-pie-chart.png"
+    "png": "renders/thorvg/mermaid-15-pie-chart.png",
+    "hdg": 1,
+    "hdg_note": "all text missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00169075,
     "rmse": 28.480240465922215,
     "error": null,
-    "png": "renders/nanosvg/mermaid-15-pie-chart.png"
+    "png": "renders/nanosvg/mermaid-15-pie-chart.png",
+    "hdg": 1,
+    "hdg_note": "text missing; one slice gray instead of green"
    }
   },
   "mermaid-16-gantt": {
@@ -1880,45 +2199,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00157465,
+    "seconds": 0.000820793,
     "rmse": 19.85448239643025,
     "error": null,
-    "png": "renders/novasvg/mermaid-16-gantt.png"
+    "png": "renders/novasvg/mermaid-16-gantt.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.0021233,
     "rmse": 22.241987923423444,
     "error": null,
-    "png": "renders/resvg/mermaid-16-gantt.png"
+    "png": "renders/resvg/mermaid-16-gantt.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00222151,
     "rmse": 20.201672012072006,
     "error": null,
-    "png": "renders/lunasvg/mermaid-16-gantt.png"
+    "png": "renders/lunasvg/mermaid-16-gantt.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.057238212000015665,
     "rmse": 20.20051947607226,
     "error": null,
-    "png": "renders/cairosvg/mermaid-16-gantt.png"
+    "png": "renders/cairosvg/mermaid-16-gantt.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000345665,
     "rmse": 143.40135463762104,
     "error": null,
-    "png": "renders/thorvg/mermaid-16-gantt.png"
+    "png": "renders/thorvg/mermaid-16-gantt.png",
+    "hdg": 2,
+    "hdg_note": "render is a solid black band"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.000836443,
     "rmse": 38.60621252256302,
     "error": null,
-    "png": "renders/nanosvg/mermaid-16-gantt.png"
+    "png": "renders/nanosvg/mermaid-16-gantt.png",
+    "hdg": 1,
+    "hdg_note": "text missing; colours flattened"
    }
   },
   "mermaid-17-journey": {
@@ -1931,45 +2259,55 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00467161,
+    "seconds": 0.00137715,
     "rmse": 55.05708332597231,
     "error": null,
-    "png": "renders/novasvg/mermaid-17-journey.png"
+    "png": "renders/novasvg/mermaid-17-journey.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00183386,
     "rmse": 39.94216951859163,
     "error": null,
-    "png": "renders/resvg/mermaid-17-journey.png"
+    "png": "renders/resvg/mermaid-17-journey.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00278163,
     "rmse": 55.14776333773165,
     "error": null,
-    "png": "renders/lunasvg/mermaid-17-journey.png"
+    "png": "renders/lunasvg/mermaid-17-journey.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.028544059999944693,
     "rmse": 13.829387750919656,
     "error": null,
-    "png": "renders/cairosvg/mermaid-17-journey.png"
+    "png": "renders/cairosvg/mermaid-17-journey.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000630807,
     "rmse": 60.34102486243538,
     "error": null,
-    "png": "renders/thorvg/mermaid-17-journey.png"
+    "png": "renders/thorvg/mermaid-17-journey.png",
+    "hdg": 2,
+    "hdg_note": "dark blocks and black dots instead of cards, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00244478,
     "rmse": 22.260455435463747,
     "error": null,
-    "png": "renders/nanosvg/mermaid-17-journey.png"
+    "png": "renders/nanosvg/mermaid-17-journey.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-18-timeline": {
@@ -1982,45 +2320,55 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00245384,
+    "seconds": 0.000666078,
     "rmse": 14.24675270910394,
     "error": null,
-    "png": "renders/novasvg/mermaid-18-timeline.png"
+    "png": "renders/novasvg/mermaid-18-timeline.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00350434,
     "rmse": 10.591051913396868,
     "error": null,
-    "png": "renders/resvg/mermaid-18-timeline.png"
+    "png": "renders/resvg/mermaid-18-timeline.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00180893,
     "rmse": 15.104316141334692,
     "error": null,
-    "png": "renders/lunasvg/mermaid-18-timeline.png"
+    "png": "renders/lunasvg/mermaid-18-timeline.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.05734300099993561,
     "rmse": 77.10772820365153,
     "error": null,
-    "png": "renders/cairosvg/mermaid-18-timeline.png"
+    "png": "renders/cairosvg/mermaid-18-timeline.png",
+    "hdg": 2,
+    "hdg_note": "event boxes filled black"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000384043,
     "rmse": 77.58354924214747,
     "error": null,
-    "png": "renders/thorvg/mermaid-18-timeline.png"
+    "png": "renders/thorvg/mermaid-18-timeline.png",
+    "hdg": 2,
+    "hdg_note": "event boxes filled black"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00108304,
     "rmse": 40.80579965877585,
     "error": null,
-    "png": "renders/nanosvg/mermaid-18-timeline.png"
+    "png": "renders/nanosvg/mermaid-18-timeline.png",
+    "hdg": 2,
+    "hdg_note": "event boxes gray, text missing, colours lost"
    }
   },
   "mermaid-19-sequence-notes-activation": {
@@ -2033,45 +2381,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00162947,
+    "seconds": 0.000953572,
     "rmse": 10.753314659042935,
     "error": null,
-    "png": "renders/novasvg/mermaid-19-sequence-notes-activation.png"
+    "png": "renders/novasvg/mermaid-19-sequence-notes-activation.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00185469,
     "rmse": 14.571273188719934,
     "error": null,
-    "png": "renders/resvg/mermaid-19-sequence-notes-activation.png"
+    "png": "renders/resvg/mermaid-19-sequence-notes-activation.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00225015,
     "rmse": 15.286163069510451,
     "error": null,
-    "png": "renders/lunasvg/mermaid-19-sequence-notes-activation.png"
+    "png": "renders/lunasvg/mermaid-19-sequence-notes-activation.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.03415297800006556,
     "rmse": 16.91068628331468,
     "error": null,
-    "png": "renders/cairosvg/mermaid-19-sequence-notes-activation.png"
+    "png": "renders/cairosvg/mermaid-19-sequence-notes-activation.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000464404,
     "rmse": 21.891805533221905,
     "error": null,
-    "png": "renders/thorvg/mermaid-19-sequence-notes-activation.png"
+    "png": "renders/thorvg/mermaid-19-sequence-notes-activation.png",
+    "hdg": 1,
+    "hdg_note": "all label text and message arrows missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00158821,
     "rmse": 27.011572995955994,
     "error": null,
-    "png": "renders/nanosvg/mermaid-19-sequence-notes-activation.png"
+    "png": "renders/nanosvg/mermaid-19-sequence-notes-activation.png",
+    "hdg": 1,
+    "hdg_note": "all label text and message arrows missing"
    }
   },
   "mermaid-20-state-composite": {
@@ -2084,45 +2441,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00211329,
+    "seconds": 0.00115391,
     "rmse": 17.87637669523665,
     "error": null,
-    "png": "renders/novasvg/mermaid-20-state-composite.png"
+    "png": "renders/novasvg/mermaid-20-state-composite.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00284969,
     "rmse": 30.508031683637366,
     "error": null,
-    "png": "renders/resvg/mermaid-20-state-composite.png"
+    "png": "renders/resvg/mermaid-20-state-composite.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00246976,
     "rmse": 30.313683933064784,
     "error": null,
-    "png": "renders/lunasvg/mermaid-20-state-composite.png"
+    "png": "renders/lunasvg/mermaid-20-state-composite.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.04483791400002701,
     "rmse": 30.251223964317305,
     "error": null,
-    "png": "renders/cairosvg/mermaid-20-state-composite.png"
+    "png": "renders/cairosvg/mermaid-20-state-composite.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000693633,
     "rmse": 164.8782499865837,
     "error": null,
-    "png": "renders/thorvg/mermaid-20-state-composite.png"
+    "png": "renders/thorvg/mermaid-20-state-composite.png",
+    "hdg": 2,
+    "hdg_note": "nodes drawn as black blobs, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.0020464,
     "rmse": 44.18852576350319,
     "error": null,
-    "png": "renders/nanosvg/mermaid-20-state-composite.png"
+    "png": "renders/nanosvg/mermaid-20-state-composite.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-21-flowchart-shapes-styles": {
@@ -2135,45 +2503,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00419991,
+    "seconds": 0.00207494,
     "rmse": 19.7989677441302,
     "error": null,
-    "png": "renders/novasvg/mermaid-21-flowchart-shapes-styles.png"
+    "png": "renders/novasvg/mermaid-21-flowchart-shapes-styles.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00362264,
     "rmse": 23.538045593711082,
     "error": null,
-    "png": "renders/resvg/mermaid-21-flowchart-shapes-styles.png"
+    "png": "renders/resvg/mermaid-21-flowchart-shapes-styles.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00397317,
     "rmse": 42.16276827624363,
     "error": null,
-    "png": "renders/lunasvg/mermaid-21-flowchart-shapes-styles.png"
+    "png": "renders/lunasvg/mermaid-21-flowchart-shapes-styles.png",
+    "hdg": 1,
+    "hdg_note": "label text missing; end node filled black"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.061169833999997536,
     "rmse": 23.744987246600413,
     "error": null,
-    "png": "renders/cairosvg/mermaid-21-flowchart-shapes-styles.png"
+    "png": "renders/cairosvg/mermaid-21-flowchart-shapes-styles.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.00111393,
     "rmse": 66.63369812269733,
     "error": null,
-    "png": "renders/thorvg/mermaid-21-flowchart-shapes-styles.png"
+    "png": "renders/thorvg/mermaid-21-flowchart-shapes-styles.png",
+    "hdg": 2,
+    "hdg_note": "shapes drawn as black blobs, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00278423,
     "rmse": 35.804009122677265,
     "error": null,
-    "png": "renders/nanosvg/mermaid-21-flowchart-shapes-styles.png"
+    "png": "renders/nanosvg/mermaid-21-flowchart-shapes-styles.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-22-gitgraph": {
@@ -2186,45 +2565,55 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.0020792,
+    "seconds": 0.00128796,
     "rmse": 11.62206369186778,
     "error": null,
-    "png": "renders/novasvg/mermaid-22-gitgraph.png"
+    "png": "renders/novasvg/mermaid-22-gitgraph.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00316732,
     "rmse": 18.151003106718935,
     "error": null,
-    "png": "renders/resvg/mermaid-22-gitgraph.png"
+    "png": "renders/resvg/mermaid-22-gitgraph.png",
+    "hdg": 1,
+    "hdg_note": "branch and commit labels missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00211625,
     "rmse": 16.512177900372627,
     "error": null,
-    "png": "renders/lunasvg/mermaid-22-gitgraph.png"
+    "png": "renders/lunasvg/mermaid-22-gitgraph.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.03851856400001452,
     "rmse": 46.89736007860002,
     "error": null,
-    "png": "renders/cairosvg/mermaid-22-gitgraph.png"
+    "png": "renders/cairosvg/mermaid-22-gitgraph.png",
+    "hdg": 2,
+    "hdg_note": "everything drawn in black"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000399115,
     "rmse": 70.72321919990983,
     "error": null,
-    "png": "renders/thorvg/mermaid-22-gitgraph.png"
+    "png": "renders/thorvg/mermaid-22-gitgraph.png",
+    "hdg": 2,
+    "hdg_note": "only black fragments, lines missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00218493,
     "rmse": 53.803563427527735,
     "error": null,
-    "png": "renders/nanosvg/mermaid-22-gitgraph.png"
+    "png": "renders/nanosvg/mermaid-22-gitgraph.png",
+    "hdg": 2,
+    "hdg_note": "colours lost (gray) and stray lines"
    }
   },
   "mermaid-23-quadrant-chart": {
@@ -2237,45 +2626,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00232097,
+    "seconds": 0.00135755,
     "rmse": 11.102704132890329,
     "error": null,
-    "png": "renders/novasvg/mermaid-23-quadrant-chart.png"
+    "png": "renders/novasvg/mermaid-23-quadrant-chart.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00131783,
     "rmse": 19.780549948118228,
     "error": null,
-    "png": "renders/resvg/mermaid-23-quadrant-chart.png"
+    "png": "renders/resvg/mermaid-23-quadrant-chart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00179619,
     "rmse": 21.319034979130887,
     "error": null,
-    "png": "renders/lunasvg/mermaid-23-quadrant-chart.png"
+    "png": "renders/lunasvg/mermaid-23-quadrant-chart.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.030844059000060042,
     "rmse": 24.446419957336673,
     "error": null,
-    "png": "renders/cairosvg/mermaid-23-quadrant-chart.png"
+    "png": "renders/cairosvg/mermaid-23-quadrant-chart.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000370202,
     "rmse": 19.80047162968126,
     "error": null,
-    "png": "renders/thorvg/mermaid-23-quadrant-chart.png"
+    "png": "renders/thorvg/mermaid-23-quadrant-chart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00199217,
     "rmse": 27.927464990243028,
     "error": null,
-    "png": "renders/nanosvg/mermaid-23-quadrant-chart.png"
+    "png": "renders/nanosvg/mermaid-23-quadrant-chart.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-24-xychart": {
@@ -2288,45 +2686,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00132889,
+    "seconds": 0.00072466,
     "rmse": 8.53539661411595,
     "error": null,
-    "png": "renders/novasvg/mermaid-24-xychart.png"
+    "png": "renders/novasvg/mermaid-24-xychart.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00155343,
     "rmse": 15.176063136755396,
     "error": null,
-    "png": "renders/resvg/mermaid-24-xychart.png"
+    "png": "renders/resvg/mermaid-24-xychart.png",
+    "hdg": 1,
+    "hdg_note": "title and axis text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00113442,
     "rmse": 13.858499325252895,
     "error": null,
-    "png": "renders/lunasvg/mermaid-24-xychart.png"
+    "png": "renders/lunasvg/mermaid-24-xychart.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.03464878099998714,
     "rmse": 12.493217319198292,
     "error": null,
-    "png": "renders/cairosvg/mermaid-24-xychart.png"
+    "png": "renders/cairosvg/mermaid-24-xychart.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000421262,
     "rmse": 15.314015721257343,
     "error": null,
-    "png": "renders/thorvg/mermaid-24-xychart.png"
+    "png": "renders/thorvg/mermaid-24-xychart.png",
+    "hdg": 1,
+    "hdg_note": "title and axis text missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.0021463,
     "rmse": 15.575920188248869,
     "error": null,
-    "png": "renders/nanosvg/mermaid-24-xychart.png"
+    "png": "renders/nanosvg/mermaid-24-xychart.png",
+    "hdg": 1,
+    "hdg_note": "title and axis text missing"
    }
   },
   "mermaid-25-sankey": {
@@ -2339,45 +2746,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00543813,
+    "seconds": 0.00374715,
     "rmse": 12.366710946779815,
     "error": null,
-    "png": "renders/novasvg/mermaid-25-sankey.png"
+    "png": "renders/novasvg/mermaid-25-sankey.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00330949,
     "rmse": 16.304827932788008,
     "error": null,
-    "png": "renders/resvg/mermaid-25-sankey.png"
+    "png": "renders/resvg/mermaid-25-sankey.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00176717,
     "rmse": 15.616698141755013,
     "error": null,
-    "png": "renders/lunasvg/mermaid-25-sankey.png"
+    "png": "renders/lunasvg/mermaid-25-sankey.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.034332271999915065,
     "rmse": 12.929554082756884,
     "error": null,
-    "png": "renders/cairosvg/mermaid-25-sankey.png"
+    "png": "renders/cairosvg/mermaid-25-sankey.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.00209372,
     "rmse": 73.43974447417224,
     "error": null,
-    "png": "renders/thorvg/mermaid-25-sankey.png"
+    "png": "renders/thorvg/mermaid-25-sankey.png",
+    "hdg": 2,
+    "hdg_note": "flows washed out almost to white, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00208369,
     "rmse": 57.633493200428134,
     "error": null,
-    "png": "renders/nanosvg/mermaid-25-sankey.png"
+    "png": "renders/nanosvg/mermaid-25-sankey.png",
+    "hdg": 1,
+    "hdg_note": "text missing; flow transparency lost (opaque colours)"
    }
   },
   "mermaid-26-block": {
@@ -2390,45 +2806,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.0016329,
+    "seconds": 0.000974979,
     "rmse": 21.338050011271285,
     "error": null,
-    "png": "renders/novasvg/mermaid-26-block.png"
+    "png": "renders/novasvg/mermaid-26-block.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.0021497,
     "rmse": 18.257850672699515,
     "error": null,
-    "png": "renders/resvg/mermaid-26-block.png"
+    "png": "renders/resvg/mermaid-26-block.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000944721,
     "rmse": 19.76457780994663,
     "error": null,
-    "png": "renders/lunasvg/mermaid-26-block.png"
+    "png": "renders/lunasvg/mermaid-26-block.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.02792292100002669,
     "rmse": 19.75562445710632,
     "error": null,
-    "png": "renders/cairosvg/mermaid-26-block.png"
+    "png": "renders/cairosvg/mermaid-26-block.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000339913,
     "rmse": 161.15246494615002,
     "error": null,
-    "png": "renders/thorvg/mermaid-26-block.png"
+    "png": "renders/thorvg/mermaid-26-block.png",
+    "hdg": 2,
+    "hdg_note": "blocks drawn as black shapes, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.0030452,
     "rmse": 31.500435237892038,
     "error": null,
-    "png": "renders/nanosvg/mermaid-26-block.png"
+    "png": "renders/nanosvg/mermaid-26-block.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-27-c4-context": {
@@ -2441,45 +2868,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00400878,
+    "seconds": 0.00225432,
     "rmse": 13.201792058858558,
     "error": null,
-    "png": "renders/novasvg/mermaid-27-c4-context.png"
+    "png": "renders/novasvg/mermaid-27-c4-context.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00205592,
     "rmse": 21.151313292022145,
     "error": null,
-    "png": "renders/resvg/mermaid-27-c4-context.png"
+    "png": "renders/resvg/mermaid-27-c4-context.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00314478,
     "rmse": 13.246712781020086,
     "error": null,
-    "png": "renders/lunasvg/mermaid-27-c4-context.png"
+    "png": "renders/lunasvg/mermaid-27-c4-context.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.054319958999940354,
     "rmse": 13.431214505114061,
     "error": null,
-    "png": "renders/cairosvg/mermaid-27-c4-context.png"
+    "png": "renders/cairosvg/mermaid-27-c4-context.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000978893,
     "rmse": 13.484419111378392,
     "error": null,
-    "png": "renders/thorvg/mermaid-27-c4-context.png"
+    "png": "renders/thorvg/mermaid-27-c4-context.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.0022959,
     "rmse": 18.097707336316553,
     "error": null,
-    "png": "renders/nanosvg/mermaid-27-c4-context.png"
+    "png": "renders/nanosvg/mermaid-27-c4-context.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-28-requirement": {
@@ -2492,45 +2928,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00257342,
+    "seconds": 0.00160908,
     "rmse": 24.919828937479803,
     "error": null,
-    "png": "renders/novasvg/mermaid-28-requirement.png"
+    "png": "renders/novasvg/mermaid-28-requirement.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00224889,
     "rmse": 33.380172547957194,
     "error": null,
-    "png": "renders/resvg/mermaid-28-requirement.png"
+    "png": "renders/resvg/mermaid-28-requirement.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000752169,
     "rmse": 34.99240013003488,
     "error": null,
-    "png": "renders/lunasvg/mermaid-28-requirement.png"
+    "png": "renders/lunasvg/mermaid-28-requirement.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.03685167100002218,
     "rmse": 34.45629905157249,
     "error": null,
-    "png": "renders/cairosvg/mermaid-28-requirement.png"
+    "png": "renders/cairosvg/mermaid-28-requirement.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000467845,
     "rmse": 35.90821724072328,
     "error": null,
-    "png": "renders/thorvg/mermaid-28-requirement.png"
+    "png": "renders/thorvg/mermaid-28-requirement.png",
+    "hdg": 1,
+    "hdg_note": "text, row dividers and arrows missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00159199,
     "rmse": 37.46643827604945,
     "error": null,
-    "png": "renders/nanosvg/mermaid-28-requirement.png"
+    "png": "renders/nanosvg/mermaid-28-requirement.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-29-kanban": {
@@ -2543,45 +2990,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00375423,
+    "seconds": 0.00252672,
     "rmse": 29.34245866319376,
     "error": null,
-    "png": "renders/novasvg/mermaid-29-kanban.png"
+    "png": "renders/novasvg/mermaid-29-kanban.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00591195,
     "rmse": 24.67385816244331,
     "error": null,
-    "png": "renders/resvg/mermaid-29-kanban.png"
+    "png": "renders/resvg/mermaid-29-kanban.png",
+    "hdg": 1,
+    "hdg_note": "all card text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00148842,
     "rmse": 28.69468427215039,
     "error": null,
-    "png": "renders/lunasvg/mermaid-29-kanban.png"
+    "png": "renders/lunasvg/mermaid-29-kanban.png",
+    "hdg": 1,
+    "hdg_note": "all card text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.08292971299999863,
     "rmse": 77.71332609817148,
     "error": null,
-    "png": "renders/cairosvg/mermaid-29-kanban.png"
+    "png": "renders/cairosvg/mermaid-29-kanban.png",
+    "hdg": 2,
+    "hdg_note": "cards filled black"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000423568,
     "rmse": 151.5364374626051,
     "error": null,
-    "png": "renders/thorvg/mermaid-29-kanban.png"
+    "png": "renders/thorvg/mermaid-29-kanban.png",
+    "hdg": 2,
+    "hdg_note": "cards filled black"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00307467,
     "rmse": 44.38742490371945,
     "error": null,
-    "png": "renders/nanosvg/mermaid-29-kanban.png"
+    "png": "renders/nanosvg/mermaid-29-kanban.png",
+    "hdg": 2,
+    "hdg_note": "card colours lost (gray outlines), text missing"
    }
   },
   "mermaid-30-architecture": {
@@ -2594,45 +3052,55 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00234191,
+    "seconds": 0.00132266,
     "rmse": 16.30985103849996,
     "error": null,
-    "png": "renders/novasvg/mermaid-30-architecture.png"
+    "png": "renders/novasvg/mermaid-30-architecture.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00259048,
     "rmse": 8.59843609364357,
     "error": null,
-    "png": "renders/resvg/mermaid-30-architecture.png"
+    "png": "renders/resvg/mermaid-30-architecture.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.0020374,
     "rmse": 17.567849284387783,
     "error": null,
-    "png": "renders/lunasvg/mermaid-30-architecture.png"
+    "png": "renders/lunasvg/mermaid-30-architecture.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.037115218000053574,
     "rmse": 22.84525660598287,
     "error": null,
-    "png": "renders/cairosvg/mermaid-30-architecture.png"
+    "png": "renders/cairosvg/mermaid-30-architecture.png",
+    "hdg": 1,
+    "hdg_note": "group border drawn solid black instead of light dashed"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000818172,
     "rmse": 106.80016066165055,
     "error": null,
-    "png": "renders/thorvg/mermaid-30-architecture.png"
+    "png": "renders/thorvg/mermaid-30-architecture.png",
+    "hdg": 2,
+    "hdg_note": "diagram covered by one black rectangle"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.0030133,
     "rmse": 69.33696058346568,
     "error": null,
-    "png": "renders/nanosvg/mermaid-30-architecture.png"
+    "png": "renders/nanosvg/mermaid-30-architecture.png",
+    "hdg": 2,
+    "hdg_note": "blank render"
    }
   },
   "mermaid-31-packet": {
@@ -2645,45 +3113,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00154829,
+    "seconds": 0.00089012,
     "rmse": 5.3505068702824214,
     "error": null,
-    "png": "renders/novasvg/mermaid-31-packet.png"
+    "png": "renders/novasvg/mermaid-31-packet.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00108086,
     "rmse": 12.941765463949022,
     "error": null,
-    "png": "renders/resvg/mermaid-31-packet.png"
+    "png": "renders/resvg/mermaid-31-packet.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00115431,
     "rmse": 7.694321314607562,
     "error": null,
-    "png": "renders/lunasvg/mermaid-31-packet.png"
+    "png": "renders/lunasvg/mermaid-31-packet.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.03383569799996167,
     "rmse": 7.258786799145884,
     "error": null,
-    "png": "renders/cairosvg/mermaid-31-packet.png"
+    "png": "renders/cairosvg/mermaid-31-packet.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.00029452,
     "rmse": 155.07533983931296,
     "error": null,
-    "png": "renders/thorvg/mermaid-31-packet.png"
+    "png": "renders/thorvg/mermaid-31-packet.png",
+    "hdg": 2,
+    "hdg_note": "rows drawn as solid black bars"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.0011472,
     "rmse": 38.1517683442532,
     "error": null,
-    "png": "renders/nanosvg/mermaid-31-packet.png"
+    "png": "renders/nanosvg/mermaid-31-packet.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-32-radar": {
@@ -2696,45 +3173,55 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.0022505,
+    "seconds": 0.00134852,
     "rmse": 7.410019643245303,
     "error": null,
-    "png": "renders/novasvg/mermaid-32-radar.png"
+    "png": "renders/novasvg/mermaid-32-radar.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00426702,
     "rmse": 7.412079061614562,
     "error": null,
-    "png": "renders/resvg/mermaid-32-radar.png"
+    "png": "renders/resvg/mermaid-32-radar.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00215146,
     "rmse": 8.055127140038666,
     "error": null,
-    "png": "renders/lunasvg/mermaid-32-radar.png"
+    "png": "renders/lunasvg/mermaid-32-radar.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.03034631499997431,
     "rmse": 114.96943766357947,
     "error": null,
-    "png": "renders/cairosvg/mermaid-32-radar.png"
+    "png": "renders/cairosvg/mermaid-32-radar.png",
+    "hdg": 2,
+    "hdg_note": "data area filled solid black"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000591899,
     "rmse": 142.57588919479863,
     "error": null,
-    "png": "renders/thorvg/mermaid-32-radar.png"
+    "png": "renders/thorvg/mermaid-32-radar.png",
+    "hdg": 2,
+    "hdg_note": "whole radar a solid black disc"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00685779,
     "rmse": 39.39955629979979,
     "error": null,
-    "png": "renders/nanosvg/mermaid-32-radar.png"
+    "png": "renders/nanosvg/mermaid-32-radar.png",
+    "hdg": 2,
+    "hdg_note": "series colours lost (gray), text missing"
    }
   },
   "mermaid-33-treemap": {
@@ -2747,45 +3234,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.000972114,
+    "seconds": 0.000526931,
     "rmse": 7.206108993606126,
     "error": null,
-    "png": "renders/novasvg/mermaid-33-treemap.png"
+    "png": "renders/novasvg/mermaid-33-treemap.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00151983,
     "rmse": 16.294152001355496,
     "error": null,
-    "png": "renders/resvg/mermaid-33-treemap.png"
+    "png": "renders/resvg/mermaid-33-treemap.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000765343,
     "rmse": 29.101615269466002,
     "error": null,
-    "png": "renders/lunasvg/mermaid-33-treemap.png"
+    "png": "renders/lunasvg/mermaid-33-treemap.png",
+    "hdg": 1,
+    "hdg_note": "one block dark olive instead of orange"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.024493443999972442,
     "rmse": 159.093444988929,
     "error": null,
-    "png": "renders/cairosvg/mermaid-33-treemap.png"
+    "png": "renders/cairosvg/mermaid-33-treemap.png",
+    "hdg": 2,
+    "hdg_note": "blocks filled black"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000373056,
     "rmse": 16.695519624294718,
     "error": null,
-    "png": "renders/thorvg/mermaid-33-treemap.png"
+    "png": "renders/thorvg/mermaid-33-treemap.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00311903,
     "rmse": 145.8451714532898,
     "error": null,
-    "png": "renders/nanosvg/mermaid-33-treemap.png"
+    "png": "renders/nanosvg/mermaid-33-treemap.png",
+    "hdg": 2,
+    "hdg_note": "blocks filled black"
    }
   },
   "mermaid-34-venn": {
@@ -2798,45 +3296,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.0010845,
+    "seconds": 0.000642341,
     "rmse": 11.146894225211593,
     "error": null,
-    "png": "renders/novasvg/mermaid-34-venn.png"
+    "png": "renders/novasvg/mermaid-34-venn.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00137991,
     "rmse": 15.621783002162932,
     "error": null,
-    "png": "renders/resvg/mermaid-34-venn.png"
+    "png": "renders/resvg/mermaid-34-venn.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000927821,
     "rmse": 17.407237654006323,
     "error": null,
-    "png": "renders/lunasvg/mermaid-34-venn.png"
+    "png": "renders/lunasvg/mermaid-34-venn.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.023725263000073937,
     "rmse": 19.939372190920544,
     "error": null,
-    "png": "renders/cairosvg/mermaid-34-venn.png"
+    "png": "renders/cairosvg/mermaid-34-venn.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000437272,
     "rmse": 17.409640229386323,
     "error": null,
-    "png": "renders/thorvg/mermaid-34-venn.png"
+    "png": "renders/thorvg/mermaid-34-venn.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00198027,
     "rmse": 22.137790068838047,
     "error": null,
-    "png": "renders/nanosvg/mermaid-34-venn.png"
+    "png": "renders/nanosvg/mermaid-34-venn.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-35-ishikawa": {
@@ -2849,45 +3356,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00202998,
+    "seconds": 0.00128692,
     "rmse": 9.949226359089652,
     "error": null,
-    "png": "renders/novasvg/mermaid-35-ishikawa.png"
+    "png": "renders/novasvg/mermaid-35-ishikawa.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00199307,
     "rmse": 18.377577623794494,
     "error": null,
-    "png": "renders/resvg/mermaid-35-ishikawa.png"
+    "png": "renders/resvg/mermaid-35-ishikawa.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00176515,
     "rmse": 18.080910211585653,
     "error": null,
-    "png": "renders/lunasvg/mermaid-35-ishikawa.png"
+    "png": "renders/lunasvg/mermaid-35-ishikawa.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.04667175099996257,
     "rmse": 21.537766120747566,
     "error": null,
-    "png": "renders/cairosvg/mermaid-35-ishikawa.png"
+    "png": "renders/cairosvg/mermaid-35-ishikawa.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.00037793,
     "rmse": 48.69210770983871,
     "error": null,
-    "png": "renders/thorvg/mermaid-35-ishikawa.png"
+    "png": "renders/thorvg/mermaid-35-ishikawa.png",
+    "hdg": 2,
+    "hdg_note": "text and branches missing; black blobs"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00185256,
     "rmse": 20.82008120181091,
     "error": null,
-    "png": "renders/nanosvg/mermaid-35-ishikawa.png"
+    "png": "renders/nanosvg/mermaid-35-ishikawa.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-36-wardley": {
@@ -2900,45 +3416,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00115508,
+    "seconds": 0.000665314,
     "rmse": 5.191066370638858,
     "error": null,
-    "png": "renders/novasvg/mermaid-36-wardley.png"
+    "png": "renders/novasvg/mermaid-36-wardley.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00109261,
     "rmse": 4.774508645483218,
     "error": null,
-    "png": "renders/resvg/mermaid-36-wardley.png"
+    "png": "renders/resvg/mermaid-36-wardley.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.000954839,
     "rmse": 5.197948588423802,
     "error": null,
-    "png": "renders/lunasvg/mermaid-36-wardley.png"
+    "png": "renders/lunasvg/mermaid-36-wardley.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.029869662000010067,
     "rmse": 5.252173574170877,
     "error": null,
-    "png": "renders/cairosvg/mermaid-36-wardley.png"
+    "png": "renders/cairosvg/mermaid-36-wardley.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000530064,
     "rmse": 4.965232866596279,
     "error": null,
-    "png": "renders/thorvg/mermaid-36-wardley.png"
+    "png": "renders/thorvg/mermaid-36-wardley.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00317405,
     "rmse": 5.652668301997158,
     "error": null,
-    "png": "renders/nanosvg/mermaid-36-wardley.png"
+    "png": "renders/nanosvg/mermaid-36-wardley.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-37-state-fork-choice": {
@@ -2951,45 +3476,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00258183,
+    "seconds": 0.00155491,
     "rmse": 13.233227225500366,
     "error": null,
-    "png": "renders/novasvg/mermaid-37-state-fork-choice.png"
+    "png": "renders/novasvg/mermaid-37-state-fork-choice.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00363493,
     "rmse": 17.19225686524866,
     "error": null,
-    "png": "renders/resvg/mermaid-37-state-fork-choice.png"
+    "png": "renders/resvg/mermaid-37-state-fork-choice.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00249335,
     "rmse": 18.976237125179335,
     "error": null,
-    "png": "renders/lunasvg/mermaid-37-state-fork-choice.png"
+    "png": "renders/lunasvg/mermaid-37-state-fork-choice.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.06728112799999053,
     "rmse": 19.081301637945874,
     "error": null,
-    "png": "renders/cairosvg/mermaid-37-state-fork-choice.png"
+    "png": "renders/cairosvg/mermaid-37-state-fork-choice.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000832536,
     "rmse": 129.16247228080474,
     "error": null,
-    "png": "renders/thorvg/mermaid-37-state-fork-choice.png"
+    "png": "renders/thorvg/mermaid-37-state-fork-choice.png",
+    "hdg": 2,
+    "hdg_note": "states drawn as black blocks, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00287416,
     "rmse": 23.98626863382752,
     "error": null,
-    "png": "renders/nanosvg/mermaid-37-state-fork-choice.png"
+    "png": "renders/nanosvg/mermaid-37-state-fork-choice.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-38-sequence-control": {
@@ -3002,45 +3538,55 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00408881,
+    "seconds": 0.00248761,
     "rmse": 17.393656902565443,
     "error": null,
-    "png": "renders/novasvg/mermaid-38-sequence-control.png"
+    "png": "renders/novasvg/mermaid-38-sequence-control.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00481598,
     "rmse": 20.535593886600424,
     "error": null,
-    "png": "renders/resvg/mermaid-38-sequence-control.png"
+    "png": "renders/resvg/mermaid-38-sequence-control.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00519163,
     "rmse": 17.79642620115047,
     "error": null,
-    "png": "renders/lunasvg/mermaid-38-sequence-control.png"
+    "png": "renders/lunasvg/mermaid-38-sequence-control.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.07086477300003935,
     "rmse": 37.08808844800656,
     "error": null,
-    "png": "renders/cairosvg/mermaid-38-sequence-control.png"
+    "png": "renders/cairosvg/mermaid-38-sequence-control.png",
+    "hdg": 1,
+    "hdg_note": "sequence-number badges drawn far too large"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000941756,
     "rmse": 35.95411980516929,
     "error": null,
-    "png": "renders/thorvg/mermaid-38-sequence-control.png"
+    "png": "renders/thorvg/mermaid-38-sequence-control.png",
+    "hdg": 2,
+    "hdg_note": "text, arrows and box fills missing; black artifacts"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00482489,
     "rmse": 73.36073434035985,
     "error": null,
-    "png": "renders/nanosvg/mermaid-38-sequence-control.png"
+    "png": "renders/nanosvg/mermaid-38-sequence-control.png",
+    "hdg": 2,
+    "hdg_note": "box colours lost (gray block), text missing"
    }
   },
   "mermaid-39-gantt-advanced": {
@@ -3053,45 +3599,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.0018854,
+    "seconds": 0.00104217,
     "rmse": 21.92731532263046,
     "error": null,
-    "png": "renders/novasvg/mermaid-39-gantt-advanced.png"
+    "png": "renders/novasvg/mermaid-39-gantt-advanced.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00265022,
     "rmse": 27.089787795820413,
     "error": null,
-    "png": "renders/resvg/mermaid-39-gantt-advanced.png"
+    "png": "renders/resvg/mermaid-39-gantt-advanced.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00274085,
     "rmse": 21.327515364578783,
     "error": null,
-    "png": "renders/lunasvg/mermaid-39-gantt-advanced.png"
+    "png": "renders/lunasvg/mermaid-39-gantt-advanced.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.046175065999932485,
     "rmse": 20.949566816485422,
     "error": null,
-    "png": "renders/cairosvg/mermaid-39-gantt-advanced.png"
+    "png": "renders/cairosvg/mermaid-39-gantt-advanced.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000477527,
     "rmse": 162.55992360800636,
     "error": null,
-    "png": "renders/thorvg/mermaid-39-gantt-advanced.png"
+    "png": "renders/thorvg/mermaid-39-gantt-advanced.png",
+    "hdg": 2,
+    "hdg_note": "render is a solid black band"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00142085,
     "rmse": 43.47760013742338,
     "error": null,
-    "png": "renders/nanosvg/mermaid-39-gantt-advanced.png"
+    "png": "renders/nanosvg/mermaid-39-gantt-advanced.png",
+    "hdg": 1,
+    "hdg_note": "text missing; bar colours flattened"
    }
   },
   "mermaid-40-erd-relations": {
@@ -3104,45 +3659,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00295195,
+    "seconds": 0.00173387,
     "rmse": 13.271648059656636,
     "error": null,
-    "png": "renders/novasvg/mermaid-40-erd-relations.png"
+    "png": "renders/novasvg/mermaid-40-erd-relations.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00440969,
     "rmse": 18.223421290907982,
     "error": null,
-    "png": "renders/resvg/mermaid-40-erd-relations.png"
+    "png": "renders/resvg/mermaid-40-erd-relations.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00315571,
     "rmse": 18.9467666086715,
     "error": null,
-    "png": "renders/lunasvg/mermaid-40-erd-relations.png"
+    "png": "renders/lunasvg/mermaid-40-erd-relations.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.061561372000028314,
     "rmse": 90.42652308811903,
     "error": null,
-    "png": "renders/cairosvg/mermaid-40-erd-relations.png"
+    "png": "renders/cairosvg/mermaid-40-erd-relations.png",
+    "hdg": 2,
+    "hdg_note": "table rows filled black"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.00111235,
     "rmse": 42.561622979366696,
     "error": null,
-    "png": "renders/thorvg/mermaid-40-erd-relations.png"
+    "png": "renders/thorvg/mermaid-40-erd-relations.png",
+    "hdg": 2,
+    "hdg_note": "text missing; black wedges and blocks"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00264336,
     "rmse": 48.35275028187568,
     "error": null,
-    "png": "renders/nanosvg/mermaid-40-erd-relations.png"
+    "png": "renders/nanosvg/mermaid-40-erd-relations.png",
+    "hdg": 2,
+    "hdg_note": "table rows gray, text missing"
    }
   },
   "mermaid-41-class-advanced": {
@@ -3155,45 +3721,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00266393,
+    "seconds": 0.00168087,
     "rmse": 28.222228831399274,
     "error": null,
-    "png": "renders/novasvg/mermaid-41-class-advanced.png"
+    "png": "renders/novasvg/mermaid-41-class-advanced.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00366294,
     "rmse": 29.187805545891006,
     "error": null,
-    "png": "renders/resvg/mermaid-41-class-advanced.png"
+    "png": "renders/resvg/mermaid-41-class-advanced.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00243048,
     "rmse": 35.806269331836056,
     "error": null,
-    "png": "renders/lunasvg/mermaid-41-class-advanced.png"
+    "png": "renders/lunasvg/mermaid-41-class-advanced.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing; one node filled black"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.07378989500000444,
     "rmse": 31.166220747436896,
     "error": null,
-    "png": "renders/cairosvg/mermaid-41-class-advanced.png"
+    "png": "renders/cairosvg/mermaid-41-class-advanced.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing; black wedge artifacts"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000738372,
     "rmse": 32.08914460998996,
     "error": null,
-    "png": "renders/thorvg/mermaid-41-class-advanced.png"
+    "png": "renders/thorvg/mermaid-41-class-advanced.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing; stretched arrow artifacts"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.0013539,
     "rmse": 36.251033372179165,
     "error": null,
-    "png": "renders/nanosvg/mermaid-41-class-advanced.png"
+    "png": "renders/nanosvg/mermaid-41-class-advanced.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-42-mindmap-shapes": {
@@ -3206,45 +3783,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00299991,
+    "seconds": 0.00170749,
     "rmse": 16.436326625615752,
     "error": null,
-    "png": "renders/novasvg/mermaid-42-mindmap-shapes.png"
+    "png": "renders/novasvg/mermaid-42-mindmap-shapes.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00875455,
     "rmse": 18.658305384280858,
     "error": null,
-    "png": "renders/resvg/mermaid-42-mindmap-shapes.png"
+    "png": "renders/resvg/mermaid-42-mindmap-shapes.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00301231,
     "rmse": 16.71306179984587,
     "error": null,
-    "png": "renders/lunasvg/mermaid-42-mindmap-shapes.png"
+    "png": "renders/lunasvg/mermaid-42-mindmap-shapes.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.1064973470000723,
     "rmse": 84.69271557292076,
     "error": null,
-    "png": "renders/cairosvg/mermaid-42-mindmap-shapes.png"
+    "png": "renders/cairosvg/mermaid-42-mindmap-shapes.png",
+    "hdg": 2,
+    "hdg_note": "nodes filled black"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.00093319,
     "rmse": 85.65389871920736,
     "error": null,
-    "png": "renders/thorvg/mermaid-42-mindmap-shapes.png"
+    "png": "renders/thorvg/mermaid-42-mindmap-shapes.png",
+    "hdg": 2,
+    "hdg_note": "nodes filled black"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00309127,
     "rmse": 47.60603457892118,
     "error": null,
-    "png": "renders/nanosvg/mermaid-42-mindmap-shapes.png"
+    "png": "renders/nanosvg/mermaid-42-mindmap-shapes.png",
+    "hdg": 2,
+    "hdg_note": "node colours lost (gray), text missing"
    }
   },
   "mermaid-43-timeline-sections": {
@@ -3257,45 +3845,55 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00165797,
+    "seconds": 0.00100635,
     "rmse": 18.12616474278116,
     "error": null,
-    "png": "renders/novasvg/mermaid-43-timeline-sections.png"
+    "png": "renders/novasvg/mermaid-43-timeline-sections.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00689046,
     "rmse": 12.966209801348867,
     "error": null,
-    "png": "renders/resvg/mermaid-43-timeline-sections.png"
+    "png": "renders/resvg/mermaid-43-timeline-sections.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.0027153,
     "rmse": 18.542336827097657,
     "error": null,
-    "png": "renders/lunasvg/mermaid-43-timeline-sections.png"
+    "png": "renders/lunasvg/mermaid-43-timeline-sections.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.07528073000003133,
     "rmse": 90.61846334020078,
     "error": null,
-    "png": "renders/cairosvg/mermaid-43-timeline-sections.png"
+    "png": "renders/cairosvg/mermaid-43-timeline-sections.png",
+    "hdg": 2,
+    "hdg_note": "event boxes filled black"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.00052997,
     "rmse": 91.29432456357341,
     "error": null,
-    "png": "renders/thorvg/mermaid-43-timeline-sections.png"
+    "png": "renders/thorvg/mermaid-43-timeline-sections.png",
+    "hdg": 2,
+    "hdg_note": "event boxes filled black"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.0013352,
     "rmse": 47.61498117704614,
     "error": null,
-    "png": "renders/nanosvg/mermaid-43-timeline-sections.png"
+    "png": "renders/nanosvg/mermaid-43-timeline-sections.png",
+    "hdg": 2,
+    "hdg_note": "event boxes gray, text missing"
    }
   },
   "mermaid-44-pie-basic": {
@@ -3308,45 +3906,55 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00166203,
+    "seconds": 0.00106912,
     "rmse": 5.466500671205817,
     "error": null,
-    "png": "renders/novasvg/mermaid-44-pie-basic.png"
+    "png": "renders/novasvg/mermaid-44-pie-basic.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00248286,
     "rmse": 11.750265558675888,
     "error": null,
-    "png": "renders/resvg/mermaid-44-pie-basic.png"
+    "png": "renders/resvg/mermaid-44-pie-basic.png",
+    "hdg": 1,
+    "hdg_note": "all text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00260661,
     "rmse": 11.370139622045174,
     "error": null,
-    "png": "renders/lunasvg/mermaid-44-pie-basic.png"
+    "png": "renders/lunasvg/mermaid-44-pie-basic.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.022317925000038485,
     "rmse": 37.62734528365292,
     "error": null,
-    "png": "renders/cairosvg/mermaid-44-pie-basic.png"
+    "png": "renders/cairosvg/mermaid-44-pie-basic.png",
+    "hdg": 1,
+    "hdg_note": "one slice filled black"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000363198,
     "rmse": 31.439678568917735,
     "error": null,
-    "png": "renders/thorvg/mermaid-44-pie-basic.png"
+    "png": "renders/thorvg/mermaid-44-pie-basic.png",
+    "hdg": 1,
+    "hdg_note": "all text missing"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00181496,
     "rmse": 20.665415173680767,
     "error": null,
-    "png": "renders/nanosvg/mermaid-44-pie-basic.png"
+    "png": "renders/nanosvg/mermaid-44-pie-basic.png",
+    "hdg": 1,
+    "hdg_note": "text missing; two slices gray"
    }
   },
   "mermaid-45-flowchart-markdown-labels": {
@@ -3359,45 +3967,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00152455,
+    "seconds": 0.00091864,
     "rmse": 18.665482553917222,
     "error": null,
-    "png": "renders/novasvg/mermaid-45-flowchart-markdown-labels.png"
+    "png": "renders/novasvg/mermaid-45-flowchart-markdown-labels.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00307167,
     "rmse": 30.353531205078053,
     "error": null,
-    "png": "renders/resvg/mermaid-45-flowchart-markdown-labels.png"
+    "png": "renders/resvg/mermaid-45-flowchart-markdown-labels.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00114493,
     "rmse": 25.39082706933167,
     "error": null,
-    "png": "renders/lunasvg/mermaid-45-flowchart-markdown-labels.png"
+    "png": "renders/lunasvg/mermaid-45-flowchart-markdown-labels.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.03053527400004441,
     "rmse": 23.79744313224328,
     "error": null,
-    "png": "renders/cairosvg/mermaid-45-flowchart-markdown-labels.png"
+    "png": "renders/cairosvg/mermaid-45-flowchart-markdown-labels.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000323059,
     "rmse": 131.55427286697616,
     "error": null,
-    "png": "renders/thorvg/mermaid-45-flowchart-markdown-labels.png"
+    "png": "renders/thorvg/mermaid-45-flowchart-markdown-labels.png",
+    "hdg": 2,
+    "hdg_note": "nodes filled black, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.000969264,
     "rmse": 37.839284874048715,
     "error": null,
-    "png": "renders/nanosvg/mermaid-45-flowchart-markdown-labels.png"
+    "png": "renders/nanosvg/mermaid-45-flowchart-markdown-labels.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-46-sequence-actors-misc": {
@@ -3410,45 +4029,54 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00173962,
+    "seconds": 0.00114595,
     "rmse": 7.5700184693291375,
     "error": null,
-    "png": "renders/novasvg/mermaid-46-sequence-actors-misc.png"
+    "png": "renders/novasvg/mermaid-46-sequence-actors-misc.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00435342,
     "rmse": 8.089681147481238,
     "error": null,
-    "png": "renders/resvg/mermaid-46-sequence-actors-misc.png"
+    "png": "renders/resvg/mermaid-46-sequence-actors-misc.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00160711,
     "rmse": 9.080997955517347,
     "error": null,
-    "png": "renders/lunasvg/mermaid-46-sequence-actors-misc.png"
+    "png": "renders/lunasvg/mermaid-46-sequence-actors-misc.png",
+    "hdg": 0
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.037680968000017856,
     "rmse": 12.032579241940718,
     "error": null,
-    "png": "renders/cairosvg/mermaid-46-sequence-actors-misc.png"
+    "png": "renders/cairosvg/mermaid-46-sequence-actors-misc.png",
+    "hdg": 0
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.00070744,
     "rmse": 47.06884940202503,
     "error": null,
-    "png": "renders/thorvg/mermaid-46-sequence-actors-misc.png"
+    "png": "renders/thorvg/mermaid-46-sequence-actors-misc.png",
+    "hdg": 2,
+    "hdg_note": "text and arrows missing; black blobs"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00148565,
     "rmse": 48.48187743595092,
     "error": null,
-    "png": "renders/nanosvg/mermaid-46-sequence-actors-misc.png"
+    "png": "renders/nanosvg/mermaid-46-sequence-actors-misc.png",
+    "hdg": 2,
+    "hdg_note": "text and arrows missing; black blobs"
    }
   },
   "mermaid-47-flowchart-br-bold-label": {
@@ -3461,45 +4089,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.000662455,
+    "seconds": 0.000366424,
     "rmse": 15.238671224698184,
     "error": null,
-    "png": "renders/novasvg/mermaid-47-flowchart-br-bold-label.png"
+    "png": "renders/novasvg/mermaid-47-flowchart-br-bold-label.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00267415,
     "rmse": 27.702255204507047,
     "error": null,
-    "png": "renders/resvg/mermaid-47-flowchart-br-bold-label.png"
+    "png": "renders/resvg/mermaid-47-flowchart-br-bold-label.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00036355,
     "rmse": 27.72924046469667,
     "error": null,
-    "png": "renders/lunasvg/mermaid-47-flowchart-br-bold-label.png"
+    "png": "renders/lunasvg/mermaid-47-flowchart-br-bold-label.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.023952230999952917,
     "rmse": 27.656507738098274,
     "error": null,
-    "png": "renders/cairosvg/mermaid-47-flowchart-br-bold-label.png"
+    "png": "renders/cairosvg/mermaid-47-flowchart-br-bold-label.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000232784,
     "rmse": 175.97280689925964,
     "error": null,
-    "png": "renders/thorvg/mermaid-47-flowchart-br-bold-label.png"
+    "png": "renders/thorvg/mermaid-47-flowchart-br-bold-label.png",
+    "hdg": 2,
+    "hdg_note": "node filled black, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.0019513,
     "rmse": 34.30776571078104,
     "error": null,
-    "png": "renders/nanosvg/mermaid-47-flowchart-br-bold-label.png"
+    "png": "renders/nanosvg/mermaid-47-flowchart-br-bold-label.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   },
   "mermaid-48-flowchart-bold-italic-runs": {
@@ -3512,45 +4151,56 @@
    },
    "novasvg": {
     "ok": true,
-    "seconds": 0.00132473,
+    "seconds": 0.00086203,
     "rmse": 16.965498076979642,
     "error": null,
-    "png": "renders/novasvg/mermaid-48-flowchart-bold-italic-runs.png"
+    "png": "renders/novasvg/mermaid-48-flowchart-bold-italic-runs.png",
+    "hdg": 0
    },
    "resvg": {
     "ok": true,
     "seconds": 0.00258561,
     "rmse": 23.646980515490768,
     "error": null,
-    "png": "renders/resvg/mermaid-48-flowchart-bold-italic-runs.png"
+    "png": "renders/resvg/mermaid-48-flowchart-bold-italic-runs.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "lunasvg": {
     "ok": true,
     "seconds": 0.00051558,
     "rmse": 23.0092187895538,
     "error": null,
-    "png": "renders/lunasvg/mermaid-48-flowchart-bold-italic-runs.png"
+    "png": "renders/lunasvg/mermaid-48-flowchart-bold-italic-runs.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "cairosvg": {
     "ok": true,
     "seconds": 0.026277999999933854,
     "rmse": 21.994277585948982,
     "error": null,
-    "png": "renders/cairosvg/mermaid-48-flowchart-bold-italic-runs.png"
+    "png": "renders/cairosvg/mermaid-48-flowchart-bold-italic-runs.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    },
    "thorvg": {
     "ok": true,
     "seconds": 0.000273251,
     "rmse": 152.19995825119884,
     "error": null,
-    "png": "renders/thorvg/mermaid-48-flowchart-bold-italic-runs.png"
+    "png": "renders/thorvg/mermaid-48-flowchart-bold-italic-runs.png",
+    "hdg": 2,
+    "hdg_note": "nodes filled black, no text"
    },
    "nanosvg": {
     "ok": true,
     "seconds": 0.00078614,
     "rmse": 37.21809035939378,
     "error": null,
-    "png": "renders/nanosvg/mermaid-48-flowchart-bold-italic-runs.png"
+    "png": "renders/nanosvg/mermaid-48-flowchart-bold-italic-runs.png",
+    "hdg": 1,
+    "hdg_note": "all label text missing"
    }
   }
  }

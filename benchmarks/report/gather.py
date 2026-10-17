@@ -10,7 +10,12 @@ plus the one thing that can't be known by any single engine: each render's RMSE 
 Chromium (ground_truth) render of the same sample, computed from the PNGs on disk, and the
 per-engine summary the report's "At a glance" is drawn from. It never runs a renderer.
 
-Usage: gather.py <out_dir>
+It also merges the hand-kept ../ratings.json (the Human defect grade, HDG: 0 accurate, 1 defective,
+2 broken) into every cell as `hdg` / `hdg_note`, and counts the grades per engine in the summary.
+RMSE is a poor judge of what a person sees (a missing label barely moves it), so the grade is the
+headline accuracy measure; a render with no entry in ratings.json is left unrated (`hdg` is null).
+
+Usage: gather.py <out_dir> [ratings.json]
 """
 import json
 import sys
@@ -40,12 +45,53 @@ def load_engine_results(renders_dir):
     return found
 
 
+HDG_GRADES = (0, 1, 2)
+DEFAULT_RATINGS = HERE.parent / "ratings.json"
+
+
+def load_ratings(path):
+    """(metric description, {sample: {engine: {"hdg": grade, "note": text}}}) from ratings.json, or (None, {})
+    when there is no such file (the report then simply has no grades)."""
+    path = Path(path)
+    if not path.is_file():
+        return None, {}
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    metric = {k: doc[k] for k in ("metric", "name", "abbr", "scale", "reference", "rated_by") if k in doc}
+    return metric, doc.get("ratings", {})
+
+
+def apply_ratings(matrix, ratings, engines):
+    """Copies each valid grade into its matrix cell. A grade for a sample or engine that is not in this run, or
+    one that is not 0/1/2, is reported on stderr and ignored rather than silently shown."""
+    for sample, row in ratings.items():
+        for engine, entry in row.items():
+            cell = matrix.get(sample, {}).get(engine)
+            grade = entry.get("hdg") if isinstance(entry, dict) else None
+            if cell is None:
+                print(f"gather: ratings.json rates {sample}/{engine}, which is not in this run; ignored", file=sys.stderr)
+            elif grade not in HDG_GRADES:
+                print(f"gather: ratings.json: {sample}/{engine}: hdg must be 0, 1 or 2, got {grade!r}; ignored", file=sys.stderr)
+            else:
+                cell["hdg"] = grade
+                if entry.get("note"):
+                    cell["hdg_note"] = entry["note"]
+
+
+def hdg_counts(matrix, engine):
+    """{"0": n, "1": n, "2": n, "rated": n, "total": n} for one engine; unrated renders are only in `total`."""
+    cells = [row[engine] for row in matrix.values() if engine in row]
+    counts = {str(g): sum(1 for c in cells if c.get("hdg") == g) for g in HDG_GRADES}
+    counts["rated"] = sum(counts[str(g)] for g in HDG_GRADES)
+    counts["total"] = len(cells)
+    return counts
+
+
 def _order(keys):
     known = [k for k in charts.ENGINE_ORDER if k in keys]
     return known + sorted(k for k in keys if k not in known)
 
 
-def gather(out_dir):
+def gather(out_dir, ratings_path=None):
     out_dir = Path(out_dir)
     found = load_engine_results(out_dir / "renders")
     errors = {k: r["unavailable"] for k, r in found.items() if "unavailable" in r}
@@ -84,6 +130,9 @@ def gather(out_dir):
             except Exception as exc:  # noqa: BLE001 - recorded, never blocks the gather
                 cell["rmse_error"] = str(exc)
 
+    metric, ratings = load_ratings(ratings_path) if ratings_path else (None, {})
+    apply_ratings(matrix, ratings, engines)
+
     summary = {}
     for k in engines:
         cells = [row[k] for row in matrix.values() if k in row and row[k]["ok"]]
@@ -96,6 +145,8 @@ def gather(out_dir):
             "total_ms": sum(t) * 1000 if t else None,
             "rmse": sum(r) / len(r) if r else None,
         }
+        if metric and k != charts.REFERENCE:
+            summary[k]["hdg"] = hdg_counts(matrix, k)
 
     # one run configuration for the page; engines run separately may differ, so say so
     for field in ("runs", "width", "height"):
@@ -110,6 +161,7 @@ def gather(out_dir):
                      or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "width": first["width"], "height": first["height"], "runs": first["runs"],
         "engine_load_errors": errors,
+        "metrics": {metric.get("metric", "hdg"): metric} if metric else {},
         "summary": summary,
         "files": files,
         "matrix": matrix,
@@ -120,10 +172,10 @@ def gather(out_dir):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("usage: gather.py <out_dir>", file=sys.stderr)
+    if len(sys.argv) not in (2, 3):
+        print("usage: gather.py <out_dir> [ratings.json]", file=sys.stderr)
         sys.exit(1)
-    path = gather(sys.argv[1])
+    path = gather(sys.argv[1], sys.argv[2] if len(sys.argv) == 3 else DEFAULT_RATINGS)
     print(f"Wrote {path} ({path.stat().st_size} bytes)")
 
 
