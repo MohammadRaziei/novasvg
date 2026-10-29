@@ -837,6 +837,16 @@ public:
 
     virtual void parseAttribute(PropertyID id, const std::string& value);
 
+    // CSS custom properties (`--name: value`, from `style=""` or a stylesheet) declared on this element: the
+    // higher cascade priority wins, a tie goes to the later one. Names are case-sensitive.
+    void setCustomProperty(int specificity, const std::string& name, const std::string& value);
+    // The element (this one or the nearest ancestor: custom properties inherit) that gives `name` a value.
+    const SVGElement* findCustomPropertyOwner(const std::string& name) const;
+    const std::string& customProperty(const std::string& name) const;
+    // Gives every attribute whose value uses `var()` its value, now that the custom properties are known.
+    // An attribute whose `var()` cannot be resolved (no such property and no fallback) is left as it was.
+    void resolveVariables();
+
     SVGElement* previousElement() const;
     SVGElement* nextElement() const;
 
@@ -924,6 +934,12 @@ private:
     AttributeList m_attributes;
     SVGPropertyList m_properties;
     SVGNodeList m_children;
+    // `--name` -> (cascade priority, value as written, possibly with var() of its own)
+    std::map<std::string, std::pair<int, std::string>> m_customProperties;
+    // Attributes whose value uses var(), as written. Their value in m_attributes is the resolved one (or this
+    // very text while it is unresolved), so that a <use> copies what was computed; resolveVariables() starts
+    // from the text kept here, so a stylesheet applied later can still change the result.
+    std::map<PropertyID, std::string> m_variableSources;
 };
 
 inline const SVGElement* toSVGElement(const SVGNode* node)
@@ -5251,21 +5267,156 @@ NOVASVG_INLINE const std::string& SVGElement::getAttribute(PropertyID id) const
     return emptyString;
 }
 
+// Whether `value` has a `var(` function in it. Not for the attributes that are names or references, never CSS values.
+inline bool usesVariables(PropertyID id, const std::string& value)
+{
+    if(id == PropertyID::Id || id == PropertyID::Class || id == PropertyID::Href)
+        return false;
+    for(size_t pos = value.find("var("); pos != std::string::npos; pos = value.find("var(", pos + 1)) {
+        if(pos == 0 || !IS_CSS_NAMECHAR(static_cast<unsigned char>(value[pos - 1])))
+            return true;
+    }
+    return false;
+}
+
 NOVASVG_INLINE bool SVGElement::setAttribute(int specificity, PropertyID id, const std::string& value)
 {
+    // A value with var() cannot be parsed before the custom properties it names are all known (a stylesheet
+    // can come after the element): it is kept, and parsed by resolveVariables() when the document is complete.
+    const bool deferred = usesVariables(id, value);
     for(auto& attribute : m_attributes) {
         if(id == attribute.id()) {
             if(specificity < attribute.specificity())
                 return false;
-            parseAttribute(id, value);
+            if(deferred)
+                m_variableSources[id] = value;
+            else {
+                m_variableSources.erase(id);
+                parseAttribute(id, value);
+            }
             attribute = Attribute(specificity, id, value);
             return true;
         }
     }
 
-    parseAttribute(id, value);
+    if(deferred)
+        m_variableSources[id] = value;
+    else
+        parseAttribute(id, value);
     m_attributes.emplace_front(specificity, id, value);
     return true;
+}
+
+NOVASVG_INLINE void SVGElement::setCustomProperty(int specificity, const std::string& name, const std::string& value)
+{
+    auto it = m_customProperties.find(name);
+    if(it != m_customProperties.end() && specificity < it->second.first)
+        return;
+    std::string_view trimmed(value);
+    stripLeadingAndTrailingSpaces(trimmed);
+    m_customProperties[name] = {specificity, std::string(trimmed)};
+}
+
+NOVASVG_INLINE const SVGElement* SVGElement::findCustomPropertyOwner(const std::string& name) const
+{
+    for(auto element = this; element != nullptr; element = element->parentElement()) {
+        if(element->m_customProperties.count(name))
+            return element;
+    }
+    return nullptr;
+}
+
+NOVASVG_INLINE const std::string& SVGElement::customProperty(const std::string& name) const
+{
+    if(auto owner = findCustomPropertyOwner(name))
+        return owner->m_customProperties.at(name).second;
+    return emptyString;
+}
+
+// Replaces each `var(--name, fallback)` in `text` with the value `--name` has on `element` -- or the fallback, if
+// there is no such property or its own var() cannot be resolved (a cycle, say). False if one cannot be replaced
+// at all: the value is then invalid and the caller leaves the attribute alone. `depth` stops a cycle.
+inline bool substituteVariables(std::string_view text, const SVGElement* element, std::string& out, int depth)
+{
+    constexpr int MaxDepth = 32;
+    if(depth > MaxDepth)
+        return false;
+    out.clear();
+    while(!text.empty()) {
+        const auto pos = text.find("var(");
+        if(pos == std::string_view::npos) {
+            out.append(text);
+            break;
+        }
+        if(pos > 0 && IS_CSS_NAMECHAR(static_cast<unsigned char>(text[pos - 1]))) { // `somevar(`: not ours
+            out.append(text.substr(0, pos + 4));
+            text.remove_prefix(pos + 4);
+            continue;
+        }
+        out.append(text.substr(0, pos));
+        text.remove_prefix(pos + 4);
+
+        // The arguments run to the matching `)`; `name` ends at the first comma outside any nesting.
+        size_t nesting = 1, end = 0, comma = std::string_view::npos;
+        char quote = 0;
+        for(; end < text.size(); ++end) {
+            const char c = text[end];
+            if(quote) {
+                if(c == quote)
+                    quote = 0;
+            } else if(c == '"' || c == '\'') {
+                quote = c;
+            } else if(c == '(') {
+                ++nesting;
+            } else if(c == ')') {
+                if(--nesting == 0)
+                    break;
+            } else if(c == ',' && nesting == 1 && comma == std::string_view::npos) {
+                comma = end;
+            }
+        }
+        if(end == text.size())
+            return false;
+
+        auto name = text.substr(0, comma == std::string_view::npos ? end : comma);
+        stripLeadingAndTrailingSpaces(name);
+        if(name.size() < 3 || name[0] != '-' || name[1] != '-')
+            return false;
+
+        std::string value;
+        bool found = false;
+        if(auto owner = element->findCustomPropertyOwner(std::string(name))) {
+            // Resolved where it is declared, then inherited as that.
+            found = substituteVariables(owner->customProperty(std::string(name)), owner, value, depth + 1);
+        }
+        if(!found) {
+            if(comma == std::string_view::npos)
+                return false;
+            auto fallback = text.substr(comma + 1, end - comma - 1);
+            stripLeadingAndTrailingSpaces(fallback);
+            if(!substituteVariables(fallback, element, value, depth + 1))
+                return false;
+        }
+        out.append(value);
+        text.remove_prefix(end + 1);
+    }
+    return true;
+}
+
+NOVASVG_INLINE void SVGElement::resolveVariables()
+{
+    for(const auto& [id, source] : m_variableSources) {
+        std::string resolved;
+        if(!substituteVariables(source, this, resolved, 0))
+            continue;
+        for(auto& attribute : m_attributes) {
+            if(attribute.id() == id) {
+                attribute = Attribute(attribute.specificity(), id, resolved);
+                break;
+            }
+        }
+        parseAttribute(id, resolved);
+    }
 }
 
 NOVASVG_INLINE void SVGElement::setAttributes(const AttributeList& attributes)

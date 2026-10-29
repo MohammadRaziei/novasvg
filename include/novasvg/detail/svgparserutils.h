@@ -10,6 +10,8 @@ namespace novasvg {
 constexpr bool IS_NUM(int cc) { return cc >= '0' && cc <= '9'; }
 constexpr bool IS_ALPHA(int cc) { return (cc >= 'a' && cc <= 'z') || (cc >= 'A' && cc <= 'Z'); }
 constexpr bool IS_WS(int cc) { return cc == ' ' || cc == '\t' || cc == '\n' || cc == '\r'; }
+constexpr bool IS_CSS_STARTNAMECHAR(int c) { return IS_ALPHA(c) || c == '_' || c == '-'; }
+constexpr bool IS_CSS_NAMECHAR(int c) { return IS_CSS_STARTNAMECHAR(c) || IS_NUM(c); }
 
 constexpr void stripLeadingSpaces(std::string_view& input)
 {

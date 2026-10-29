@@ -75,7 +75,7 @@ struct Declaration {
     int specificity;
     PropertyID id; // Unknown for a property no SVG element has (only the HTML in a foreignObject reads those)
     std::string value;
-    std::string name; // lower-case property name as written
+    std::string name; // lower-case property name as written (a custom property's, `--x`, keeps its case)
 };
 
 using DeclarationList = std::vector<Declaration>;
@@ -335,9 +335,6 @@ NOVASVG_INLINE bool RuleData::match(const SVGElement* element) const
 {
     return matchSelector(m_selector, element);
 }
-
-constexpr bool IS_CSS_STARTNAMECHAR(int c) { return IS_ALPHA(c) || c == '_' || c == '-'; }
-constexpr bool IS_CSS_NAMECHAR(int c) { return IS_CSS_STARTNAMECHAR(c) || IS_NUM(c); }
 
 inline bool readCSSIdentifier(std::string_view& input, std::string& output)
 {
@@ -623,6 +620,11 @@ static bool parseSelectors(std::string_view& input, SelectorList& selectors)
     return true;
 }
 
+inline bool isCustomPropertyName(std::string_view name)
+{
+    return name.size() > 2 && name[0] == '-' && name[1] == '-';
+}
+
 static bool parseDeclarations(std::string_view& input, DeclarationList& declarations)
 {
     if(!skipDelimiter(input, '{'))
@@ -646,8 +648,11 @@ static bool parseDeclarations(std::string_view& input, DeclarationList& declarat
         declaration.specificity = Specificity::Stylesheet;
         declaration.id = propertyid(name);
         declaration.value.assign(value);
-        for(auto& ch : name)
-            ch = char(std::tolower(static_cast<unsigned char>(ch)));
+        const bool custom = isCustomPropertyName(name);
+        if(!custom) {
+            for(auto& ch : name)
+                ch = char(std::tolower(static_cast<unsigned char>(ch)));
+        }
         declaration.name = name;
         if(skipDelimiter(input, '!')) {
             skipOptionalSpaces(input);
@@ -656,8 +661,9 @@ static bool parseDeclarations(std::string_view& input, DeclarationList& declarat
             declaration.specificity = Specificity::StylesheetImportant;
         }
 
-        // `background-color` is no SVG property, but the HTML inside a foreignObject paints it
-        if(declaration.id != PropertyID::Unknown || declaration.name == "background-color")
+        // `background-color` is no SVG property, but the HTML inside a foreignObject paints it; a custom
+        // property (`--x`) is none either, but `var(--x)` in the values of the elements below reads it
+        if(declaration.id != PropertyID::Unknown || custom || declaration.name == "background-color")
             declarations.push_back(std::move(declaration));
         skipOptionalSpacesOrDelimiter(input, ';');
     } while(!input.empty() && input.front() != '}');
@@ -1002,6 +1008,13 @@ inline void parseInlineStyle(std::string_view input, SVGElement* element)
         while(!input.empty() && input.front() != ';') {
             value.push_back(input.front());
             input.remove_prefix(1);
+        }
+
+        if(isCustomPropertyName(name)) {
+            const bool important = stripImportantFlag(value);
+            element->setCustomProperty(important ? Specificity::InlineImportant : Specificity::InlineStyle, name, value);
+            skipOptionalSpacesOrDelimiter(input, ';');
+            continue;
         }
 
         auto id = csspropertyid(name);
@@ -1765,11 +1778,17 @@ NOVASVG_INLINE void Document::applyStyleSheet(const std::string& content)
                     for(const auto& declaration : rule.declarations()) {
                         if(declaration.id != PropertyID::Unknown)
                             element->setAttribute(declaration.specificity, declaration.id, declaration.value);
+                        else if(isCustomPropertyName(declaration.name))
+                            element->setCustomProperty(declaration.specificity, declaration.name, declaration.value);
                     }
                 }
             }
         });
     }
+
+    // Every custom property is known now (the elements' own `style`, and every sheet so far): the values that
+    // use var() are given theirs.
+    m_rootElement->transverse([](SVGElement* element) { element->resolveVariables(); });
 
     if(!content.empty())
         m_rootElement->addStyleSheet(content);

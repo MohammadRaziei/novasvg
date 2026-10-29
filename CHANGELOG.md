@@ -2,6 +2,19 @@
 
 ### Added
 
+- **CSS custom properties and `var()`.** `--name: value` is read from an element's `style=""` and from
+  stylesheets (`:root{--c:red}`, `svg{...}`, `.a{...}`, with the usual cascade: inline over sheet, `!important`
+  over both), custom properties **inherit** down the tree, and `var(--name)` / `var(--name, fallback)` is
+  replaced in every property value, in presentation attributes as well as in `style` and sheets. A custom
+  property can use `var()` itself (what a theme chain like `--_fg: var(--pele-fg, #1f1f1f)` does); the
+  fallback is used when a property does not exist or cannot be resolved (a cycle); a value that cannot be
+  resolved at all is left unparsed, as if it were not there. Names are case-sensitive. Values are resolved
+  once the document (and every sheet applied so far, `Document::applyStyleSheet()` included) is known, so a
+  sheet that comes after the element still counts, and a `<use>` copy gets the value its original computed.
+  Before this, any `var()` made the property invalid -- a `fill="var(--c)"` was painted black -- which broke
+  SVGs that theme themselves with CSS variables (e.g. [pele](https://pele.run)'s output).
+  Not covered yet: `var()` inside the HTML of a `<foreignObject>`, and `calc()`/`env()`.
+
 - Benchmarks: a **Human defect grade (HDG)** next to RMSE, which counts pixels rather than what a person
   sees. Every render is graded against the Chromium one on an ordinal scale where lower is better:
   `0` accurate, `1` defective, `2` broken. The grades are kept by hand in `benchmarks/ratings.json`
