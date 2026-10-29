@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.11.4] - 2026-10-30
+
 ### Added
 
 - **CSS custom properties and `var()`.** `--name: value` is read from an element's `style=""` and from
