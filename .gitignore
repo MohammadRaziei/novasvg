@@ -154,3 +154,6 @@ tests/corpus/
 # Generated test-render outputs (regenerate via data/mermaid/COVERAGE.md workflow)
 data/*.png
 data/mermaid/*.png
+
+# refactor scratch: golden baseline renders (see REFACTOR_CHECKLIST.md), never committed
+/refactor/
