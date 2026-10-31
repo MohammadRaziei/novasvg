@@ -1,5 +1,9 @@
 #include <cassert>
+#include <exception>
 #include <unordered_map>
+#include <vector>
+
+#include <stb/zlib.hpp>
 
 #ifndef NOVASVG_DISABLE_EMBEDDED_FONT
 #include "default_font.h"
@@ -728,21 +732,24 @@ static FontFace fontFaceFromBase64(std::string_view payload)
 }
 
 // fontFaceFromBase64() for a payload that was zlib-compressed before it was base64-encoded. The inflater is
-// the one stb_image already contains for PNG, so this needs nothing the library doesn't have anyway.
+// libstb's (stb::zlib_decompress), which reports bad input by exception: that becomes an empty FontFace.
 static FontFace fontFaceFromZlibBase64(std::string_view payload)
 {
     size_t compressedLength = 0;
     auto* compressed = base64_decode(payload.data(), int(payload.size()), &compressedLength);
     if(compressed == nullptr)
         return FontFace();
-    int length = 0;
-    char* inflated = stbi_zlib_decode_malloc(reinterpret_cast<const char*>(compressed), int(compressedLength), &length);
-    free(compressed);
-    if(inflated == nullptr || length <= 0) {
-        free(inflated);
-        return FontFace();
+    std::vector<uint8_t> inflated;
+    try {
+        inflated = stb::zlib_decompress(compressed, compressedLength);
+    } catch(const std::exception&) {
+        inflated.clear();
     }
-    return FontFace(inflated, size_t(length), [](void* closure) { free(closure); }, inflated);
+    free(compressed);
+    if(inflated.empty())
+        return FontFace();
+    auto* owned = new std::vector<uint8_t>(std::move(inflated));
+    return FontFace(owned->data(), owned->size(), [](void* closure) { delete static_cast<std::vector<uint8_t>*>(closure); }, owned);
 }
 
 NOVASVG_INLINE FontFace embeddedFallbackFont(bool bold, bool italic)

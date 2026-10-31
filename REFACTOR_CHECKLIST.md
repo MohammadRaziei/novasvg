@@ -68,10 +68,15 @@ python3 tools/golden.py render /tmp/b0/novasvg refactor/golden-baseline
 
 ## تصمیم‌های باز (قبل از مرحله‌ای که لازمشان دارد از تو می‌پرسم)
 
-- [ ] libstb چطور وارد شود: `add_subdirectory` کنار هم، `FetchContent`، یا `find_package`؟ (مرحله ۱)
-- [ ] libstb به‌صورت static یا shared لینک شود؟ libstb اخیراً shared شده و روی Windows (DLL) و
-      musllinux (segfault) مشکل داشته؛ این‌ها به novasvg هم منتقل می‌شود. (مرحله ۱)
-- [ ] خروجی `render()` در API عمومی `Bitmap` بماند یا `stb::image` برگرداند؟ (مرحله ۲)
+- [x] libstb چطور وارد شود: **`FetchContent` از گیت** (فعلاً؛ تو بعداً می‌گویی اگر عوض شود). پین‌شده روی commit `765f48c`.
+- [x] libstb **حتماً dynamic (shared)** لینک می‌شود؛ در CMake اجباری است (اگر shared نباشد configure خطا می‌دهد).
+      هنوز باز: libstb اخیراً shared شده و روی Windows (DLL) و musllinux (segfault) مشکل داشته؛ این‌ها به
+      novasvg هم منتقل می‌شود و در مرحله ۷ (wheels) باید جدی بررسی شود.
+- [x] خروجی `render()` در API عمومی: **`stb::image`** (و `Bitmap` از API عمومی بیرون می‌رود، مرحله ۲ب).
+      سطح رسم داخلی **premultiplied می‌ماند و خصوصی است**. بنچمارک (۴۰۹۶×۴۰۹۶، ۱۶٫۷ مگاپیکسل):
+      composite روی premultiplied ۱٫۶ تا ۲٫۶ ns/پیکسل، روی straight alpha ۴٫۸ تا ۶٫۰ ns/پیکسل (۲ تا ۴ برابر کندتر،
+      چه پس‌زمینه شفاف چه opaque). تبدیل نهایی premultiplied → RGBA در محل: ۱٫۳ تا ۵٫۳ ns/پیکسل، یعنی ۱٫۵ تا ۶ درصد
+      کل رندر (۲۴ تا ۸۹ ms در برابر ۱٫۴ تا ۱٫۶ s)؛ و بدون کپی با `stb::image::wrap` تحویل داده می‌شود.
 - [ ] پشتیبانی از ABI: آیا کتابخانه‌ی novasvg خودش هم shared عرضه شود یا فقط static؟ (مرحله ۴)
 
 ## قاعده‌ی نامگذاری (برگرفته از libstb)
@@ -103,22 +108,58 @@ python3 tools/golden.py render /tmp/b0/novasvg refactor/golden-baseline
 - [x] این چک‌لیست
 - [ ] اجرای تست‌های پایتون (نیاز به nanobind؛ در مرحله‌ی ۷ برمی‌گردیم)
 
-### مرحله ۱ — لوله‌کشی CMake برای libstb
+### مرحله ۱ — لوله‌کشی CMake برای libstb ✅
 بدون تغییر در کد یا نام‌ها.
-- [ ] تصمیم نحوه‌ی ورود libstb (بالا)
-- [ ] تارگت `novasvg` به `libstb::core` لینک شود
-- [ ] یک تست کوچک که `stb::` را از داخل novasvg include و لینک می‌کند (smoke test)
-- [ ] تست‌ها + golden بدون تغییر
+- [x] ورود libstb با `FetchContent` (repo و commit قابل override: `NOVASVG_LIBSTB_GIT_REPOSITORY` / `NOVASVG_LIBSTB_GIT_TAG`؛
+      برای کار با نسخه‌ی لوکال: `-DFETCHCONTENT_SOURCE_DIR_LIBSTB=/path/to/libstb`؛ آفلاین: `-DFETCHCONTENT_FULLY_DISCONNECTED=ON`)
+- [x] `novasvg_noflag` به `libstb::core` لینک شد (`novasvg::novasvg` از آن ارث می‌برد)
+- [x] shared بودن اجباری است (`STB_BUILD_SHARED=ON` با FORCE + بررسی نوع تارگت)
+- [x] تست دودی `test_novasvg_libstb`: فقط به `novasvg::noflag` لینک می‌شود، round-trip رنگ/zlib/PNG می‌زند،
+      و (روی Linux/macOS با `dladdr`) ثابت می‌کند libstb یک shared object جداست
+- [x] install و `find_package(novasvg)` آزموده شد با یک پروژه‌ی مصرف‌کننده‌ی جدا
+- [x] تست‌ها + golden بدون تغییر
+
+نتیجه: `test_novasvg_cpp` 64/377، `test_novasvg_embedded_font` 5/71، `test_novasvg_libstb` OK،
+golden 62 تصویر با تفاوت صفر. هیچ شیء سنگین تست دوباره کامپایل نشد (دستور کامپایل‌شان عوض نشده).
+
+آنچه در این مرحله پیدا و درست شد:
+- **تداخل ماژول‌های CMake**: هر دو پروژه `Startup`/`Optimize`/`DynamicVersion` دارند و libstb مسیر خودش را
+  *بعد از* مسیر novasvg به `CMAKE_MODULE_PATH` اضافه می‌کند؛ پس بی‌صدا ماژول novasvg را برمی‌داشت و فلگ‌هایش
+  عوض می‌شد (`-fstrict-aliasing` افتاده بود). مسیر ماژول‌های ما هنگام کانفیگ libstb موقتاً خالی می‌شود.
+  پیشنهاد برای ریپوی libstb: `list(PREPEND CMAKE_MODULE_PATH ...)` به‌جای `APPEND`، تا این مشکل از ریشه برود.
+- **install**: config باید `find_dependency(libstb)` داشته باشد (اضافه شد). نصب novasvg، libstb را هم در همان
+  prefix نصب می‌کند.
+- **RPATH نصب‌شده**: CLI نصب‌شده `$ORIGIN/../lib` را گرفت (روی macOS `@loader_path/../lib`)، وگرنه بعد از
+  نصب libstb را پیدا نمی‌کرد. روی Windows `stb.dll` کنار `novasvg.exe` نصب می‌شود.
+- حداقل نسخه‌ی CMake از 3.19 به **3.21** رفت (libstb لازم دارد).
+- `ldd novasvg` هنوز libstb را نشان نمی‌دهد: CLI فعلاً نمادی از آن صدا نمی‌زند و لینکر (`--as-needed`) حذفش
+  می‌کند. از مرحله‌ی ۲ که کد از `stb::` استفاده کند ظاهر می‌شود.
+- تست‌های موجود (`test_novasvg_cpp`، `test_novasvg_embedded_font`) هنوز به `novasvg::noflag` لینک نمی‌شوند؛
+  در مرحله‌ی ۲ که به libstb نیاز پیدا می‌کنند، این اتصال اضافه می‌شود.
 
 ### مرحله ۲ — تصویر و zlib: حذف stb_image و stb_image_write
-novasvg از stb_image فقط `stbi_load`, `stbi_load_from_memory`, `stbi_image_free`,
-`stbi_zlib_decode_malloc` را صدا می‌زند؛ بقیه‌ی حدود 8 هزار خطِ `render/surface.h` کد vendor شده است.
-- [ ] `stbi_load*` ← `stb::image::open` / `stb::image::decode`
-- [ ] `stbi_zlib_decode_malloc` (فونت WOFF) ← `stb::zlib_decompress`
-- [ ] `BitmapCodec` و `writeTo{Png,Bmp,Tga,Jpg}` ← `stb::image::to_*` / `write_*`
-- [ ] مرز تبدیل `Bitmap` (premultiplied ARGB32) ↔ `stb::image` (RGBA ساده)، با تست
-- [ ] حذف stb_image و stb_image_write از هدرها
-- [ ] تست‌ها + golden؛ مراقب: خطاها (exception به‌جای کد برگشتی)، premultiply، 16-bit/HDR، EXIF
+
+#### ۲الف — حذف کد vendor شده ✅
+- [x] `stbi_load` / `stbi_load_from_memory` ← `stb::image::open` / `decode` با `format = rgba` (EXIF اعمال نمی‌شود،
+      مثل قبل)؛ خطا همچنان `nullptr` برمی‌گرداند
+- [x] `stbi_zlib_decode_malloc` (فونت جاسازی‌شده) ← `stb::zlib_decompress`
+- [x] `BitmapCodec` (حدود ۱٬۴۰۰ خط، پورت stb_image_write) حذف شد؛ `writeTo{Png,Bmp,Tga,Jpg}` روی `stb::image`
+- [x] stb_image (حدود ۷٬۷۰۰ خط) از `render/surface.h` حذف شد (جمعاً حدود ۹٬۱۵۰ خط)
+- [x] تست‌ها به `libstb::core` لینک شدند
+- [x] تست‌ها: 64/377، 5/71، libstb link OK؛ golden 62 تصویر با تفاوت صفر؛ نماد `stbi_*` در باینری‌ها صفر
+- نتیجه: CLI از 1٫4 به 1٫3 مگابایت، تست اصلی از 2٫4 به 1٫8 مگابایت؛ `ldd novasvg` حالا libstb را نشان می‌دهد
+- باگ پنهان که ضمن کار درست شد: نوشتن یک `Bitmap` با stride بزرگ‌تر از `width*4` (Bitmap روی حافظه‌ی دست کاربر)
+  در `BitmapRgbaScratch` پشت بافر می‌نوشت (heap overflow)؛ حالا سطر به سطر تبدیل می‌شود
+- تفاوت‌های ریز و شناخته‌شده: بایت‌های PNG/JPEG/BMP/TGA خروجی عوض می‌شود (انکودر libstb، پیکسل‌ها یکسان)؛ فرمت Softimage PIC
+  که stb_image می‌خواند دیگر پشتیبانی نمی‌شود؛ حد decode برابر 512 MiB است؛ کیفیت JPEG همچنان به 1..100 clamp می‌شود
+- [ ] README/docs/لایسنس‌ها هنوز از stb_image نام می‌برند (در مرحله ۷ مرتب می‌شود)
+
+#### ۲ب — `Bitmap` از API عمومی بیرون برود
+- [ ] `render()` → `stb::image` (تبدیل در محل + `image::wrap` با keep_alive روی surface، بدون کپی)
+- [ ] رندر روی تصویر موجود: لایه‌ی شفاف رندر شود و با `stb::image::blend` ترکیب شود (به‌جای رسم مستقیم روی straight alpha)
+- [ ] `Bitmap` به نوع داخلی (`detail`) تبدیل شود؛ `writeTo*` حذف (از `stb::image` استفاده می‌شود)
+- [ ] CLI، تست‌ها، مثال‌ها و بایندینگ پایتون (numpy interop) به‌روز شوند
+- [ ] تست‌ها + golden؛ مراقب: premultiply/unpremultiply، رندر روی تصویر موجود، stride
 
 ### مرحله ۳ — فونت: حذف stb_truetype
 novasvg فقط ۱۲ تابع stbtt استفاده می‌کند. API فعلی `stb::font` متن را به bitmap رندر می‌کند، ولی

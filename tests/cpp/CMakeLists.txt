@@ -17,6 +17,9 @@ if(NOVASVG_DIST_DIR)
 endif()
 
 target_include_directories(test_novasvg_cpp PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}")
+# These two take their headers from NOVASVG_TEST_INCLUDE_DIR (which can be the dist header), so they link
+# libstb directly instead of going through the novasvg target.
+target_link_libraries(test_novasvg_cpp PRIVATE libstb::core)
 
 add_test(NAME test_novasvg_cpp COMMAND $<TARGET_FILE:test_novasvg_cpp>)
 
@@ -24,18 +27,26 @@ add_test(NAME test_novasvg_cpp COMMAND $<TARGET_FILE:test_novasvg_cpp>)
 # font loading compiled out and runs as its own executable (the main one deliberately sees system fonts).
 add_executable(test_novasvg_embedded_font embedded_font/check_embedded_font.cpp)
 target_include_directories(test_novasvg_embedded_font PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}")
+target_link_libraries(test_novasvg_embedded_font PRIVATE libstb::core)
 target_compile_definitions(test_novasvg_embedded_font PRIVATE
     NOVASVG_DISABLE_LOAD_SYSTEM_FONTS
     NOVASVG_TEST_FONT_PATH="${PROJECT_SOURCE_DIR}/data/fonts/DejaVuSans.ttf")
 add_test(NAME test_novasvg_embedded_font COMMAND $<TARGET_FILE:test_novasvg_embedded_font>)
 
+# novasvg links libstb dynamically. This one is built against novasvg::noflag only, so it proves the
+# include path and link line travel with the target and that libstb is a separate shared object.
+add_executable(test_novasvg_libstb libstb_link/check_libstb_link.cpp)
+target_link_libraries(test_novasvg_libstb PRIVATE novasvg::noflag ${CMAKE_DL_LIBS})
+add_test(NAME test_novasvg_libstb COMMAND $<TARGET_FILE:test_novasvg_libstb>)
+
 add_custom_target(novasvg_test_cpp
     COMMAND ${CMAKE_COMMAND} -E echo "-- Running c++ tests..."
     COMMAND $<TARGET_FILE:test_novasvg_cpp>
     COMMAND $<TARGET_FILE:test_novasvg_embedded_font>
+    COMMAND $<TARGET_FILE:test_novasvg_libstb>
     WORKING_DIRECTORY ${NOVASVG_TEST_BINARY_DIR}
 )
-add_dependencies(novasvg_test_cpp test_novasvg_cpp test_novasvg_embedded_font)
+add_dependencies(novasvg_test_cpp test_novasvg_cpp test_novasvg_embedded_font test_novasvg_libstb)
 add_dependencies(novasvg_test novasvg_test_cpp)
 
 

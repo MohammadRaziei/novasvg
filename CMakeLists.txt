@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.21)  # libstb needs 3.21
 
 # novasvg_cli.cpp uses std::filesystem, which libc++ marks unavailable below
 # macOS 10.15. cibuildwheel/scikit-build-core can otherwise pass an older
@@ -44,6 +44,39 @@ option(NOVASVG_BUILD_DOCS "Build documentation" OFF)
 
 set(NOVASVG_SOURCE_DIR ${PROJECT_SOURCE_DIR})
 
+# ---- libstb: image/zlib/font engine, linked DYNAMICALLY ---------------------------------------
+# Fetched from git with FetchContent. Point FETCHCONTENT_SOURCE_DIR_LIBSTB at a local checkout to
+# work on both projects side by side, or pass -DFETCHCONTENT_FULLY_DISCONNECTED=ON to stay offline.
+include(FetchContent)
+set(NOVASVG_LIBSTB_GIT_REPOSITORY "https://github.com/mohammadraziei/libstb.git" CACHE STRING
+    "libstb repository to fetch")
+set(NOVASVG_LIBSTB_GIT_TAG "765f48ce476194a98f2a69af95f9711aef06d8a6" CACHE STRING
+    "libstb commit, tag or branch to fetch (a commit hash keeps the build reproducible)")
+
+# libstb is always built as a shared library here, and none of its extras are wanted.
+set(STB_BUILD_SHARED   ON  CACHE BOOL "novasvg links libstb dynamically" FORCE)
+set(STB_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+set(STB_BUILD_PYTHON   OFF CACHE BOOL "" FORCE)
+set(STB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(STB_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(libstb
+    GIT_REPOSITORY "${NOVASVG_LIBSTB_GIT_REPOSITORY}"
+    GIT_TAG        "${NOVASVG_LIBSTB_GIT_TAG}")
+# libstb appends its own cmake/ directory to CMAKE_MODULE_PATH AFTER ours, and both projects have
+# modules of the same name (Startup, Optimize, DynamicVersion). Left alone, libstb would silently
+# include novasvg's Optimize.cmake and be compiled with novasvg's flags (checked: it lost
+# -fstrict-aliasing). So our modules are hidden while libstb configures.
+set(_novasvg_module_path "${CMAKE_MODULE_PATH}")
+set(CMAKE_MODULE_PATH "")
+FetchContent_MakeAvailable(libstb)
+set(CMAKE_MODULE_PATH "${_novasvg_module_path}")
+
+get_target_property(_novasvg_libstb_type libstb::core TYPE)
+if(NOT _novasvg_libstb_type STREQUAL "SHARED_LIBRARY")
+    message(FATAL_ERROR "novasvg requires libstb as a shared library, got: ${_novasvg_libstb_type}")
+endif()
+
 # Header-only library: two INTERFACE targets.
 #   novasvg::noflag   headers + compile definitions only
 #   novasvg::novasvg  noflag + optimisation flags (-O3 / /O2 ...): what nearly everybody wants.
@@ -51,6 +84,9 @@ set(NOVASVG_SOURCE_DIR ${PROJECT_SOURCE_DIR})
 add_library(novasvg_noflag INTERFACE)
 add_library(novasvg::noflag ALIAS novasvg_noflag)
 set_target_properties(novasvg_noflag PROPERTIES EXPORT_NAME noflag)
+
+# Everything that links novasvg links libstb too (dynamic), and gets its include path.
+target_link_libraries(novasvg_noflag INTERFACE libstb::core)
 
 if(NOT NOVASVG_EMBED_DEFAULT_FONT)
     target_compile_definitions(novasvg_noflag INTERFACE NOVASVG_DISABLE_EMBEDDED_FONT)
@@ -69,6 +105,13 @@ novasvg_optimize(novasvg)   # flags travel to every consumer of novasvg::novasvg
 add_executable(novasvg_cli src/novasvg_cli.cpp)
 target_link_libraries(novasvg_cli PRIVATE novasvg::novasvg)
 set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg)
+# The installed CLI finds the libstb it was installed with (bin/ and lib/ are siblings); the build tree
+# already has the right RUNPATH. On Windows stb.dll is installed next to novasvg.exe.
+if(APPLE)
+    set_target_properties(novasvg_cli PROPERTIES INSTALL_RPATH "@loader_path/../lib")
+elseif(UNIX)
+    set_target_properties(novasvg_cli PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
+endif()
 novasvg_optimize(novasvg_cli)
 
 

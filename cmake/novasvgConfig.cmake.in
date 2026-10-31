@@ -9,6 +9,10 @@
 
 @PACKAGE_INIT@
 
+# novasvg links libstb (a shared library); installing novasvg installs libstb beside it.
+include(CMakeFindDependencyMacro)
+find_dependency(libstb)
+
 include("${CMAKE_CURRENT_LIST_DIR}/novasvgTargets.cmake")
 
 check_required_components(novasvg)
