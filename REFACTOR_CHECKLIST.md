@@ -286,3 +286,11 @@ Today each concept is defined in several layers (public, `detail/canvas.h`, `det
 - [ ] `CHANGELOG`, README, docs, version (breaking)
 - [ ] `find_package(novasvg)` and `novasvgConfig.cmake`
 - [ ] Update README and licence notices that still name stb_image
+
+### Verification gate, new session (2026-11-02)
+No code changed. Fresh unzip, full rebuild, gate run:
+- C++: 79 cases / 552 assertions pass; font test 71 assertions pass; libstb link check OK.
+- Golden: 67 images, 0 differ (tol=0, worst delta=0).
+- libstb fetched hash: `e655ce9`.
+- Python module rebuilt on top of `novasvg_core` (SKBUILD path): 433 tests passed (closes the "not rebuilt after step 4" item).
+- Still open: install/export consumer test with the compiled core, hot-path benchmark (7.1.1), dist single header.

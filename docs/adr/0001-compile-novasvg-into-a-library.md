@@ -1,6 +1,6 @@
 # ADR-0001: Compile novasvg into a library instead of shipping it header-only
 
-**Status:** Accepted (implementation is step 4 of the refactor and has not started)
+**Status:** Accepted. Step 4 is in progress: the `render/` layer is compiled into `novasvg_core` (see `REFACTOR_CHECKLIST.md`)
 **Date:** 2026-11-01
 **Deciders:** Mohammad Raziei (maintainer)
 

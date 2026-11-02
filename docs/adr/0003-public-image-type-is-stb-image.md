@@ -1,6 +1,6 @@
 # ADR-0003: The public pixel type is `stb::image`; the premultiplied render surface is internal
 
-**Status:** Accepted (implementation is step 2b and has not started)
+**Status:** Accepted. Implemented in step 2b on the C++ side (`renderToImage`, `render(stb::image&)`); the Python `Bitmap` class still sits over the internal type (open, see the checklist)
 **Date:** 2026-11-01
 **Deciders:** Mohammad Raziei (maintainer). The maintainer asked for no duplicated pixel structures and for the
 choice to be made on performance, not effort; the analysis below was done on that basis.
