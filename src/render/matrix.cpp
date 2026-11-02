@@ -3,6 +3,8 @@
 namespace novasvg {
 namespace render {
 
+static int parse_matrix_parameters(const char** begin, const char* end, float values[6], int required, int optional);
+
 void matrix_init(matrix_t* matrix, float a, float b, float c, float d, float e, float f)
 {
     matrix->a = a; matrix->b = b;
@@ -144,7 +146,7 @@ void matrix_map_rect(const matrix_t* matrix, const rect_t* src, rect_t* dst)
     dst->h = b - t;
 }
 
-int parse_matrix_parameters(const char** begin, const char* end, float values[6], int required, int optional)
+static int parse_matrix_parameters(const char** begin, const char* end, float values[6], int required, int optional)
 {
     if(!skip_ws_and_delim(begin, end, '('))
         return 0;

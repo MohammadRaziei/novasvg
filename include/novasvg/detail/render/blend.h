@@ -331,8 +331,5 @@ void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const sp
 
 void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_buffer_t* span_buffer);
 
-void blend(canvas_t* canvas, const span_buffer_t* span_buffer);
-
-
 } // namespace render
 } // namespace novasvg

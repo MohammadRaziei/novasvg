@@ -5,6 +5,8 @@
 
 #include <stb/zlib.hpp>
 
+#include "render/surface.h"  // base64_decode (data: URIs)
+
 #ifndef NOVASVG_DISABLE_EMBEDDED_FONT
 #include "default_font.h"
 #endif

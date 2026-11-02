@@ -246,7 +246,7 @@ outlines** (`stbtt_GetGlyphShape`), so libstb must grow an API first.
       set by CMake on `novasvg_core`); `NOVASVG_MAX/MIN` stay as they are (maintainer's decision)
 - [ ] Benchmark the hot rasterize/blend path (now cross-TU, inlined only by LTO)
 - [ ] vendor `ft_raster` / `ft_stroker` / `ft_math` (different pattern, by hand)
-- [ ] Remove duplicate declarations (`render.h` vs per-module headers) and trim heavy includes
+- [x] Removed duplicate declarations (`render.h` vs per-module headers): 192 duplicates dropped from matrix/path/paint/canvas/surface/blend/rasterize `.h`; 13 internal-only functions (`parse_matrix_parameters`, `path_add_command`, `split_bezier`, the path traverse/parse helpers, `state_*`, `span_buffer_update_extents`) moved into their `.cpp` as `static`; `detail/canvas.h`, `bitmap.h`, `font.h` now include only `render/render.h`; `svgparser.hpp` includes `render/surface.h` explicitly for `base64_decode`
 - [ ] `render/font.h` waits for step 3; then `color`, `canvas`/`bitmap`, split `svgelement.h`, CSS/HTML engine, close `detail/`
 
 ### Step 5: remove duplicates
@@ -299,3 +299,8 @@ No code changed. Fresh unzip, full rebuild, gate run:
 `include/novasvg/detail/render/vendor/` -> `src/render/vendor/` (git mv). `rasterize.h` no longer includes FreeType headers or declares any `ft_*`; consumers of `canvas.h` stop parsing ~4,800 vendored lines.
 Gate: C++ 79 / 552, font 71, link check OK, golden 67 images 0 differ, Python 433 passed, libstb `e655ce9`.
 Finding: libstb `draw.hpp` (rect/ellipse/line, int coordinates) has no path, bezier, fill rule, join/cap/dash stroker or span output, so the FreeType rasterizer/stroker has no libstb replacement yet. Design question (public vector-drawing layer, `detail/` removal, issue for libstb) is open, see the chat.
+
+### Step 4, module 3: render/ headers cleaned (2026-11-03)
+`render.h` is now the single declaration point for the public render API. Per-module headers keep only inline helpers, macros and the few cross-TU internals (`base64_decode`). The 3 consumers outside `render/` no longer pull blend/SSE internals.
+Gate: C++ 79 / 552, font 71, link check OK, golden 67 images 0 differ, Python 433 passed, libstb `e655ce9` (not updated to `955870f` yet).
+Open: per-module headers still carry `static inline` helpers (paint.h hex/hsl parsing, blend.h SSE) that belong in the `.cpp` if no other TU uses them; `private.h` duplicates the `span_buffer_*` family.

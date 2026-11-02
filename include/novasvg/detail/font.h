@@ -6,7 +6,7 @@
 // would come out in a given font) without pulling in the rest of novasvg.
 
 #include "svgparserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no SVG-tree dependency, consistent with this header's own self-contained goal
-#include "render/path.h"    // path_move_to/line_to/cubic_to, used to extract glyph outlines
+#include "render/render.h"  // path_move_to/line_to/cubic_to, used to extract glyph outlines
 #include "render/font.h"
 
 #include <string>

@@ -4,6 +4,11 @@
 namespace novasvg {
 namespace render {
 
+static state_t* state_create(void);
+static void state_reset(state_t* state);
+static void state_copy(state_t* state, const state_t* source);
+static void state_destroy(state_t* state);
+
 int render_version(void)
 {
     return NOVASVG_RENDER_VERSION;
@@ -14,7 +19,7 @@ const char* render_version_string(void)
     return NOVASVG_RENDER_VERSION_STRING;
 }
 
-state_t* state_create(void)
+static state_t* state_create(void)
 {
     state_t* state = static_cast<state_t*>(malloc(sizeof(state_t)));
     state->paint = NULL;
@@ -34,7 +39,7 @@ state_t* state_create(void)
     return state;
 }
 
-void state_reset(state_t* state)
+static void state_reset(state_t* state)
 {
     paint_destroy(state->paint);
     font_face_destroy(state->font_face);
@@ -53,7 +58,7 @@ void state_reset(state_t* state)
     state->clipping = false;
 }
 
-void state_copy(state_t* state, const state_t* source)
+static void state_copy(state_t* state, const state_t* source)
 {
     state->paint = paint_reference(source->paint);
     state->font_face = font_face_reference(source->font_face);
@@ -71,7 +76,7 @@ void state_copy(state_t* state, const state_t* source)
     state->clipping = source->clipping;
 }
 
-void state_destroy(state_t* state)
+static void state_destroy(state_t* state)
 {
     paint_destroy(state->paint);
     font_face_destroy(state->font_face);

@@ -7,6 +7,8 @@
 namespace novasvg {
 namespace render {
 
+static void span_buffer_update_extents(span_buffer_t* span_buffer);
+
 void span_buffer_init(span_buffer_t* span_buffer)
 {
     novasvg_array_init(span_buffer->spans);
@@ -73,7 +75,7 @@ bool span_buffer_contains(const span_buffer_t* span_buffer, float x, float y)
     return false;
 }
 
-void span_buffer_update_extents(span_buffer_t* span_buffer)
+static void span_buffer_update_extents(span_buffer_t* span_buffer)
 {
     if(span_buffer->w != -1 && span_buffer->h != -1)
         return;

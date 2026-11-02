@@ -39,10 +39,6 @@ static surface_t* surface_create_uninitialized(int width, int height)
     return surface;
 }
 
-surface_t* surface_create(int width, int height);
-
-surface_t* surface_create_for_data(unsigned char* data, int width, int height, int stride);
-
 // libstb decodes to straight-alpha RGBA; the surface wants premultiplied ARGB32, so this is the one
 // conversion pass between the two. Any decode problem (unknown format, corrupt data, too large) is
 // reported by libstb as an exception and by this layer, as before, as a null surface.
@@ -61,10 +57,6 @@ static stb::load_options surface_load_options()
     options.format = stb::pixel_format::rgba;
     return options;
 }
-
-surface_t* surface_load_from_image_file(const char* filename);
-
-surface_t* surface_load_from_image_data(const void* data, int length);
 
 static const uint8_t base64_table[128] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -90,33 +82,6 @@ static const uint8_t base64_table[128] = {
 // data URIs (svgparser.hpp) can share one implementation. Returns NULL
 // on any malformed input (bad character, wrong padding, ...).
 uint8_t* base64_decode(const char* data, int length, size_t* out_length);
-
-surface_t* surface_load_from_image_base64(const char* data, int length);
-
-surface_t* surface_reference(surface_t* surface);
-
-void surface_destroy(surface_t* surface);
-
-int surface_get_reference_count(const surface_t* surface);
-
-unsigned char* surface_get_data(const surface_t* surface);
-
-int surface_get_width(const surface_t* surface);
-
-int surface_get_height(const surface_t* surface);
-
-int surface_get_stride(const surface_t* surface);
-
-void surface_clear(surface_t* surface, const color_t* color);
-
-// Both conversions are libstb's (SIMD, bit-exact with the scalar loops that used to live here):
-//   premultiplied -> straight:  c' = c * 255 / a   (a == 0 gives zeros)
-//   straight -> premultiplied:  c' = c * a / 255    (a == 0 gives zeros)
-// `dst` and `src` are either the same buffer (in place) or do not overlap; one stride serves both.
-void convert_argb_to_rgba(unsigned char* dst, const unsigned char* src, int width, int height, int stride);
-
-void convert_rgba_to_argb(unsigned char* dst, const unsigned char* src, int width, int height, int stride);
-
 
 } // namespace render
 } // namespace novasvg

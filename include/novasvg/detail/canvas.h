@@ -20,13 +20,7 @@
 #include "color.h"
 #include "font.h"
 #include "bitmap.h"
-#include "render/blend.h"
-#include "render/matrix.h"
-#include "render/paint.h"
-#include "render/path.h"
-#include "render/rasterize.h"
-#include "render/surface.h"
-#include "render/canvas.h"
+#include "render/render.h"
 
 namespace novasvg {
 using namespace render; // render/ layer (novasvg::render), the former plutovg

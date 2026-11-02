@@ -8,9 +8,7 @@
 // rest of novasvg.
 
 #include "color.h"
-#include "render/blend.h"   // memfill32, used by surface_clear()
-#include "render/paint.h"   // color_to_argb32 / color_init_rgba32, used by surface_clear()
-#include "render/surface.h"
+#include "render/render.h"  // memfill32, color_to_argb32, color_init_rgba32 (surface_clear()), surface_t
 
 #include <cstdint>
 #include <cstdio>

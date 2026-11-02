@@ -3,6 +3,14 @@
 namespace novasvg {
 namespace render {
 
+static path_element_t* path_add_command(path_t* path, path_command_t command, int npoints);
+static void split_bezier(const bezier_t* b, bezier_t* first, bezier_t* second);
+static void dash_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints);
+static void clone_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints);
+static void extents_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints);
+static bool parse_arc_flag(const char** begin, const char* end, bool* flag);
+static bool parse_path_coordinates(const char** begin, const char* end, float values[6], int offset, int count);
+
 void path_iterator_init(path_iterator_t* it, const path_t* path)
 {
     it->elements = path->elements.data;
@@ -73,7 +81,7 @@ int path_get_elements(const path_t* path, const path_element_t** elements)
     return path->elements.size;
 }
 
-path_element_t* path_add_command(path_t* path, path_command_t command, int npoints)
+static path_element_t* path_add_command(path_t* path, path_command_t command, int npoints)
 {
     const int length = npoints + 1;
     novasvg_array_ensure(path->elements, length);
@@ -433,7 +441,7 @@ void path_traverse(const path_t* path, path_traverse_func_t traverse_func, void*
     }
 }
 
-void split_bezier(const bezier_t* b, bezier_t* first, bezier_t* second)
+static void split_bezier(const bezier_t* b, bezier_t* first, bezier_t* second)
 {
     float c = (b->x2 + b->x3) * 0.5f;
     first->x2 = (b->x1 + b->x2) * 0.5f;
@@ -516,7 +524,7 @@ void path_traverse_flatten(const path_t* path, path_traverse_func_t traverse_fun
     }
 }
 
-void dash_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
+static void dash_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
 {
     dasher_t* dasher = (dasher_t*)(closure);
     if(command == NOVASVG_PATH_COMMAND_MOVE_TO) {
@@ -605,7 +613,7 @@ path_t* path_clone(const path_t* path)
     return clone;
 }
 
-void clone_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
+static void clone_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
 {
     path_t* path = (path_t*)(closure);
     switch(command) {
@@ -640,7 +648,7 @@ path_t* path_clone_dashed(const path_t* path, float offset, const float* dashes,
     return clone;
 }
 
-void extents_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
+static void extents_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
 {
     extents_calculator_t* calculator = (extents_calculator_t*)(closure);
     if(calculator->is_first_point) {
@@ -690,7 +698,7 @@ float path_length(const path_t* path)
     return path_extents(path, NULL, true);
 }
 
-bool parse_arc_flag(const char** begin, const char* end, bool* flag)
+static bool parse_arc_flag(const char** begin, const char* end, bool* flag)
 {
     if(skip_delim(begin, end, '0'))
         *flag = 0;
@@ -702,7 +710,7 @@ bool parse_arc_flag(const char** begin, const char* end, bool* flag)
     return true;
 }
 
-bool parse_path_coordinates(const char** begin, const char* end, float values[6], int offset, int count)
+static bool parse_path_coordinates(const char** begin, const char* end, float values[6], int offset, int count)
 {
     for(int i = 0; i < count; i++) {
         if(!parse_number(begin, end, values + offset + i))
