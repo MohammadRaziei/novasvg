@@ -4,6 +4,11 @@ file(GLOB NOVASVG_TEST_SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/test_*.cpp
 )
 
+# TEMPORARY refactor hook: verification tests that only make sense while the refactor runs live in the
+# gitignored /refactor/temp-tests and are compiled in when present. Remove this block when the refactor ends.
+file(GLOB NOVASVG_REFACTOR_TEST_SOURCES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/refactor/temp-tests/test_*.cpp)
+list(APPEND NOVASVG_TEST_SOURCES ${NOVASVG_REFACTOR_TEST_SOURCES})
+
 add_executable(test_novasvg_cpp ${NOVASVG_TEST_SOURCES})
 
 # Default: test against normal headers (source tree)
@@ -19,7 +24,7 @@ endif()
 target_include_directories(test_novasvg_cpp PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}")
 # These two take their headers from NOVASVG_TEST_INCLUDE_DIR (which can be the dist header), so they link
 # libstb directly instead of going through the novasvg target.
-target_link_libraries(test_novasvg_cpp PRIVATE libstb::core)
+target_link_libraries(test_novasvg_cpp PRIVATE novasvg::noflag)
 
 add_test(NAME test_novasvg_cpp COMMAND $<TARGET_FILE:test_novasvg_cpp>)
 
@@ -27,7 +32,7 @@ add_test(NAME test_novasvg_cpp COMMAND $<TARGET_FILE:test_novasvg_cpp>)
 # font loading compiled out and runs as its own executable (the main one deliberately sees system fonts).
 add_executable(test_novasvg_embedded_font embedded_font/check_embedded_font.cpp)
 target_include_directories(test_novasvg_embedded_font PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}")
-target_link_libraries(test_novasvg_embedded_font PRIVATE libstb::core)
+target_link_libraries(test_novasvg_embedded_font PRIVATE novasvg::noflag)
 target_compile_definitions(test_novasvg_embedded_font PRIVATE
     NOVASVG_DISABLE_LOAD_SYSTEM_FONTS
     NOVASVG_TEST_FONT_PATH="${PROJECT_SOURCE_DIR}/data/fonts/DejaVuSans.ttf")

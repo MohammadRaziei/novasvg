@@ -29,10 +29,11 @@ TEST_CASE("Load SVG data from file and render") {
     CHECK(document->width() == doctest::Approx(64.0f));
     CHECK(document->height() == doctest::Approx(64.0f));
 
-    novasvg::Bitmap bitmap = document->renderToBitmap(64, 64);
-    CHECK_FALSE(bitmap.isNull());
-    CHECK(bitmap.width() == 64);
-    CHECK(bitmap.height() == 64);
+    stb::image image = document->renderToImage(64, 64);
+    CHECK_FALSE(image.empty());
+    CHECK(image.width() == 64);
+    CHECK(image.height() == 64);
+    CHECK(image.format() == stb::pixel_format::rgba);
 }
 
 TEST_CASE("Missing SVG file returns null document") {

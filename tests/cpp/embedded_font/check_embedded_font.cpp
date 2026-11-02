@@ -16,11 +16,11 @@ size_t inked_pixels(const std::string& svg)
 {
     auto document = novasvg::Document::loadFromData(svg);
     REQUIRE(document != nullptr);
-    auto bitmap = document->renderToBitmap();
+    auto image = document->renderToImage();
     size_t inked = 0;
-    for(int y = 0; y < bitmap.height(); ++y) {
-        const auto* row = bitmap.data() + size_t(y) * bitmap.stride();
-        for(int x = 0; x < bitmap.width(); ++x)
+    for(int y = 0; y < image.height(); ++y) {
+        const auto* row = image.data() + size_t(y) * image.stride();
+        for(int x = 0; x < image.width(); ++x)
             inked += row[x * 4 + 3] != 0;
     }
     return inked;

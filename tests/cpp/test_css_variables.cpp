@@ -16,9 +16,8 @@ Pixel centre(const std::string& svg)
 {
     auto document = novasvg::Document::loadFromData(svg);
     REQUIRE(document != nullptr);
-    auto bitmap = document->renderToBitmap(40, 40);
-    bitmap.convertToRGBA();
-    const uint8_t* p = bitmap.data() + 20 * bitmap.stride() + 20 * 4;
+    auto image = document->renderToImage(40, 40);
+    const uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
     return {p[0], p[1], p[2], p[3]};
 }
 
@@ -120,8 +119,7 @@ TEST_CASE("var(): a stylesheet applied after loading changes what var() gives")
     auto document = novasvg::Document::loadFromData(svg("--c:red", rect + "fill=\"var(--c)\"/>"));
     REQUIRE(document != nullptr);
     document->applyStyleSheet(":root{--c:blue !important}");
-    auto bitmap = document->renderToBitmap(40, 40);
-    bitmap.convertToRGBA();
-    const uint8_t* p = bitmap.data() + 20 * bitmap.stride() + 20 * 4;
+    auto image = document->renderToImage(40, 40);
+    const uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
     CHECK(Pixel{p[0], p[1], p[2], p[3]} == blue);
 }

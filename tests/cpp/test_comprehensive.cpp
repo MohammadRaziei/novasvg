@@ -153,9 +153,8 @@ TEST_CASE("Bitmap operations") {
     CHECK(bitmap3.width() == 100);
     CHECK(bitmap2.isNull()); // Should be null after move
     
-    // Test write to PNG (will fail if file can't be written, but that's OK)
-    bool writeResult = bitmap3.write("/tmp/test_novasvg.png");
-    // We don't check the result as it depends on filesystem permissions
+    // A bitmap converts to a straight-alpha image of the same size
+    CHECK(novasvg::bitmap_to_rgba_image(bitmap3).width() == 100);
 }
 
 TEST_CASE("Document methods") {

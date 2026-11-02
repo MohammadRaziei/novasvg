@@ -20,8 +20,8 @@ def compute_rmse(png_bytes_a, png_bytes_b):
     Raises if the two images differ in pixel dimensions (shouldn't happen
     here -- every engine renders each sample at the same
     corpus.py-computed size)."""
-    img_a = libstb.imread(png_bytes_a, channels=4)  # (height, width, 4) uint8, straight RGBA
-    img_b = libstb.imread(png_bytes_b, channels=4)
+    img_a = libstb.imread(png_bytes_a, format="rgba")  # (height, width, 4) uint8, straight RGBA
+    img_b = libstb.imread(png_bytes_b, format="rgba")
     if img_a.shape != img_b.shape:
         raise ValueError(f"size mismatch: {img_a.shape[1]}x{img_a.shape[0]} vs {img_b.shape[1]}x{img_b.shape[0]}")
     a = img_a.astype(np.float64)

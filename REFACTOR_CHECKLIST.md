@@ -10,7 +10,7 @@ A step is done only when **all** of these hold:
 
 1. The project builds.
 2. The tests match the baseline or better (numbers below).
-3. `tools/golden.py diff` over the 62 golden renders shows zero differences (or each difference is explained here).
+3. `refactor/golden.py diff` over the 62 golden renders shows zero differences (or each difference is explained here).
 4. This file is updated: boxes ticked, findings written under the step.
 5. A zip of the project is delivered, one per step, to be pushed on a new branch.
 
@@ -30,8 +30,8 @@ cmake --build build
 ./build/tests/cpp/test_novasvg_libstb
 
 # Pixel comparison against the baseline
-python3 tools/golden.py render ./build/novasvg /tmp/golden-new
-python3 tools/golden.py diff refactor/golden-baseline /tmp/golden-new
+python3 refactor/golden.py render ./build/novasvg /tmp/golden-new
+python3 refactor/golden.py diff refactor/golden-baseline /tmp/golden-new
 ```
 
 `golden.py` decodes the PNGs before comparing, so swapping the PNG encoder does not count as a difference; only
@@ -47,7 +47,7 @@ git). If they are lost, regenerate them from the baseline commit:
 git stash -u && git checkout 85ebfc7          # or use a separate worktree
 cmake -S . -B /tmp/b0 -G Ninja -DCMAKE_BUILD_TYPE=Release -DNOVASVG_BUILD_PYTHON=OFF \
       -DNOVASVG_BUILD_TESTS=OFF -DNOVASVG_BUILD_EXAMPLES=OFF && cmake --build /tmp/b0
-python3 tools/golden.py render /tmp/b0/novasvg refactor/golden-baseline
+python3 refactor/golden.py render /tmp/b0/novasvg refactor/golden-baseline
 ```
 
 | Item | Value |
@@ -66,7 +66,7 @@ Reasons, options considered and costs are in the ADRs; this is only the summary.
 |---|---|---|
 | [0001](docs/adr/0001-compile-novasvg-into-a-library.md) | Compile novasvg into a library, thin public headers | Accepted (step 4) |
 | [0002](docs/adr/0002-depend-on-libstb-via-fetchcontent-dynamic.md) | libstb via FetchContent from git (pinned `765f48c`), linked dynamically | Implemented (step 1) |
-| [0003](docs/adr/0003-public-image-type-is-stb-image.md) | Public pixel type is `stb::image`; premultiplied render surface stays internal | Accepted (step 2b) |
+| [0003](docs/adr/0003-public-image-type-is-stb-image.md) | Public pixel type is `stb::image`; premultiplied render surface stays internal | Accepted (step 2b; C++ side done, Python side open) |
 | [0004](docs/adr/0004-stl-like-naming-and-namespace.md) | stl-like `snake_case` naming; namespace `novasvg` | Accepted (step 6) |
 | [0005](docs/adr/0005-replace-vendored-stb-with-libstb.md) | Replace vendored stb_image, image writer and inflater with libstb | Implemented (step 2a) |
 | [0006](docs/adr/0006-fonts-on-libstb.md) | Build fonts on libstb; add a glyph-outline API to libstb | Proposed (step 3) |
@@ -106,11 +106,20 @@ examples above only show the direction.
 
 ## Steps
 
+## Temporary refactor-only artifacts (gitignored, deleted when the refactor ends)
+Nothing that exists only to prove the refactor is an official test. All of it lives in `/refactor/` (in `.gitignore`):
+- `refactor/golden.py`, `refactor/golden-svg/`, `refactor/golden-baseline/`: before/after render diff
+- `refactor/temp-tests/test_*.cpp`: verification tests (old scalar loops vs libstb, layer route vs direct drawing);
+  compiled into `test_novasvg_cpp` only while the folder exists, through a marked block in `tests/cpp/CMakeLists.txt`
+  (remove that block at the end)
+Official tests (`tests/`) only describe the behaviour of the library as it is meant to be.
+
+
 ### Step 0: baseline and verification tooling
 - [x] Clone novasvg and libstb
 - [x] libstb builds (static, standalone)
 - [x] novasvg baseline builds; tests green (numbers above)
-- [x] `tools/golden.py` written and tested; 62 golden renders made (in `refactor/`, git-ignored)
+- [x] `refactor/golden.py` written and tested; 62 golden renders made (in `refactor/`, git-ignored)
 - [x] This checklist
 - [ ] Run the Python tests (needs nanobind; revisit in step 7)
 
@@ -162,14 +171,39 @@ Findings:
   clamped to 1..100.
 - [ ] README, docs and licence notices still mention stb_image (cleaned up in step 7)
 
-#### 2b: `Bitmap` leaves the public API
-- [ ] `render()` returns `stb::image` (in-place conversion plus `image::wrap` with `keep_alive` on the surface; no copy)
-- [ ] Rendering onto an existing image: render a transparent layer and composite it with `stb::image::blend`
-      (instead of drawing straight into straight-alpha pixels); test `mix-blend-mode`
-- [ ] `Bitmap` becomes an internal (`detail`) type; `writeTo*` removed (`stb::image` encoders take over)
-- [ ] CLI, tests, examples and the Python bindings (numpy interop) updated
-- [ ] Tests and golden; watch: premultiply/unpremultiply, rendering onto an existing image, stride
-- [ ] When libstb's conversion-kernel issue lands, swap the two call sites (final hand-off and `<image>` decode)
+#### 2b: `Bitmap` leaves the public API  (C++ and Python bindings done; Bitmap not yet moved to `detail`)
+libstb floats on `master` for now (temporary, by the maintainer's decision); fetched `3a6269f` while this step was built.
+Target is `libstb::libstb` (renamed from `libstb::core` in libstb 0.9).
+- [x] `renderToImage()` returns `stb::image` (conversion in place + `image::wrap`, keep_alive on the surface; no copy
+      for a tightly packed bitmap, padded stride falls back to one copy). Old `render(Bitmap&)` / `renderToBitmap` kept
+      as `@internal`
+- [x] Rendering onto an existing image (`render(stb::image&)`): transparent layer + `stb::image::blend`. Normal mode
+      differs from direct drawing by at most 2 per channel; `mix-blend-mode` differs (delta 162 in the test): it now
+      blends against the layer, not against the image underneath. A semi-transparent root `background-color` is composited
+      over the image instead of replacing it. Both recorded in `test_render_image.cpp`
+- [x] `writeTo*` / `write` removed from `Bitmap`; CLI picks the encoder by extension (unknown -> PNG, JPEG quality 80,
+      as before) because `stb::image::write` throws on unknown extensions
+- [x] The two conversion call sites (plus `Bitmap::convertToRGBA`) use libstb's `premultiplied_argb_to_rgba` /
+      `rgba_to_premultiplied_argb`; `test_premultiply_exact.cpp` compares all 65,536 (alpha, colour) pairs, including
+      colour > alpha (mod 256), with the old scalar loops
+- [x] Golden set grown 62 -> 67 (`refactor/golden-svg/`: RTL text, JPEG/GIF/PNG-alpha images, image pattern, 8 blend modes,
+      filters); baseline rendered with `85ebfc7`
+- [x] CLI, C++ tests and `sample01` updated
+- [x] Python bindings: the ten encoder bindings became one path (`encode_to_bytes` / `write_to_file` over
+      `bitmap_to_rgba_image` + libstb encoders; JPEG quality still clamped to 1..100). The Python `Bitmap` class stays
+      over the internal type (its documented premultiplied zero-copy export would break); moving it to libstb's image
+      type belongs with packaging. `render()` is bound explicitly to its `Bitmap&` overload. Extension built with
+      nanobind 3.1 / Python 3.12 (SKBUILD=2); 433 Python tests pass
+- [x] Found by the Python tests: with libstb a shared library, `import novasvg` failed unless `libstb` was imported
+      first (no runpath). Fixed with `INSTALL_RPATH $ORIGIN/../libstb/lib` (`@loader_path` on macOS) on `novasvg_py`;
+      the wheel layout (`site-packages/libstb/lib`) still needs checking in step 7
+- [x] Found by the Python tests: libstb 0.9's Python `imread` takes `format=`, not `channels=`; `benchmarks/python/compare.py`
+      ported, `test` extra now needs `libstb>=0.9.0`
+- [x] `novasvg_write_func_t` typedef removed (no users left)
+- [x] Gate (this machine, Release, 1 core, libstb master `3a6269f`): `test_novasvg_cpp` 79 cases / 552 assertions;
+      `test_novasvg_embedded_font` 5 / 71; libstb link check OK; Python 433 tests; golden 67 images, 0 differ, tol 0;
+      `sample01` (14 SVGs -> PNG, 0 failed) and `sample02` run
+- [ ] `Bitmap` still `novasvg::Bitmap` (marked internal); moving it to `detail` waits for step 4 (public/internal split)
 
 ### Step 3: fonts, remove stb_truetype (see ADR-0006, proposed)
 novasvg calls 13 stb_truetype functions. `stb::font` renders text to bitmaps, but SVG needs **vector glyph
@@ -192,6 +226,25 @@ outlines** (`stbtt_GetGlyphShape`), so libstb must grow an API first.
 - [ ] CMake targets: `novasvg::novasvg` becomes the real library; decide what `noflag` means
 - [ ] Decide the fate of the dist single header and `NOVASVG_TEST_INCLUDE_DIR`
 - [ ] Measure build time before and after and record it here
+  - Before (header-only, Release, 1 core, GCC; from `build/.ninja_log`): every translation unit that includes
+    `novasvg.h` costs 14-55 s (CLI 23 s, `sample02` 14 s, the doctest files 23-48 s, `check_embedded_font` 55 s);
+    the 15 such units in a full tests + examples build add up to roughly 9 minutes. Header lines: 34,469
+
+
+#### Step 4 progress (module 1: the `render/` layer)  -- IN PROGRESS
+- [x] Compiled core: `novasvg_core` (STATIC, PIC, LTO) in `CMakeLists.txt`; `novasvg::noflag` / `novasvg::novasvg` link it;
+      tests link `novasvg::noflag`; macros moved to `detail/config.h`
+- [x] Moved to `src/render/*.cpp`: matrix, utils, path, paint, rasterize, surface, blend, canvas (265 symbols in
+      `libnovasvg_core.a`) with `refactor/split_header.py` (temporary tool)
+- [x] Gate: 79 tests, font test 5 / 71, libstb link check, golden 67 images 0 differ (tol 0)
+- Lesson: no function may be left `NOVASVG_INLINE` in a header once `render.h` declares it `NOVASVG_API`
+  (undefined reference in TUs that only see the declaration); everything moved, inlining relies on LTO
+- Build time so far: barely better (test_basics 43 -> 32 s, check_embedded_font 55 -> ~42 s, CLI 23 -> 27 s; rough,
+  from `.ninja_log`), because `svgelement.h`, `font.h` and the rest of `detail/` are still header-only
+- [ ] Benchmark the hot rasterize/blend path (now cross-TU, inlined only by LTO)
+- [ ] vendor `ft_raster` / `ft_stroker` / `ft_math` (different pattern, by hand)
+- [ ] Remove duplicate declarations (`render.h` vs per-module headers) and trim heavy includes
+- [ ] `render/font.h` waits for step 3; then `color`, `canvas`/`bitmap`, split `svgelement.h`, CSS/HTML engine, close `detail/`
 
 ### Step 5: remove duplicates
 Today each concept is defined in several layers (public, `detail/canvas.h`, `detail/render/`).
@@ -214,6 +267,15 @@ Today each concept is defined in several layers (public, `detail/canvas.h`, `det
 - [ ] Error handling: exceptions (as libstb does) or return codes?
 - [ ] Ownership and lifetime in the public API
 - [ ] Thread safety (as `stb::font`: immutable and cheap to copy)
+- [ ] Findings from step 2b to settle here (seen in the code, not yet changed):
+  - `Bitmap` copies alias the same mutable pixels (`surface_reference`), yet `convertToRGBA()` converts in place and
+    `bitmap_release_to_image` relies on unique ownership. Make it move-only with an explicit `clone()`, or split the
+    states into two types (premultiplied surface / straight image) so a double conversion cannot compile. The Python
+    docs already warn about the double-convert corruption of `convert_to_rgba()`
+  - `render` / `renderToBitmap` / `render(stb::image&)` / `renderToImage` are written twice (`Element` and `Document`);
+    `Document` should delegate to its root element, and layer + blend lives in one place
+  - `convert_argb_to_rgba` / `convert_rgba_to_argb` in `render.h` are now one-line wrappers over libstb: remove them
+  - Two pixel types are still public through Python until the Python `Bitmap` moves to libstb's image type
 
 ### Step 7: packaging and release
 - [ ] Python bindings and Python tests

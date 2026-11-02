@@ -33,61 +33,7 @@
 #include <cctype>
 #include <vector>
 
-// True header-only linkage: every function/method defined in the detail/
-// implementation headers is marked NOVASVG_INLINE (plain `inline`), so
-// this whole library -- including its rendering backend -- can safely be
-// #included from any number of translation units with no separate
-// "#define NOVASVG_IMPLEMENTATION in exactly one .cpp" step required.
-#ifndef NOVASVG_INLINE
-#define NOVASVG_INLINE inline
-#endif
-
-// NovaSVG is header-only: every function is NOVASVG_INLINE, so the default
-// linkage must NOT be dllimport/dllexport. On MSVC, __declspec(dllimport) on
-// an inline-defined function suppresses the inline body and produces LNK2019
-// unresolved externals. Shared-library decoration is therefore opt-in via
-// NOVASVG_BUILD_SHARED.
-#if defined(NOVASVG_BUILD_STATIC) || !defined(NOVASVG_BUILD_SHARED)
-#define NOVASVG_EXPORT
-#define NOVASVG_IMPORT
-#elif (defined(_WIN32) || defined(__CYGWIN__))
-#define NOVASVG_EXPORT __declspec(dllexport)
-#define NOVASVG_IMPORT __declspec(dllimport)
-#elif defined(__GNUC__) && (__GNUC__ >= 4)
-#define NOVASVG_EXPORT __attribute__((__visibility__("default")))
-#define NOVASVG_IMPORT
-#else
-#define NOVASVG_EXPORT
-#define NOVASVG_IMPORT
-#endif
-
-#ifdef NOVASVG_BUILD
-#define NOVASVG_API NOVASVG_EXPORT
-#else
-#define NOVASVG_API NOVASVG_IMPORT
-#endif
-
-// Plain ternary macros instead of std::max/std::min. A uniquely-prefixed
-// macro can never collide with anything, which a bare `std::max`/
-// `std::min` call genuinely can: <windows.h> (pulled in transitively by
-// Python.h and friends on a Windows build) `#define`s `max`/`min` as
-// object-like macros unless NOMINMAX is defined first, and since that's
-// a build-system concern novasvg can't force on every consumer of a
-// header-only library, this codebase calls these instead of std::max/
-// std::min directly wherever it needs a two-argument max/min. Same
-// pattern the vendored FreeType rasterizer already uses for its own
-// internals (PVG_FT_MIN/PVG_FT_MAX in detail/render/vendor/), just
-// under this project's own prefix for general-purpose call sites.
-// ponytail: no protection against double-evaluating a/b if either has
-// side effects -- fine for every current call site (plain variable/
-// member reads), just don't reach for these with e.g. `x++` as an
-// argument.
-#ifndef NOVASVG_MAX
-#define NOVASVG_MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif
-#ifndef NOVASVG_MIN
-#define NOVASVG_MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
+#include "detail/config.h"
 
 #define NOVASVG_VERSION_MAJOR 0
 #define NOVASVG_VERSION_MINOR 11
@@ -120,13 +66,6 @@ using matrix_t = matrix;
  */
 typedef void (*novasvg_destroy_func_t)(void* closure);
 
-/**
- * @brief A function pointer type for a write callback.
- * @param closure A pointer to user-defined data or context.
- * @param data A pointer to the data to be written.
- * @param size The size of the data in bytes.
- */
-typedef void (*novasvg_write_func_t)(void* closure, void* data, int size);
 
 
 namespace novasvg {
@@ -486,18 +425,34 @@ public:
     void setAttribute(const std::string& name, const std::string& value);
 
     /**
-     * @brief Renders the element onto a bitmap using a transformation matrix.
-     * @param bitmap The bitmap to render onto.
-     * @param The root transformation matrix.
+     * @brief Renders the element onto an existing image, using a transformation matrix.
+     *
+     * The element is drawn on a transparent layer the size of `image` and the layer is composited over the
+     * image's pixels with stb::image::blend (normal mode, "over" with straight alpha). Because the layer starts
+     * transparent, `mix-blend-mode` inside the element blends against the layer, not against what was already in
+     * `image`. Any pixel format is accepted; images larger than 32767 pixels on a side are left untouched.
+     * @param image The image to render onto (changed in place).
+     * @param matrix The root transformation matrix.
+     */
+    void render(stb::image& image, const Matrix& matrix = Matrix()) const;
+
+    /**
+     * @brief Renders the element to a new straight-alpha RGBA image with specified dimensions.
+     * @param width The desired width in pixels, or -1 to auto-scale based on the intrinsic size.
+     * @param height The desired height in pixels, or -1 to auto-scale based on the intrinsic size.
+     * @param backgroundColor The background color to render onto.
+     * @return The rendered image, or an empty image if the element has nothing to draw or memory ran out.
+     */
+    stb::image renderToImage(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
+
+    /**
+     * @internal Premultiplied-ARGB32 rendering target (Bitmap is not part of the public API; use the
+     * stb::image overloads above).
      */
     void render(Bitmap& bitmap, const Matrix& matrix = Matrix()) const;
 
     /**
-     * @brief Renders the element to a bitmap with specified dimensions.
-     * @param width The desired width in pixels, or -1 to auto-scale based on the intrinsic size.
-     * @param height The desired height in pixels, or -1 to auto-scale based on the intrinsic size.
-     * @param backgroundColor The background color to render onto.
-     * @return A Bitmap containing the raster representation of the element.
+     * @internal See render(Bitmap&).
      */
     Bitmap renderToBitmap(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
 
@@ -621,18 +576,35 @@ public:
     void forceLayout();
 
     /**
-     * @brief Renders the document onto a bitmap using a transformation matrix.
-     * @param bitmap The bitmap to render onto.
-     * @param The root transformation matrix.
+     * @brief Renders the document onto an existing image, using a transformation matrix.
+     *
+     * The document is drawn on a transparent layer the size of `image` and the layer is composited over the
+     * image's pixels with stb::image::blend (normal mode, "over" with straight alpha). Because the layer starts
+     * transparent, `mix-blend-mode` inside the document blends against the layer, not against what was already in
+     * `image`. A root `background-color` is composited over the image too, instead of replacing it. Any pixel
+     * format is accepted; images larger than 32767 pixels on a side are left untouched.
+     * @param image The image to render onto (changed in place).
+     * @param matrix The root transformation matrix.
+     */
+    void render(stb::image& image, const Matrix& matrix = Matrix()) const;
+
+    /**
+     * @brief Renders the document to a new straight-alpha RGBA image with specified dimensions.
+     * @param width The desired width in pixels, or -1 to auto-scale based on the intrinsic size.
+     * @param height The desired height in pixels, or -1 to auto-scale based on the intrinsic size.
+     * @param backgroundColor The background color to render onto.
+     * @return The rendered image, or an empty image if the document has nothing to draw or memory ran out.
+     */
+    stb::image renderToImage(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
+
+    /**
+     * @internal Premultiplied-ARGB32 rendering target (Bitmap is not part of the public API; use the
+     * stb::image overloads above).
      */
     void render(Bitmap& bitmap, const Matrix& matrix = Matrix()) const;
 
     /**
-     * @brief Renders the document to a bitmap with specified dimensions.
-     * @param width The desired width in pixels, or -1 to auto-scale based on the intrinsic size.
-     * @param height The desired height in pixels, or -1 to auto-scale based on the intrinsic size.
-     * @param backgroundColor The background color to render onto.
-     * @return A Bitmap containing the raster representation of the document.
+     * @internal See render(Bitmap&).
      */
     Bitmap renderToBitmap(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
 
@@ -956,6 +928,24 @@ NOVASVG_INLINE Bitmap Element::renderToBitmap(int width, int height, const Color
     return bitmap;
 }
 
+NOVASVG_INLINE void Element::render(stb::image& image, const Matrix& matrix) const
+{
+    if(m_node == nullptr || image.empty())
+        return;
+    Bitmap layer(image.width(), image.height());  // transparent
+    if(layer.isNull())
+        return;
+    render(layer, matrix);
+    stb::image over = bitmap_release_to_image(std::move(layer));
+    if(!over.empty())
+        image.blend(over);
+}
+
+NOVASVG_INLINE stb::image Element::renderToImage(int width, int height, const Color& backgroundColor) const
+{
+    return bitmap_release_to_image(renderToBitmap(width, height, backgroundColor));
+}
+
 NOVASVG_INLINE Matrix Element::getLocalMatrix() const
 {
     if(m_node)
@@ -1137,6 +1127,24 @@ NOVASVG_INLINE Bitmap Document::renderToBitmap(int width, int height, const Colo
     if(backgroundColor.value()) bitmap.clear(backgroundColor);
     render(bitmap, matrix);
     return bitmap;
+}
+
+NOVASVG_INLINE void Document::render(stb::image& image, const Matrix& matrix) const
+{
+    if(image.empty())
+        return;
+    Bitmap layer(image.width(), image.height());  // transparent
+    if(layer.isNull())
+        return;
+    render(layer, matrix);
+    stb::image over = bitmap_release_to_image(std::move(layer));
+    if(!over.empty())
+        image.blend(over);
+}
+
+NOVASVG_INLINE stb::image Document::renderToImage(int width, int height, const Color& backgroundColor) const
+{
+    return bitmap_release_to_image(renderToBitmap(width, height, backgroundColor));
 }
 
 NOVASVG_INLINE Element Document::elementFromPoint(float x, float y) const

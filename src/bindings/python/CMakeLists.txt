@@ -33,6 +33,14 @@ if(DEFINED SKBUILD)
     # Link against the novasvg library
     target_link_libraries(novasvg_py PRIVATE novasvg::novasvg)
 
+    # libstb is a shared library and the wheel puts it in site-packages/libstb/lib (next to the `novasvg`
+    # package). Without this runpath `import novasvg` only works if something imported `libstb` first.
+    if(APPLE)
+        set_target_properties(novasvg_py PROPERTIES INSTALL_RPATH "@loader_path/../libstb/lib")
+    elseif(UNIX)
+        set_target_properties(novasvg_py PROPERTIES INSTALL_RPATH "$ORIGIN/../libstb/lib")
+    endif()
+
     # Generate Python stubs
     # Run stubgen from the directory that actually contains the built module.
     # On multi-config generators (Visual Studio, Xcode) the .pyd/.so lands in a

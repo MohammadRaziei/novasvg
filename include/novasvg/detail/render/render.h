@@ -1266,7 +1266,7 @@ NOVASVG_API void surface_clear(surface_t* surface, const color_t* color);
  * Transforms pixel data from native-endian 32-bit ARGB premultiplied format
  * to a non-premultiplied RGBA byte sequence.
  *
- * @param dst Pointer to the destination buffer (can overlap with `src`).
+ * @param dst Pointer to the destination buffer (the same buffer as `src` for in-place use, otherwise not overlapping it).
  * @param src Pointer to the source buffer in ARGB premultiplied format.
  * @param width Image width in pixels.
  * @param height Image height in pixels.
@@ -1280,7 +1280,7 @@ NOVASVG_API void convert_argb_to_rgba(unsigned char* dst, const unsigned char* s
  * Transforms pixel data from a non-premultiplied RGBA byte sequence
  * to a native-endian 32-bit ARGB premultiplied format.
  *
- * @param dst Pointer to the destination buffer (can overlap with `src`).
+ * @param dst Pointer to the destination buffer (the same buffer as `src` for in-place use, otherwise not overlapping it).
  * @param src Pointer to the source buffer in RGBA format.
  * @param width Image width in pixels.
  * @param height Image height in pixels.

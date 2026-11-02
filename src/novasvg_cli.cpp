@@ -24,6 +24,23 @@
 
 namespace fs = std::filesystem;
 
+// Picks the encoder from the extension (.png .bmp .tga .jpg .jpeg, case-insensitive); anything else is PNG, and
+// JPEG quality is 80 -- the behaviour the CLI always had. stb::image::write() would throw on an unknown extension.
+static bool write_image(const stb::image& image, const std::string& filename) {
+    std::string ext = fs::path(filename).extension().string();
+    for (auto& c : ext) c = char(std::tolower(static_cast<unsigned char>(c)));
+    try {
+        if (image.empty()) return false;
+        if (ext == ".bmp") image.write_bmp(filename);
+        else if (ext == ".tga") image.write_tga(filename);
+        else if (ext == ".jpg" || ext == ".jpeg") image.write_jpg(filename, 80);
+        else image.write_png(filename);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
 // ============================================================
 // Utilities
 // ============================================================
@@ -111,13 +128,13 @@ int cmd_convert(const std::string& input,
     // novasvg::Color should have an opinion about, so it's resolved
     // here rather than by asking Color to treat "" as a color.
     auto bg_color = bg_color_str.empty() ? novasvg::Color::Transparent : novasvg::Color(bg_color_str);
-    auto bitmap = doc->renderToBitmap(width, height, bg_color);
-    if (bitmap.isNull()) {
+    auto image = doc->renderToImage(width, height, bg_color);
+    if (image.empty()) {
         std::cerr << "Error: Failed to render SVG\n";
         return 1;
     }
     
-    if (!bitmap.write(output_path.string())) {
+    if (!write_image(image, output_path.string())) {
         std::cerr << "Error: Failed to save PNG file: " << output_path.string() << "\n";
         return 1;
     }
@@ -303,10 +320,10 @@ int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
         std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input_file);
         if (!doc) { std::cerr << "  Failed to load\n"; failed++; continue; }
         
-        auto bitmap = doc->renderToBitmap();
-        if (bitmap.isNull()) { std::cerr << "  Failed to render\n"; failed++; continue; }
+        auto image = doc->renderToImage();
+        if (image.empty()) { std::cerr << "  Failed to render\n"; failed++; continue; }
         
-        if (!bitmap.write(output_file)) { std::cerr << "  Failed to save\n"; failed++; continue; }
+        if (!write_image(image, output_file)) { std::cerr << "  Failed to save\n"; failed++; continue; }
         
         success++;
     }

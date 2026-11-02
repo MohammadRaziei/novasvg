@@ -55,16 +55,18 @@ int main() {
             continue;
         }
 
-        // Render to bitmap
-        auto bitmap = document->renderToBitmap();
-        if (bitmap.isNull()) {
+        // Render to a straight-alpha RGBA stb::image
+        auto image = document->renderToImage();
+        if (image.empty()) {
             std::cerr << "FAILED (render)\n";
             failure_count++;
             continue;
         }
 
         // Write PNG
-        if (!bitmap.writeToPng(png_path.string())) {
+        try {
+            image.write_png(png_path);
+        } catch (const std::exception&) {
             std::cerr << "FAILED (write)\n";
             failure_count++;
             continue;

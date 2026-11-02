@@ -20,7 +20,7 @@ Work in small steps. A step counts as done only when all of the following hold:
 1. The project builds.
 2. The unit tests match or beat the baseline: `test_novasvg_cpp` 64 cases / 377 assertions (plus any tests added
    since), `test_novasvg_embedded_font` 5 / 71, and `test_novasvg_libstb`.
-3. `tools/golden.py diff` against the golden renders reports **zero differing pixels** (tolerance 0), or each
+3. `refactor/golden.py diff` against the golden renders reports **zero differing pixels** (tolerance 0), or each
    difference is explained in the checklist.
 4. `REFACTOR_CHECKLIST.md` is updated with what was verified and what was found.
 5. A zip of the project is delivered.
@@ -63,7 +63,7 @@ named commit keeps them reproducible.
 
 ## Action Items
 
-1. [x] `tools/golden.py` (render and diff) and the baseline renders.
+1. [x] `refactor/golden.py` (render and diff) and the baseline renders.
 2. [x] Per-step checklist with the exit criteria above.
 3. [ ] Add RTL text, JPEG/GIF images, `mix-blend-mode` and filter SVGs to the golden set (before steps 2b, 3, 5).
 4. [ ] Bring the Python tests into the gate in step 7.

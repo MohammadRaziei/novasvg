@@ -50,8 +50,8 @@ set(NOVASVG_SOURCE_DIR ${PROJECT_SOURCE_DIR})
 include(FetchContent)
 set(NOVASVG_LIBSTB_GIT_REPOSITORY "https://github.com/mohammadraziei/libstb.git" CACHE STRING
     "libstb repository to fetch")
-set(NOVASVG_LIBSTB_GIT_TAG "765f48ce476194a98f2a69af95f9711aef06d8a6" CACHE STRING
-    "libstb commit, tag or branch to fetch (a commit hash keeps the build reproducible)")
+set(NOVASVG_LIBSTB_GIT_TAG "master" CACHE STRING
+    "libstb commit, tag or branch to fetch (floats on master for now: temporary, to be replaced)")
 
 # libstb is always built as a shared library here, and none of its extras are wanted.
 set(STB_BUILD_SHARED   ON  CACHE BOOL "novasvg links libstb dynamically" FORCE)
@@ -72,29 +72,38 @@ set(CMAKE_MODULE_PATH "")
 FetchContent_MakeAvailable(libstb)
 set(CMAKE_MODULE_PATH "${_novasvg_module_path}")
 
-get_target_property(_novasvg_libstb_type libstb::core TYPE)
+get_target_property(_novasvg_libstb_type libstb::libstb TYPE)
 if(NOT _novasvg_libstb_type STREQUAL "SHARED_LIBRARY")
     message(FATAL_ERROR "novasvg requires libstb as a shared library, got: ${_novasvg_libstb_type}")
 endif()
 
-# Header-only library: two INTERFACE targets.
-#   novasvg::noflag   headers + compile definitions only
+# ---- the compiled core -------------------------------------------------------------------------
+# Step 4 of the refactor (ADR-0001) moves implementation out of the headers into src/, one module at a
+# time. What has been moved is compiled once, here; what has not is still header-only and is compiled
+# into whatever includes it. Each module directory under src/ is globbed.
+file(GLOB NOVASVG_CORE_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/render/*.cpp")
+add_library(novasvg_core STATIC ${NOVASVG_CORE_SOURCES})
+set_target_properties(novasvg_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_definitions(novasvg_core PRIVATE NOVASVG_BUILD)
+target_include_directories(novasvg_core PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:include>")
+# Everything that links novasvg links libstb too (dynamic).
+target_link_libraries(novasvg_core PUBLIC libstb::libstb)
+if(NOT NOVASVG_EMBED_DEFAULT_FONT)
+    target_compile_definitions(novasvg_core PUBLIC NOVASVG_DISABLE_EMBEDDED_FONT)
+endif()
+novasvg_optimize(novasvg_core)
+
+# Two consumer-facing targets (kept while the library is still partly header-only):
+#   novasvg::noflag   the core, no optimisation flags on the consumer
 #   novasvg::novasvg  noflag + optimisation flags (-O3 / /O2 ...): what nearly everybody wants.
 #                     Link novasvg::noflag instead to opt out of the flags.
 add_library(novasvg_noflag INTERFACE)
 add_library(novasvg::noflag ALIAS novasvg_noflag)
 set_target_properties(novasvg_noflag PROPERTIES EXPORT_NAME noflag)
-
-# Everything that links novasvg links libstb too (dynamic), and gets its include path.
-target_link_libraries(novasvg_noflag INTERFACE libstb::core)
-
-if(NOT NOVASVG_EMBED_DEFAULT_FONT)
-    target_compile_definitions(novasvg_noflag INTERFACE NOVASVG_DISABLE_EMBEDDED_FONT)
-endif()
-
-target_include_directories(novasvg_noflag INTERFACE
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-    "$<INSTALL_INTERFACE:include>")
+target_link_libraries(novasvg_noflag INTERFACE novasvg_core)
 
 add_library(novasvg INTERFACE)
 add_library(novasvg::novasvg ALIAS novasvg)
@@ -190,7 +199,8 @@ if(NOVASVG_INSTALL)
     set(NOVASVG_INSTALL_CMAKEDIR "${CMAKE_INSTALL_DATADIR}/cmake/novasvg" CACHE STRING
         "Where novasvgConfig.cmake is installed (relative to the install prefix)")
 
-    install(TARGETS novasvg_noflag novasvg EXPORT novasvgTargets)
+    install(TARGETS novasvg_core novasvg_noflag novasvg EXPORT novasvgTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
     install(EXPORT novasvgTargets
         FILE novasvgTargets.cmake
         NAMESPACE novasvg::

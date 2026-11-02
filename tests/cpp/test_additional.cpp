@@ -47,13 +47,14 @@ TEST_CASE("Bitmap advanced operations") {
     // Test convertToRGBA
     bitmap.convertToRGBA();
     
-    // Test writeToPng() with callback (just test it doesn't crash)
-    // Note: novasvg_write_func_t has signature: void (*)(void* closure, void* data, int size)
-    bool writeResult = bitmap.writeToPng([](void* closure, void* data, int size) {
-        // Do nothing, just accept the data
-    }, nullptr);
-    // Don't check result as it depends on PNG writer
-    
+    // The straight-alpha image made from a bitmap encodes without trouble
+    {
+        novasvg::Bitmap copy(data.data(), width, height, stride);
+        auto image = novasvg::bitmap_to_rgba_image(copy);
+        CHECK_FALSE(image.empty());
+        CHECK_FALSE(image.to_png().empty());
+    }
+
     // Test move assignment operator
     novasvg::Bitmap bitmap2;
     bitmap2 = std::move(bitmap);
