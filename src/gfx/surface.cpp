@@ -1,7 +1,7 @@
-#include "novasvg/detail/render/surface.h"
+#include "surface.h"
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 surface_t* surface_create(int width, int height)
 {
@@ -199,5 +199,5 @@ void convert_rgba_to_argb(unsigned char* dst, const unsigned char* src, int widt
     stb::rgba_to_premultiplied_argb(dst, size_t(stride), src, size_t(stride), width, height);
 }
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

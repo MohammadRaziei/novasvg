@@ -2,13 +2,13 @@
 
 // Bitmap (INTERNAL; the public pixel type is stb::image): a premultiplied-ARGB32 pixel buffer -- novasvg's
 // drawable surface, texture source, and render target all in one. Self-contained:
-// needs only Color and the low-level render::surface_t it wraps, nothing
+// needs only Color and the low-level gfx::surface_t it wraps, nothing
 // from the SVG/Canvas/Font layers, so it can be used entirely on its own
 // (e.g. to build up an image and write it out) without pulling in the
 // rest of novasvg.
 
 #include "color.h"
-#include "render/render.h"  // memfill32, color_to_argb32, color_init_rgba32 (surface_clear()), surface_t
+#include "render.h"  // memfill32, color_to_argb32, color_init_rgba32 (surface_clear()), surface_t
 
 #include <cstdint>
 #include <cstdio>
@@ -26,7 +26,7 @@
 #include <stb/image.hpp>
 
 namespace novasvg {
-using namespace render;
+using namespace gfx;
 
 class NOVASVG_API Bitmap {
 public:

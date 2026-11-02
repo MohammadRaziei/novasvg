@@ -1,13 +1,13 @@
 #pragma once
 
-#include "private.h"
-#include "utils.h"
+#include "novasvg/gfx/internal.h"
+#include "novasvg/gfx/utils.h"
 
 #include <assert.h>
 #include <limits.h>
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 #define COLOR_TABLE_SIZE 1024
 typedef struct {
@@ -61,11 +61,11 @@ uint32_t BYTE_MUL(uint32_t x, uint32_t a);
 
 #ifdef __SSE2__
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg
 #include <emmintrin.h>
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 NOVASVG_INLINE void memfill32(unsigned int* dest, int length, unsigned int value)
 {
@@ -331,5 +331,5 @@ void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const sp
 
 void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_buffer_t* span_buffer);
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

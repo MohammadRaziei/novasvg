@@ -24,6 +24,8 @@
 #define NOVASVG_RENDER_H
 
 #include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
 
 #include "../config.h"   // NOVASVG_API, NOVASVG_INLINE, NOVASVG_MAX/MIN (one definition, shared with novasvg.h)
 
@@ -37,7 +39,7 @@
 // below -- everything here now lives in namespace novasvg::render
 // instead.
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 #define NOVASVG_RENDER_VERSION_MAJOR 1
 #define NOVASVG_RENDER_VERSION_MINOR 3
@@ -1135,6 +1137,9 @@ typedef struct surface surface_t;
  * @param height The height of the surface in pixels.
  * @return A pointer to the newly created `surface_t` object.
  */
+/** @brief Decodes base64 text (used for data: URIs). Returns a malloc'd buffer the caller frees, or NULL. */
+NOVASVG_API uint8_t* base64_decode(const char* data, int length, size_t* out_length);
+
 NOVASVG_API surface_t* surface_create(int width, int height);
 
 /**
@@ -2499,7 +2504,7 @@ NOVASVG_API void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, f
  */
 NOVASVG_API float canvas_text_extents(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, rect_t* extents);
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg
 
 #endif // NOVASVG_RENDER_H

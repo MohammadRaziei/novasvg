@@ -19,7 +19,7 @@ INPUT                  = @PROJECT_SOURCE_DIR@/docs/cpp/mainpage.md \
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.h *.hpp *.hxx
 RECURSIVE              = YES
-EXCLUDE_PATTERNS       = */src/render/vendor/*
+EXCLUDE_PATTERNS       = */src/gfx/vendor/*
 USE_MDFILE_AS_MAINPAGE = @PROJECT_SOURCE_DIR@/docs/cpp/mainpage.md
 # INCLUDE_PATH lets Doxygen resolve <novasvg/...> includes for the include graph.
 INCLUDE_PATH           = @PROJECT_SOURCE_DIR@/include

@@ -15,7 +15,7 @@
 #include "../config.h"
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 #define NOVASVG_IS_NUM(c) ((c) >= '0' && (c) <= '9')
 #define NOVASVG_IS_ALPHA(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z'))
@@ -101,7 +101,7 @@ bool skip_ws_or_comma(const char** begin, const char* end, bool* has_comma);
 // unit conversion (%, em, ...) if that ever matters in practice.
 void skip_css_unit(const char** begin, const char* end, float* number);
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg
 
 #endif // NOVASVG_UTILS_H

@@ -1,7 +1,7 @@
-#include "novasvg/detail/render/blend.h"
+#include "blend.h"
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 uint32_t premultiply_color_with_opacity(const color_t* color, float opacity)
 {
@@ -998,5 +998,5 @@ void blend(canvas_t* canvas, const span_buffer_t* span_buffer)
     }
 }
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

@@ -2,7 +2,7 @@
 
 Everything in this folder is embedded, unmodified algorithmic code from
 other open-source projects. It backs `novasvg`'s own rendering layer
-(`src/render/*.cpp`) but is not `novasvg`'s own code,
+(`src/gfx/*.cpp`) but is not `novasvg`'s own code,
 so it is kept separate on purpose and its internal naming (`stbi_`,
 `stbtt_`, `FT_`, `PVG_FT_`, ...) is left as-is rather than rebranded.
 
@@ -22,8 +22,8 @@ license (public domain / MIT), same Sean Barrett, unmodified otherwise:
 | File | Project | Inlined into |
 |---|---|---|
 | `stb_image_write.h` | [stb_image_write](https://github.com/nothings/stb) | `include/novasvg/novasvg.h`, next to `Bitmap` (the only thing in novasvg that writes images) |
-| `stb_image.h` | [stb_image](https://github.com/nothings/stb) | `include/novasvg/detail/render/surface.h` (its only user) |
-| `stb_truetype.h` | [stb_truetype](https://github.com/nothings/stb) | `include/novasvg/detail/render/font.h` (its only user) |
+| `stb_image.h` | [stb_image](https://github.com/nothings/stb) | `include/novasvg/gfx/surface.h` (its only user) |
+| `stb_truetype.h` | [stb_truetype](https://github.com/nothings/stb) | `include/novasvg/gfx/font_impl.h` (its only user) |
 
 The FreeType-derived files above stay separate: four files with a real
 internal dependency chain (types -> math -> raster -> stroker) and a

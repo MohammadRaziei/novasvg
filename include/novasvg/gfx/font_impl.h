@@ -1,6 +1,6 @@
 #pragma once
 
-#include "private.h"
+#include "internal.h"
 #include "utils.h"
 
 #include <stdio.h>
@@ -4999,7 +4999,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // ---- end inlined stb_truetype ----
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 static int text_iterator_length(const void* data, text_encoding_t encoding)
 {
@@ -5103,11 +5103,11 @@ NOVASVG_INLINE codepoint_t text_iterator_next(text_iterator_t* it)
 
 #if defined(_WIN32)
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg
 #include <windows.h>
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 typedef CRITICAL_SECTION mutex_t;
 
@@ -5118,11 +5118,11 @@ typedef CRITICAL_SECTION mutex_t;
 
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && defined(HAVE_THREADS_H) && !defined(__STDC_NO_THREADS__)
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg
 #include <threads.h>
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 typedef mtx_t mutex_t;
 
@@ -5850,59 +5850,59 @@ NOVASVG_INLINE font_face_t* font_face_cache_get(font_face_cache_t* cache, const 
 
 #ifndef NOVASVG_DISABLE_FONT_FACE_CACHE_LOAD
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg
 #include <ctype.h>
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 #ifdef _WIN32
-} // namespace render
+} // namespace gfx
 } // namespace novasvg
 #include <windows.h>
 namespace novasvg {
-namespace render {
+namespace gfx {
 #else
-} // namespace render
+} // namespace gfx
 } // namespace novasvg
 #include <fcntl.h>
 namespace novasvg {
-namespace render {
-} // namespace render
+namespace gfx {
+} // namespace gfx
 } // namespace novasvg
 #include <unistd.h>
 namespace novasvg {
-namespace render {
-} // namespace render
+namespace gfx {
+} // namespace gfx
 } // namespace novasvg
 #include <dirent.h>
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 #ifdef __linux__
-} // namespace render
+} // namespace gfx
 } // namespace novasvg
 #include <linux/limits.h>
 namespace novasvg {
-namespace render {
+namespace gfx {
 #else
-} // namespace render
+} // namespace gfx
 } // namespace novasvg
 #include <limits.h>
 namespace novasvg {
-namespace render {
+namespace gfx {
 #endif
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg
 #include <sys/mman.h>
 namespace novasvg {
-namespace render {
-} // namespace render
+namespace gfx {
+} // namespace gfx
 } // namespace novasvg
 #include <sys/stat.h>
 namespace novasvg {
-namespace render {
+namespace gfx {
 #endif
 
 #ifdef _WIN32
@@ -6263,5 +6263,5 @@ NOVASVG_INLINE int font_face_cache_load_sys(font_face_cache_t* cache)
 #endif // NOVASVG_DISABLE_FONT_FACE_CACHE_LOAD
 
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

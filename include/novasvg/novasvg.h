@@ -33,7 +33,7 @@
 #include <cctype>
 #include <vector>
 
-#include "detail/config.h"
+#include "config.h"
 
 #define NOVASVG_VERSION_MAJOR 0
 #define NOVASVG_VERSION_MINOR 11
@@ -46,15 +46,15 @@
 #define NOVASVG_VERSION_STRINGIZE(major, minor, patch) NOVASVG_VERSION_XSTRINGIZE(major, minor, patch)
 #define NOVASVG_VERSION_STRING NOVASVG_VERSION_STRINGIZE(NOVASVG_VERSION_MAJOR, NOVASVG_VERSION_MINOR, NOVASVG_VERSION_PATCH)
 
-#include "detail/color.h"
+#include "gfx/color.h"
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 struct surface;
 struct matrix;
 using surface_t = surface;
 using matrix_t = matrix;
-} // namespace render
+} // namespace gfx
 } // namespace novasvg
 
 /**
@@ -69,7 +69,7 @@ typedef void (*novasvg_destroy_func_t)(void* closure);
 
 
 namespace novasvg {
-using namespace render;
+using namespace gfx;
 
 /**
  * @brief Returns the version of the novasvg library encoded in a single integer.
@@ -93,12 +93,12 @@ std::string versionString();
 
 } // namespace novasvg
 
-#include "detail/font.h"
+#include "gfx/font.h"
 
-#include "detail/bitmap.h"
+#include "gfx/bitmap.h"
 
 namespace novasvg {
-using namespace render;
+using namespace gfx;
 
 class Rect;
 class Matrix;
@@ -665,12 +665,12 @@ private:
 #include <fstream>
 #include <cmath>
 
-#include "detail/canvas.h"
-#include "detail/svgelement.h"
-#include "detail/svgparser.hpp"
+#include "gfx/canvas.h"
+#include "svg/svgelement.h"
+#include "svg/svgparser.hpp"
 
 namespace novasvg {
-using namespace render;
+using namespace gfx;
 
 // ---------------------------------------------------------------
 // Implementation (formerly detail/novasvg.hpp -- merged in since
@@ -678,7 +678,7 @@ using namespace render;
 // to keep the public declarations and their definitions apart).
 // ---------------------------------------------------------------
 
-using namespace render; // render/ layer (novasvg::render), the former plutovg
+using namespace gfx; // render/ layer (novasvg::render), the former plutovg
 
 NOVASVG_INLINE int version()
 {

@@ -8,7 +8,7 @@
 
 novasvg carried private copies of code that libstb now provides (ADR-0002):
 
-- stb_image 2.30, about 7,700 lines inlined in `detail/render/surface.h`;
+- stb_image 2.30, about 7,700 lines inlined in `gfx/surface.h`;
 - `BitmapCodec`, a port of stb_image_write (PNG, BMP, TGA, JPEG), about 1,400 lines in `detail/bitmap.h`;
 - the zlib inflater (`stbi_zlib_decode_malloc`) used for compressed embedded fonts.
 

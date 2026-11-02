@@ -5,9 +5,9 @@
 // can be used entirely on its own (e.g. to measure how wide some text
 // would come out in a given font) without pulling in the rest of novasvg.
 
-#include "svgparserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no SVG-tree dependency, consistent with this header's own self-contained goal
-#include "render/render.h"  // path_move_to/line_to/cubic_to, used to extract glyph outlines
-#include "render/font.h"
+#include "../svg/svgparserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no SVG-tree dependency, consistent with this header's own self-contained goal
+#include "render.h"  // path_move_to/line_to/cubic_to, used to extract glyph outlines
+#include "font_impl.h"
 
 #include <string>
 #include <string_view>
@@ -17,7 +17,7 @@
 #include <vector>
 
 namespace novasvg {
-using namespace render;
+using namespace gfx;
 
 class FontFace {
 public:
@@ -55,7 +55,7 @@ public:
     // Kerning adjustment between two consecutive codepoints, in raw font
     // design units (unscaled) -- the same "kern"/GPOS lookup
     // Font::measureText() itself applies between every glyph pair (see
-    // font_face_text_extents() in detail/render/font.h), exposed per-pair
+    // font_face_text_extents() in gfx/font_impl.h), exposed per-pair
     // so a caller that (unlike Font::measureText()) can't call back into
     // novasvg per string -- e.g. mermaidx's V8 engine, which sums a
     // shipped per-codepoint advance table in JS instead -- can still fold
@@ -290,7 +290,7 @@ NOVASVG_INLINE float FontFace::advanceWidthUnits(char32_t codepoint) const
     if(isNull())
         return 0.f;
     // font_face_get_glyph_metrics() always returns advance_width * scale
-    // (see detail/render/font.h) -- passing unitsPerEm() as the "size"
+    // (see gfx/font_impl.h) -- passing unitsPerEm() as the "size"
     // makes scale == 1, i.e. the raw, size-independent font-unit value,
     // with no separate unscaled code path needed on the render side.
     float advance = 0.f;

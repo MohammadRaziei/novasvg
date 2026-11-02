@@ -1,7 +1,7 @@
 #pragma once
 
-#include "private.h"
-#include "utils.h"
+#include "novasvg/gfx/internal.h"
+#include "novasvg/gfx/utils.h"
 
 // Image decoding is libstb's (stb::image); this layer only rasterizes and turns decoded pixels into a
 // premultiplied surface. Writing images is Bitmap's job (it asks libstb too).
@@ -20,7 +20,7 @@
 #include <exception>
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 static surface_t* surface_create_uninitialized(int width, int height)
 {
@@ -81,7 +81,6 @@ static const uint8_t base64_table[128] = {
 // Extracted so both image data URIs (below) and @font-face embedded font
 // data URIs (svgparser.hpp) can share one implementation. Returns NULL
 // on any malformed input (bad character, wrong padding, ...).
-uint8_t* base64_decode(const char* data, int length, size_t* out_length);
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

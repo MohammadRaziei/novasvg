@@ -1,7 +1,7 @@
-#include "novasvg/detail/render/matrix.h"
+#include "matrix.h"
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 static int parse_matrix_parameters(const char** begin, const char* end, float values[6], int required, int optional);
 
@@ -233,5 +233,5 @@ bool matrix_parse(matrix_t* matrix, const char* data, int length)
     return !has_trailing_comma;
 }
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

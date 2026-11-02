@@ -7,7 +7,7 @@
 ## Context
 
 The public API of 0.11.4 is Qt/DOM-flavoured: `PascalCase` types and `camelCase` methods with `get`/`set`/`is`/`to`
-prefixes (for example `loadFromFile`, `getElementById`, `isNull`). The internal `detail/render/` layer, a plutovg
+prefixes (for example `loadFromFile`, `getElementById`, `isNull`). The internal `gfx/` layer, a plutovg
 port, is already `snake_case`, and libstb, which novasvg now depends on and shares types with, is entirely
 `snake_case` in the style of the standard library. The result is three conventions in one codebase.
 

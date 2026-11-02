@@ -5,7 +5,7 @@
 // is included standalone by tests/cpp/test_novacolor.cpp, not just via
 // the novasvg.h umbrella. novasvg.h defines these same two macros before
 // it includes this file, so the guards below are a no-op in that path;
-// here they're what makes plain `#include "novasvg/detail/color.h"` work
+// here they're what makes plain `#include "novasvg/gfx/color.h"` work
 // on its own too.
 #ifndef NOVASVG_MAX
 #define NOVASVG_MAX(a, b) ((a) > (b) ? (a) : (b))

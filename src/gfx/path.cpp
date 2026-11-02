@@ -1,7 +1,7 @@
-#include "novasvg/detail/render/path.h"
+#include "path.h"
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 static path_element_t* path_add_command(path_t* path, path_command_t command, int npoints);
 static void split_bezier(const bezier_t* b, bezier_t* first, bezier_t* second);
@@ -898,5 +898,5 @@ bool path_parse(path_t* path, const char* data, int length)
     return true;
 }
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

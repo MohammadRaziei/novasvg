@@ -14,16 +14,16 @@
 
 // Canvas: novasvg's 2D drawing surface (paths, fills, strokes, gradients,
 // text, blending), plus the Path/Rect/Transform/Point primitives that go
-// with it. Self-contained -- pulls in exactly the render:: engine pieces
+// with it. Self-contained -- pulls in exactly the gfx:: engine pieces
 // it needs plus Font (for fillText/strokeText) -- so it's usable without
 // the SVG/parsing layer, e.g. to draw directly onto a Bitmap.
 #include "color.h"
 #include "font.h"
 #include "bitmap.h"
-#include "render/render.h"
+#include "render.h"
 
 namespace novasvg {
-using namespace render; // render/ layer (novasvg::render), the former plutovg
+using namespace gfx; // render/ layer (novasvg::render), the former plutovg
 
 enum class LineCap : uint8_t {
     Butt = NOVASVG_LINE_CAP_BUTT,
@@ -374,7 +374,7 @@ private:
 } // namespace novasvg
 
 namespace novasvg {
-using namespace render;
+using namespace gfx;
 
 enum class TextureType {
     Plain = NOVASVG_TEXTURE_TYPE_PLAIN,
@@ -531,7 +531,7 @@ private:
 // here is NOVASVG_INLINE, so there is no more reason to keep
 // declarations and definitions in separate files).
 // ---------------------------------------------------------------
-using namespace render; // render/ layer (novasvg::render), the former plutovg
+using namespace gfx; // render/ layer (novasvg::render), the former plutovg
 
 // Color::Black/White/Transparent are defined once, in color.h.
 

@@ -1,7 +1,7 @@
-#include "novasvg/detail/render/utils.h"
+#include "novasvg/gfx/utils.h"
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 uint32_t premultiply_argb(uint32_t color)
 {
@@ -183,5 +183,5 @@ void skip_css_unit(const char** begin, const char* end, float* number)
     *begin = it;
 }
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

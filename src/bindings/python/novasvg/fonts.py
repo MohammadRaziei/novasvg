@@ -3,7 +3,7 @@ novasvg.fonts -- font loading and text/HTML-label measurement.
 
 Wraps FontFace/Font (see novasvg/font.h in the C++ library) and the free
 functions built around them (see binding.cpp), all backed by novasvg's own
-vendored stb_truetype font stack (novasvg/detail/render/font.h) -- the same
+vendored stb_truetype font stack (novasvg/gfx/font_impl.h) -- the same
 code that later paints text and <foreignObject> HTML content, so anything
 measured here can never disagree with what novasvg itself goes on to
 render.

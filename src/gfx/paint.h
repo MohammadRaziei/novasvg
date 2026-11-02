@@ -1,12 +1,12 @@
 #pragma once
 
-#include "private.h"
-#include "utils.h"
+#include "novasvg/gfx/internal.h"
+#include "novasvg/gfx/utils.h"
 
 #include <ctype.h>
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 static inline float hsl_component(float h, float s, float l, float n)
 {
@@ -100,5 +100,5 @@ static gradient_paint_t* gradient_create(gradient_type_t type, spread_method_t s
     return gradient;
 }
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

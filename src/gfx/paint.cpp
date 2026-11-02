@@ -1,7 +1,7 @@
-#include "novasvg/detail/render/paint.h"
+#include "paint.h"
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 void color_init_rgb(color_t* color, float r, float g, float b)
 {
@@ -411,5 +411,5 @@ int paint_get_reference_count(const paint_t* paint)
     return novasvg_get_reference_count(paint);
 }
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

@@ -1,11 +1,11 @@
-#include "novasvg/detail/render/rasterize.h"
+#include "rasterize.h"
 
 // FreeType rasterizer/stroker: private to this translation unit (see vendor/VENDOR.md).
 #include "vendor/ft_raster.h"
 #include "vendor/ft_stroker.h"
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 static void span_buffer_update_extents(span_buffer_t* span_buffer);
 
@@ -414,5 +414,5 @@ void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* m
     ft_outline_destroy(outline);
 }
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

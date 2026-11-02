@@ -154,7 +154,7 @@ NB_MODULE(novasvg_py, m) {
 
     // --- Bind FontFace / Font (text measurement) ---
     // Exposes novasvg's own font stack (a vendored stb_truetype under
-    // include/novasvg/detail/render/font.h) to Python, so callers that need
+    // include/novasvg/gfx/font_impl.h) to Python, so callers that need
     // to measure text -- e.g. mermaidx computing label/box sizes before it
     // ever builds the SVG -- can ask the exact same engine that will later
     // paint the glyphs, instead of hand-rolling a second TTF parser that

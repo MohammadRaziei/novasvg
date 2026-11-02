@@ -1,12 +1,12 @@
 #pragma once
 
-#include "private.h"
-#include "utils.h"
+#include "novasvg/gfx/internal.h"
+#include "novasvg/gfx/utils.h"
 
 #include <assert.h>
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 typedef struct {
     float x1; float y1;
@@ -35,5 +35,5 @@ typedef struct {
     float y2;
 } extents_calculator_t;
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

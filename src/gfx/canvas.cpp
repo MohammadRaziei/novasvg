@@ -1,8 +1,8 @@
-#include "novasvg/detail/render/canvas.h"
-#include "novasvg/detail/render/font.h"
+#include "state.h"
+#include "novasvg/gfx/font_impl.h"
 
 namespace novasvg {
-namespace render {
+namespace gfx {
 
 static state_t* state_create(void);
 static void state_reset(state_t* state);
@@ -771,5 +771,5 @@ float canvas_text_extents(canvas_t* canvas, const void* text, int length, text_e
     return 0.f;
 }
 
-} // namespace render
+} // namespace gfx
 } // namespace novasvg

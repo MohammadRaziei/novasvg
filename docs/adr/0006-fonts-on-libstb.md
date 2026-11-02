@@ -6,7 +6,7 @@
 
 ## Context
 
-novasvg embeds stb_truetype and stb_rect_pack, about 5,000 lines at the top of `detail/render/font.h`, and builds
+novasvg embeds stb_truetype and stb_rect_pack, about 5,000 lines at the top of `gfx/font_impl.h`, and builds
 its own font loading (`FontFace`, `FontFaceCache`, WOFF handling) and shaping (kerning, GPOS) on them.
 Its own code calls **13 stb_truetype functions**:
 

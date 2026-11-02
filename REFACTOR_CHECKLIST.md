@@ -234,7 +234,7 @@ outlines** (`stbtt_GetGlyphShape`), so libstb must grow an API first.
 #### Step 4 progress (module 1: the `render/` layer)  -- IN PROGRESS
 - [x] Compiled core: `novasvg_core` (STATIC, PIC, LTO) in `CMakeLists.txt`; `novasvg::noflag` / `novasvg::novasvg` link it;
       tests link `novasvg::noflag`; macros moved to `detail/config.h`
-- [x] Moved to `src/render/*.cpp`: matrix, utils, path, paint, rasterize, surface, blend, canvas (265 symbols in
+- [x] Moved to `src/gfx/*.cpp`: matrix, utils, path, paint, rasterize, surface, blend, canvas (265 symbols in
       `libnovasvg_core.a`) with `refactor/split_header.py` (temporary tool)
 - [x] Gate: 79 tests, font test 5 / 71, libstb link check, golden 67 images 0 differ (tol 0)
 - Lesson: no function may be left `NOVASVG_INLINE` in a header once `render.h` declares it `NOVASVG_API`
@@ -250,14 +250,14 @@ outlines** (`stbtt_GetGlyphShape`), so libstb must grow an API first.
 - [ ] `render/font.h` waits for step 3; then `color`, `canvas`/`bitmap`, split `svgelement.h`, CSS/HTML engine, close `detail/`
 
 ### Step 5: remove duplicates
-Today each concept is defined in several layers (public, `detail/canvas.h`, `detail/render/`).
+Today each concept is defined in several layers (public, `detail/canvas.h`, `gfx/`).
 - [ ] `Color` becomes `stb::color` (it was derived from this code)
 - [ ] One `matrix` instead of `Matrix` / `Transform` / `matrix`
 - [ ] One `rect` / `point` / `size` / `box`
 - [ ] One `path`
 - [ ] Merge `Font` / `FontFace` / `FontFaceCache` with `font_face` / `font_face_cache` / `glyph`
 - [ ] Settle `Canvas` / `canvas` and `Bitmap` / `surface`
-- [x] `render/vendor/ft_*` (FreeType/plutovg code) moved to `src/render/vendor/`, included only from `src/render/rasterize.cpp`; FT helpers (`ft_outline_*`, `spans_generation_callback`) are file-local; `rasterize.h` shrank to `span_buffer_*` + `rasterize()`
+- [x] `render/vendor/ft_*` (FreeType/plutovg code) moved to `src/gfx/vendor/`, included only from `src/gfx/rasterize.cpp`; FT helpers (`ft_outline_*`, `spans_generation_callback`) are file-local; `rasterize.h` shrank to `span_buffer_*` + `rasterize()`
 
 ### Step 6: stl-like naming (ADR-0004)
 - [ ] Write the old-to-new name table for the public API and get it approved
@@ -296,7 +296,7 @@ No code changed. Fresh unzip, full rebuild, gate run:
 - Still open: install/export consumer test with the compiled core, hot-path benchmark (7.1.1), dist single header.
 
 ### Step 4, module 2: vendored rasterizer moved to src/ (2026-11-02)
-`include/novasvg/detail/render/vendor/` -> `src/render/vendor/` (git mv). `rasterize.h` no longer includes FreeType headers or declares any `ft_*`; consumers of `canvas.h` stop parsing ~4,800 vendored lines.
+`include/novasvg/gfx/vendor/` -> `src/gfx/vendor/` (git mv). `rasterize.h` no longer includes FreeType headers or declares any `ft_*`; consumers of `canvas.h` stop parsing ~4,800 vendored lines.
 Gate: C++ 79 / 552, font 71, link check OK, golden 67 images 0 differ, Python 433 passed, libstb `e655ce9`.
 Finding: libstb `draw.hpp` (rect/ellipse/line, int coordinates) has no path, bezier, fill rule, join/cap/dash stroker or span output, so the FreeType rasterizer/stroker has no libstb replacement yet. Design question (public vector-drawing layer, `detail/` removal, issue for libstb) is open, see the chat.
 
@@ -304,3 +304,11 @@ Finding: libstb `draw.hpp` (rect/ellipse/line, int coordinates) has no path, bez
 `render.h` is now the single declaration point for the public render API. Per-module headers keep only inline helpers, macros and the few cross-TU internals (`base64_decode`). The 3 consumers outside `render/` no longer pull blend/SSE internals.
 Gate: C++ 79 / 552, font 71, link check OK, golden 67 images 0 differ, Python 433 passed, libstb `e655ce9` (not updated to `955870f` yet).
 Open: per-module headers still carry `static inline` helpers (paint.h hex/hsl parsing, blend.h SSE) that belong in the `.cpp` if no other TU uses them; `private.h` duplicates the `span_buffer_*` family.
+
+### Architecture reset, step A: layout (2026-11-03, ADR-0008)
+`detail/` is gone. `include/novasvg/{config.h, gfx/, svg/}`, private headers + cpp in `src/gfx/` (was `src/render/`), `namespace render` -> `gfx`.
+- `gfx/`: color, bitmap, canvas, font, default_font, render (C-style API, now also declares `base64_decode`), plus temporary-public `internal.h`, `utils.h`, `font_impl.h` (the inline stb_truetype stack that `gfx/font.h` still needs; goes away with step 3 / libstb fonts).
+- `svg/`: svgelement, svgparser, svgparserutils. `gfx/font.h` still includes `svg/svgparserutils.h` (one inverted dependency, goes with the `Font` rewrite).
+- Paused: the planned `paint.h` / `blend.h` / `private.h` cleanup (those files get rewritten in steps B and C).
+- Not verified: single-header dist (quom) and `install()` of the new header tree; docs/Doxyfile paths were sed-updated only.
+- Gate: C++ 79 / 552, font 71, link check OK, golden 67 images 0 differ, Python 433 passed, libstb `e655ce9`.

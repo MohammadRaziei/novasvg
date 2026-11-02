@@ -15,7 +15,7 @@ Forces at play:
 
 - Every translation unit that includes `novasvg.h` parses and compiles all of it. Nothing is shared between
   consumers, and the library's own tests recompile everything per test file.
-- The same concept is defined in several layers (public API, `detail/canvas.h`, `detail/render/`), partly
+- The same concept is defined in several layers (public API, `detail/canvas.h`, `gfx/`), partly
   because a header-only library has no way to hide the internal layers from the public include path.
 - novasvg is going to depend on libstb (ADR-0002), which is a compiled shared library. Consumers must link
   something regardless, so "one `#include` and nothing else" no longer holds.
