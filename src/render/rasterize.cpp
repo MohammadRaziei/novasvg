@@ -1,5 +1,9 @@
 #include "novasvg/detail/render/rasterize.h"
 
+// FreeType rasterizer/stroker: private to this translation unit (see vendor/VENDOR.md).
+#include "vendor/ft_raster.h"
+#include "vendor/ft_stroker.h"
+
 namespace novasvg {
 namespace render {
 
@@ -161,6 +165,11 @@ void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, c
     }
 }
 
+#define ALIGN_SIZE(size) (((size) + 7ul) & ~7ul)
+#define FT_COORD(x) ft_coord_round((x) * 64)
+
+namespace {
+
 PVG_FT_Outline* ft_outline_create(int points, int contours)
 {
     size_t points_size = ALIGN_SIZE((points + contours) * sizeof(PVG_FT_Vector));
@@ -260,7 +269,7 @@ void ft_outline_end(PVG_FT_Outline* ft)
 
 PVG_FT_Outline* ft_outline_convert_stroke(const path_t* path, const matrix_t* matrix, const stroke_data_t* stroke_data);
 
-NOVASVG_INLINE PVG_FT_Outline* ft_outline_convert(const path_t* path, const matrix_t* matrix, const stroke_data_t* stroke_data)
+PVG_FT_Outline* ft_outline_convert(const path_t* path, const matrix_t* matrix, const stroke_data_t* stroke_data)
 {
     if(stroke_data) {
         return ft_outline_convert_stroke(path, matrix, stroke_data);
@@ -366,6 +375,8 @@ void spans_generation_callback(int count, const PVG_FT_Span* spans, void* user)
     span_buffer_t* span_buffer = (span_buffer_t*)(user);
     novasvg_array_append_data(span_buffer->spans, spans, count);
 }
+
+} // namespace
 
 void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data, fill_rule_t winding)
 {

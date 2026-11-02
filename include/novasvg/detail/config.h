@@ -39,7 +39,7 @@
 // header-only library, this codebase calls these instead of std::max/
 // std::min directly wherever it needs a two-argument max/min. Same
 // pattern the vendored FreeType rasterizer already uses for its own
-// internals (PVG_FT_MIN/PVG_FT_MAX in detail/render/vendor/), just
+// internals (PVG_FT_MIN/PVG_FT_MAX in src/render/vendor/), just
 // under this project's own prefix for general-purpose call sites.
 // ponytail: no protection against double-evaluating a/b if either has
 // side effects -- fine for every current call site (plain variable/

@@ -2,7 +2,7 @@
 
 Everything in this folder is embedded, unmodified algorithmic code from
 other open-source projects. It backs `novasvg`'s own rendering layer
-(`include/novasvg/detail/render/*.h`) but is not `novasvg`'s own code,
+(`src/render/*.cpp`) but is not `novasvg`'s own code,
 so it is kept separate on purpose and its internal naming (`stbi_`,
 `stbtt_`, `FT_`, `PVG_FT_`, ...) is left as-is rather than rebranded.
 

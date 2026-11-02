@@ -257,7 +257,7 @@ Today each concept is defined in several layers (public, `detail/canvas.h`, `det
 - [ ] One `path`
 - [ ] Merge `Font` / `FontFace` / `FontFaceCache` with `font_face` / `font_face_cache` / `glyph`
 - [ ] Settle `Canvas` / `canvas` and `Bitmap` / `surface`
-- [ ] `render/vendor/ft_*` (FreeType/plutovg code) stays; just document where it lives
+- [x] `render/vendor/ft_*` (FreeType/plutovg code) moved to `src/render/vendor/`, included only from `src/render/rasterize.cpp`; FT helpers (`ft_outline_*`, `spans_generation_callback`) are file-local; `rasterize.h` shrank to `span_buffer_*` + `rasterize()`
 
 ### Step 6: stl-like naming (ADR-0004)
 - [ ] Write the old-to-new name table for the public API and get it approved
@@ -294,3 +294,8 @@ No code changed. Fresh unzip, full rebuild, gate run:
 - libstb fetched hash: `e655ce9`.
 - Python module rebuilt on top of `novasvg_core` (SKBUILD path): 433 tests passed (closes the "not rebuilt after step 4" item).
 - Still open: install/export consumer test with the compiled core, hot-path benchmark (7.1.1), dist single header.
+
+### Step 4, module 2: vendored rasterizer moved to src/ (2026-11-02)
+`include/novasvg/detail/render/vendor/` -> `src/render/vendor/` (git mv). `rasterize.h` no longer includes FreeType headers or declares any `ft_*`; consumers of `canvas.h` stop parsing ~4,800 vendored lines.
+Gate: C++ 79 / 552, font 71, link check OK, golden 67 images 0 differ, Python 433 passed, libstb `e655ce9`.
+Finding: libstb `draw.hpp` (rect/ellipse/line, int coordinates) has no path, bezier, fill rule, join/cap/dash stroker or span output, so the FreeType rasterizer/stroker has no libstb replacement yet. Design question (public vector-drawing layer, `detail/` removal, issue for libstb) is open, see the chat.
