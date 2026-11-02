@@ -136,7 +136,7 @@ TEST_CASE("image io: a bitmap over caller memory with a padded stride converts c
             row[x] = 0xFF000000u | (static_cast<std::uint32_t>(x * 40) << 16) | (static_cast<std::uint32_t>(y * 80) << 8) | 0x33u;
     }
     novasvg::Bitmap bitmap(memory.data(), width, height, stride);
-    REQUIRE(!bitmap.isNull());
+    REQUIRE(!bitmap.is_null());
 
     auto check = [&](const stb::image& image) {
         REQUIRE(image.width() == width);

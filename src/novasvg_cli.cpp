@@ -72,7 +72,7 @@ int cmd_convert(const std::string& input,
                 const std::string& css_file) {
     
     // Load SVG
-    std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
+    std::unique_ptr<novasvg::Document> doc = novasvg::Document::load_file(input);
     if (!doc) {
         std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
@@ -94,8 +94,8 @@ int cmd_convert(const std::string& input,
     }
 
     if (!final_css.empty()) {
-        doc->applyStyleSheet(final_css);
-        doc->forceLayout();
+        doc->apply_style_sheet(final_css);
+        doc->force_layout();
     }
 
     // Determine Output Path
@@ -128,7 +128,7 @@ int cmd_convert(const std::string& input,
     // novasvg::Color should have an opinion about, so it's resolved
     // here rather than by asking Color to treat "" as a color.
     auto bg_color = bg_color_str.empty() ? novasvg::Color::Transparent : novasvg::Color(bg_color_str);
-    auto image = doc->renderToImage(width, height, bg_color);
+    auto image = doc->render_to_image(width, height, bg_color);
     if (image.empty()) {
         std::cerr << "Error: Failed to render SVG\n";
         return 1;
@@ -148,23 +148,23 @@ size_t count_all_elements(const novasvg::Element& element) {
     size_t count = 1; 
     auto children = element.children();
     for (const auto& child : children) {
-        if (child.isElement()) {
-            count += count_all_elements(child.toElement());
+        if (child.is_element()) {
+            count += count_all_elements(child.to_element());
         }
     }
     return count;
 }
 
 int cmd_info(const std::string& input, bool json_output = false) {
-    std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
+    std::unique_ptr<novasvg::Document> doc = novasvg::Document::load_file(input);
     if (!doc) {
         std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
     }
     if (json_output) {
-        auto bbox = doc->boundingBox();
+        auto bbox = doc->bounding_box();
         size_t total_elements = 0;
-        auto root = doc->documentElement();
+        auto root = doc->document_element();
         if (root) total_elements = count_all_elements(root);
         
         std::uintmax_t file_size = 0;
@@ -193,13 +193,13 @@ int cmd_info(const std::string& input, bool json_output = false) {
     std::cout << "SVG Information:\n";
     std::cout << "  File: " << input << "\n";
     std::cout << "  Size: " << doc->width() << "x" << doc->height() << "px\n";
-    auto bbox = doc->boundingBox();
+    auto bbox = doc->bounding_box();
     std::cout << "  Bounding Box: " 
               << bbox.x << "," << bbox.y << " "
               << bbox.w << "x" << bbox.h << "\n";
     
     size_t total_elements = 0;
-    auto root = doc->documentElement();
+    auto root = doc->document_element();
     if (root) {
         total_elements = count_all_elements(root);
         std::cout << "  Total elements: " << total_elements << "\n";
@@ -216,20 +216,20 @@ int cmd_info(const std::string& input, bool json_output = false) {
 }
 
 int cmd_query(const std::string& selector, const std::string& input, bool json_output = false) {
-    std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
+    std::unique_ptr<novasvg::Document> doc = novasvg::Document::load_file(input);
     if (!doc) {
         std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
     }
-    auto elements = doc->querySelectorAll(selector);
+    auto elements = doc->query_selector_all(selector);
     
     if (json_output) {
         std::cout << "{\"selector\":\"" << selector << "\",\"count\":" << elements.size() << ",\"elements\":[";
         for (size_t i = 0; i < elements.size(); i++) {
             const auto& elem = elements[i];
-            auto bbox = elem.getBoundingBox();
-            auto local_bbox = elem.getLocalBoundingBox();
-            auto global_bbox = elem.getGlobalBoundingBox();
+            auto bbox = elem.bounding_box();
+            auto local_bbox = elem.local_bounding_box();
+            auto global_bbox = elem.global_bounding_box();
             
             if (i > 0) std::cout << ",";
             std::cout << "{\"index\":" << (i + 1) << ",\"bounding_box\":{\"x\":" 
@@ -243,23 +243,23 @@ int cmd_query(const std::string& selector, const std::string& input, bool json_o
             
             std::cout << ",\"attributes\":{";
             bool first_attr = true;
-            if (elem.hasAttribute("id")) {
-                std::cout << "\"id\":\"" << elem.getAttribute("id") << "\"";
+            if (elem.has_attribute("id")) {
+                std::cout << "\"id\":\"" << elem.attribute("id") << "\"";
                 first_attr = false;
             }
-            if (elem.hasAttribute("class")) {
+            if (elem.has_attribute("class")) {
                 if (!first_attr) std::cout << ",";
-                std::cout << "\"class\":\"" << elem.getAttribute("class") << "\"";
+                std::cout << "\"class\":\"" << elem.attribute("class") << "\"";
                 first_attr = false;
             }
-            if (elem.hasAttribute("fill")) {
+            if (elem.has_attribute("fill")) {
                 if (!first_attr) std::cout << ",";
-                std::cout << "\"fill\":\"" << elem.getAttribute("fill") << "\"";
+                std::cout << "\"fill\":\"" << elem.attribute("fill") << "\"";
                 first_attr = false;
             }
-            if (elem.hasAttribute("stroke")) {
+            if (elem.has_attribute("stroke")) {
                 if (!first_attr) std::cout << ",";
-                std::cout << "\"stroke\":\"" << elem.getAttribute("stroke") << "\"";
+                std::cout << "\"stroke\":\"" << elem.attribute("stroke") << "\"";
                 first_attr = false;
             }
             std::cout << "}}";
@@ -271,9 +271,9 @@ int cmd_query(const std::string& selector, const std::string& input, bool json_o
     std::cout << "Found " << elements.size() << " element(s) matching: " << selector << "\n\n";
     for (size_t i = 0; i < elements.size(); i++) {
         const auto& elem = elements[i];
-        auto bbox = elem.getBoundingBox();
-        auto local_bbox = elem.getLocalBoundingBox();
-        auto global_bbox = elem.getGlobalBoundingBox();
+        auto bbox = elem.bounding_box();
+        auto local_bbox = elem.local_bounding_box();
+        auto global_bbox = elem.global_bounding_box();
         
         std::cout << "Element #" << (i + 1) << ":\n";
         std::cout << "  Bounding Box: " 
@@ -286,10 +286,10 @@ int cmd_query(const std::string& selector, const std::string& input, bool json_o
                   << global_bbox.x << "," << global_bbox.y << " "
                   << global_bbox.w << "x" << global_bbox.h << "\n";
         
-        if (elem.hasAttribute("id")) std::cout << "  ID: " << elem.getAttribute("id") << "\n";
-        if (elem.hasAttribute("class")) std::cout << "  Class: " << elem.getAttribute("class") << "\n";
-        if (elem.hasAttribute("fill")) std::cout << "  Fill: " << elem.getAttribute("fill") << "\n";
-        if (elem.hasAttribute("stroke")) std::cout << "  Stroke: " << elem.getAttribute("stroke") << "\n";
+        if (elem.has_attribute("id")) std::cout << "  ID: " << elem.attribute("id") << "\n";
+        if (elem.has_attribute("class")) std::cout << "  Class: " << elem.attribute("class") << "\n";
+        if (elem.has_attribute("fill")) std::cout << "  Fill: " << elem.attribute("fill") << "\n";
+        if (elem.has_attribute("stroke")) std::cout << "  Stroke: " << elem.attribute("stroke") << "\n";
         std::cout << "\n";
     }
     return 0;
@@ -317,10 +317,10 @@ int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
         std::cout << "Processing: " << path.filename() << " -> " 
                   << fs::path(output_file).filename() << "\n";
         
-        std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input_file);
+        std::unique_ptr<novasvg::Document> doc = novasvg::Document::load_file(input_file);
         if (!doc) { std::cerr << "  Failed to load\n"; failed++; continue; }
         
-        auto image = doc->renderToImage();
+        auto image = doc->render_to_image();
         if (image.empty()) { std::cerr << "  Failed to render\n"; failed++; continue; }
         
         if (!write_image(image, output_file)) { std::cerr << "  Failed to save\n"; failed++; continue; }
@@ -341,7 +341,7 @@ int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
 // ============================================================
 
 int main(int argc, char** argv) {
-    const std::string version_str = novasvg::versionString();
+    const std::string version_str = novasvg::version_string();
 
     CLI::App app{"novasvg Command Line Interface v" + version_str + " - High-performance SVG rendering toolkit."};
     app.name("novasvg");

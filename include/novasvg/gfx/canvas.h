@@ -116,7 +116,7 @@ public:
     constexpr void scale(float sw, float sh) { w *= sw; h *= sh; }
     constexpr void scale(float s) { scale(s, s); }
 
-    constexpr bool isEmpty() const { return w <= 0.f || h <= 0.f; }
+    constexpr bool is_empty() const { return w <= 0.f || h <= 0.f; }
     constexpr bool isZero() const { return w <= 0.f && h <= 0.f; }
     constexpr bool isValid() const { return w >= 0.f && h >= 0.f; }
 
@@ -190,7 +190,7 @@ public:
     constexpr float right() const { return x + w; }
     constexpr float bottom() const { return y + h; }
 
-    constexpr bool isEmpty() const { return w <= 0.f || h <= 0.f; }
+    constexpr bool is_empty() const { return w <= 0.f || h <= 0.f; }
     constexpr bool isZero() const { return w <= 0.f && h <= 0.f; }
     constexpr bool isValid() const { return w >= 0.f && h >= 0.f; }
 
@@ -263,7 +263,7 @@ public:
     Transform& rotate(float angle, float cx = 0.f, float cy = 0.f);
     Transform& shear(float shx, float shy);
 
-    Transform& postMultiply(const Transform& transform);
+    Transform& post_multiply(const Transform& transform);
     Transform& postTranslate(float tx, float ty);
     Transform& postScale(float sx, float sy);
     Transform& postRotate(float angle, float cx = 0.f, float cy = 0.f);
@@ -276,7 +276,7 @@ public:
 
     Point mapPoint(float x, float y) const;
     Point mapPoint(const Point& point) const;
-    Rect mapRect(const Rect& rect) const;
+    Rect map_rect(const Rect& rect) const;
 
     float xScale() const;
     float yScale() const;
@@ -334,9 +334,9 @@ public:
     void reset();
 
     Rect boundingRect() const;
-    bool isEmpty() const;
+    bool is_empty() const;
     bool isUnique() const;
-    bool isNull() const { return m_data == nullptr; }
+    bool is_null() const { return m_data == nullptr; }
     path_t* data() const { return m_data; }
 
     bool parse(const char* data, size_t length);
@@ -598,29 +598,29 @@ NOVASVG_INLINE Transform& Transform::shear(float shx, float shy)
     return multiply(sheared(shx, shy));
 }
 
-NOVASVG_INLINE Transform& Transform::postMultiply(const Transform& transform)
+NOVASVG_INLINE Transform& Transform::post_multiply(const Transform& transform)
 {
     return (*this = transform * *this);
 }
 
 NOVASVG_INLINE Transform& Transform::postTranslate(float tx, float ty)
 {
-    return postMultiply(translated(tx, ty));
+    return post_multiply(translated(tx, ty));
 }
 
 NOVASVG_INLINE Transform& Transform::postScale(float sx, float sy)
 {
-    return postMultiply(scaled(sx, sy));
+    return post_multiply(scaled(sx, sy));
 }
 
 NOVASVG_INLINE Transform& Transform::postRotate(float angle, float cx, float cy)
 {
-    return postMultiply(rotated(angle, cx, cy));
+    return post_multiply(rotated(angle, cx, cy));
 }
 
 NOVASVG_INLINE Transform& Transform::postShear(float shx, float shy)
 {
-    return postMultiply(sheared(shx, shy));
+    return post_multiply(sheared(shx, shy));
 }
 
 NOVASVG_INLINE Transform Transform::inverse() const
@@ -652,7 +652,7 @@ NOVASVG_INLINE Point Transform::mapPoint(const Point& point) const
     return mapPoint(point.x, point.y);
 }
 
-NOVASVG_INLINE Rect Transform::mapRect(const Rect& rect) const
+NOVASVG_INLINE Rect Transform::map_rect(const Rect& rect) const
 {
     if(!rect.isValid()) {
         return Rect::Invalid;
@@ -821,7 +821,7 @@ NOVASVG_INLINE Rect Path::boundingRect() const
     return extents;
 }
 
-NOVASVG_INLINE bool Path::isEmpty() const
+NOVASVG_INLINE bool Path::is_empty() const
 {
     if(m_data)
         return path_get_elements(m_data, nullptr) == 0;
@@ -841,7 +841,7 @@ NOVASVG_INLINE bool Path::parse(const char* data, size_t length)
 
 NOVASVG_INLINE path_t* Path::ensure()
 {
-    if(isNull()) {
+    if(is_null()) {
         m_data = path_create();
     } else if(!isUnique()) {
         path_destroy(m_data);

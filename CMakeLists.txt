@@ -143,18 +143,6 @@ install(TARGETS novasvg_cli
     RUNTIME DESTINATION bin
 )
 
-# Generate single-header distribution if NOVASVG_DIST_DIR is defined
-if(DEFINED NOVASVG_DIST_DIR)
-    add_custom_target(novasvg_dist_header
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_DIST_DIR}/novasvg
-        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h 
-            ${NOVASVG_DIST_DIR}/novasvg/novasvg.h 
-            -I ${CMAKE_CURRENT_SOURCE_DIR}/include
-        COMMENT "Generating single-header distribution: ${NOVASVG_DIST_DIR}/novasvg/novasvg.h"
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-    )
-endif()
-
 # Tests
 if(NOVASVG_BUILD_TESTS)
     enable_testing()

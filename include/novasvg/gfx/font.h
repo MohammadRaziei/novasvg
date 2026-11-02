@@ -34,7 +34,7 @@ public:
 
     void swap(FontFace& face);
 
-    bool isNull() const { return m_face == nullptr; }
+    bool is_null() const { return m_face == nullptr; }
     font_face_t* get() const { return m_face; }
 
     // Raw font design units (unscaled by any particular pixel size) -- the
@@ -171,7 +171,7 @@ public:
     const FontFace& face() const { return m_face; }
     float size() const { return m_size; }
 
-    bool isNull() const { return m_size <= 0.f || m_face.isNull(); }
+    bool is_null() const { return m_size <= 0.f || m_face.is_null(); }
 
 private:
     FontFace m_face;
@@ -262,14 +262,14 @@ NOVASVG_INLINE font_face_t* FontFace::release()
 
 NOVASVG_INLINE float FontFace::unitsPerEm() const
 {
-    if(isNull())
+    if(is_null())
         return 0.f;
     return font_face_get_units_per_em(m_face);
 }
 
 NOVASVG_INLINE float FontFace::ascentUnits() const
 {
-    if(isNull())
+    if(is_null())
         return 0.f;
     float ascent = 0.f;
     font_face_get_metrics(m_face, unitsPerEm(), &ascent, nullptr, nullptr, nullptr);
@@ -278,7 +278,7 @@ NOVASVG_INLINE float FontFace::ascentUnits() const
 
 NOVASVG_INLINE float FontFace::descentUnits() const
 {
-    if(isNull())
+    if(is_null())
         return 0.f;
     float descent = 0.f;
     font_face_get_metrics(m_face, unitsPerEm(), nullptr, &descent, nullptr, nullptr);
@@ -287,7 +287,7 @@ NOVASVG_INLINE float FontFace::descentUnits() const
 
 NOVASVG_INLINE float FontFace::advanceWidthUnits(char32_t codepoint) const
 {
-    if(isNull())
+    if(is_null())
         return 0.f;
     // font_face_get_glyph_metrics() always returns advance_width * scale
     // (see gfx/font_impl.h) -- passing unitsPerEm() as the "size"
@@ -300,7 +300,7 @@ NOVASVG_INLINE float FontFace::advanceWidthUnits(char32_t codepoint) const
 
 NOVASVG_INLINE float FontFace::kernAdvanceUnits(char32_t first, char32_t second) const
 {
-    if(isNull())
+    if(is_null())
         return 0.f;
     // Same unitsPerEm()-as-size trick as advanceWidthUnits(): makes
     // font_face_get_kern_advance()'s internal scale multiplication a
@@ -311,7 +311,7 @@ NOVASVG_INLINE float FontFace::kernAdvanceUnits(char32_t first, char32_t second)
 NOVASVG_INLINE std::vector<char32_t> FontFace::codepoints() const
 {
     std::vector<char32_t> result;
-    if(isNull())
+    if(is_null())
         return result;
     font_face_enumerate_codepoints(m_face, [](uint32_t codepoint, void* closure) {
         static_cast<std::vector<char32_t>*>(closure)->push_back(static_cast<char32_t>(codepoint));
@@ -321,9 +321,9 @@ NOVASVG_INLINE std::vector<char32_t> FontFace::codepoints() const
 
 NOVASVG_INLINE bool FontFaceCache::addFontFace(const std::string& family, bool bold, bool italic, const FontFace& face)
 {
-    if(!face.isNull())
+    if(!face.is_null())
         font_face_cache_add(m_cache, family.data(), bold, italic, face.get());
-    return !face.isNull();
+    return !face.is_null();
 }
 
 NOVASVG_INLINE FontFace FontFaceCache::getFontFaceLocal(const std::string& family, bool bold, bool italic) const
@@ -333,7 +333,7 @@ NOVASVG_INLINE FontFace FontFaceCache::getFontFaceLocal(const std::string& famil
 
 NOVASVG_INLINE FontFace FontFaceCache::getFontFace(const std::string& family, bool bold, bool italic) const
 {
-    if(auto face = getFontFaceLocal(family, bold, italic); !face.isNull()) {
+    if(auto face = getFontFaceLocal(family, bold, italic); !face.is_null()) {
         return face;
     }
 
@@ -356,7 +356,7 @@ NOVASVG_INLINE FontFace FontFaceCache::getFontFace(const std::string& family, bo
 
     for(auto value : generic_fallbacks) {
         if(value.generic == family || family.empty()) {
-            if(auto face = FontFace(font_face_cache_get(m_cache, value.fallback, bold, italic)); !face.isNull())
+            if(auto face = FontFace(font_face_cache_get(m_cache, value.fallback, bold, italic)); !face.is_null())
                 return face;
             // Not even the platform's stand-in is installed: use the embedded font
             // so text is still drawn (and drawn the same way) on a machine without fonts.
@@ -408,7 +408,7 @@ NOVASVG_INLINE FontFace FontFaceCache::getFontFaceForFamilyStack(const std::stri
             continue;
 
         std::string name(family);
-        if(auto face = getFontFaceLocal(name, bold, italic); !face.isNull())
+        if(auto face = getFontFaceLocal(name, bold, italic); !face.is_null())
             return face;
 
         std::string lower(name);
@@ -421,17 +421,17 @@ NOVASVG_INLINE FontFace FontFaceCache::getFontFaceForFamilyStack(const std::stri
                 ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
             if(lower != key)
                 continue;
-            if(auto face = getFontFaceLocal(alias.family, bold, italic); !face.isNull())
+            if(auto face = getFontFaceLocal(alias.family, bold, italic); !face.is_null())
                 return face;
             for(auto substitute = alias.substitutes; *substitute; ++substitute) {
-                if(auto face = getFontFaceLocal(*substitute, bold, italic); !face.isNull())
+                if(auto face = getFontFaceLocal(*substitute, bold, italic); !face.is_null())
                     return face;
             }
         }
 
         // Generic keywords ("sans-serif", ...). Anything else is not a
         // generic name, so this stays empty for it and the walk goes on.
-        if(auto face = getFontFace(lower, bold, italic); !face.isNull())
+        if(auto face = getFontFace(lower, bold, italic); !face.is_null())
             return face;
     }
 
@@ -455,7 +455,7 @@ NOVASVG_INLINE FontFaceCache* fontFaceCache()
 NOVASVG_INLINE Font::Font(const FontFace& face, float size)
     : m_face(face), m_size(size)
 {
-    if(m_size > 0.f && !m_face.isNull()) {
+    if(m_size > 0.f && !m_face.is_null()) {
         font_face_get_metrics(m_face.get(), m_size, &m_ascent, &m_descent, &m_lineGap, nullptr);
     }
 }
@@ -463,21 +463,21 @@ NOVASVG_INLINE Font::Font(const FontFace& face, float size)
 NOVASVG_INLINE float Font::xHeight() const
 {
     rect_t extents = {0};
-    if(m_size > 0.f && !m_face.isNull())
+    if(m_size > 0.f && !m_face.is_null())
         font_face_get_glyph_metrics(m_face.get(), m_size, 'x', nullptr, nullptr, &extents);
     return extents.h;
 }
 
 NOVASVG_INLINE float Font::measureText(const std::u32string_view& text) const
 {
-    if(m_size > 0.f && !m_face.isNull())
+    if(m_size > 0.f && !m_face.is_null())
         return font_face_text_extents(m_face.get(), m_size, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF32, nullptr);
     return 0;
 }
 NOVASVG_INLINE std::vector<Font::GlyphBox> Font::glyphBoxes(const std::u32string_view& text) const
 {
     std::vector<GlyphBox> boxes;
-    if(m_size <= 0.f || m_face.isNull())
+    if(m_size <= 0.f || m_face.is_null())
         return boxes;
 
     font_face_t* face = m_face.get();

@@ -187,7 +187,7 @@ static bool matchAttributeValue(const AttributeSelector& selector, std::string_v
 
 static bool matchAttributeSelector(const AttributeSelector& selector, const SVGElement* element)
 {
-    return matchAttributeValue(selector, element->getAttribute(selector.id));
+    return matchAttributeValue(selector, element->attribute(selector.id));
 }
 
 static bool matchSimpleSelector(const SimpleSelector& selector, const SVGElement* element);
@@ -313,7 +313,7 @@ static bool matchSelector(const Selector& selector, const SVGElement* element)
         switch(combinator) {
         case SimpleSelector::Combinator::Child:
         case SimpleSelector::Combinator::Descendant:
-            element = element->parentElement();
+            element = element->parent_element();
             break;
         case SimpleSelector::Combinator::DirectAdjacent:
         case SimpleSelector::Combinator::InDirectAdjacent:
@@ -859,7 +859,7 @@ static void parseFontFaceRule(std::string_view block)
         auto payload = url.substr(base64Pos + 7);
 
         auto face = fontFaceFromBase64(payload);
-        if(face.isNull())
+        if(face.is_null())
             continue; // malformed, or not raw SFNT (e.g. still WOFF/WOFF2) -- try the next alternative
 
         fontFaceCache()->addFontFace(std::string(family), bold, italic, face);
@@ -1029,7 +1029,7 @@ inline void parseInlineStyle(std::string_view input, SVGElement* element)
         auto id = csspropertyid(name);
         if(id != PropertyID::Unknown) {
             const bool important = stripImportantFlag(value);
-            element->setAttribute(important ? Specificity::InlineImportant : Specificity::InlineStyle, id, value);
+            element->set_attribute(important ? Specificity::InlineImportant : Specificity::InlineStyle, id, value);
         }
         skipOptionalSpacesOrDelimiter(input, ';');
     }
@@ -1158,7 +1158,7 @@ NOVASVG_INLINE bool Document::parse(const char* data, size_t length)
             styleSheet.append(buffer);
         } else {
             auto node = std::make_unique<SVGTextNode>(this);
-            node->setData(buffer);
+            node->set_data(buffer);
             currentElement->addChild(std::move(node));
         }
     };
@@ -1249,7 +1249,7 @@ NOVASVG_INLINE bool Document::parse(const char* data, size_t length)
                 auto id = elementid(buffer);
                 if(id != currentElement->id())
                     return false;
-                currentElement = currentElement->parentElement();
+                currentElement = currentElement->parent_element();
             } else {
                 --ignoring;
             }
@@ -1309,7 +1309,7 @@ NOVASVG_INLINE bool Document::parse(const char* data, size_t length)
                 } else {
                     if(id == PropertyID::Id)
                         m_rootElement->addElementById(buffer, element);
-                    element->setAttribute(Specificity::PresentationAttribute, id, buffer);
+                    element->set_attribute(Specificity::PresentationAttribute, id, buffer);
                 }
             }
 
@@ -1351,7 +1351,7 @@ NOVASVG_INLINE bool Document::parse(const char* data, size_t length)
 
     if(m_rootElement == nullptr || ignoring > 0 || !input.empty())
         return false;
-    applyStyleSheet(styleSheet);
+    apply_style_sheet(styleSheet);
     m_rootElement->build();
     return true;
 }
@@ -1560,7 +1560,7 @@ static bool matchHtmlSelector(const Selector& selector, const std::vector<HtmlNo
             return StyleNode{nullptr, owner};
         }
 
-        return StyleNode{nullptr, node.svg->parentElement()};
+        return StyleNode{nullptr, node.svg->parent_element()};
     };
     auto matches = [](const SimpleSelector& simple, const StyleNode& node) {
         return node.html ? matchHtmlSimpleSelector(simple, *node.html) : matchSimpleSelector(simple, node.svg);
@@ -1628,7 +1628,7 @@ static void offerInlineStyle(std::string_view style, CascadedValue& color, Casca
 }
 
 // Works out the text colour and the box colour the CSS gives this foreignObject's HTML and stores them on
-// it. `rules` must be sorted (least to most specific, then source order), as applyStyleSheet() leaves them.
+// it. `rules` must be sorted (least to most specific, then source order), as apply_style_sheet() leaves them.
 //  * text colour: `color` inherits, so every node has the colour of its own rule or else its parent's; the
 //    text is painted in the colour of the last element that holds text itself (black if nothing sets one).
 //    This is the HTML's CSS `color` -- deliberately not the SVG `fill` that happens to be in effect around
@@ -1690,7 +1690,7 @@ static void resolveForeignObjectStyle(SVGForeignObjectElement* foreignObject, co
 
 // One RuleDataList out of several stylesheets applied one after another, each parsed on its own (a rule
 // the parser can't read ends only its own sheet) and numbered on from the sheets before it, so a later
-// sheet wins a tie. Sorted the way applyStyleSheet() sorts.
+// sheet wins a tie. Sorted the way apply_style_sheet() sorts.
 static RuleDataList parseStyleSheets(const std::vector<std::string>& sheets)
 {
     RuleDataList all;
@@ -1703,7 +1703,7 @@ static RuleDataList parseStyleSheets(const std::vector<std::string>& sheets)
     return all;
 }
 
-// Which rules can possibly match a given element, so that applyStyleSheet() does not have to try every rule on
+// Which rules can possibly match a given element, so that apply_style_sheet() does not have to try every rule on
 // every element. A rule is filed under what its *rightmost* compound selector demands of the element itself:
 // a tag name (`rect`), else a class (`.node`), else nothing in particular. An element then only has to try the
 // rules filed under its own tag, under each of its own classes, and the unfiled ones -- which are the only
@@ -1747,7 +1747,7 @@ public:
         out.insert(out.end(), tagged.begin(), tagged.end());
         out.insert(out.end(), m_other.begin(), m_other.end());
         if(!m_byClass.empty()) {
-            std::string_view classes(element->getAttribute(PropertyID::Class));
+            std::string_view classes(element->attribute(PropertyID::Class));
             while(!classes.empty()) {
                 skipOptionalSpaces(classes);
                 size_t n = 0;
@@ -1772,7 +1772,7 @@ private:
     std::vector<uint32_t> m_other;
 };
 
-NOVASVG_INLINE void Document::applyStyleSheet(const std::string& content)
+NOVASVG_INLINE void Document::apply_style_sheet(const std::string& content)
 {
     auto rules = parseStyleSheet(content);
     std::sort(rules.begin(), rules.end());
@@ -1786,7 +1786,7 @@ NOVASVG_INLINE void Document::applyStyleSheet(const std::string& content)
                 if(rule.match(element)) {
                     for(const auto& declaration : rule.declarations()) {
                         if(declaration.id != PropertyID::Unknown)
-                            element->setAttribute(declaration.specificity, declaration.id, declaration.value);
+                            element->set_attribute(declaration.specificity, declaration.id, declaration.value);
                         else if(isCustomPropertyName(declaration.name))
                             element->setCustomProperty(declaration.specificity, declaration.name, declaration.value);
                     }
@@ -1824,7 +1824,7 @@ NOVASVG_INLINE void Document::applyStyleSheet(const std::string& content)
     });
 }
 
-NOVASVG_INLINE ElementList Document::querySelectorAll(const std::string& content) const
+NOVASVG_INLINE ElementList Document::query_selector_all(const std::string& content) const
 {
     auto selectors = parseQuerySelectors(content);
     if(selectors.empty())

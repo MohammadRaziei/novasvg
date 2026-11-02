@@ -89,7 +89,7 @@ int version();
  *
  * @return A pointer to a string containing the version in "X.Y.Z" format.
  */
-std::string versionString();
+std::string version_string();
 
 } // namespace novasvg
 
@@ -310,43 +310,43 @@ public:
      * @brief Checks if the node is a text node.
      * @return True if the node is a text node, false otherwise.
      */
-    bool isTextNode() const;
+    bool is_text_node() const;
 
     /**
      * @brief Checks if the node is an element node.
      * @return True if the node is an element node, false otherwise.
      */
-    bool isElement() const;
+    bool is_element() const;
 
     /**
      * @brief Converts the node to a TextNode.
      * @return A TextNode or a null node if conversion is not possible.
      */
-    TextNode toTextNode() const;
+    TextNode to_text_node() const;
 
     /**
      * @brief Converts the node to an Element.
      * @return An Element or a null node if conversion is not possible.
      */
-    Element toElement() const;
+    Element to_element() const;
 
     /**
      * @brief Returns the parent element.
      * @return The parent element of this node. If this node has no parent, a null `Element` is returned.
      */
-    Element parentElement() const;
+    Element parent_element() const;
 
     /**
      * @brief Checks if the node is null.
      * @return True if the node is null, false otherwise.
      */
-    bool isNull() const { return m_node == nullptr; }
+    bool is_null() const { return m_node == nullptr; }
 
     /**
      * @brief Checks if the node is not null.
      * @return True if the node is not null, false otherwise.
      */
-    operator bool() const { return !isNull(); }
+    operator bool() const { return !is_null(); }
 
     /**
      * @brief Checks if two nodes are equal.
@@ -388,7 +388,7 @@ public:
      * @brief Sets the text content of the node.
      * @param data The new text content to set.
      */
-    void setData(const std::string& data);
+    void set_data(const std::string& data);
 
 private:
     TextNode(SVGTextNode* text);
@@ -408,21 +408,21 @@ public:
      * @param name The name of the attribute to check.
      * @return True if the element has the specified attribute, false otherwise.
      */
-    bool hasAttribute(const std::string& name) const;
+    bool has_attribute(const std::string& name) const;
 
     /**
      * @brief Retrieves the value of an attribute.
      * @param name The name of the attribute to retrieve.
      * @return The value of the attribute as a string.
      */
-    const std::string& getAttribute(const std::string& name) const;
+    const std::string& attribute(const std::string& name) const;
 
     /**
      * @brief Sets the value of an attribute.
      * @param name The name of the attribute to set.
      * @param value The value to assign to the attribute.
      */
-    void setAttribute(const std::string& name, const std::string& value);
+    void set_attribute(const std::string& name, const std::string& value);
 
     /**
      * @brief Renders the element onto an existing image, using a transformation matrix.
@@ -443,7 +443,7 @@ public:
      * @param backgroundColor The background color to render onto.
      * @return The rendered image, or an empty image if the element has nothing to draw or memory ran out.
      */
-    stb::image renderToImage(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
+    stb::image render_to_image(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
 
     /**
      * @internal Premultiplied-ARGB32 rendering target (Bitmap is not part of the public API; use the
@@ -454,37 +454,37 @@ public:
     /**
      * @internal See render(Bitmap&).
      */
-    Bitmap renderToBitmap(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
+    Bitmap render_to_bitmap(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
 
     /**
      * @brief Retrieves the local transformation matrix of the element.
      * @return The matrix that applies only to the element, relative to its parent.
      */
-    Matrix getLocalMatrix() const;
+    Matrix local_matrix() const;
 
     /**
      * @brief Retrieves the global transformation matrix of the element.
      * @return The matrix combining the element's local and all parent transformations.
      */
-    Matrix getGlobalMatrix() const;
+    Matrix global_matrix() const;
 
     /**
      * @brief Retrieves the local bounding box of the element.
      * @return A Box representing the bounding box after applying local transformations.
      */
-    Box getLocalBoundingBox() const;
+    Box local_bounding_box() const;
 
     /**
      * @brief Retrieves the global bounding box of the element.
      * @return A Box representing the bounding box after applying global transformations.
      */
-    Box getGlobalBoundingBox() const;
+    Box global_bounding_box() const;
 
     /**
      * @brief Retrieves the bounding box of the element without any transformations.
      * @return A Box representing the bounding box of the element without any transformations applied.
      */
-    Box getBoundingBox() const;
+    Box bounding_box() const;
 
     /**
      * @brief Returns the child nodes of this node.
@@ -494,7 +494,7 @@ public:
 
 private:
     Element(SVGElement* element);
-    SVGElement* element(bool layoutIfNeeded = false) const;
+    SVGElement* element(bool layout_if_needed = false) const;
     friend class Node;
     friend class Document;
 };
@@ -510,21 +510,21 @@ public:
      * @param filename The path to the SVG file.
      * @return A pointer to the loaded `Document`, or `nullptr` on failure.
      */
-    static std::unique_ptr<Document> loadFromFile(const std::string& filename);
+    static std::unique_ptr<Document> load_file(const std::string& filename);
 
     /**
      * @brief Load an SVG document from a string.
      * @param string The SVG data as a string.
      * @return A pointer to the loaded `Document`, or `nullptr` on failure.
      */
-    static std::unique_ptr<Document> loadFromData(const std::string& string);
+    static std::unique_ptr<Document> load_data(const std::string& string);
 
     /**
      * @brief Load an SVG document from a null-terminated string.
      * @param data The string containing the SVG data.
      * @return A pointer to the loaded `Document`, or `nullptr` on failure.
      */
-    static std::unique_ptr<Document> loadFromData(const char* data);
+    static std::unique_ptr<Document> load_data(const char* data);
 
     /**
      * @brief Load an SVG document from a string with a specified length.
@@ -532,20 +532,20 @@ public:
      * @param length The length of the string in bytes.
      * @return A pointer to the loaded `Document`, or `nullptr` on failure.
      */
-    static std::unique_ptr<Document> loadFromData(const char* data, size_t length);
+    static std::unique_ptr<Document> load_data(const char* data, size_t length);
 
     /**
      * @brief Applies a CSS stylesheet to the document.
      * @param content A string containing the CSS rules to apply, with comments removed.
      */
-    void applyStyleSheet(const std::string& content);
+    void apply_style_sheet(const std::string& content);
 
     /**
      * @brief Selects all elements that match the given CSS selector(s).
      * @param content A string containing the CSS selector(s) to match elements.
      * @return A list of elements matching the selector(s).
      */
-    ElementList querySelectorAll(const std::string& content) const;
+    ElementList query_selector_all(const std::string& content) const;
 
     /**
      * @brief Returns the intrinsic width of the document in pixels.
@@ -563,17 +563,17 @@ public:
      * @brief Returns the smallest rectangle that encloses the document content.
      * @return A Box representing the bounding box of the document.
      */
-    Box boundingBox() const;
+    Box bounding_box() const;
 
     /**
      * @brief Updates the layout of the document if needed.
      */
-    void updateLayout();
+    void update_layout();
 
     /**
      * @brief Forces an immediate layout update.
      */
-    void forceLayout();
+    void force_layout();
 
     /**
      * @brief Renders the document onto an existing image, using a transformation matrix.
@@ -595,7 +595,7 @@ public:
      * @param backgroundColor The background color to render onto.
      * @return The rendered image, or an empty image if the document has nothing to draw or memory ran out.
      */
-    stb::image renderToImage(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
+    stb::image render_to_image(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
 
     /**
      * @internal Premultiplied-ARGB32 rendering target (Bitmap is not part of the public API; use the
@@ -606,7 +606,7 @@ public:
     /**
      * @internal See render(Bitmap&).
      */
-    Bitmap renderToBitmap(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
+    Bitmap render_to_bitmap(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
 
     /**
      * @brief Returns the topmost element under the specified point.
@@ -614,20 +614,20 @@ public:
      * @param y The y-coordinate in viewport space.
      * @return The topmost Element at the given point, or a null `Element` if no match is found.
      */
-    Element elementFromPoint(float x, float y) const;
+    Element element_from_point(float x, float y) const;
 
     /**
      * @brief Retrieves an element by its ID.
      * @param id The ID of the element to retrieve.
      * @return The Element with the specified ID, or a null `Element` if not found.
      */
-    Element getElementById(const std::string& id) const;
+    Element element_by_id(const std::string& id) const;
 
     /**
      * @brief Retrieves the document element.
      * @return The root Element of the document.
      */
-    Element documentElement() const;
+    Element document_element() const;
 
     Document(Document&&);
     Document& operator=(Document&&);
@@ -637,7 +637,7 @@ private:
     Document();
     Document(const Document&) = delete;
     Document& operator=(const Document&) = delete;
-    SVGRootElement* rootElement(bool layoutIfNeeded = false) const;
+    SVGRootElement* root_element(bool layout_if_needed = false) const;
     bool parse(const char* data, size_t length);
     std::unique_ptr<SVGRootElement> m_rootElement;
     friend class SVGURIReference;
@@ -685,7 +685,7 @@ NOVASVG_INLINE int version()
     return NOVASVG_VERSION;
 }
 
-NOVASVG_INLINE std::string versionString()
+NOVASVG_INLINE std::string version_string()
 {
     return NOVASVG_VERSION_STRING;
 }
@@ -709,7 +709,7 @@ NOVASVG_INLINE Box& Box::transform(const Matrix &matrix)
 
 NOVASVG_INLINE Box Box::transformed(const Matrix& matrix) const
 {
-    return Transform(matrix).mapRect(*this);
+    return Transform(matrix).map_rect(*this);
 }
 
 NOVASVG_INLINE Rect::Rect(const Box& box)
@@ -812,34 +812,34 @@ NOVASVG_INLINE Node::Node(SVGNode* node)
 {
 }
 
-NOVASVG_INLINE bool Node::isTextNode() const
+NOVASVG_INLINE bool Node::is_text_node() const
 {
-    return m_node && m_node->isTextNode();
+    return m_node && m_node->is_text_node();
 }
 
-NOVASVG_INLINE bool Node::isElement() const
+NOVASVG_INLINE bool Node::is_element() const
 {
-    return m_node && m_node->isElement();
+    return m_node && m_node->is_element();
 }
 
-NOVASVG_INLINE TextNode Node::toTextNode() const
+NOVASVG_INLINE TextNode Node::to_text_node() const
 {
-    if(m_node && m_node->isTextNode())
+    if(m_node && m_node->is_text_node())
         return static_cast<SVGTextNode*>(m_node);
     return TextNode();
 }
 
-NOVASVG_INLINE Element Node::toElement() const
+NOVASVG_INLINE Element Node::to_element() const
 {
-    if(m_node && m_node->isElement())
+    if(m_node && m_node->is_element())
         return static_cast<SVGElement*>(m_node);
     return Element();
 }
 
-NOVASVG_INLINE Element Node::parentElement() const
+NOVASVG_INLINE Element Node::parent_element() const
 {
     if(m_node)
-        return m_node->parentElement();
+        return m_node->parent_element();
     return Element();
 }
 
@@ -855,10 +855,10 @@ NOVASVG_INLINE const std::string& TextNode::data() const
     return emptyString;
 }
 
-NOVASVG_INLINE void TextNode::setData(const std::string& data)
+NOVASVG_INLINE void TextNode::set_data(const std::string& data)
 {
     if(m_node) {
-        text()->setData(data);
+        text()->set_data(data);
     }
 }
 
@@ -872,42 +872,42 @@ NOVASVG_INLINE Element::Element(SVGElement* element)
 {
 }
 
-NOVASVG_INLINE bool Element::hasAttribute(const std::string& name) const
+NOVASVG_INLINE bool Element::has_attribute(const std::string& name) const
 {
     if(m_node)
-        return element()->hasAttribute(name);
+        return element()->has_attribute(name);
     return false;
 }
 
-NOVASVG_INLINE const std::string& Element::getAttribute(const std::string& name) const
+NOVASVG_INLINE const std::string& Element::attribute(const std::string& name) const
 {
     if(m_node)
-        return element()->getAttribute(name);
+        return element()->attribute(name);
     return emptyString;
 }
 
-NOVASVG_INLINE void Element::setAttribute(const std::string& name, const std::string& value)
+NOVASVG_INLINE void Element::set_attribute(const std::string& name, const std::string& value)
 {
     if(m_node) {
-        element()->setAttribute(name, value);
+        element()->set_attribute(name, value);
     }
 }
 
 NOVASVG_INLINE void Element::render(Bitmap& bitmap, const Matrix& matrix) const
 {
-    if(m_node == nullptr || bitmap.isNull())
+    if(m_node == nullptr || bitmap.is_null())
         return;
     auto canvas = Canvas::create(bitmap);
     SVGRenderState state(nullptr, nullptr, matrix, SVGRenderMode::Painting, canvas);
     element(true)->render(state);
 }
 
-NOVASVG_INLINE Bitmap Element::renderToBitmap(int width, int height, const Color& backgroundColor) const
+NOVASVG_INLINE Bitmap Element::render_to_bitmap(int width, int height, const Color& backgroundColor) const
 {
     if(m_node == nullptr)
         return Bitmap();
-    auto elementBounds = element(true)->localTransform().mapRect(element()->paintBoundingBox());
-    if(elementBounds.isEmpty())
+    auto elementBounds = element(true)->local_transform().map_rect(element()->paint_bounding_box());
+    if(elementBounds.is_empty())
         return Bitmap();
     if(width <= 0 && height <= 0) {
         width = static_cast<int>(std::ceil(elementBounds.w));
@@ -933,7 +933,7 @@ NOVASVG_INLINE void Element::render(stb::image& image, const Matrix& matrix) con
     if(m_node == nullptr || image.empty())
         return;
     Bitmap layer(image.width(), image.height());  // transparent
-    if(layer.isNull())
+    if(layer.is_null())
         return;
     render(layer, matrix);
     stb::image over = bitmap_release_to_image(std::move(layer));
@@ -941,42 +941,42 @@ NOVASVG_INLINE void Element::render(stb::image& image, const Matrix& matrix) con
         image.blend(over);
 }
 
-NOVASVG_INLINE stb::image Element::renderToImage(int width, int height, const Color& backgroundColor) const
+NOVASVG_INLINE stb::image Element::render_to_image(int width, int height, const Color& backgroundColor) const
 {
-    return bitmap_release_to_image(renderToBitmap(width, height, backgroundColor));
+    return bitmap_release_to_image(render_to_bitmap(width, height, backgroundColor));
 }
 
-NOVASVG_INLINE Matrix Element::getLocalMatrix() const
+NOVASVG_INLINE Matrix Element::local_matrix() const
 {
     if(m_node)
-        return element(true)->localTransform();
+        return element(true)->local_transform();
     return Matrix();
 }
 
-NOVASVG_INLINE Matrix Element::getGlobalMatrix() const
+NOVASVG_INLINE Matrix Element::global_matrix() const
 {
     if(m_node == nullptr)
         return Matrix();
-    auto transform = element(true)->localTransform();
-    for(auto parent = element()->parentElement(); parent; parent = parent->parentElement())
-        transform.postMultiply(parent->localTransform());
+    auto transform = element(true)->local_transform();
+    for(auto parent = element()->parent_element(); parent; parent = parent->parent_element())
+        transform.post_multiply(parent->local_transform());
     return transform;
 }
 
-NOVASVG_INLINE Box Element::getLocalBoundingBox() const
+NOVASVG_INLINE Box Element::local_bounding_box() const
 {
-    return getBoundingBox().transformed(getLocalMatrix());
+    return bounding_box().transformed(local_matrix());
 }
 
-NOVASVG_INLINE Box Element::getGlobalBoundingBox() const
+NOVASVG_INLINE Box Element::global_bounding_box() const
 {
-    return getBoundingBox().transformed(getGlobalMatrix());
+    return bounding_box().transformed(global_matrix());
 }
 
-NOVASVG_INLINE Box Element::getBoundingBox() const
+NOVASVG_INLINE Box Element::bounding_box() const
 {
     if(m_node)
-        return element(true)->paintBoundingBox();
+        return element(true)->paint_bounding_box();
     return Box();
 }
 
@@ -990,15 +990,15 @@ NOVASVG_INLINE NodeList Element::children() const
     return children;
 }
 
-NOVASVG_INLINE SVGElement* Element::element(bool layoutIfNeeded) const
+NOVASVG_INLINE SVGElement* Element::element(bool layout_if_needed) const
 {
     auto element = static_cast<SVGElement*>(m_node);
-    if(element && layoutIfNeeded)
-        element->rootElement()->layoutIfNeeded();
+    if(element && layout_if_needed)
+        element->root_element()->layout_if_needed();
     return element;
 }
 
-NOVASVG_INLINE std::unique_ptr<Document> Document::loadFromFile(const std::string& filename)
+NOVASVG_INLINE std::unique_ptr<Document> Document::load_file(const std::string& filename)
 {
     std::ifstream fs;
     fs.open(filename);
@@ -1007,20 +1007,20 @@ NOVASVG_INLINE std::unique_ptr<Document> Document::loadFromFile(const std::strin
     std::string content;
     std::getline(fs, content, '\0');
     fs.close();
-    return loadFromData(content);
+    return load_data(content);
 }
 
-NOVASVG_INLINE std::unique_ptr<Document> Document::loadFromData(const std::string& string)
+NOVASVG_INLINE std::unique_ptr<Document> Document::load_data(const std::string& string)
 {
-    return loadFromData(string.data(), string.size());
+    return load_data(string.data(), string.size());
 }
 
-NOVASVG_INLINE std::unique_ptr<Document> Document::loadFromData(const char* data)
+NOVASVG_INLINE std::unique_ptr<Document> Document::load_data(const char* data)
 {
-    return loadFromData(data, std::strlen(data));
+    return load_data(data, std::strlen(data));
 }
 
-NOVASVG_INLINE std::unique_ptr<Document> Document::loadFromData(const char* data, size_t length)
+NOVASVG_INLINE std::unique_ptr<Document> Document::load_data(const char* data, size_t length)
 {
     std::unique_ptr<Document> document(new Document);
     if(!document->parse(data, length))
@@ -1030,32 +1030,32 @@ NOVASVG_INLINE std::unique_ptr<Document> Document::loadFromData(const char* data
 
 NOVASVG_INLINE float Document::width() const
 {
-    return rootElement(true)->intrinsicWidth();
+    return root_element(true)->intrinsic_width();
 }
 
 NOVASVG_INLINE float Document::height() const
 {
-    return rootElement(true)->intrinsicHeight();
+    return root_element(true)->intrinsic_height();
 }
 
-NOVASVG_INLINE Box Document::boundingBox() const
+NOVASVG_INLINE Box Document::bounding_box() const
 {
-    return rootElement(true)->localTransform().mapRect(rootElement()->paintBoundingBox());
+    return root_element(true)->local_transform().map_rect(root_element()->paint_bounding_box());
 }
 
-NOVASVG_INLINE void Document::updateLayout()
+NOVASVG_INLINE void Document::update_layout()
 {
-    m_rootElement->layoutIfNeeded();
+    m_rootElement->layout_if_needed();
 }
 
-NOVASVG_INLINE void Document::forceLayout()
+NOVASVG_INLINE void Document::force_layout()
 {
-    m_rootElement->forceLayout();
+    m_rootElement->force_layout();
 }
 
 NOVASVG_INLINE void Document::render(Bitmap& bitmap, const Matrix& matrix) const
 {
-    if(bitmap.isNull())
+    if(bitmap.is_null())
         return;
 
     // A `background-color` in the root <svg>'s own inline style isn't a
@@ -1068,7 +1068,7 @@ NOVASVG_INLINE void Document::render(Bitmap& bitmap, const Matrix& matrix) const
     // correct-looking standalone render, honor it here the same way:
     // clear the bitmap to it before any content paints, so it sits under
     // everything and behind any transparency in the content itself. Takes
-    // priority over renderToBitmap()'s own `backgroundColor` argument
+    // priority over render_to_bitmap()'s own `backgroundColor` argument
     // (this runs after that clear) since that argument means "what to
     // show through transparent content", and content here isn't actually
     // transparent -- it explicitly asked for this color.
@@ -1082,11 +1082,11 @@ NOVASVG_INLINE void Document::render(Bitmap& bitmap, const Matrix& matrix) const
     // correct-looking standalone render, honor it here the same way:
     // clear the bitmap to it before any content paints, so it sits under
     // everything and behind any transparency in the content itself. Takes
-    // priority over renderToBitmap()'s own `backgroundColor` argument
+    // priority over render_to_bitmap()'s own `backgroundColor` argument
     // (this runs after that clear) since that argument means "what to
     // show through transparent content", and content here isn't actually
     // transparent -- it explicitly asked for this color.
-    if(const auto& bg = rootElement(true)->getAttribute(PropertyID::Background_Color); !bg.empty()) {
+    if(const auto& bg = root_element(true)->attribute(PropertyID::Background_Color); !bg.empty()) {
         color_t color;
         if(color_parse(&color, bg.data(), static_cast<int>(bg.length())) > 0) {
             auto argb = color_to_argb32(&color);
@@ -1101,26 +1101,26 @@ NOVASVG_INLINE void Document::render(Bitmap& bitmap, const Matrix& matrix) const
 
     auto canvas = Canvas::create(bitmap);
     SVGRenderState state(nullptr, nullptr, matrix, SVGRenderMode::Painting, canvas);
-    rootElement(true)->render(state);
+    root_element(true)->render(state);
 }
 
-NOVASVG_INLINE Bitmap Document::renderToBitmap(int width, int height, const Color& backgroundColor) const
+NOVASVG_INLINE Bitmap Document::render_to_bitmap(int width, int height, const Color& backgroundColor) const
 {
-    auto intrinsicWidth = rootElement(true)->intrinsicWidth();
-    auto intrinsicHeight = rootElement()->intrinsicHeight();
-    if(intrinsicWidth == 0.f || intrinsicHeight == 0.f)
+    auto intrinsic_width = root_element(true)->intrinsic_width();
+    auto intrinsic_height = root_element()->intrinsic_height();
+    if(intrinsic_width == 0.f || intrinsic_height == 0.f)
         return Bitmap();
     if(width <= 0 && height <= 0) {
-        width = static_cast<int>(std::ceil(intrinsicWidth));
-        height = static_cast<int>(std::ceil(intrinsicHeight));
+        width = static_cast<int>(std::ceil(intrinsic_width));
+        height = static_cast<int>(std::ceil(intrinsic_height));
     } else if(width > 0 && height <= 0) {
-        height = static_cast<int>(std::ceil(width * intrinsicHeight / intrinsicWidth));
+        height = static_cast<int>(std::ceil(width * intrinsic_height / intrinsic_width));
     } else if(height > 0 && width <= 0) {
-        width = static_cast<int>(std::ceil(height * intrinsicWidth / intrinsicHeight));
+        width = static_cast<int>(std::ceil(height * intrinsic_width / intrinsic_height));
     }
 
-    auto xScale = width / intrinsicWidth;
-    auto yScale = height / intrinsicHeight;
+    auto xScale = width / intrinsic_width;
+    auto yScale = height / intrinsic_height;
 
     Matrix matrix(xScale, 0, 0, yScale, 0, 0);
     Bitmap bitmap(width, height);
@@ -1134,7 +1134,7 @@ NOVASVG_INLINE void Document::render(stb::image& image, const Matrix& matrix) co
     if(image.empty())
         return;
     Bitmap layer(image.width(), image.height());  // transparent
-    if(layer.isNull())
+    if(layer.is_null())
         return;
     render(layer, matrix);
     stb::image over = bitmap_release_to_image(std::move(layer));
@@ -1142,30 +1142,30 @@ NOVASVG_INLINE void Document::render(stb::image& image, const Matrix& matrix) co
         image.blend(over);
 }
 
-NOVASVG_INLINE stb::image Document::renderToImage(int width, int height, const Color& backgroundColor) const
+NOVASVG_INLINE stb::image Document::render_to_image(int width, int height, const Color& backgroundColor) const
 {
-    return bitmap_release_to_image(renderToBitmap(width, height, backgroundColor));
+    return bitmap_release_to_image(render_to_bitmap(width, height, backgroundColor));
 }
 
-NOVASVG_INLINE Element Document::elementFromPoint(float x, float y) const
+NOVASVG_INLINE Element Document::element_from_point(float x, float y) const
 {
-    return rootElement(true)->elementFromPoint(x, y);
+    return root_element(true)->element_from_point(x, y);
 }
 
-NOVASVG_INLINE Element Document::getElementById(const std::string& id) const
+NOVASVG_INLINE Element Document::element_by_id(const std::string& id) const
 {
-    return m_rootElement->getElementById(id);
+    return m_rootElement->element_by_id(id);
 }
 
-NOVASVG_INLINE Element Document::documentElement() const
+NOVASVG_INLINE Element Document::document_element() const
 {
     return m_rootElement.get();
 }
 
-NOVASVG_INLINE SVGRootElement* Document::rootElement(bool layoutIfNeeded) const
+NOVASVG_INLINE SVGRootElement* Document::root_element(bool layout_if_needed) const
 {
-    if(layoutIfNeeded)
-        m_rootElement->layoutIfNeeded();
+    if(layout_if_needed)
+        m_rootElement->layout_if_needed();
     return m_rootElement.get();
 }
 

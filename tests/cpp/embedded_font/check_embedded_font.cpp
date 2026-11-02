@@ -14,9 +14,9 @@
 namespace {
 size_t inked_pixels(const std::string& svg)
 {
-    auto document = novasvg::Document::loadFromData(svg);
+    auto document = novasvg::Document::load_data(svg);
     REQUIRE(document != nullptr);
-    auto image = document->renderToImage();
+    auto image = document->render_to_image();
     size_t inked = 0;
     for(int y = 0; y < image.height(); ++y) {
         const auto* row = image.data() + size_t(y) * image.stride();
@@ -46,8 +46,8 @@ TEST_CASE("the embedded font lays text out exactly like the full DejaVu Sans")
     auto* cache = novasvg::fontFaceCache();
     auto full = cache->getFontFace("Full Probe", false, false);
     auto embedded = cache->getFontFace("sans-serif", false, false);
-    REQUIRE(!full.isNull());
-    REQUIRE(!embedded.isNull());
+    REQUIRE(!full.is_null());
+    REQUIRE(!embedded.is_null());
     CHECK(embedded.unitsPerEm() == full.unitsPerEm());
 
     // kerning pairs, ligatures, digits, punctuation, Latin-1
@@ -86,7 +86,7 @@ TEST_CASE("bold and italic requests get the bold / oblique embedded faces, laid 
     };
     auto* cache = novasvg::fontFaceCache();
     const auto regular = cache->getFontFace("sans-serif", false, false);
-    REQUIRE(!regular.isNull());
+    REQUIRE(!regular.is_null());
     const std::u32string samples[] = {U"Hello World", U"AV To LT Ty Yo WA", U"fi fl ffi ffl office", U"The quick brown fox jumps over the lazy dog"};
 
     for(const auto& spec : faces) {
@@ -95,8 +95,8 @@ TEST_CASE("bold and italic requests get the bold / oblique embedded faces, laid 
         REQUIRE(novasvg::addFontFaceFromFile(family.c_str(), spec.bold, spec.italic, (font_dir() + spec.file).c_str()));
         const auto full = cache->getFontFace(family, spec.bold, spec.italic);
         const auto embedded = cache->getFontFace("sans-serif", spec.bold, spec.italic);
-        REQUIRE(!full.isNull());
-        REQUIRE(!embedded.isNull());
+        REQUIRE(!full.is_null());
+        REQUIRE(!embedded.is_null());
         CHECK(embedded.get() != regular.get()); // not just the regular face under another request
         for(const auto& text : samples)
             CHECK(novasvg::Font(embedded, 16.f).measureText(text) == novasvg::Font(full, 16.f).measureText(text));

@@ -14,9 +14,9 @@ using Pixel = std::array<int, 4>;
 
 Pixel centre(const std::string& svg)
 {
-    auto document = novasvg::Document::loadFromData(svg);
+    auto document = novasvg::Document::load_data(svg);
     REQUIRE(document != nullptr);
-    auto image = document->renderToImage(40, 40);
+    auto image = document->render_to_image(40, 40);
     const uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
     return {p[0], p[1], p[2], p[3]};
 }
@@ -116,10 +116,10 @@ TEST_CASE("var(): a <use> copy gets the value its original computed")
 
 TEST_CASE("var(): a stylesheet applied after loading changes what var() gives")
 {
-    auto document = novasvg::Document::loadFromData(svg("--c:red", rect + "fill=\"var(--c)\"/>"));
+    auto document = novasvg::Document::load_data(svg("--c:red", rect + "fill=\"var(--c)\"/>"));
     REQUIRE(document != nullptr);
-    document->applyStyleSheet(":root{--c:blue !important}");
-    auto image = document->renderToImage(40, 40);
+    document->apply_style_sheet(":root{--c:blue !important}");
+    auto image = document->render_to_image(40, 40);
     const uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
     CHECK(Pixel{p[0], p[1], p[2], p[3]} == blue);
 }

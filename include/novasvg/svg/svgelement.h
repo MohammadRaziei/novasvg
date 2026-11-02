@@ -689,17 +689,17 @@ public:
     {}
 
     virtual ~SVGNode() = default;
-    virtual bool isTextNode() const { return false; }
-    virtual bool isElement() const { return false; }
+    virtual bool is_text_node() const { return false; }
+    virtual bool is_element() const { return false; }
     virtual bool isPaintElement() const { return false; }
     virtual bool isGraphicsElement() const { return false; }
     virtual bool isGeometryElement() const { return false; }
     virtual bool isTextPositioningElement() const { return false; }
 
     Document* document() const { return m_document; }
-    SVGRootElement* rootElement() const { return m_document->rootElement(); }
+    SVGRootElement* root_element() const { return m_document->root_element(); }
 
-    SVGElement* parentElement() const { return m_parentElement; }
+    SVGElement* parent_element() const { return m_parentElement; }
     void setParentElement(SVGElement* parent) { m_parentElement = parent; }
 
     bool isRootElement() const { return m_parentElement == nullptr; }
@@ -717,10 +717,10 @@ class SVGTextNode final : public SVGNode {
 public:
     SVGTextNode(Document* document);
 
-    bool isTextNode() const final { return true; }
+    bool is_text_node() const final { return true; }
 
     const std::string& data() const { return m_data; }
-    void setData(const std::string& data);
+    void set_data(const std::string& data);
 
     std::unique_ptr<SVGNode> clone(bool deep) const final;
 
@@ -824,16 +824,16 @@ public:
     SVGElement(Document* document, ElementID id);
     virtual ~SVGElement() = default;
 
-    bool hasAttribute(std::string_view name) const;
-    const std::string& getAttribute(std::string_view name) const;
-    bool setAttribute(std::string_view name, const std::string& value);
+    bool has_attribute(std::string_view name) const;
+    const std::string& attribute(std::string_view name) const;
+    bool set_attribute(std::string_view name, const std::string& value);
 
     const Attribute* findAttribute(PropertyID id) const;
-    bool hasAttribute(PropertyID id) const;
-    const std::string& getAttribute(PropertyID id) const;
-    bool setAttribute(int specificity, PropertyID id, const std::string& value);
+    bool has_attribute(PropertyID id) const;
+    const std::string& attribute(PropertyID id) const;
+    bool set_attribute(int specificity, PropertyID id, const std::string& value);
     void setAttributes(const AttributeList& attributes);
-    bool setAttribute(const Attribute& attribute);
+    bool set_attribute(const Attribute& attribute);
 
     virtual void parseAttribute(PropertyID id, const std::string& value);
 
@@ -859,10 +859,10 @@ public:
     const SVGPropertyList& properties() const { return m_properties; }
     const SVGNodeList& children() const { return m_children; }
 
-    virtual Transform localTransform() const { return Transform::Identity; }
+    virtual Transform local_transform() const { return Transform::Identity; }
     virtual Rect fillBoundingBox() const;
     virtual Rect strokeBoundingBox() const;
-    virtual Rect paintBoundingBox() const;
+    virtual Rect paint_bounding_box() const;
 
     SVGMarkerElement* getMarker(std::string_view id) const;
     SVGClipPathElement* getClipper(std::string_view id) const;
@@ -870,7 +870,7 @@ public:
     SVGFilterElement* getFilterElement(std::string_view id) const;
     SVGPaintElement* getPainter(std::string_view id) const;
 
-    SVGElement* elementFromPoint(float x, float y);
+    SVGElement* element_from_point(float x, float y);
 
     template<typename T>
     void transverse(T callback);
@@ -880,7 +880,7 @@ public:
     Size currentViewportSize() const;
     float font_size() const { return m_font_size; }
 
-    void cloneChildren(SVGElement* parentElement) const;
+    void cloneChildren(SVGElement* parent_element) const;
     std::unique_ptr<SVGNode> clone(bool deep) const final;
 
     virtual void build();
@@ -914,7 +914,7 @@ public:
     float opacity() const { return m_opacity; }
     MixBlendMode mixBlendMode() const { return m_mix_blend_mode; }
 
-    bool isElement() const final { return true; }
+    bool is_element() const final { return true; }
 
 private:
     mutable Rect m_paintBoundingBox = Rect::Invalid;
@@ -944,14 +944,14 @@ private:
 
 inline const SVGElement* toSVGElement(const SVGNode* node)
 {
-    if(node && node->isElement())
+    if(node && node->is_element())
         return static_cast<const SVGElement*>(node);
     return nullptr;
 }
 
 inline SVGElement* toSVGElement(SVGNode* node)
 {
-    if(node && node->isElement())
+    if(node && node->is_element())
         return static_cast<SVGElement*>(node);
     return nullptr;
 }
@@ -1031,7 +1031,7 @@ public:
     bool isGraphicsElement() const final { return true; }
 
     const SVGTransform& transform() const { return m_transform; }
-    Transform localTransform() const override;
+    Transform local_transform() const override;
 
     SVGPaintServer getPaintServer(const Paint& paint, float opacity) const;
     StrokeData getStrokeData(const SVGLayoutState& state) const;
@@ -1051,7 +1051,7 @@ public:
     const SVGLength& width() const { return m_width; }
     const SVGLength& height() const { return m_height; }
 
-    Transform localTransform() const override;
+    Transform local_transform() const override;
     void render(SVGRenderState& state) const override;
 
 private:
@@ -1065,22 +1065,22 @@ class SVGRootElement final : public SVGSVGElement {
 public:
     SVGRootElement(Document* document);
 
-    float intrinsicWidth() const { return m_intrinsicWidth; }
-    float intrinsicHeight() const { return m_intrinsicHeight; }
+    float intrinsic_width() const { return m_intrinsicWidth; }
+    float intrinsic_height() const { return m_intrinsicHeight; }
 
     void setNeedsLayout() { m_intrinsicWidth = -1.f; }
     bool needsLayout() const { return m_intrinsicWidth == -1.f; }
 
-    SVGRootElement* layoutIfNeeded();
+    SVGRootElement* layout_if_needed();
 
-    SVGElement* getElementById(std::string_view id) const;
+    SVGElement* element_by_id(std::string_view id) const;
     void addElementById(const std::string& id, SVGElement* element);
     void layout(SVGLayoutState& state) final;
 
-    void forceLayout();
+    void force_layout();
 
     // Every stylesheet applied to the document -- the <style> text found while parsing, then anything
-    // passed to Document::applyStyleSheet() -- kept verbatim and in order. The HTML inside a
+    // passed to Document::apply_style_sheet() -- kept verbatim and in order. The HTML inside a
     // <foreignObject> sits outside the SVG element tree and so never goes through the resolver that sets
     // SVG presentation properties; it is styled from these (see resolveForeignObjectStyle()).
     const std::vector<std::string>& styleSheets() const { return m_styleSheets; }
@@ -1102,7 +1102,7 @@ public:
     const SVGLength& width() const { return m_width; }
     const SVGLength& height() const { return m_height; }
 
-    Transform localTransform() const final;
+    Transform local_transform() const final;
     void render(SVGRenderState& state) const final;
     void build() final;
 
@@ -1305,7 +1305,7 @@ public:
     Rect markerBoundingBox(const Point& origin, float angle, float strokeWidth) const;
     void renderMarker(SVGRenderState& state, const Point& origin, float angle, float strokeWidth) const;
 
-    Transform localTransform() const final;
+    Transform local_transform() const final;
 
 private:
     SVGLength m_refX;
@@ -1447,8 +1447,8 @@ public:
 
     std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
     {
-        auto sigma = parseFirstFloat(getAttribute(PropertyID::StdDeviation), 0.f) * context.scale();
-        auto output = context.cloneCanvas(*context.resolveInput(getAttribute(PropertyID::In)));
+        auto sigma = parseFirstFloat(attribute(PropertyID::StdDeviation), 0.f) * context.scale();
+        auto output = context.cloneCanvas(*context.resolveInput(attribute(PropertyID::In)));
         output->boxBlur(sigma, sigma);
         return output;
     }
@@ -1460,9 +1460,9 @@ public:
 
     std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
     {
-        auto dx = parseFirstFloat(getAttribute(PropertyID::Dx), 0.f) * context.scale();
-        auto dy = parseFirstFloat(getAttribute(PropertyID::Dy), 0.f) * context.scale();
-        auto output = context.cloneCanvas(*context.resolveInput(getAttribute(PropertyID::In)));
+        auto dx = parseFirstFloat(attribute(PropertyID::Dx), 0.f) * context.scale();
+        auto dy = parseFirstFloat(attribute(PropertyID::Dy), 0.f) * context.scale();
+        auto output = context.cloneCanvas(*context.resolveInput(attribute(PropertyID::In)));
         output->shift(dx, dy);
         return output;
     }
@@ -1474,9 +1474,9 @@ public:
 
     std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
     {
-        auto floodColorAttr = getAttribute(PropertyID::Flood_Color);
+        auto floodColorAttr = attribute(PropertyID::Flood_Color);
         Color floodColor = floodColorAttr.empty() ? Color(0, 0, 0) : Color(floodColorAttr);
-        auto floodOpacity = parseFirstFloat(getAttribute(PropertyID::Flood_Opacity), 1.f);
+        auto floodOpacity = parseFirstFloat(attribute(PropertyID::Flood_Opacity), 1.f);
 
         auto output = context.newCanvas();
         output->fillOpaqueWhite();
@@ -1495,7 +1495,7 @@ public:
         for(const auto& child : children()) {
             auto element = toSVGElement(child);
             if(element && element->id() == ElementID::FeMergeNode)
-                output->compositeOver(*context.resolveInput(element->getAttribute(PropertyID::In)));
+                output->compositeOver(*context.resolveInput(element->attribute(PropertyID::In)));
         }
 
         return output;
@@ -1508,16 +1508,16 @@ public:
 
     std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
     {
-        auto input = context.resolveInput(getAttribute(PropertyID::In));
-        auto input2 = context.resolveInput(getAttribute(PropertyID::In2));
+        auto input = context.resolveInput(attribute(PropertyID::In));
+        auto input2 = context.resolveInput(attribute(PropertyID::In2));
         auto output = context.cloneCanvas(*input2);
 
-        auto op = getAttribute(PropertyID::Operator);
+        auto op = attribute(PropertyID::Operator);
         if(op == "arithmetic") {
-            auto k1 = parseFirstFloat(getAttribute(PropertyID::K1), 0.f);
-            auto k2 = parseFirstFloat(getAttribute(PropertyID::K2), 0.f);
-            auto k3 = parseFirstFloat(getAttribute(PropertyID::K3), 0.f);
-            auto k4 = parseFirstFloat(getAttribute(PropertyID::K4), 0.f);
+            auto k1 = parseFirstFloat(attribute(PropertyID::K1), 0.f);
+            auto k2 = parseFirstFloat(attribute(PropertyID::K2), 0.f);
+            auto k3 = parseFirstFloat(attribute(PropertyID::K3), 0.f);
+            auto k4 = parseFirstFloat(attribute(PropertyID::K4), 0.f);
             output->compositeArithmetic(*input, k1, k2, k3, k4);
             return output;
         }
@@ -1539,14 +1539,14 @@ public:
 
     std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
     {
-        auto sigma = parseFirstFloat(getAttribute(PropertyID::StdDeviation), 2.f) * context.scale();
-        auto dx = parseFirstFloat(getAttribute(PropertyID::Dx), 2.f) * context.scale();
-        auto dy = parseFirstFloat(getAttribute(PropertyID::Dy), 2.f) * context.scale();
-        auto floodColorAttr = getAttribute(PropertyID::Flood_Color);
+        auto sigma = parseFirstFloat(attribute(PropertyID::StdDeviation), 2.f) * context.scale();
+        auto dx = parseFirstFloat(attribute(PropertyID::Dx), 2.f) * context.scale();
+        auto dy = parseFirstFloat(attribute(PropertyID::Dy), 2.f) * context.scale();
+        auto floodColorAttr = attribute(PropertyID::Flood_Color);
         Color floodColor = floodColorAttr.empty() ? Color(0, 0, 0) : Color(floodColorAttr);
-        auto floodOpacity = parseFirstFloat(getAttribute(PropertyID::Flood_Opacity), 1.f);
+        auto floodOpacity = parseFirstFloat(attribute(PropertyID::Flood_Opacity), 1.f);
 
-        auto input = context.resolveInput(getAttribute(PropertyID::In));
+        auto input = context.resolveInput(attribute(PropertyID::In));
         auto shadow = context.cloneCanvas(*input);
         shadow->tintToFloodColor(floodColor, floodOpacity);
         shadow->boxBlur(sigma, sigma);
@@ -1603,8 +1603,8 @@ private:
 
 class SVGRenderState {
 public:
-    SVGRenderState(const SVGElement* element, const SVGRenderState& parent, const Transform& localTransform)
-        : m_element(element), m_parent(&parent), m_currentTransform(parent.currentTransform() * localTransform)
+    SVGRenderState(const SVGElement* element, const SVGRenderState& parent, const Transform& local_transform)
+        : m_element(element), m_parent(&parent), m_currentTransform(parent.currentTransform() * local_transform)
         , m_mode(parent.mode()), m_canvas(parent.canvas())
     {}
 
@@ -1622,7 +1622,7 @@ public:
     const std::shared_ptr<Canvas>& canvas() const { return m_canvas; }
 
     Rect fillBoundingBox() const { return m_element->fillBoundingBox(); }
-    Rect paintBoundingBox() const { return m_element->paintBoundingBox(); }
+    Rect paint_bounding_box() const { return m_element->paint_bounding_box(); }
 
     bool hasCycleReference(const SVGElement* element) const;
 
@@ -1950,7 +1950,7 @@ public:
     Rect strokeBoundingBox() const override;
     void layoutElement(const SVGLayoutState& state) override;
 
-    bool isRenderable() const { return !m_path.isNull() && !isDisplayNone() && !isVisibilityHidden(); }
+    bool isRenderable() const { return !m_path.is_null() && !isDisplayNone() && !isVisibilityHidden(); }
 
     FillRule fill_rule() const { return m_fill_rule; }
     FillRule clip_rule() const { return m_clip_rule; }
@@ -2181,14 +2181,14 @@ class SVGTextElement final : public SVGTextPositioningElement {
 public:
     SVGTextElement(Document* document);
 
-    Rect fillBoundingBox() const final { return boundingBox(false); }
-    Rect strokeBoundingBox() const final { return boundingBox(true); }
+    Rect fillBoundingBox() const final { return bounding_box(false); }
+    Rect strokeBoundingBox() const final { return bounding_box(true); }
 
     void layout(SVGLayoutState& state) final;
     void render(SVGRenderState& state) const final;
 
 private:
-    Rect boundingBox(bool includeStroke) const;
+    Rect bounding_box(bool includeStroke) const;
     SVGTextFragmentList m_fragments;
     std::u32string m_text;
 };
@@ -2937,7 +2937,7 @@ NOVASVG_INLINE bool SVGPreserveAspectRatio::parse(std::string_view input)
 
 NOVASVG_INLINE Rect SVGPreserveAspectRatio::getClipRect(const Rect& viewBoxRect, const Size& viewportSize) const
 {
-    assert(!viewBoxRect.isEmpty() && !viewportSize.isEmpty());
+    assert(!viewBoxRect.is_empty() && !viewportSize.is_empty());
     auto xScale = viewportSize.w / viewBoxRect.w;
     auto yScale = viewportSize.h / viewBoxRect.h;
     if(m_alignType == AlignType::None) {
@@ -2984,7 +2984,7 @@ NOVASVG_INLINE Rect SVGPreserveAspectRatio::getClipRect(const Rect& viewBoxRect,
 
 NOVASVG_INLINE Transform SVGPreserveAspectRatio::getTransform(const Rect& viewBoxRect, const Size& viewportSize) const
 {
-    assert(!viewBoxRect.isEmpty() && !viewportSize.isEmpty());
+    assert(!viewBoxRect.is_empty() && !viewportSize.is_empty());
     auto xScale = viewportSize.w / viewBoxRect.w;
     auto yScale = viewportSize.h / viewBoxRect.h;
     if(m_alignType == AlignType::None) {
@@ -3142,12 +3142,12 @@ NOVASVG_INLINE void SVGRenderState::beginGroup(const SVGBlendInfo& blendInfo)
 {
     auto requiresCompositing = blendInfo.requiresCompositing(m_mode);
     if(requiresCompositing) {
-        auto boundingBox = m_currentTransform.mapRect(m_element->paintBoundingBox());
+        auto bounding_box = m_currentTransform.map_rect(m_element->paint_bounding_box());
         if(m_mode == SVGRenderMode::Painting && blendInfo.filterElement()) {
-            boundingBox.inflate(blendInfo.filterElement()->pixelMargin() * m_currentTransform.xScale());
+            bounding_box.inflate(blendInfo.filterElement()->pixelMargin() * m_currentTransform.xScale());
         }
-        boundingBox.intersect(m_canvas->extents());
-        m_canvas = Canvas::create(boundingBox);
+        bounding_box.intersect(m_canvas->extents());
+        m_canvas = Canvas::create(bounding_box);
     } else {
         m_canvas->save();
     }
@@ -3236,11 +3236,11 @@ NOVASVG_INLINE SVGGradientElement::SVGGradientElement(Document* document, Elemen
 
 NOVASVG_INLINE void SVGGradientElement::collectGradientAttributes(SVGGradientAttributes& attributes) const
 {
-    if(!attributes.hasGradientTransform() && hasAttribute(PropertyID::GradientTransform))
+    if(!attributes.hasGradientTransform() && has_attribute(PropertyID::GradientTransform))
         attributes.setGradientTransform(this);
-    if(!attributes.hasSpreadMethod() && hasAttribute(PropertyID::SpreadMethod))
+    if(!attributes.hasSpreadMethod() && has_attribute(PropertyID::SpreadMethod))
         attributes.setSpreadMethod(this);
-    if(!attributes.hasGradientUnits() && hasAttribute(PropertyID::GradientUnits))
+    if(!attributes.hasGradientUnits() && has_attribute(PropertyID::GradientUnits))
         attributes.setGradientUnits(this);
     if(!attributes.hasGradientContentElement()) {
         for(const auto& child : children()) {
@@ -3274,13 +3274,13 @@ NOVASVG_INLINE SVGLinearGradientAttributes SVGLinearGradientElement::collectGrad
         current->collectGradientAttributes(attributes);
         if(current->id() == ElementID::LinearGradient) {
             auto element = static_cast<const SVGLinearGradientElement*>(current);
-            if(!attributes.hasX1() && element->hasAttribute(PropertyID::X1))
+            if(!attributes.hasX1() && element->has_attribute(PropertyID::X1))
                 attributes.setX1(element);
-            if(!attributes.hasY1() && element->hasAttribute(PropertyID::Y1))
+            if(!attributes.hasY1() && element->has_attribute(PropertyID::Y1))
                 attributes.setY1(element);
-            if(!attributes.hasX2() && element->hasAttribute(PropertyID::X2))
+            if(!attributes.hasX2() && element->has_attribute(PropertyID::X2))
                 attributes.setX2(element);
-            if(!attributes.hasY2() && element->hasAttribute(PropertyID::Y2)) {
+            if(!attributes.hasY2() && element->has_attribute(PropertyID::Y2)) {
                 attributes.setY2(element);
             }
         }
@@ -3339,7 +3339,7 @@ NOVASVG_INLINE bool SVGLinearGradientElement::applyPaint(SVGRenderState& state, 
     auto gradientTransform = attributes.gradientTransform();
     if(gradientUnits == Units::ObjectBoundingBox) {
         auto bbox = state.fillBoundingBox();
-        gradientTransform.postMultiply(Transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
+        gradientTransform.post_multiply(Transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
     }
 
     state->setLinearGradient(x1, y1, x2, y2, spreadMethod, gradientStops, gradientTransform);
@@ -3386,7 +3386,7 @@ NOVASVG_INLINE bool SVGRadialGradientElement::applyPaint(SVGRenderState& state, 
     auto gradientTransform = attributes.gradientTransform();
     if(gradientUnits == Units::ObjectBoundingBox) {
         auto bbox = state.fillBoundingBox();
-        gradientTransform.postMultiply(Transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
+        gradientTransform.post_multiply(Transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
     }
 
     state->setRadialGradient(cx, cy, r, fx, fy, spreadMethod, gradientStops, gradientTransform);
@@ -3402,15 +3402,15 @@ NOVASVG_INLINE SVGRadialGradientAttributes SVGRadialGradientElement::collectGrad
         current->collectGradientAttributes(attributes);
         if(current->id() == ElementID::RadialGradient) {
             auto element = static_cast<const SVGRadialGradientElement*>(current);
-            if(!attributes.hasCx() && element->hasAttribute(PropertyID::Cx))
+            if(!attributes.hasCx() && element->has_attribute(PropertyID::Cx))
                 attributes.setCx(element);
-            if(!attributes.hasCy() && element->hasAttribute(PropertyID::Cy))
+            if(!attributes.hasCy() && element->has_attribute(PropertyID::Cy))
                 attributes.setCy(element);
-            if(!attributes.hasR() && element->hasAttribute(PropertyID::R))
+            if(!attributes.hasR() && element->has_attribute(PropertyID::R))
                 attributes.setR(element);
-            if(!attributes.hasFx() && element->hasAttribute(PropertyID::Fx))
+            if(!attributes.hasFx() && element->has_attribute(PropertyID::Fx))
                 attributes.setFx(element);
-            if(!attributes.hasFy() && element->hasAttribute(PropertyID::Fy)) {
+            if(!attributes.hasFy() && element->has_attribute(PropertyID::Fy)) {
                 attributes.setFy(element);
             }
         }
@@ -3506,27 +3506,27 @@ NOVASVG_INLINE SVGPatternAttributes SVGPatternElement::collectPatternAttributes(
     std::set<const SVGPatternElement*> processedPatterns;
     const SVGPatternElement* current = this;
     while(true) {
-        if(!attributes.hasX() && current->hasAttribute(PropertyID::X))
+        if(!attributes.hasX() && current->has_attribute(PropertyID::X))
             attributes.setX(current);
-        if(!attributes.hasY() && current->hasAttribute(PropertyID::Y))
+        if(!attributes.hasY() && current->has_attribute(PropertyID::Y))
             attributes.setY(current);
-        if(!attributes.hasWidth() && current->hasAttribute(PropertyID::Width))
+        if(!attributes.hasWidth() && current->has_attribute(PropertyID::Width))
             attributes.setWidth(current);
-        if(!attributes.hasHeight() && current->hasAttribute(PropertyID::Height))
+        if(!attributes.hasHeight() && current->has_attribute(PropertyID::Height))
             attributes.setHeight(current);
-        if(!attributes.hasPatternTransform() && current->hasAttribute(PropertyID::PatternTransform))
+        if(!attributes.hasPatternTransform() && current->has_attribute(PropertyID::PatternTransform))
             attributes.setPatternTransform(current);
-        if(!attributes.hasPatternUnits() && current->hasAttribute(PropertyID::PatternUnits))
+        if(!attributes.hasPatternUnits() && current->has_attribute(PropertyID::PatternUnits))
             attributes.setPatternUnits(current);
-        if(!attributes.hasPatternContentUnits() && current->hasAttribute(PropertyID::PatternContentUnits))
+        if(!attributes.hasPatternContentUnits() && current->has_attribute(PropertyID::PatternContentUnits))
             attributes.setPatternContentUnits(current);
-        if(!attributes.hasViewBox() && current->hasAttribute(PropertyID::ViewBox))
+        if(!attributes.hasViewBox() && current->has_attribute(PropertyID::ViewBox))
             attributes.setViewBox(current);
-        if(!attributes.hasPreserveAspectRatio() && current->hasAttribute(PropertyID::PreserveAspectRatio))
+        if(!attributes.hasPreserveAspectRatio() && current->has_attribute(PropertyID::PreserveAspectRatio))
             attributes.setPreserveAspectRatio(current);
         if(!attributes.hasPatternContentElement()) {
             for(const auto& child : current->children()) {
-                if(child->isElement()) {
+                if(child->is_element()) {
                     attributes.setPatternContentElement(current);
                     break;
                 }
@@ -3602,7 +3602,7 @@ NOVASVG_INLINE void SVGGeometryElement::layoutElement(const SVGLayoutState& stat
 
 NOVASVG_INLINE void SVGGeometryElement::updateMarkerPositions(SVGMarkerPositionList& positions, const SVGLayoutState& state)
 {
-    if(m_path.isEmpty())
+    if(m_path.is_empty())
         return;
     auto markerStart = getMarker(state.marker_start());
     auto markerMid = getMarker(state.marker_mid());
@@ -3687,7 +3687,7 @@ NOVASVG_INLINE void SVGGeometryElement::render(SVGRenderState& state) const
     if(!isRenderable())
         return;
     SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, localTransform());
+    SVGRenderState newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     if(newState.mode() == SVGRenderMode::Clipping) {
         newState->setColor(Color::White);
@@ -3870,7 +3870,7 @@ using namespace gfx; // render/ layer (novasvg::render), the former plutovg
 
 inline const SVGTextNode* toSVGTextNode(const SVGNode* node)
 {
-    assert(node && node->isTextNode());
+    assert(node && node->is_text_node());
     return static_cast<const SVGTextNode*>(node);
 }
 
@@ -3917,10 +3917,10 @@ NOVASVG_INLINE AlignmentBaseline resolveDominantBaseline(const SVGTextPositionin
 NOVASVG_INLINE float calculateBaselineOffset(const SVGTextPositioningElement* element)
 {
     auto offset = element->baseline_offset();
-    auto parent = element->parentElement();
+    auto parent = element->parent_element();
     while(parent->isTextPositioningElement()) {
         offset += toSVGTextPositioningElement(parent)->baseline_offset();
-        parent = parent->parentElement();
+        parent = parent->parent_element();
     }
 
     auto baseline = element->alignment_baseline();
@@ -4026,7 +4026,7 @@ NOVASVG_INLINE void handleTextChunk(SVGTextFragmentIterator begin, SVGTextFragme
 {
     const SVGTextFragment& firstFragment = *begin;
     const auto isVerticalText = firstFragment.element->isVerticalWritingMode();
-    if(firstFragment.element->hasAttribute(PropertyID::TextLength)) {
+    if(firstFragment.element->has_attribute(PropertyID::TextLength)) {
         LengthContext lengthContext(firstFragment.element);
         auto textLength = lengthContext.valueForLength(firstFragment.element->textLength());
         auto chunkLength = calculateTextChunkLength(begin, end, isVerticalText);
@@ -4099,9 +4099,9 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::build(const SVGTextElement* textEle
 
     std::u32string_view wholeText(m_text);
     for(const auto& textPosition : m_textPositions) {
-        if(!textPosition.node->isTextNode())
+        if(!textPosition.node->is_text_node())
             continue;
-        auto element = toSVGTextPositioningElement(textPosition.node->parentElement());
+        auto element = toSVGTextPositioningElement(textPosition.node->parent_element());
         const auto isVerticalText = element->isVerticalWritingMode();
         const auto isUprightText = element->isUprightTextOrientation();
         const auto& font = element->font();
@@ -4122,7 +4122,7 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::build(const SVGTextElement* textEle
             m_fragments.push_back(fragment);
         };
 
-        auto needsTextLengthSpacing = element->lengthAdjust() == LengthAdjust::Spacing && element->hasAttribute(PropertyID::TextLength);
+        auto needsTextLengthSpacing = element->lengthAdjust() == LengthAdjust::Spacing && element->has_attribute(PropertyID::TextLength);
         auto baselineOffset = calculateBaselineOffset(element);
         auto startOffset = textPosition.startOffset;
         auto textOffset = textPosition.startOffset;
@@ -4214,7 +4214,7 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::handleText(const SVGTextNode* node)
     const auto& text = node->data();
     if(text.empty())
         return;
-    auto element = toSVGTextPositioningElement(node->parentElement());
+    auto element = toSVGTextPositioningElement(node->parent_element());
     const auto startOffset = m_text.length();
     uint32_t lastCharacter = ' ';
     if(!m_text.empty()) {
@@ -4245,7 +4245,7 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::handleElement(const SVGTextPosition
     const auto itemIndex = m_textPositions.size();
     m_textPositions.emplace_back(element, m_text.length(), m_text.length());
     for(const auto& child : element->children()) {
-        if(child->isTextNode()) {
+        if(child->is_text_node()) {
             handleText(toSVGTextNode(child.get()));
         } else if(child->isTextPositioningElement()) {
             handleElement(toSVGTextPositioningElement(child.get()));
@@ -4388,7 +4388,7 @@ NOVASVG_INLINE void SVGTextElement::render(SVGRenderState& state) const
     if(m_fragments.empty() || isVisibilityHidden() || isDisplayNone())
         return;
     SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, localTransform());
+    SVGRenderState newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     if(newState.mode() == SVGRenderMode::Clipping) {
         newState->setColor(Color::White);
@@ -4420,9 +4420,9 @@ NOVASVG_INLINE void SVGTextElement::render(SVGRenderState& state) const
     newState.endGroup(blendInfo);
 }
 
-NOVASVG_INLINE Rect SVGTextElement::boundingBox(bool includeStroke) const
+NOVASVG_INLINE Rect SVGTextElement::bounding_box(bool includeStroke) const
 {
-    auto boundingBox = Rect::Invalid;
+    auto bounding_box = Rect::Invalid;
     for(const auto& fragment : m_fragments) {
         const auto& font = fragment.element->font();
         const auto& stroke = fragment.element->stroke();
@@ -4430,12 +4430,12 @@ NOVASVG_INLINE Rect SVGTextElement::boundingBox(bool includeStroke) const
         auto fragmentRect = Rect(fragment.x, fragment.y - font.ascent(), fragment.width, fragment.height);
         if(includeStroke && stroke.isRenderable())
             fragmentRect.inflate(fragment.element->stroke_width() / 2.f);
-        boundingBox.unite(fragmentTranform.mapRect(fragmentRect));
+        bounding_box.unite(fragmentTranform.map_rect(fragmentRect));
     }
 
-    if(!boundingBox.isValid())
-        boundingBox = Rect::Empty;
-    return boundingBox;
+    if(!bounding_box.isValid())
+        bounding_box = Rect::Empty;
+    return bounding_box;
 }
 
 // ---- svglayoutstate (impl) ----
@@ -5048,7 +5048,7 @@ NOVASVG_INLINE Font makeFont(const std::string& family, float size, bool bold, b
     FontFace face = fontFaceCache()->getFontFaceForFamilyStack(family, bold, italic);
 
     // Absolute last resort: the hardcoded generic-family table.
-    if(face.isNull())
+    if(face.is_null())
         face = fontFaceCache()->getFontFace(emptyString, bold, italic);
     return Font(face, size);
 }
@@ -5114,16 +5114,16 @@ NOVASVG_INLINE SVGTextNode::SVGTextNode(Document* document)
 {
 }
 
-NOVASVG_INLINE void SVGTextNode::setData(const std::string& data)
+NOVASVG_INLINE void SVGTextNode::set_data(const std::string& data)
 {
-    rootElement()->setNeedsLayout();
+    root_element()->setNeedsLayout();
     m_data.assign(data);
 }
 
 NOVASVG_INLINE std::unique_ptr<SVGNode> SVGTextNode::clone(bool deep) const
 {
     auto node = std::make_unique<SVGTextNode>(document());
-    node->setData(m_data);
+    node->set_data(m_data);
     return node;
 }
 
@@ -5210,28 +5210,28 @@ NOVASVG_INLINE SVGElement::SVGElement(Document* document, ElementID id)
 {
 }
 
-NOVASVG_INLINE bool SVGElement::hasAttribute(std::string_view name) const
+NOVASVG_INLINE bool SVGElement::has_attribute(std::string_view name) const
 {
     auto id = propertyid(name);
     if(id == PropertyID::Unknown)
         return false;
-    return hasAttribute(id);
+    return has_attribute(id);
 }
 
-NOVASVG_INLINE const std::string& SVGElement::getAttribute(std::string_view name) const
+NOVASVG_INLINE const std::string& SVGElement::attribute(std::string_view name) const
 {
     auto id = propertyid(name);
     if(id == PropertyID::Unknown)
         return emptyString;
-    return getAttribute(id);
+    return attribute(id);
 }
 
-NOVASVG_INLINE bool SVGElement::setAttribute(std::string_view name, const std::string& value)
+NOVASVG_INLINE bool SVGElement::set_attribute(std::string_view name, const std::string& value)
 {
     auto id = propertyid(name);
     if(id == PropertyID::Unknown)
         return false;
-    return setAttribute(Specificity::Api, id, value);
+    return set_attribute(Specificity::Api, id, value);
 }
 
 NOVASVG_INLINE const Attribute* SVGElement::findAttribute(PropertyID id) const
@@ -5245,7 +5245,7 @@ NOVASVG_INLINE const Attribute* SVGElement::findAttribute(PropertyID id) const
     return nullptr;
 }
 
-NOVASVG_INLINE bool SVGElement::hasAttribute(PropertyID id) const
+NOVASVG_INLINE bool SVGElement::has_attribute(PropertyID id) const
 {
     for(const auto& attribute : m_attributes) {
         if(id == attribute.id()) {
@@ -5256,7 +5256,7 @@ NOVASVG_INLINE bool SVGElement::hasAttribute(PropertyID id) const
     return false;
 }
 
-NOVASVG_INLINE const std::string& SVGElement::getAttribute(PropertyID id) const
+NOVASVG_INLINE const std::string& SVGElement::attribute(PropertyID id) const
 {
     for(const auto& attribute : m_attributes) {
         if(id == attribute.id()) {
@@ -5279,7 +5279,7 @@ inline bool usesVariables(PropertyID id, const std::string& value)
     return false;
 }
 
-NOVASVG_INLINE bool SVGElement::setAttribute(int specificity, PropertyID id, const std::string& value)
+NOVASVG_INLINE bool SVGElement::set_attribute(int specificity, PropertyID id, const std::string& value)
 {
     // A value with var() cannot be parsed before the custom properties it names are all known (a stylesheet
     // can come after the element): it is kept, and parsed by resolveVariables() when the document is complete.
@@ -5319,7 +5319,7 @@ NOVASVG_INLINE void SVGElement::setCustomProperty(int specificity, const std::st
 
 NOVASVG_INLINE const SVGElement* SVGElement::findCustomPropertyOwner(const std::string& name) const
 {
-    for(auto element = this; element != nullptr; element = element->parentElement()) {
+    for(auto element = this; element != nullptr; element = element->parent_element()) {
         if(element->m_customProperties.count(name))
             return element;
     }
@@ -5422,18 +5422,18 @@ NOVASVG_INLINE void SVGElement::resolveVariables()
 NOVASVG_INLINE void SVGElement::setAttributes(const AttributeList& attributes)
 {
     for(const auto& attribute : attributes) {
-        setAttribute(attribute);
+        set_attribute(attribute);
     }
 }
 
-NOVASVG_INLINE bool SVGElement::setAttribute(const Attribute& attribute)
+NOVASVG_INLINE bool SVGElement::set_attribute(const Attribute& attribute)
 {
-    return setAttribute(attribute.specificity(), attribute.id(), attribute.value());
+    return set_attribute(attribute.specificity(), attribute.id(), attribute.value());
 }
 
 NOVASVG_INLINE void SVGElement::parseAttribute(PropertyID id, const std::string& value)
 {
-    rootElement()->setNeedsLayout();
+    root_element()->setNeedsLayout();
     if(auto property = getProperty(id)) {
         property->parse(value);
     }
@@ -5441,7 +5441,7 @@ NOVASVG_INLINE void SVGElement::parseAttribute(PropertyID id, const std::string&
 
 NOVASVG_INLINE SVGElement* SVGElement::previousElement() const
 {
-    auto parent = parentElement();
+    auto parent = parent_element();
     if(parent == nullptr)
         return nullptr;
     const auto& children = parent->children();
@@ -5450,7 +5450,7 @@ NOVASVG_INLINE SVGElement* SVGElement::previousElement() const
     SVGElement* element = nullptr;
     for(; it != end; ++it) {
         SVGNode* node = &**it;
-        if(node->isTextNode())
+        if(node->is_text_node())
             continue;
         if(node == this)
             return element;
@@ -5462,7 +5462,7 @@ NOVASVG_INLINE SVGElement* SVGElement::previousElement() const
 
 NOVASVG_INLINE SVGElement* SVGElement::nextElement() const
 {
-    auto parent = parentElement();
+    auto parent = parent_element();
     if(parent == nullptr)
         return nullptr;
     const auto& children = parent->children();
@@ -5471,7 +5471,7 @@ NOVASVG_INLINE SVGElement* SVGElement::nextElement() const
     SVGElement* element = nullptr;
     for(; it != end; ++it) {
         SVGNode* node = &**it;
-        if(node->isTextNode())
+        if(node->is_text_node())
             continue;
         if(node == this)
             return element;
@@ -5507,7 +5507,7 @@ NOVASVG_INLINE Rect SVGElement::fillBoundingBox() const
     auto fillBoundingBox = Rect::Invalid;
     for(const auto& child : m_children) {
         if(auto element = toSVGElement(child); element && !element->isHiddenElement()) {
-            fillBoundingBox.unite(element->localTransform().mapRect(element->fillBoundingBox()));
+            fillBoundingBox.unite(element->local_transform().map_rect(element->fillBoundingBox()));
         }
     }
 
@@ -5521,7 +5521,7 @@ NOVASVG_INLINE Rect SVGElement::strokeBoundingBox() const
     auto strokeBoundingBox = Rect::Invalid;
     for(const auto& child : m_children) {
         if(auto element = toSVGElement(child); element && !element->isHiddenElement()) {
-            strokeBoundingBox.unite(element->localTransform().mapRect(element->strokeBoundingBox()));
+            strokeBoundingBox.unite(element->local_transform().map_rect(element->strokeBoundingBox()));
         }
     }
 
@@ -5530,7 +5530,7 @@ NOVASVG_INLINE Rect SVGElement::strokeBoundingBox() const
     return strokeBoundingBox;
 }
 
-NOVASVG_INLINE Rect SVGElement::paintBoundingBox() const
+NOVASVG_INLINE Rect SVGElement::paint_bounding_box() const
 {
     if(m_paintBoundingBox.isValid())
         return m_paintBoundingBox;
@@ -5544,7 +5544,7 @@ NOVASVG_INLINE Rect SVGElement::paintBoundingBox() const
 
 NOVASVG_INLINE SVGMarkerElement* SVGElement::getMarker(std::string_view id) const
 {
-    auto element = rootElement()->getElementById(id);
+    auto element = root_element()->element_by_id(id);
     if(element && element->id() == ElementID::Marker)
         return static_cast<SVGMarkerElement*>(element);
     return nullptr;
@@ -5552,7 +5552,7 @@ NOVASVG_INLINE SVGMarkerElement* SVGElement::getMarker(std::string_view id) cons
 
 NOVASVG_INLINE SVGClipPathElement* SVGElement::getClipper(std::string_view id) const
 {
-    auto element = rootElement()->getElementById(id);
+    auto element = root_element()->element_by_id(id);
     if(element && element->id() == ElementID::ClipPath)
         return static_cast<SVGClipPathElement*>(element);
     return nullptr;
@@ -5560,7 +5560,7 @@ NOVASVG_INLINE SVGClipPathElement* SVGElement::getClipper(std::string_view id) c
 
 NOVASVG_INLINE SVGMaskElement* SVGElement::getMasker(std::string_view id) const
 {
-    auto element = rootElement()->getElementById(id);
+    auto element = root_element()->element_by_id(id);
     if(element && element->id() == ElementID::Mask)
         return static_cast<SVGMaskElement*>(element);
     return nullptr;
@@ -5568,7 +5568,7 @@ NOVASVG_INLINE SVGMaskElement* SVGElement::getMasker(std::string_view id) const
 
 NOVASVG_INLINE SVGFilterElement* SVGElement::getFilterElement(std::string_view id) const
 {
-    auto element = rootElement()->getElementById(id);
+    auto element = root_element()->element_by_id(id);
     if(element && element->id() == ElementID::Filter)
         return static_cast<SVGFilterElement*>(element);
     return nullptr;
@@ -5576,30 +5576,30 @@ NOVASVG_INLINE SVGFilterElement* SVGElement::getFilterElement(std::string_view i
 
 NOVASVG_INLINE SVGPaintElement* SVGElement::getPainter(std::string_view id) const
 {
-    auto element = rootElement()->getElementById(id);
+    auto element = root_element()->element_by_id(id);
     if(element && element->isPaintElement())
         return static_cast<SVGPaintElement*>(element);
     return nullptr;
 }
 
-NOVASVG_INLINE SVGElement* SVGElement::elementFromPoint(float x, float y)
+NOVASVG_INLINE SVGElement* SVGElement::element_from_point(float x, float y)
 {
     auto it = m_children.rbegin();
     auto end = m_children.rend();
     for(; it != end; ++it) {
         auto child = toSVGElement(*it);
         if(child && !child->isHiddenElement()) {
-            if(auto element = child->elementFromPoint(x, y)) {
+            if(auto element = child->element_from_point(x, y)) {
                 return element;
             }
         }
     }
 
     if(isPointableElement()) {
-        auto transform = localTransform();
-        for(auto parent = parentElement(); parent; parent = parent->parentElement())
-            transform.postMultiply(parent->localTransform());
-        auto bbox = transform.mapRect(paintBoundingBox());
+        auto transform = local_transform();
+        for(auto parent = parent_element(); parent; parent = parent->parent_element())
+            transform.post_multiply(parent->local_transform());
+        auto bbox = transform.map_rect(paint_bounding_box());
         if(bbox.contains(x, y)) {
             return this;
         }
@@ -5626,7 +5626,7 @@ NOVASVG_INLINE SVGProperty* SVGElement::getProperty(PropertyID id) const
 
 NOVASVG_INLINE Size SVGElement::currentViewportSize() const
 {
-    auto parent = parentElement();
+    auto parent = parent_element();
     if(parent == nullptr) {
         auto element = static_cast<const SVGSVGElement*>(this);
         const auto& viewBox = element->viewBox();
@@ -5649,10 +5649,10 @@ NOVASVG_INLINE Size SVGElement::currentViewportSize() const
     return parent->currentViewportSize();
 }
 
-NOVASVG_INLINE void SVGElement::cloneChildren(SVGElement* parentElement) const
+NOVASVG_INLINE void SVGElement::cloneChildren(SVGElement* parent_element) const
 {
     for(const auto& child : m_children) {
-        parentElement->addChild(child->clone(true));
+        parent_element->addChild(child->clone(true));
     }
 }
 
@@ -5788,7 +5788,7 @@ NOVASVG_INLINE SVGFitToViewBox::SVGFitToViewBox(SVGElement* element)
 NOVASVG_INLINE Transform SVGFitToViewBox::viewBoxToViewTransform(const Size& viewportSize) const
 {
     const auto& viewBoxRect = m_viewBox.value();
-    if(viewBoxRect.isEmpty() || viewportSize.isEmpty())
+    if(viewBoxRect.is_empty() || viewportSize.is_empty())
         return Transform::Identity;
     return m_preserveAspectRatio.getTransform(viewBoxRect, viewportSize);
 }
@@ -5796,7 +5796,7 @@ NOVASVG_INLINE Transform SVGFitToViewBox::viewBoxToViewTransform(const Size& vie
 NOVASVG_INLINE Rect SVGFitToViewBox::getClipRect(const Size& viewportSize) const
 {
     const auto& viewBoxRect = m_viewBox.value();
-    if(viewBoxRect.isEmpty() || viewportSize.isEmpty())
+    if(viewBoxRect.is_empty() || viewportSize.is_empty())
         return Rect(0, 0, viewportSize.w, viewportSize.h);
     return m_preserveAspectRatio.getClipRect(viewBoxRect, viewportSize);
 }
@@ -5812,7 +5812,7 @@ NOVASVG_INLINE SVGElement* SVGURIReference::getTargetElement(const Document* doc
     std::string_view value(m_href.value());
     if(value.empty() || value.front() != '#')
         return nullptr;
-    return document->rootElement()->getElementById(value.substr(1));
+    return document->root_element()->element_by_id(value.substr(1));
 }
 
 NOVASVG_INLINE bool SVGPaintServer::applyPaint(SVGRenderState& state) const
@@ -5835,7 +5835,7 @@ NOVASVG_INLINE SVGGraphicsElement::SVGGraphicsElement(Document* document, Elemen
     addProperty(m_transformBox);
 }
 
-NOVASVG_INLINE Transform SVGGraphicsElement::localTransform() const
+NOVASVG_INLINE Transform SVGGraphicsElement::local_transform() const
 {
     // Only shift the pivot when transform-origin was actually specified --
     // matches legacy behavior (origin at the current user-space (0,0)) for
@@ -5853,7 +5853,7 @@ NOVASVG_INLINE Transform SVGGraphicsElement::localTransform() const
         box = Rect(0.f, 0.f, size.w, size.h);
     }
 
-    if(box.isEmpty())
+    if(box.is_empty())
         return m_transform.value();
 
     auto origin = m_transformOrigin.resolve(box);
@@ -5899,7 +5899,7 @@ NOVASVG_INLINE SVGSVGElement::SVGSVGElement(Document* document)
     addProperty(m_height);
 }
 
-NOVASVG_INLINE Transform SVGSVGElement::localTransform() const
+NOVASVG_INLINE Transform SVGSVGElement::local_transform() const
 {
     LengthContext lengthContext(this);
     const Rect viewportRect = {
@@ -5911,7 +5911,7 @@ NOVASVG_INLINE Transform SVGSVGElement::localTransform() const
 
     if(isRootElement())
         return viewBoxToViewTransform(viewportRect.size());
-    return SVGGraphicsElement::localTransform() * Transform::translated(viewportRect.x, viewportRect.y) * viewBoxToViewTransform(viewportRect.size());
+    return SVGGraphicsElement::local_transform() * Transform::translated(viewportRect.x, viewportRect.y) * viewBoxToViewTransform(viewportRect.size());
 }
 
 NOVASVG_INLINE void SVGSVGElement::render(SVGRenderState& state) const
@@ -5924,10 +5924,10 @@ NOVASVG_INLINE void SVGSVGElement::render(SVGRenderState& state) const
         lengthContext.valueForLength(m_height)
     };
 
-    if(viewportSize.isEmpty())
+    if(viewportSize.is_empty())
         return;
     SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, localTransform());
+    SVGRenderState newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     if(isOverflowHidden())
         newState->clipRect(getClipRect(viewportSize), FillRule::NonZero, newState.currentTransform());
@@ -5940,14 +5940,14 @@ NOVASVG_INLINE SVGRootElement::SVGRootElement(Document* document)
 {
 }
 
-NOVASVG_INLINE SVGRootElement* SVGRootElement::layoutIfNeeded()
+NOVASVG_INLINE SVGRootElement* SVGRootElement::layout_if_needed()
 {
     if(needsLayout())
-        forceLayout();
+        force_layout();
     return this;
 }
 
-NOVASVG_INLINE SVGElement* SVGRootElement::getElementById(std::string_view id) const
+NOVASVG_INLINE SVGElement* SVGRootElement::element_by_id(std::string_view id) const
 {
     auto it = m_idCache.find(id);
     if(it == m_idCache.end())
@@ -5978,7 +5978,7 @@ NOVASVG_INLINE void SVGRootElement::layout(SVGLayoutState& state)
     }
 
     const auto& viewBoxRect = viewBox().value();
-    if(!viewBoxRect.isEmpty() && (!m_intrinsicWidth || !m_intrinsicHeight)) {
+    if(!viewBoxRect.is_empty() && (!m_intrinsicWidth || !m_intrinsicHeight)) {
         auto intrinsicRatio = viewBoxRect.w / viewBoxRect.h;
         if(!m_intrinsicWidth && m_intrinsicHeight)
             m_intrinsicWidth = m_intrinsicHeight * intrinsicRatio;
@@ -5993,16 +5993,16 @@ NOVASVG_INLINE void SVGRootElement::layout(SVGLayoutState& state)
     }
 
     if(!m_intrinsicWidth || !m_intrinsicHeight) {
-        auto boundingBox = paintBoundingBox();
+        auto bounding_box = paint_bounding_box();
         if(!m_intrinsicWidth)
-            m_intrinsicWidth = boundingBox.right();
+            m_intrinsicWidth = bounding_box.right();
         if(!m_intrinsicHeight) {
-            m_intrinsicHeight = boundingBox.bottom();
+            m_intrinsicHeight = bounding_box.bottom();
         }
     }
 }
 
-NOVASVG_INLINE void SVGRootElement::forceLayout()
+NOVASVG_INLINE void SVGRootElement::force_layout()
 {
     SVGLayoutState state;
     layout(state);
@@ -6022,7 +6022,7 @@ NOVASVG_INLINE SVGUseElement::SVGUseElement(Document* document)
     addProperty(m_height);
 }
 
-NOVASVG_INLINE Transform SVGUseElement::localTransform() const
+NOVASVG_INLINE Transform SVGUseElement::local_transform() const
 {
     LengthContext lengthContext(this);
     const Point translation = {
@@ -6030,7 +6030,7 @@ NOVASVG_INLINE Transform SVGUseElement::localTransform() const
         lengthContext.valueForLength(m_y)
     };
 
-    return SVGGraphicsElement::localTransform() * Transform::translated(translation.x, translation.y);
+    return SVGGraphicsElement::local_transform() * Transform::translated(translation.x, translation.y);
 }
 
 NOVASVG_INLINE void SVGUseElement::render(SVGRenderState& state) const
@@ -6038,7 +6038,7 @@ NOVASVG_INLINE void SVGUseElement::render(SVGRenderState& state) const
     if(isDisplayNone())
         return;
     SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, localTransform());
+    SVGRenderState newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     renderChildren(newState);
     newState.endGroup(blendInfo);
@@ -6084,13 +6084,13 @@ NOVASVG_INLINE std::unique_ptr<SVGElement> SVGUseElement::cloneTargetElement(SVG
 {
     if(targetElement == this || isDisallowedElement(targetElement))
         return nullptr;
-    const auto& idAttr = targetElement->getAttribute(PropertyID::Id);
-    auto parent = parentElement();
+    const auto& idAttr = targetElement->attribute(PropertyID::Id);
+    auto parent = parent_element();
     while(parent) {
         auto attribute = parent->findAttribute(PropertyID::Id);
         if(attribute && idAttr == attribute->value())
             return nullptr;
-        parent = parent->parentElement();
+        parent = parent->parent_element();
     }
 
     auto tagId = targetElement->id();
@@ -6103,7 +6103,7 @@ NOVASVG_INLINE std::unique_ptr<SVGElement> SVGUseElement::cloneTargetElement(SVG
     if(newElement->id() == ElementID::Svg) {
         for(const auto& attribute : attributes()) {
             if(attribute.id() == PropertyID::Width || attribute.id() == PropertyID::Height) {
-                newElement->setAttribute(attribute);
+                newElement->set_attribute(attribute);
             }
         }
     }
@@ -6148,16 +6148,16 @@ NOVASVG_INLINE Rect SVGImageElement::strokeBoundingBox() const
 
 NOVASVG_INLINE void SVGImageElement::render(SVGRenderState& state) const
 {
-    if(m_image.isNull() || isDisplayNone() || isVisibilityHidden())
+    if(m_image.is_null() || isDisplayNone() || isVisibilityHidden())
         return;
     Rect dstRect(fillBoundingBox());
     Rect srcRect(0, 0, m_image.width(), m_image.height());
-    if(dstRect.isEmpty() || srcRect.isEmpty())
+    if(dstRect.is_empty() || srcRect.is_empty())
         return;
     m_preserveAspectRatio.transformRect(dstRect, srcRect);
 
     SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, localTransform());
+    SVGRenderState newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     newState->drawImage(m_image, dstRect, srcRect, newState.currentTransform());
     newState.endGroup(blendInfo);
@@ -6231,7 +6231,7 @@ NOVASVG_INLINE ForeignObjectFonts SVGForeignObjectElement::fontsFor(unsigned use
         }
         auto variant = makeFont(m_fontFamily, m_font.size(), (style & ForeignObjectFonts::Bold) != 0, (style & ForeignObjectFonts::Italic) != 0);
         // A variant the machine can't provide at all must not blank the text: use the element's own face.
-        fonts.face[style] = variant.isNull() ? m_font : variant;
+        fonts.face[style] = variant.is_null() ? m_font : variant;
     }
     return fonts;
 }
@@ -6251,7 +6251,7 @@ NOVASVG_INLINE void SVGForeignObjectElement::render(SVGRenderState& state) const
     if(m_rawContent.empty() || isDisplayNone() || isVisibilityHidden())
         return;
     SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, localTransform());
+    SVGRenderState newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     auto renderer = m_renderer ? m_renderer : ForeignObjectSimple::instance();
     renderer->render(this, newState);
@@ -6863,7 +6863,7 @@ inline void wrapForeignObjectParagraph(const std::u32string& paragraph, const Fo
 inline std::vector<std::u32string> wrapForeignObjectText(const std::string& text, const Font* font = nullptr, float maxWidth = 0.f)
 {
     std::vector<std::u32string> lines;
-    const bool softWrap = font != nullptr && !font->isNull() && maxWidth > 0.f;
+    const bool softWrap = font != nullptr && !font->is_null() && maxWidth > 0.f;
     size_t pos = 0;
     while(pos <= text.size()) {
         auto nl = text.find('\n', pos);
@@ -6952,7 +6952,7 @@ inline void wrapForeignObjectStyledParagraph(const std::vector<ForeignObjectSegm
             text += segment.text;
         auto chars = utf8ToU32(text);
         const auto& font = fonts.get(style);
-        if(maxWidth > 0.f && !font.isNull()) {
+        if(maxWidth > 0.f && !font.is_null()) {
             std::vector<std::u32string> wrapped;
             wrapForeignObjectParagraph(chars, font, maxWidth, wrapped);
             for(auto& line : wrapped)
@@ -7099,7 +7099,7 @@ inline ForeignObjectMetrics measureForeignObjectSegments(std::string_view rawHtm
 {
     ForeignObjectMetrics metrics;
     const auto& font = fonts.get(baseStyle);
-    if(font.isNull())
+    if(font.is_null())
         return metrics;
     // Same rule render() applies, so layout and paint agree: soft-wrap only if
     // the HTML's own `white-space` allows it, at the explicit maxWidth if one
@@ -7158,7 +7158,7 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
         return;
 
     const auto& font = element->font();
-    if(font.isNull())
+    if(font.is_null())
         return;
 
     // One face per style that actually occurs (just font() for unstyled text, nothing else is looked up).
@@ -7261,7 +7261,7 @@ NOVASVG_INLINE void SVGGElement::render(SVGRenderState& state) const
     if(isDisplayNone())
         return;
     SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, localTransform());
+    SVGRenderState newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     renderChildren(newState);
     newState.endGroup(blendInfo);
@@ -7285,8 +7285,8 @@ inline bool switchChildPasses(const SVGElement* child)
             v.remove_suffix(1);
         return v;
     };
-    if(child->hasAttribute(PropertyID::RequiredExtensions)) {
-        std::string_view value = trim(child->getAttribute(PropertyID::RequiredExtensions));
+    if(child->has_attribute(PropertyID::RequiredExtensions)) {
+        std::string_view value = trim(child->attribute(PropertyID::RequiredExtensions));
         bool supported = false;
         size_t pos = 0;
         while(pos < value.size() && !supported) {
@@ -7301,8 +7301,8 @@ inline bool switchChildPasses(const SVGElement* child)
         if(!supported)
             return false;
     }
-    if(child->hasAttribute(PropertyID::SystemLanguage)) {
-        std::string_view value = child->getAttribute(PropertyID::SystemLanguage);
+    if(child->has_attribute(PropertyID::SystemLanguage)) {
+        std::string_view value = child->attribute(PropertyID::SystemLanguage);
         bool matches = false;
         size_t pos = 0;
         while(pos <= value.size() && !matches) {
@@ -7340,7 +7340,7 @@ NOVASVG_INLINE void SVGSwitchElement::render(SVGRenderState& state) const
     if(isDisplayNone())
         return;
     SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, localTransform());
+    SVGRenderState newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     if(auto child = selectedChild())
         child->render(newState);
@@ -7411,7 +7411,7 @@ NOVASVG_INLINE Transform SVGMarkerElement::markerTransform(const Point& origin, 
 
 NOVASVG_INLINE Rect SVGMarkerElement::markerBoundingBox(const Point& origin, float angle, float strokeWidth) const
 {
-    return markerTransform(origin, angle, strokeWidth).mapRect(paintBoundingBox());
+    return markerTransform(origin, angle, strokeWidth).map_rect(paint_bounding_box());
 }
 
 NOVASVG_INLINE void SVGMarkerElement::renderMarker(SVGRenderState& state, const Point& origin, float angle, float strokeWidth) const
@@ -7427,7 +7427,7 @@ NOVASVG_INLINE void SVGMarkerElement::renderMarker(SVGRenderState& state, const 
     newState.endGroup(blendInfo);
 }
 
-NOVASVG_INLINE Transform SVGMarkerElement::localTransform() const
+NOVASVG_INLINE Transform SVGMarkerElement::local_transform() const
 {
     return viewBoxToViewTransform(markerSize());
 }
@@ -7441,7 +7441,7 @@ NOVASVG_INLINE SVGClipPathElement::SVGClipPathElement(Document* document)
 
 NOVASVG_INLINE Rect SVGClipPathElement::clipBoundingBox(const SVGElement* element) const
 {
-    auto clipBoundingBox = paintBoundingBox();
+    auto clipBoundingBox = paint_bounding_box();
     if(m_clipPathUnits.value() == Units::ObjectBoundingBox) {
         auto bbox = element->fillBoundingBox();
         clipBoundingBox.x = clipBoundingBox.x * bbox.w + bbox.x;
@@ -7450,15 +7450,15 @@ NOVASVG_INLINE Rect SVGClipPathElement::clipBoundingBox(const SVGElement* elemen
         clipBoundingBox.h = clipBoundingBox.h * bbox.h;
     }
 
-    return localTransform().mapRect(clipBoundingBox);
+    return local_transform().map_rect(clipBoundingBox);
 }
 
 NOVASVG_INLINE void SVGClipPathElement::applyClipMask(SVGRenderState& state) const
 {
     if(state.hasCycleReference(this))
         return;
-    auto maskImage = Canvas::create(state.currentTransform().mapRect(state.paintBoundingBox()));
-    auto currentTransform = state.currentTransform() * localTransform();
+    auto maskImage = Canvas::create(state.currentTransform().map_rect(state.paint_bounding_box()));
+    auto currentTransform = state.currentTransform() * local_transform();
     if(m_clipPathUnits.value() == Units::ObjectBoundingBox) {
         auto bbox = state.fillBoundingBox();
         currentTransform.translate(bbox.x, bbox.y);
@@ -7483,7 +7483,7 @@ inline const SVGGeometryElement* toSVGGeometryElement(const SVGNode* node)
 
 NOVASVG_INLINE void SVGClipPathElement::applyClipPath(SVGRenderState& state) const
 {
-    auto currentTransform = state.currentTransform() * localTransform();
+    auto currentTransform = state.currentTransform() * local_transform();
     if(m_clipPathUnits.value() == Units::ObjectBoundingBox) {
         auto bbox = state.fillBoundingBox();
         currentTransform.translate(bbox.x, bbox.y);
@@ -7499,13 +7499,13 @@ NOVASVG_INLINE void SVGClipPathElement::applyClipPath(SVGRenderState& state) con
         if(shapeElement == nullptr) {
             if(element->id() != ElementID::Use)
                 continue;
-            clipTransform.multiply(element->localTransform());
+            clipTransform.multiply(element->local_transform());
             shapeElement = toSVGGeometryElement(element->firstChild());
         }
 
         if(shapeElement == nullptr || !shapeElement->isRenderable())
             continue;
-        state->clipPath(shapeElement->path(), shapeElement->clip_rule(), clipTransform * shapeElement->localTransform());
+        state->clipPath(shapeElement->path(), shapeElement->clip_rule(), clipTransform * shapeElement->local_transform());
         return;
     }
 
@@ -7582,7 +7582,7 @@ NOVASVG_INLINE Rect SVGMaskElement::maskRect(const SVGElement* element) const
 
 NOVASVG_INLINE Rect SVGMaskElement::maskBoundingBox(const SVGElement* element) const
 {
-    auto maskBoundingBox = paintBoundingBox();
+    auto maskBoundingBox = paint_bounding_box();
     if(m_maskContentUnits.value() == Units::ObjectBoundingBox) {
         auto bbox = element->fillBoundingBox();
         maskBoundingBox.x = maskBoundingBox.x * bbox.w + bbox.x;
@@ -7598,7 +7598,7 @@ NOVASVG_INLINE void SVGMaskElement::applyMask(SVGRenderState& state) const
 {
     if(state.hasCycleReference(this))
         return;
-    auto maskImage = Canvas::create(state.currentTransform().mapRect(state.paintBoundingBox()));
+    auto maskImage = Canvas::create(state.currentTransform().map_rect(state.paint_bounding_box()));
     maskImage->clipRect(maskRect(state.element()), FillRule::NonZero, state.currentTransform());
 
     auto currentTransform = state.currentTransform();
@@ -7635,16 +7635,16 @@ NOVASVG_INLINE float SVGFilterElement::pixelMargin() const
         if(!element)
             continue;
         if(element->id() == ElementID::FeGaussianBlur) {
-            auto sigma = parseFirstFloat(element->getAttribute(PropertyID::StdDeviation), 0.f);
+            auto sigma = parseFirstFloat(element->attribute(PropertyID::StdDeviation), 0.f);
             margin = NOVASVG_MAX(margin, sigma * 3.f);
         } else if(element->id() == ElementID::FeDropShadow) {
-            auto sigma = parseFirstFloat(element->getAttribute(PropertyID::StdDeviation), 2.f);
-            auto dx = parseFirstFloat(element->getAttribute(PropertyID::Dx), 2.f);
-            auto dy = parseFirstFloat(element->getAttribute(PropertyID::Dy), 2.f);
+            auto sigma = parseFirstFloat(element->attribute(PropertyID::StdDeviation), 2.f);
+            auto dx = parseFirstFloat(element->attribute(PropertyID::Dx), 2.f);
+            auto dy = parseFirstFloat(element->attribute(PropertyID::Dy), 2.f);
             margin = NOVASVG_MAX(margin, sigma * 3.f + NOVASVG_MAX(std::abs(dx), std::abs(dy)));
         } else if(element->id() == ElementID::FeOffset) {
-            auto dx = parseFirstFloat(element->getAttribute(PropertyID::Dx), 0.f);
-            auto dy = parseFirstFloat(element->getAttribute(PropertyID::Dy), 0.f);
+            auto dx = parseFirstFloat(element->attribute(PropertyID::Dx), 0.f);
+            auto dy = parseFirstFloat(element->attribute(PropertyID::Dy), 0.f);
             margin = NOVASVG_MAX(margin, NOVASVG_MAX(std::abs(dx), std::abs(dy)));
         }
         // feFlood/feComposite/feMerge don't themselves need extra margin;
@@ -7665,7 +7665,7 @@ NOVASVG_INLINE void SVGFilterElement::applyFilter(SVGRenderState& state, float s
         auto output = element->applyFilterPrimitive(context);
         if(!output)
             continue; // not a primitive (e.g. a stray feMergeNode outside feMerge)
-        context.setResult(element->getAttribute(PropertyID::Result), std::move(output));
+        context.setResult(element->attribute(PropertyID::Result), std::move(output));
     }
 
     state.canvas()->copyPixelsFrom(*context.lastResult());

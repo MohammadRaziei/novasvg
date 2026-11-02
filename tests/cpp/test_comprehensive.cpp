@@ -37,18 +37,18 @@ TEST_CASE("Load SVG from string data") {
         <rect x="10" y="10" width="80" height="80" fill="red"/>
     </svg>)";
     
-    auto document = novasvg::Document::loadFromData(svg_data);
+    auto document = novasvg::Document::load_data(svg_data);
     REQUIRE(document != nullptr);
     CHECK(document->width() == doctest::Approx(100.0f));
     CHECK(document->height() == doctest::Approx(100.0f));
     
     // Test with C-string
-    auto document2 = novasvg::Document::loadFromData(svg_data.c_str());
+    auto document2 = novasvg::Document::load_data(svg_data.c_str());
     REQUIRE(document2 != nullptr);
     CHECK(document2->width() == doctest::Approx(100.0f));
     
     // Test with data and length
-    auto document3 = novasvg::Document::loadFromData(svg_data.c_str(), svg_data.length());
+    auto document3 = novasvg::Document::load_data(svg_data.c_str(), svg_data.length());
     REQUIRE(document3 != nullptr);
     CHECK(document3->width() == doctest::Approx(100.0f));
 }
@@ -131,7 +131,7 @@ TEST_CASE("Box operations") {
 TEST_CASE("Bitmap operations") {
     // Create bitmap with dimensions
     novasvg::Bitmap bitmap(100, 150);
-    REQUIRE_FALSE(bitmap.isNull());
+    REQUIRE_FALSE(bitmap.is_null());
     CHECK(bitmap.width() == 100);
     CHECK(bitmap.height() == 150);
     CHECK(bitmap.stride() >= 100 * 4); // ARGB32 is 4 bytes per pixel
@@ -151,7 +151,7 @@ TEST_CASE("Bitmap operations") {
     // Test move constructor
     novasvg::Bitmap bitmap3 = std::move(bitmap2);
     CHECK(bitmap3.width() == 100);
-    CHECK(bitmap2.isNull()); // Should be null after move
+    CHECK(bitmap2.is_null()); // Should be null after move
     
     // A bitmap converts to a straight-alpha image of the same size
     CHECK(novasvg::bitmap_to_rgba_image(bitmap3).width() == 100);
@@ -159,38 +159,38 @@ TEST_CASE("Bitmap operations") {
 
 TEST_CASE("Document methods") {
     auto svg_file = data_path("rect.svg");
-    auto document = novasvg::Document::loadFromFile(svg_file.string());
+    auto document = novasvg::Document::load_file(svg_file.string());
     REQUIRE(document != nullptr);
     
     // Test bounding box
-    auto bbox = document->boundingBox();
+    auto bbox = document->bounding_box();
     CHECK(bbox.w == doctest::Approx(64.0f));
     CHECK(bbox.h == doctest::Approx(64.0f));
     
     // Test document element
-    auto docElement = document->documentElement();
-    CHECK_FALSE(docElement.isNull());
+    auto docElement = document->document_element();
+    CHECK_FALSE(docElement.is_null());
     
-    // Test updateLayout and forceLayout (should not crash)
-    document->updateLayout();
-    document->forceLayout();
+    // Test update_layout and force_layout (should not crash)
+    document->update_layout();
+    document->force_layout();
     
-    // Test elementFromPoint (center of document)
-    auto element = document->elementFromPoint(32.0f, 32.0f);
-    CHECK_FALSE(element.isNull());
+    // Test element_from_point (center of document)
+    auto element = document->element_from_point(32.0f, 32.0f);
+    CHECK_FALSE(element.is_null());
     
-    // Test getElementById (no ID in rect.svg, should return null)
-    auto elementById = document->getElementById("nonexistent");
-    CHECK(elementById.isNull());
+    // Test element_by_id (no ID in rect.svg, should return null)
+    auto elementById = document->element_by_id("nonexistent");
+    CHECK(elementById.is_null());
 }
 
 TEST_CASE("Element methods") {
     auto svg_file = data_path("rect.svg");
-    auto document = novasvg::Document::loadFromFile(svg_file.string());
+    auto document = novasvg::Document::load_file(svg_file.string());
     REQUIRE(document != nullptr);
     
-    auto docElement = document->documentElement();
-    REQUIRE_FALSE(docElement.isNull());
+    auto docElement = document->document_element();
+    REQUIRE_FALSE(docElement.is_null());
     
     // Test children
     auto children = docElement.children();
@@ -199,68 +199,68 @@ TEST_CASE("Element methods") {
     
     // Test element methods on the first child
     if (!children.empty()) {
-        auto rectElement = children[0].toElement();
-        CHECK_FALSE(rectElement.isNull());
+        auto rectElement = children[0].to_element();
+        CHECK_FALSE(rectElement.is_null());
         
         // Test bounding box methods
-        auto bbox = rectElement.getBoundingBox();
-        auto localBbox = rectElement.getLocalBoundingBox();
-        auto globalBbox = rectElement.getGlobalBoundingBox();
+        auto bbox = rectElement.bounding_box();
+        auto localBbox = rectElement.local_bounding_box();
+        auto globalBbox = rectElement.global_bounding_box();
         
         // Test matrix methods
-        auto localMatrix = rectElement.getLocalMatrix();
-        auto globalMatrix = rectElement.getGlobalMatrix();
+        auto localMatrix = rectElement.local_matrix();
+        auto globalMatrix = rectElement.global_matrix();
         
-        // Test hasAttribute, getAttribute
-        CHECK(rectElement.hasAttribute("x"));
-        CHECK(rectElement.hasAttribute("y"));
-        CHECK(rectElement.hasAttribute("width"));
-        CHECK(rectElement.hasAttribute("height"));
+        // Test has_attribute, attribute
+        CHECK(rectElement.has_attribute("x"));
+        CHECK(rectElement.has_attribute("y"));
+        CHECK(rectElement.has_attribute("width"));
+        CHECK(rectElement.has_attribute("height"));
         
-        auto xAttr = rectElement.getAttribute("x");
-        auto yAttr = rectElement.getAttribute("y");
+        auto xAttr = rectElement.attribute("x");
+        auto yAttr = rectElement.attribute("y");
         CHECK(xAttr == "4");
         CHECK(yAttr == "4");
         
-        // Test setAttribute (commented out as it may not work as expected)
-        // rectElement.setAttribute("test", "value");
-        // CHECK(rectElement.getAttribute("test") == "value");
+        // Test set_attribute (commented out as it may not work as expected)
+        // rectElement.set_attribute("test", "value");
+        // CHECK(rectElement.attribute("test") == "value");
         
         // Test render methods
         novasvg::Bitmap bitmap(64, 64);
         rectElement.render(bitmap);
         
-        auto renderedBitmap = rectElement.renderToBitmap(64, 64);
-        CHECK_FALSE(renderedBitmap.isNull());
+        auto renderedBitmap = rectElement.render_to_bitmap(64, 64);
+        CHECK_FALSE(renderedBitmap.is_null());
     }
 }
 
 TEST_CASE("Node methods") {
     auto svg_file = data_path("rect.svg");
-    auto document = novasvg::Document::loadFromFile(svg_file.string());
+    auto document = novasvg::Document::load_file(svg_file.string());
     REQUIRE(document != nullptr);
     
-    auto docElement = document->documentElement();
+    auto docElement = document->document_element();
     auto children = docElement.children();
     
     if (!children.empty()) {
         auto node = children[0];
-        CHECK_FALSE(node.isNull());
+        CHECK_FALSE(node.is_null());
         
         // Test node type checks
-        CHECK(node.isElement());
-        CHECK_FALSE(node.isTextNode());
+        CHECK(node.is_element());
+        CHECK_FALSE(node.is_text_node());
         
         // Test conversions
-        auto element = node.toElement();
-        CHECK_FALSE(element.isNull());
+        auto element = node.to_element();
+        CHECK_FALSE(element.is_null());
         
-        auto textNode = node.toTextNode();
-        CHECK(textNode.isNull()); // Should be null since it's not a text node
+        auto textNode = node.to_text_node();
+        CHECK(textNode.is_null()); // Should be null since it's not a text node
         
         // Test parent element
-        auto parent = node.parentElement();
-        CHECK_FALSE(parent.isNull());
+        auto parent = node.parent_element();
+        CHECK_FALSE(parent.is_null());
         
         // Test equality operators
         auto node2 = children[0];
@@ -272,25 +272,25 @@ TEST_CASE("Node methods") {
 TEST_CASE("Complex SVG rendering") {
     // Test with tiger.svg (more complex SVG)
     auto svg_file = data_path("tiger.svg");
-    auto document = novasvg::Document::loadFromFile(svg_file.string());
+    auto document = novasvg::Document::load_file(svg_file.string());
     
     // tiger.svg should load successfully
     REQUIRE(document != nullptr);
     
     // Test rendering at different sizes
-    auto bitmap1 = document->renderToBitmap(100, 100);
-    CHECK_FALSE(bitmap1.isNull());
+    auto bitmap1 = document->render_to_bitmap(100, 100);
+    CHECK_FALSE(bitmap1.is_null());
     CHECK(bitmap1.width() == 100);
     CHECK(bitmap1.height() == 100);
     
     // Test with auto-scaling (width = -1)
-    auto bitmap2 = document->renderToBitmap(-1, 200);
-    CHECK_FALSE(bitmap2.isNull());
+    auto bitmap2 = document->render_to_bitmap(-1, 200);
+    CHECK_FALSE(bitmap2.is_null());
     CHECK(bitmap2.height() == 200);
     
     // Test with background color
-    auto bitmap3 = document->renderToBitmap(100, 100, novasvg::Color::fromValue(0xFFFFFFFF));
-    CHECK_FALSE(bitmap3.isNull());
+    auto bitmap3 = document->render_to_bitmap(100, 100, novasvg::Color::fromValue(0xFFFFFFFF));
+    CHECK_FALSE(bitmap3.is_null());
 }
 
 TEST_CASE("CSS selector queries") {
@@ -300,25 +300,25 @@ TEST_CASE("CSS selector queries") {
         <circle id="circle1" cx="25" cy="70" r="20" fill="green"/>
     </svg>)";
     
-    auto document = novasvg::Document::loadFromData(svg_data);
+    auto document = novasvg::Document::load_data(svg_data);
     REQUIRE(document != nullptr);
     
-    // Test querySelectorAll with element selector
-    auto allRects = document->querySelectorAll("rect");
+    // Test query_selector_all with element selector
+    auto allRects = document->query_selector_all("rect");
     CHECK(allRects.size() == 2);
     
-    // Test querySelectorAll with ID selector
-    auto rect1 = document->querySelectorAll("#rect1");
+    // Test query_selector_all with ID selector
+    auto rect1 = document->query_selector_all("#rect1");
     CHECK(rect1.size() == 1);
     
     if (!rect1.empty()) {
-        CHECK(rect1[0].getAttribute("id") == "rect1");
+        CHECK(rect1[0].attribute("id") == "rect1");
     }
     
-    // Test getElementById
-    auto circleElement = document->getElementById("circle1");
-    CHECK_FALSE(circleElement.isNull());
-    CHECK(circleElement.getAttribute("id") == "circle1");
+    // Test element_by_id
+    auto circleElement = document->element_by_id("circle1");
+    CHECK_FALSE(circleElement.is_null());
+    CHECK(circleElement.attribute("id") == "circle1");
 }
 
 TEST_CASE("Apply stylesheet") {
@@ -326,12 +326,12 @@ TEST_CASE("Apply stylesheet") {
         <rect id="myrect" x="10" y="10" width="80" height="80"/>
     </svg>)";
     
-    auto document = novasvg::Document::loadFromData(svg_data);
+    auto document = novasvg::Document::load_data(svg_data);
     REQUIRE(document != nullptr);
     
     // Apply CSS stylesheet
     std::string css = "#myrect { fill: #FF0000; stroke: #0000FF; stroke-width: 2; }";
-    document->applyStyleSheet(css);
+    document->apply_style_sheet(css);
     
     // The styles should be applied (though we can't easily verify rendering)
     // This test at least ensures the method doesn't crash
@@ -358,7 +358,7 @@ TEST_CASE("Font face APIs") {
 TEST_CASE("Bitmap edge cases") {
     // Test null bitmap
     novasvg::Bitmap nullBitmap;
-    CHECK(nullBitmap.isNull());
+    CHECK(nullBitmap.is_null());
     CHECK(nullBitmap.width() == 0);
     CHECK(nullBitmap.height() == 0);
     CHECK(nullBitmap.stride() == 0);
@@ -366,18 +366,18 @@ TEST_CASE("Bitmap edge cases") {
     
     // Test bitmap with zero dimensions (should create null bitmap)
     novasvg::Bitmap zeroBitmap(0, 0);
-    CHECK(zeroBitmap.isNull());
+    CHECK(zeroBitmap.is_null());
     
     novasvg::Bitmap negativeBitmap(-1, -1);
-    CHECK(negativeBitmap.isNull());
+    CHECK(negativeBitmap.is_null());
     
     // Test copy of null bitmap
     novasvg::Bitmap copiedNull = nullBitmap;
-    CHECK(copiedNull.isNull());
+    CHECK(copiedNull.is_null());
     
     // Test move of null bitmap
     novasvg::Bitmap movedNull = std::move(nullBitmap);
-    CHECK(movedNull.isNull());
+    CHECK(movedNull.is_null());
 }
 
 TEST_CASE("Matrix inverse and advanced operations") {

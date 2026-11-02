@@ -55,17 +55,6 @@ if(DEFINED SKBUILD)
         COMMENT "Generating Python stubs (.pyi) for novasvg_py..."
     )
     
-    # Generate the single-header distribution for the Python package 
-    add_custom_command(
-        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/novasvg/novasvg.h"
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${dist_path}/novasvg
-        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h 
-            "${CMAKE_CURRENT_BINARY_DIR}/novasvg/novasvg.h"
-            -I ${CMAKE_CURRENT_SOURCE_DIR}/include
-        MAIN_DEPENDENCY novasvg
-        COMMENT "Generating: ${CMAKE_CURRENT_BINARY_DIR}/novasvg/novasvg.h"
-    )
-
     # Install rules for the Python package
     # This installs the compiled module (.so or .pyd) and the python source files
 

@@ -310,5 +310,8 @@ Open: per-module headers still carry `static inline` helpers (paint.h hex/hsl pa
 - `gfx/`: color, bitmap, canvas, font, default_font, render (C-style API, now also declares `base64_decode`), plus temporary-public `internal.h`, `utils.h`, `font_impl.h` (the inline stb_truetype stack that `gfx/font.h` still needs; goes away with step 3 / libstb fonts).
 - `svg/`: svgelement, svgparser, svgparserutils. `gfx/font.h` still includes `svg/svgparserutils.h` (one inverted dependency, goes with the `Font` rewrite).
 - Paused: the planned `paint.h` / `blend.h` / `private.h` cleanup (those files get rewritten in steps B and C).
-- Not verified: single-header dist (quom) and `install()` of the new header tree; docs/Doxyfile paths were sed-updated only.
+- Single-header dist (quom) is cancelled by the maintainer: removed from root and Python CMake and from CI. Not verified: `install()` of the new header tree; docs/Doxyfile paths were sed-updated only.
 - Gate: C++ 79 / 552, font 71, link check OK, golden 67 images 0 differ, Python 433 passed, libstb `e655ce9`.
+
+### Step 6 started: public method names (2026-11-03)
+38 camelCase methods renamed to snake_case outside string literals (see `docs/naming-table.md`); Python and CLI names unchanged. Types (`Element` -> `element` etc.) pending. Gate: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.

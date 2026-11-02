@@ -99,7 +99,7 @@ inline Bitmap bitmap_from_pixels(const std::uint8_t* p, std::int64_t h, std::int
         throw std::invalid_argument("raw=True needs shape (H, W, 4): premultiplied BGRA, the Bitmap's own layout");
 
     Bitmap bmp(static_cast<int>(w), static_cast<int>(h));
-    if (bmp.isNull()) throw std::runtime_error("could not allocate the Bitmap");
+    if (bmp.is_null()) throw std::runtime_error("could not allocate the Bitmap");
 
     auto at = [&](std::int64_t y, std::int64_t x, std::int64_t k) -> std::uint32_t {
         return p[y * s0 + x * s1 + k * s2];
@@ -223,7 +223,7 @@ inline int bitmap_getbuffer(PyObject* exporter, Py_buffer* view, int flags) {
         return -1;
     }
     auto* bmp = nb::inst_ptr<Bitmap>(nb::handle(exporter));
-    if (bmp->isNull()) {
+    if (bmp->is_null()) {
         PyErr_SetString(PyExc_BufferError, "cannot export a null Bitmap");
         return -1;
     }
@@ -303,14 +303,14 @@ inline numpy_pixels copied_pixels_of(const Bitmap& bmp, bool rgba) {
 }
 
 inline void require_pixels(const Bitmap& bmp, const char* what) {
-    if (bmp.isNull()) throw std::invalid_argument(std::string("cannot use a null Bitmap for ") + what);
+    if (bmp.is_null()) throw std::invalid_argument(std::string("cannot use a null Bitmap for ") + what);
 }
 
 // An independent Bitmap with its own pixels (Bitmap's own copy constructor shares them).
 inline Bitmap deep_copy(const Bitmap& bmp) {
-    if (bmp.isNull()) return Bitmap();
+    if (bmp.is_null()) return Bitmap();
     Bitmap out(bmp.width(), bmp.height());
-    if (out.isNull()) throw std::runtime_error("could not allocate the Bitmap");
+    if (out.is_null()) throw std::runtime_error("could not allocate the Bitmap");
     for (int y = 0; y < bmp.height(); ++y)
         std::memcpy(out.data() + std::size_t(y) * out.stride(), bmp.data() + std::size_t(y) * bmp.stride(),
                     std::size_t(bmp.width()) * 4);
@@ -356,7 +356,7 @@ inline void bind_bitmap_interop(nb::class_<Bitmap>& cls) {
         .def("__deepcopy__", [](const Bitmap& b, nb::handle) { return deep_copy(b); }, "memo"_a)
 
         .def_prop_ro("shape",
-                     [](const Bitmap& b) { return std::make_tuple(b.height(), b.width(), b.isNull() ? 0 : 4); },
+                     [](const Bitmap& b) { return std::make_tuple(b.height(), b.width(), b.is_null() ? 0 : 4); },
                      "(height, width, 4), the shape of the arrays this Bitmap exports.")
 
         // DLPack: np.from_dlpack(bitmap), torch.from_dlpack(bitmap), jax.numpy.from_dlpack(bitmap),
@@ -421,7 +421,7 @@ inline void bind_bitmap_interop(nb::class_<Bitmap>& cls) {
             "__array_interface__",
             [](nb::handle self) {
                 const auto& b = nb::cast<const Bitmap&>(self);
-                if (b.isNull()) throw nb::attribute_error("a null Bitmap has no array interface");
+                if (b.is_null()) throw nb::attribute_error("a null Bitmap has no array interface");
                 nb::dict d;
                 d["version"] = 3;
                 d["shape"] = nb::make_tuple(b.height(), b.width(), 4);
@@ -438,7 +438,7 @@ inline void bind_bitmap_interop(nb::class_<Bitmap>& cls) {
             [](nb::handle self, bool rgba, nb::object dtype, bool copy) -> nb::object {
                 require_numpy("Bitmap.numpy()");
                 auto& bmp = nb::cast<Bitmap&>(self);
-                if (bmp.isNull())  // an empty array (the old code returned None here)
+                if (bmp.is_null())  // an empty array (the old code returned None here)
                     return nb::module_::import_("numpy").attr("zeros")(nb::make_tuple(0, 0, 4), "uint8");
                 nb::object a = rgba ? nb::cast(copied_pixels_of(bmp, true))
                                     : (copy ? nb::cast(copied_pixels_of(bmp, false)) : nb::cast(raw_pixels_of(self)));
@@ -455,7 +455,7 @@ inline void bind_bitmap_interop(nb::class_<Bitmap>& cls) {
             "(do not combine it with convert_to_rgba(), which already converts the buffer). copy=True copies the\n"
             "raw view. A dtype other than uint8 is always a copy.")
         .def("__repr__", [](const Bitmap& b) {
-            if (b.isNull()) return std::string("Bitmap(null)");
+            if (b.is_null()) return std::string("Bitmap(null)");
             return "Bitmap(width=" + std::to_string(b.width()) + ", height=" + std::to_string(b.height()) + ")";
         });
 }

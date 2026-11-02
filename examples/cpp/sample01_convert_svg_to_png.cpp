@@ -48,7 +48,7 @@ int main() {
         std::cout << "Processing: " << svg_path.filename() << " ... ";
 
         // Load SVG document
-        auto document = novasvg::Document::loadFromFile(svg_path.string());
+        auto document = novasvg::Document::load_file(svg_path.string());
         if (!document) {
             std::cerr << "FAILED (load)\n";
             failure_count++;
@@ -56,7 +56,7 @@ int main() {
         }
 
         // Render to a straight-alpha RGBA stb::image
-        auto image = document->renderToImage();
+        auto image = document->render_to_image();
         if (image.empty()) {
             std::cerr << "FAILED (render)\n";
             failure_count++;

@@ -160,8 +160,6 @@ jobs:
       with:
         cmake-version: '3.28.x'
 
-    - name: Install quom
-      run: pip install quom
 
     - name: Configure CMake with DIST_DIR
       run: |

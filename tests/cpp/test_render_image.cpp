@@ -20,10 +20,10 @@ std::string svg(const std::string& body, const std::string& defs = "")
 
 TEST_CASE("renderToImage returns straight-alpha RGBA")
 {
-    auto doc = novasvg::Document::loadFromData(
+    auto doc = novasvg::Document::load_data(
         svg("<rect x='0' y='0' width='40' height='40' fill='#0000ff' fill-opacity='0.5'/>"));
     REQUIRE(doc != nullptr);
-    const stb::image image = doc->renderToImage(40, 40);
+    const stb::image image = doc->render_to_image(40, 40);
     REQUIRE(!image.empty());
     CHECK(image.format() == stb::pixel_format::rgba);
     const std::uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
@@ -35,23 +35,23 @@ TEST_CASE("renderToImage returns straight-alpha RGBA")
 
 TEST_CASE("renderToImage with a background colour, and an empty image when there is nothing to draw")
 {
-    auto doc = novasvg::Document::loadFromData(svg("<rect width='10' height='10' fill='red'/>"));
+    auto doc = novasvg::Document::load_data(svg("<rect width='10' height='10' fill='red'/>"));
     REQUIRE(doc != nullptr);
-    const stb::image image = doc->renderToImage(40, 40, novasvg::Color(255, 255, 255, 255));
+    const stb::image image = doc->render_to_image(40, 40, novasvg::Color(255, 255, 255, 255));
     const std::uint8_t* corner = image.data() + 39 * image.stride() + 39 * 4;
     CHECK(corner[0] == 255);
     CHECK(corner[1] == 255);
     CHECK(corner[2] == 255);
     CHECK(corner[3] == 255);
 
-    auto blank = novasvg::Document::loadFromData("<svg xmlns='http://www.w3.org/2000/svg'></svg>");
+    auto blank = novasvg::Document::load_data("<svg xmlns='http://www.w3.org/2000/svg'></svg>");
     REQUIRE(blank != nullptr);
-    CHECK(blank->renderToImage(-1, 100).empty());  // nothing to size from, same as renderToBitmap's null
+    CHECK(blank->render_to_image(-1, 100).empty());  // nothing to size from, same as render_to_bitmap's null
 }
 
 TEST_CASE("render onto an existing image keeps its pixels where nothing is drawn, and its format")
 {
-    auto doc = novasvg::Document::loadFromData(svg("<rect width='10' height='10' fill='red'/>"));
+    auto doc = novasvg::Document::load_data(svg("<rect width='10' height='10' fill='red'/>"));
     REQUIRE(doc != nullptr);
 
     stb::image rgba(40, 40, stb::pixel_format::rgba);

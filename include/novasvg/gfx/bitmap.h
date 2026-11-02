@@ -134,14 +134,14 @@ public:
      * @brief Checks if the bitmap is null.
      * @return True if the bitmap is null, false otherwise.
      */
-    bool isNull() const { return m_surface == nullptr; }
+    bool is_null() const { return m_surface == nullptr; }
 
     /**
      * @brief Checks if the bitmap is valid.
-     * @deprecated This function has been deprecated. Use `isNull()` instead to check whether the bitmap is null.
+     * @deprecated This function has been deprecated. Use `is_null()` instead to check whether the bitmap is null.
      * @return True if the bitmap is valid, false otherwise.
      */
-    bool valid() const { return !isNull(); }
+    bool valid() const { return !is_null(); }
 
     /**
      * @internal
@@ -249,7 +249,7 @@ NOVASVG_INLINE Bitmap& Bitmap::operator=(Bitmap&& bitmap)
 // over caller-owned memory may be wider than width * 4, an image never is.
 NOVASVG_INLINE stb::image bitmap_to_rgba_image(const Bitmap& bitmap)
 {
-    if(bitmap.isNull())
+    if(bitmap.is_null())
         return stb::image();
     const int width = bitmap.width();
     const int height = bitmap.height();
@@ -267,7 +267,7 @@ NOVASVG_INLINE stb::image bitmap_to_rgba_image(const Bitmap& bitmap)
 // cannot be wrapped (stb::image has no stride), so that case takes the copying path above.
 NOVASVG_INLINE stb::image bitmap_release_to_image(Bitmap&& bitmap)
 {
-    if(bitmap.isNull())
+    if(bitmap.is_null())
         return stb::image();
     if(size_t(bitmap.stride()) != size_t(bitmap.width()) * 4)
         return bitmap_to_rgba_image(bitmap);
