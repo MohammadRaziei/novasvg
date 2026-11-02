@@ -241,6 +241,9 @@ outlines** (`stbtt_GetGlyphShape`), so libstb must grow an API first.
   (undefined reference in TUs that only see the declaration); everything moved, inlining relies on LTO
 - Build time so far: barely better (test_basics 43 -> 32 s, check_embedded_font 55 -> ~42 s, CLI 23 -> 27 s; rough,
   from `.ninja_log`), because `svgelement.h`, `font.h` and the rest of `detail/` are still header-only
+- [x] One definition of the export macros: `detail/config.h` (the duplicate block in `render/render.h` removed).
+      `NOVASVG_API` has the same scheme as libstb's `STB_API` (`NOVASVG_BUILDING_LIBRARY` / `NOVASVG_STATIC_DEFINE`,
+      set by CMake on `novasvg_core`); `NOVASVG_MAX/MIN` stay as they are (maintainer's decision)
 - [ ] Benchmark the hot rasterize/blend path (now cross-TU, inlined only by LTO)
 - [ ] vendor `ft_raster` / `ft_stroker` / `ft_math` (different pattern, by hand)
 - [ ] Remove duplicate declarations (`render.h` vs per-module headers) and trim heavy includes

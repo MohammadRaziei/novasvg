@@ -4,38 +4,30 @@
 // min/max helpers. Kept in its own header so internal headers (and the compiled sources in src/)
 // can use them without pulling in the whole public API.
 
-// True header-only linkage: every function/method defined in the detail/
-// implementation headers is marked NOVASVG_INLINE (plain `inline`), so
-// this whole library -- including its rendering backend -- can safely be
-// #included from any number of translation units with no separate
-// "#define NOVASVG_IMPLEMENTATION in exactly one .cpp" step required.
+// Linkage: NOVASVG_INLINE marks the definitions that have not moved out of the headers yet (step 4 of
+// the refactor). NOVASVG_API marks what the compiled library exports. Same scheme as STB_API in libstb:
+//
+//   building the library        NOVASVG_BUILDING_LIBRARY is defined: dllexport on Windows, default
+//                               visibility elsewhere.
+//   using the library           dllimport on Windows, default visibility elsewhere.
+//   static library              NOVASVG_STATIC_DEFINE is defined (CMake does it for a static build):
+//                               NOVASVG_API is empty.
 #ifndef NOVASVG_INLINE
 #define NOVASVG_INLINE inline
 #endif
 
-// NovaSVG is header-only: every function is NOVASVG_INLINE, so the default
-// linkage must NOT be dllimport/dllexport. On MSVC, __declspec(dllimport) on
-// an inline-defined function suppresses the inline body and produces LNK2019
-// unresolved externals. Shared-library decoration is therefore opt-in via
-// NOVASVG_BUILD_SHARED.
-#if defined(NOVASVG_BUILD_STATIC) || !defined(NOVASVG_BUILD_SHARED)
-#define NOVASVG_EXPORT
-#define NOVASVG_IMPORT
-#elif (defined(_WIN32) || defined(__CYGWIN__))
-#define NOVASVG_EXPORT __declspec(dllexport)
-#define NOVASVG_IMPORT __declspec(dllimport)
-#elif defined(__GNUC__) && (__GNUC__ >= 4)
-#define NOVASVG_EXPORT __attribute__((__visibility__("default")))
-#define NOVASVG_IMPORT
+#if defined(NOVASVG_STATIC_DEFINE)
+#define NOVASVG_API
+#elif defined(_WIN32) || defined(__CYGWIN__)
+#if defined(NOVASVG_BUILDING_LIBRARY)
+#define NOVASVG_API __declspec(dllexport)
 #else
-#define NOVASVG_EXPORT
-#define NOVASVG_IMPORT
+#define NOVASVG_API __declspec(dllimport)
 #endif
-
-#ifdef NOVASVG_BUILD
-#define NOVASVG_API NOVASVG_EXPORT
+#elif defined(__GNUC__) || defined(__clang__)
+#define NOVASVG_API __attribute__((visibility("default")))
 #else
-#define NOVASVG_API NOVASVG_IMPORT
+#define NOVASVG_API
 #endif
 
 // Plain ternary macros instead of std::max/std::min. A uniquely-prefixed

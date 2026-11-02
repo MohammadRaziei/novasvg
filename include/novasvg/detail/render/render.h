@@ -25,7 +25,9 @@
 
 #include <stdbool.h>
 
-// NOVASVG_MAX/NOVASVG_MIN are defined in novasvg.h, which #includes
+#include "../config.h"   // NOVASVG_API, NOVASVG_INLINE, NOVASVG_MAX/MIN (one definition, shared with novasvg.h)
+
+// NOVASVG_MAX/NOVASVG_MIN are defined in detail/config.h, which #includes
 // (transitively, via canvas.h) this header -- always available by the
 // time any of the macros below are actually used at a call site.
 
@@ -36,31 +38,6 @@
 // instead.
 namespace novasvg {
 namespace render {
-
-// NovaSVG is header-only: every function is NOVASVG_INLINE, so the default
-// linkage must NOT be dllimport/dllexport. On MSVC, __declspec(dllimport) on
-// an inline-defined function suppresses the inline body and produces LNK2019
-// unresolved externals. Shared-library decoration is therefore opt-in via
-// NOVASVG_BUILD_SHARED.
-#if defined(NOVASVG_BUILD_STATIC) || !defined(NOVASVG_BUILD_SHARED)
-#define NOVASVG_EXPORT
-#define NOVASVG_IMPORT
-#elif (defined(_WIN32) || defined(__CYGWIN__))
-#define NOVASVG_EXPORT __declspec(dllexport)
-#define NOVASVG_IMPORT __declspec(dllimport)
-#elif defined(__GNUC__) && (__GNUC__ >= 4)
-#define NOVASVG_EXPORT __attribute__((__visibility__("default")))
-#define NOVASVG_IMPORT
-#else
-#define NOVASVG_EXPORT
-#define NOVASVG_IMPORT
-#endif
-
-#ifdef NOVASVG_BUILD
-#define NOVASVG_API NOVASVG_EXPORT
-#else
-#define NOVASVG_API NOVASVG_IMPORT
-#endif
 
 #define NOVASVG_RENDER_VERSION_MAJOR 1
 #define NOVASVG_RENDER_VERSION_MINOR 3

@@ -85,7 +85,11 @@ file(GLOB NOVASVG_CORE_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/render/*.cpp")
 add_library(novasvg_core STATIC ${NOVASVG_CORE_SOURCES})
 set_target_properties(novasvg_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_compile_definitions(novasvg_core PRIVATE NOVASVG_BUILD)
+target_compile_definitions(novasvg_core PRIVATE NOVASVG_BUILDING_LIBRARY)
+get_target_property(_novasvg_core_type novasvg_core TYPE)
+if(_novasvg_core_type STREQUAL "STATIC_LIBRARY")
+    target_compile_definitions(novasvg_core PUBLIC NOVASVG_STATIC_DEFINE)   # NOVASVG_API empty for consumers
+endif()
 target_include_directories(novasvg_core PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<INSTALL_INTERFACE:include>")
