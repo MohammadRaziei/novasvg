@@ -1,11 +1,11 @@
 /**
  * NovaSVG Command Line Interface
  * 
- * A comprehensive CLI tool for working with SVG files using the NovaSVG library.
+ * A comprehensive CLI tool for working with svg files using the NovaSVG library.
  * 
  * Features:
- * - Convert SVG to PNG
- * - Query SVG information (size, bounding box, file size)
+ * - Convert svg to PNG
+ * - Query svg information (size, bounding box, file size)
  * - Extract elements using CSS selectors
  * - Batch processing
  */
@@ -71,8 +71,8 @@ int cmd_convert(const std::string& input,
                 const std::string& style_content,
                 const std::string& css_file) {
     
-    // Load SVG
-    std::unique_ptr<novasvg::Document> doc = novasvg::Document::load_file(input);
+    // Load svg
+    std::unique_ptr<novasvg::document> doc = novasvg::document::load_file(input);
     if (!doc) {
         std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
@@ -144,9 +144,9 @@ int cmd_convert(const std::string& input,
 }
 
 // Helper function to count all elements recursively
-size_t count_all_elements(const novasvg::Element& element) {
+size_t count_all_elements(const novasvg::element& el) {
     size_t count = 1; 
-    auto children = element.children();
+    auto children = el.children();
     for (const auto& child : children) {
         if (child.is_element()) {
             count += count_all_elements(child.to_element());
@@ -156,7 +156,7 @@ size_t count_all_elements(const novasvg::Element& element) {
 }
 
 int cmd_info(const std::string& input, bool json_output = false) {
-    std::unique_ptr<novasvg::Document> doc = novasvg::Document::load_file(input);
+    std::unique_ptr<novasvg::document> doc = novasvg::document::load_file(input);
     if (!doc) {
         std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
@@ -216,7 +216,7 @@ int cmd_info(const std::string& input, bool json_output = false) {
 }
 
 int cmd_query(const std::string& selector, const std::string& input, bool json_output = false) {
-    std::unique_ptr<novasvg::Document> doc = novasvg::Document::load_file(input);
+    std::unique_ptr<novasvg::document> doc = novasvg::document::load_file(input);
     if (!doc) {
         std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
@@ -317,7 +317,7 @@ int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
         std::cout << "Processing: " << path.filename() << " -> " 
                   << fs::path(output_file).filename() << "\n";
         
-        std::unique_ptr<novasvg::Document> doc = novasvg::Document::load_file(input_file);
+        std::unique_ptr<novasvg::document> doc = novasvg::document::load_file(input_file);
         if (!doc) { std::cerr << "  Failed to load\n"; failed++; continue; }
         
         auto image = doc->render_to_image();

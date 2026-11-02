@@ -268,7 +268,7 @@ public:
     void setA(uint8_t value) { a = value; }
 
     // ==================== Engine-Facing Additions ====================
-    // The methods below are additions for the SVG rendering engine's
+    // The methods below are additions for the svg rendering engine's
     // internal use (float 0..1 channel access, opacity checks, deriving
     // a new color with a different alpha) -- your original getters/
     // setters/static factories above are untouched.
@@ -843,7 +843,7 @@ public:
 
     // Static member-variable form, distinct from the black()/white()/
     // transparent() factory functions above (used pervasively as
-    // default values through the SVG engine, e.g. `Color::Transparent`).
+    // default values through the svg engine, e.g. `Color::Transparent`).
     static const Color Black;
     static const Color White;
     static const Color Transparent;

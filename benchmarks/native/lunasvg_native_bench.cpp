@@ -1,4 +1,4 @@
-// Drives lunasvg through its own C++ API (lunasvg::Document /
+// Drives lunasvg through its own C++ API (lunasvg::document /
 // lunasvg::Bitmap) directly -- no Python binding, no CLI. See manifest.h
 // for the shared timing/manifest protocol every native_*_bench binary
 // speaks.
@@ -17,7 +17,7 @@ int main(int argc, char** argv)
     std::cout << "@@VERSION\t" << LUNASVG_VERSION_STRING << "\n";
 
     bench::runAll(jobs, runs, [](const bench::Job& job, bool isLast) {
-        auto doc = lunasvg::Document::load_file(job.svg_path);
+        auto doc = lunasvg::document::load_file(job.svg_path);
         if(!doc)
             throw std::runtime_error("failed to load/parse SVG");
         auto bitmap = doc->render_to_bitmap(job.width, job.height);

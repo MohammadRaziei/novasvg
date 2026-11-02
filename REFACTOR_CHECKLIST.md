@@ -315,3 +315,7 @@ Open: per-module headers still carry `static inline` helpers (paint.h hex/hsl pa
 
 ### Step 6 started: public method names (2026-11-03)
 38 camelCase methods renamed to snake_case outside string literals (see `docs/naming-table.md`); Python and CLI names unchanged. Types (`Element` -> `element` etc.) pending. Gate: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
+
+### Step 6 continued: DOM types (2026-11-03)
+`Node` `TextNode` `Element` `Document` -> snake_case; every `SVG*` identifier -> `svg_*`; `isEmpty` -> `empty()` (critical review of ADR-0004: its `is_` rule for booleans contradicts the STL / libstb `empty()` it claims to follow). Colliding variables renamed (`element`->`el`, `node`->`nd`, `document`->`dom`). `Box` / `Matrix` wait for step 5. Gate: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
+Still camelCase in the svg layer: non-`SVG*` internal types and members (e.g. `Length`, `Paint`, `Color`, `Bitmap`, `Canvas`, `Font*`), to be done per module.

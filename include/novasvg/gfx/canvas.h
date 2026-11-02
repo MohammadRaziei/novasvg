@@ -16,7 +16,7 @@
 // text, blending), plus the Path/Rect/Transform/Point primitives that go
 // with it. Self-contained -- pulls in exactly the gfx:: engine pieces
 // it needs plus Font (for fillText/strokeText) -- so it's usable without
-// the SVG/parsing layer, e.g. to draw directly onto a Bitmap.
+// the svg/parsing layer, e.g. to draw directly onto a Bitmap.
 #include "color.h"
 #include "font.h"
 #include "bitmap.h"
@@ -116,7 +116,7 @@ public:
     constexpr void scale(float sw, float sh) { w *= sw; h *= sh; }
     constexpr void scale(float s) { scale(s, s); }
 
-    constexpr bool is_empty() const { return w <= 0.f || h <= 0.f; }
+    constexpr bool empty() const { return w <= 0.f || h <= 0.f; }
     constexpr bool isZero() const { return w <= 0.f && h <= 0.f; }
     constexpr bool isValid() const { return w >= 0.f && h >= 0.f; }
 
@@ -190,7 +190,7 @@ public:
     constexpr float right() const { return x + w; }
     constexpr float bottom() const { return y + h; }
 
-    constexpr bool is_empty() const { return w <= 0.f || h <= 0.f; }
+    constexpr bool empty() const { return w <= 0.f || h <= 0.f; }
     constexpr bool isZero() const { return w <= 0.f && h <= 0.f; }
     constexpr bool isValid() const { return w >= 0.f && h >= 0.f; }
 
@@ -334,7 +334,7 @@ public:
     void reset();
 
     Rect boundingRect() const;
-    bool is_empty() const;
+    bool empty() const;
     bool isUnique() const;
     bool is_null() const { return m_data == nullptr; }
     path_t* data() const { return m_data; }
@@ -462,7 +462,7 @@ public:
     void convertToLuminanceMask();
     // standard "fast almost-gaussian" trick browsers/thorvg also use)
     // rather than a true gaussian convolution kernel -- visually
-    // indistinguishable for the stdDeviation ranges SVG content actually
+    // indistinguishable for the stdDeviation ranges svg content actually
     // uses, and O(w*h) instead of O(w*h*kernel). Upgrade path: replace the
     // naive per-pixel box blur loop with a moving-sum/summed-area version
     // if profiling ever shows this mattering for very large canvases.
@@ -486,7 +486,7 @@ public:
     void shift(float dx, float dy);
 
     // Porter-Duff compositing operators needed by feComposite/feMerge.
-    // (arithmetic is intentionally not offered -- see SVGFECompositeElement)
+    // (arithmetic is intentionally not offered -- see svg_fe_composite_element)
     enum class PorterDuff { Over, In, Out, Atop, Xor };
     void compositeWith(const Canvas& src, PorterDuff mode);
     void compositeOver(const Canvas& src) ;
@@ -540,7 +540,7 @@ NOVASVG_INLINE const Rect Rect::Invalid(0, 0, -1, -1);
 NOVASVG_INLINE const Rect Rect::Infinite(-FLT_MAX / 2.f, -FLT_MAX / 2.f, FLT_MAX, FLT_MAX);
 
 // Rect::Rect(const Box&) is defined in novasvg.h, right after Box itself --
-// Box belongs to the SVG/Document layer, not here, so this file (which
+// Box belongs to the svg/document layer, not here, so this file (which
 // stays usable without that layer) only declares the conversion, it
 // doesn't define it.
 
@@ -557,7 +557,7 @@ NOVASVG_INLINE Transform::Transform(float a, float b, float c, float d, float e,
 }
 
 // Transform::Transform(const Matrix&) is defined in novasvg.h, right after
-// Matrix itself -- Matrix belongs to the SVG/Document layer, not here, so
+// Matrix itself -- Matrix belongs to the svg/document layer, not here, so
 // this file (which stays usable without that layer) only declares the
 // conversion, it doesn't define it.
 
@@ -821,7 +821,7 @@ NOVASVG_INLINE Rect Path::boundingRect() const
     return extents;
 }
 
-NOVASVG_INLINE bool Path::is_empty() const
+NOVASVG_INLINE bool Path::empty() const
 {
     if(m_data)
         return path_get_elements(m_data, nullptr) == 0;
@@ -1158,8 +1158,8 @@ static void boxBlurPass(unsigned char* data, int width, int height, int stride, 
 // Converts a true gaussian stdDeviation to an equivalent box-blur radius
 // (the well-known 3-box approximation formula), then runs 3 passes.
 //
-// The SVG spec's formula gives `d`, the box *width* each pass should use
-// (https://www.w3.org/TR/SVG11/filters.html#feGaussianBlurElement) --
+// The svg spec's formula gives `d`, the box *width* each pass should use
+// (https://www.w3.org/TR/svg11/filters.html#feGaussianBlurElement) --
 // boxBlurPass below takes a *radius* (box width = 2*radius+1), so d needs
 // halving before rounding. Using d itself as the radius (i.e. a box width
 // of 2d+1) doubles the effective blur: for stdDeviation=4 that's an

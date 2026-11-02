@@ -1,4 +1,4 @@
-// Drives novasvg through its own C++ API directly (novasvg::Document /
+// Drives novasvg through its own C++ API directly (novasvg::document /
 // novasvg::Bitmap) -- see manifest.h for the shared timing/manifest
 // protocol every native_*_bench binary speaks.
 //
@@ -20,7 +20,7 @@ int main(int argc, char** argv)
     std::cout << "@@VERSION\t" << novasvg::version_string() << "\n";
 
     {
-        auto warm = novasvg::Document::load_data(
+        auto warm = novasvg::document::load_data(
             "<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'>"
             "<text x='0' y='1'>x</text></svg>");
         if(warm)
@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     }
 
     bench::runAll(jobs, runs, [](const bench::Job& job, bool isLast) {
-        auto doc = novasvg::Document::load_file(job.svg_path);
+        auto doc = novasvg::document::load_file(job.svg_path);
         if(!doc)
             throw std::runtime_error("failed to load/parse SVG");
         auto bitmap = doc->render_to_bitmap(job.width, job.height, novasvg::Color::Transparent);

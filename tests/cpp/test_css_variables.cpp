@@ -14,9 +14,9 @@ using Pixel = std::array<int, 4>;
 
 Pixel centre(const std::string& svg)
 {
-    auto document = novasvg::Document::load_data(svg);
-    REQUIRE(document != nullptr);
-    auto image = document->render_to_image(40, 40);
+    auto dom = novasvg::document::load_data(svg);
+    REQUIRE(dom != nullptr);
+    auto image = dom->render_to_image(40, 40);
     const uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
     return {p[0], p[1], p[2], p[3]};
 }
@@ -70,7 +70,7 @@ TEST_CASE("var(): custom properties inherit, and a descendant can override them"
 {
     CHECK(centre(svg("--c:red", "<g>" + rect + "fill=\"var(--c)\"/></g>")) == red);
     CHECK(centre(svg("--c:red", "<g style=\"--c:green\">" + rect + "fill=\"var(--c)\"/></g>")) == green);
-    // An override is seen by the descendants of the element that has it only.
+    // An override is seen by the descendants of the el that has it only.
     CHECK(centre(svg("--c:red", "<g style=\"--c:green\"/>" + rect + "fill=\"var(--c)\"/>")) == red);
 }
 
@@ -116,10 +116,10 @@ TEST_CASE("var(): a <use> copy gets the value its original computed")
 
 TEST_CASE("var(): a stylesheet applied after loading changes what var() gives")
 {
-    auto document = novasvg::Document::load_data(svg("--c:red", rect + "fill=\"var(--c)\"/>"));
-    REQUIRE(document != nullptr);
-    document->apply_style_sheet(":root{--c:blue !important}");
-    auto image = document->render_to_image(40, 40);
+    auto dom = novasvg::document::load_data(svg("--c:red", rect + "fill=\"var(--c)\"/>"));
+    REQUIRE(dom != nullptr);
+    dom->apply_style_sheet(":root{--c:blue !important}");
+    auto image = dom->render_to_image(40, 40);
     const uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
     CHECK(Pixel{p[0], p[1], p[2], p[3]} == blue);
 }

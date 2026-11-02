@@ -38,7 +38,7 @@ int main() {
     // Iterate over all files in the input directory
     for (const auto& entry : std::filesystem::directory_iterator(input_dir)) {
         if (!entry.is_regular_file() || !has_svg_extension(entry.path())) {
-            continue;  // Skip non-SVG files and directories
+            continue;  // Skip non-svg files and directories
         }
 
         const auto& svg_path = entry.path();
@@ -47,16 +47,16 @@ int main() {
 
         std::cout << "Processing: " << svg_path.filename() << " ... ";
 
-        // Load SVG document
-        auto document = novasvg::Document::load_file(svg_path.string());
-        if (!document) {
+        // Load svg dom
+        auto dom = novasvg::document::load_file(svg_path.string());
+        if (!dom) {
             std::cerr << "FAILED (load)\n";
             failure_count++;
             continue;
         }
 
         // Render to a straight-alpha RGBA stb::image
-        auto image = document->render_to_image();
+        auto image = dom->render_to_image();
         if (image.empty()) {
             std::cerr << "FAILED (render)\n";
             failure_count++;

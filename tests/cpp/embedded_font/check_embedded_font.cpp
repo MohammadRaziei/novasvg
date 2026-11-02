@@ -14,9 +14,9 @@
 namespace {
 size_t inked_pixels(const std::string& svg)
 {
-    auto document = novasvg::Document::load_data(svg);
-    REQUIRE(document != nullptr);
-    auto image = document->render_to_image();
+    auto dom = novasvg::document::load_data(svg);
+    REQUIRE(dom != nullptr);
+    auto image = dom->render_to_image();
     size_t inked = 0;
     for(int y = 0; y < image.height(); ++y) {
         const auto* row = image.data() + size_t(y) * image.stride();

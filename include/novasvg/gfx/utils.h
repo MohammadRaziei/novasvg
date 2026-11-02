@@ -91,13 +91,13 @@ bool skip_ws_or_delim(const char** begin, const char* end, char delim, bool* has
 bool skip_ws_or_comma(const char** begin, const char* end, bool* has_comma);
 
 // ponytail: CSS transform values (e.g. `rotate(15deg)`, set via a CSS
-// class/style rather than the plain SVG presentation attribute) carry a
-// unit immediately after the number, which the SVG attribute grammar
+// class/style rather than the plain svg presentation attribute) carry a
+// unit immediately after the number, which the svg attribute grammar
 // above doesn't expect. Rather than reject the whole transform list on
 // the first such token (the previous behavior), convert angle units to
 // degrees in place and just skip length units (px and friends -- treating
 // them as raw user-units is an acceptable simplification for translate).
-// Upgrade path: consult the target element's viewport/font-size for true
+// Upgrade path: consult the target el's viewport/font-size for true
 // unit conversion (%, em, ...) if that ever matters in practice.
 void skip_css_unit(const char** begin, const char* end, float* number);
 

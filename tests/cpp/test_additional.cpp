@@ -106,23 +106,23 @@ TEST_CASE("Box operations") {
 }
 
 TEST_CASE("TextNode operations") {
-    // Create a simple SVG with text
+    // Create a simple svg with text
     std::string svg_data = R"(<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
         <text id="text1" x="10" y="20">Hello World</text>
     </svg>)";
     
-    auto document = novasvg::Document::load_data(svg_data);
-    REQUIRE(document != nullptr);
+    auto dom = novasvg::document::load_data(svg_data);
+    REQUIRE(dom != nullptr);
     
-    // Get text element
-    auto textElement = document->element_by_id("text1");
+    // Get text el
+    auto textElement = dom->element_by_id("text1");
     REQUIRE_FALSE(textElement.is_null());
     
-    // Get children (should contain text node)
+    // Get children (should contain text nd)
     auto children = textElement.children();
     CHECK(children.size() >= 1);
     
-    // Find text node
+    // Find text nd
     for (const auto& child : children) {
         if (child.is_text_node()) {
             auto textNode = child.to_text_node();
@@ -139,30 +139,30 @@ TEST_CASE("TextNode operations") {
 
 TEST_CASE("Document render with matrix") {
     auto svg_file = data_path("rect.svg");
-    auto document = novasvg::Document::load_file(svg_file.string());
-    REQUIRE(document != nullptr);
+    auto dom = novasvg::document::load_file(svg_file.string());
+    REQUIRE(dom != nullptr);
     
     // Create bitmap
     novasvg::Bitmap bitmap(100, 100);
     
     // Test render with identity matrix
-    document->render(bitmap, novasvg::Matrix());
+    dom->render(bitmap, novasvg::Matrix());
     
     // Test render with translation matrix
     auto matrix = novasvg::Matrix::translated(10.0f, 20.0f);
-    document->render(bitmap, matrix);
+    dom->render(bitmap, matrix);
     
     // Test render with scaling matrix
     auto matrix2 = novasvg::Matrix::scaled(0.5f, 0.5f);
-    document->render(bitmap, matrix2);
+    dom->render(bitmap, matrix2);
 }
 
 TEST_CASE("Element render with matrix") {
     auto svg_file = data_path("rect.svg");
-    auto document = novasvg::Document::load_file(svg_file.string());
-    REQUIRE(document != nullptr);
+    auto dom = novasvg::document::load_file(svg_file.string());
+    REQUIRE(dom != nullptr);
     
-    auto docElement = document->document_element();
+    auto docElement = dom->document_element();
     auto children = docElement.children();
     
     if (!children.empty()) {
@@ -182,29 +182,29 @@ TEST_CASE("Element render with matrix") {
 }
 
 TEST_CASE("Document methods with edge cases") {
-    // Test with empty SVG
+    // Test with empty svg
     std::string empty_svg = R"(<svg xmlns="http://www.w3.org/2000/svg"></svg>)";
-    auto document = novasvg::Document::load_data(empty_svg);
-    REQUIRE(document != nullptr);
+    auto dom = novasvg::document::load_data(empty_svg);
+    REQUIRE(dom != nullptr);
     
-    // Test width/height with empty SVG
-    CHECK(document->width() == doctest::Approx(0.0f));
-    CHECK(document->height() == doctest::Approx(0.0f));
+    // Test width/height with empty svg
+    CHECK(dom->width() == doctest::Approx(0.0f));
+    CHECK(dom->height() == doctest::Approx(0.0f));
     
-    // Test bounding_box with empty SVG
-    auto bbox = document->bounding_box();
+    // Test bounding_box with empty svg
+    auto bbox = dom->bounding_box();
     CHECK(bbox.w == doctest::Approx(0.0f));
     CHECK(bbox.h == doctest::Approx(0.0f));
     
     // Test render_to_bitmap with empty dimensions
-    auto bitmap = document->render_to_bitmap(0, 0);
+    auto bitmap = dom->render_to_bitmap(0, 0);
     CHECK(bitmap.is_null());
     
-    // Test render_to_bitmap with auto-scaling from empty SVG
-    auto bitmap2 = document->render_to_bitmap(-1, 100);
+    // Test render_to_bitmap with auto-scaling from empty svg
+    auto bitmap2 = dom->render_to_bitmap(-1, 100);
     CHECK(bitmap2.is_null());
     
-    auto bitmap3 = document->render_to_bitmap(100, -1);
+    auto bitmap3 = dom->render_to_bitmap(100, -1);
     CHECK(bitmap3.is_null());
 }
 
@@ -216,14 +216,14 @@ TEST_CASE("Query selector edge cases") {
         </g>
     </svg>)";
     
-    auto document = novasvg::Document::load_data(svg_data);
-    REQUIRE(document != nullptr);
+    auto dom = novasvg::document::load_data(svg_data);
+    REQUIRE(dom != nullptr);
     
     // Test query_selector_all with class selector (if supported)
     // Note: This may not work depending on CSS selector support
     
-    // Test element_by_id with nested element
-    auto group = document->element_by_id("group1");
+    // Test element_by_id with nested el
+    auto group = dom->element_by_id("group1");
     CHECK_FALSE(group.is_null());
     
     // Test children of group
@@ -236,25 +236,25 @@ TEST_CASE("Apply stylesheet edge cases") {
         <rect id="rect1" x="10" y="10" width="80" height="80"/>
     </svg>)";
     
-    auto document = novasvg::Document::load_data(svg_data);
-    REQUIRE(document != nullptr);
+    auto dom = novasvg::document::load_data(svg_data);
+    REQUIRE(dom != nullptr);
     
     // Apply empty stylesheet
-    document->apply_style_sheet("");
+    dom->apply_style_sheet("");
     
     // Apply stylesheet with invalid CSS (should not crash)
-    document->apply_style_sheet("invalid { css: syntax; }");
+    dom->apply_style_sheet("invalid { css: syntax; }");
     
     // Apply valid CSS
-    document->apply_style_sheet("#rect1 { fill: #FF0000; }");
+    dom->apply_style_sheet("#rect1 { fill: #FF0000; }");
 }
 
 TEST_CASE("Node equality operators") {
     auto svg_file = data_path("rect.svg");
-    auto document = novasvg::Document::load_file(svg_file.string());
-    REQUIRE(document != nullptr);
+    auto dom = novasvg::document::load_file(svg_file.string());
+    REQUIRE(dom != nullptr);
     
-    auto docElement = document->document_element();
+    auto docElement = dom->document_element();
     auto children = docElement.children();
     
     if (children.size() >= 1) {
@@ -265,8 +265,8 @@ TEST_CASE("Node equality operators") {
         CHECK(node1 == node2);
         CHECK_FALSE(node1 != node2);
         
-        // Test with null node
-        novasvg::Node nullNode;
+        // Test with null nd
+        novasvg::node nullNode;
         CHECK_FALSE(node1 == nullNode);
         CHECK(node1 != nullNode);
         

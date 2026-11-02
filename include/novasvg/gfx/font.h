@@ -1,11 +1,11 @@
 #pragma once
 
 // Font: TrueType font loading, face caching, and text measurement.
-// Self-contained -- doesn't need Bitmap, Canvas, or the SVG layer -- so it
+// Self-contained -- doesn't need Bitmap, Canvas, or the svg layer -- so it
 // can be used entirely on its own (e.g. to measure how wide some text
 // would come out in a given font) without pulling in the rest of novasvg.
 
-#include "../svg/svgparserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no SVG-tree dependency, consistent with this header's own self-contained goal
+#include "../svg/svgparserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no svg-tree dependency, consistent with this header's own self-contained goal
 #include "render.h"  // path_move_to/line_to/cubic_to, used to extract glyph outlines
 #include "font_impl.h"
 
@@ -108,7 +108,7 @@ public:
     // registered via addFontFace() -- including an @font-face-embedded
     // font under the exact family name its CSS declared). No generic
     // "sans-serif"-style fallback table and no OS substitution -- used
-    // by SVGLayoutState::font()'s per-name stack loop so an embedded
+    // by svg_layout_state::font()'s per-name stack loop so an embedded
     // font is found (and wins) before falling through to guessing at a
     // substitute for names later in the stack.
     FontFace getFontFaceLocal(const std::string& family, bool bold, bool italic) const;

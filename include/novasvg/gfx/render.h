@@ -268,10 +268,10 @@ NOVASVG_API void matrix_map_points(const matrix_t* matrix, const point_t* src, p
 NOVASVG_API void matrix_map_rect(const matrix_t* matrix, const rect_t* src, rect_t* dst);
 
 /**
- * @brief Parses an SVG transform string into a matrix.
+ * @brief Parses an svg transform string into a matrix.
  * 
  * @param matrix A pointer to a `matrix_t` object to store the result.
- * @param data Input SVG transform string.
+ * @param data Input svg transform string.
  * @param length Length of the string, or `-1` if null-terminated.
  * 
  * @return `true` on success, `false` on failure.
@@ -294,10 +294,10 @@ typedef enum path_command {
 } path_command_t;
 
 /**
- * @brief Union representing a path element.
+ * @brief Union representing a path el.
  *
- * A path element can be a command with a length or a coordinate point.
- * Each command type in the path element array is followed by a specific number of points:
+ * A path el can be a command with a length or a coordinate point.
+ * Each command type in the path el array is followed by a specific number of points:
  * - `NOVASVG_PATH_COMMAND_MOVE_TO`: 1 point
  * - `NOVASVG_PATH_COMMAND_LINE_TO`: 1 point
  * - `NOVASVG_PATH_COMMAND_CUBIC_TO`: 3 points
@@ -365,7 +365,7 @@ NOVASVG_API bool path_iterator_has_next(const path_iterator_t* it);
  *
  * @param it The path iterator.
  * @param points An array to store the points for the current command.
- * @return The path command for the current element.
+ * @return The path command for the current el.
  */
 NOVASVG_API path_command_t path_iterator_next(path_iterator_t* it, point_t points[3]);
 
@@ -418,7 +418,7 @@ NOVASVG_API int path_get_elements(const path_t* path, const path_element_t** ele
  * @brief Moves the current point to a new position.
  *
  * This function moves the current point to the specified coordinates without
- * drawing a line. This is equivalent to the `M` command in SVG path syntax.
+ * drawing a line. This is equivalent to the `M` command in svg path syntax.
  *
  * @param path A pointer to a `path_t` object.
  * @param x The x-coordinate of the new position.
@@ -430,7 +430,7 @@ NOVASVG_API void path_move_to(path_t* path, float x, float y);
  * @brief Adds a straight line segment to the path.
  *
  * This function adds a straight line segment from the current point to the
- * specified coordinates. This is equivalent to the `L` command in SVG path syntax.
+ * specified coordinates. This is equivalent to the `L` command in svg path syntax.
  *
  * @param path A pointer to a `path_t` object.
  * @param x The x-coordinate of the end point of the line segment.
@@ -443,7 +443,7 @@ NOVASVG_API void path_line_to(path_t* path, float x, float y);
  *
  * This function adds a quadratic Bézier curve segment from the current point
  * to the specified end point, using the given control point. This is equivalent
- * to the `Q` command in SVG path syntax.
+ * to the `Q` command in svg path syntax.
  *
  * @param path A pointer to a `path_t` object.
  * @param x1 The x-coordinate of the control point.
@@ -458,7 +458,7 @@ NOVASVG_API void path_quad_to(path_t* path, float x1, float y1, float x2, float 
  *
  * This function adds a cubic Bézier curve segment from the current point
  * to the specified end point, using the given two control points. This is
- * equivalent to the `C` command in SVG path syntax.
+ * equivalent to the `C` command in svg path syntax.
  *
  * @param path A pointer to a `path_t` object.
  * @param x1 The x-coordinate of the first control point.
@@ -475,7 +475,7 @@ NOVASVG_API void path_cubic_to(path_t* path, float x1, float y1, float x2, float
  *
  * This function adds an elliptical arc segment from the current point to the
  * specified end point. The arc is defined by the radii, rotation angle, and
- * flags for large arc and sweep. This is equivalent to the `A` command in SVG
+ * flags for large arc and sweep. This is equivalent to the `A` command in svg
  * path syntax.
  *
  * @param path A pointer to a `path_t` object.
@@ -493,7 +493,7 @@ NOVASVG_API void path_arc_to(path_t* path, float rx, float ry, float angle, bool
  * @brief Closes the current sub-path.
  *
  * This function closes the current sub-path by drawing a straight line back to
- * the start point of the sub-path. This is equivalent to the `Z` command in SVG
+ * the start point of the sub-path. This is equivalent to the `Z` command in svg
  * path syntax.
  *
  * @param path A pointer to a `path_t` object.
@@ -637,10 +637,10 @@ NOVASVG_API void path_transform(path_t* path, const matrix_t* matrix);
 typedef void (*path_traverse_func_t)(void* closure, path_command_t command, const point_t* points, int npoints);
 
 /**
- * @brief Traverses the path and calls the callback for each element.
+ * @brief Traverses the path and calls the callback for each el.
  *
  * @param path A pointer to a `path_t` object.
- * @param traverse_func The callback function to be called for each element of the path.
+ * @param traverse_func The callback function to be called for each el of the path.
  * @param closure User-defined data passed to the callback.
  */
 NOVASVG_API void path_traverse(const path_t* path, path_traverse_func_t traverse_func, void* closure);
@@ -649,7 +649,7 @@ NOVASVG_API void path_traverse(const path_t* path, path_traverse_func_t traverse
  * @brief Traverses the path with Bézier curves flattened to line segments.
  *
  * @param path A pointer to a `path_t` object.
- * @param traverse_func The callback function to be called for each element of the path.
+ * @param traverse_func The callback function to be called for each el of the path.
  * @param closure User-defined data passed to the callback.
  */
 NOVASVG_API void path_traverse_flatten(const path_t* path, path_traverse_func_t traverse_func, void* closure);
@@ -661,7 +661,7 @@ NOVASVG_API void path_traverse_flatten(const path_t* path, path_traverse_func_t 
  * @param offset The starting offset into the dash pattern.
  * @param dashes An array of dash lengths.
  * @param ndashes The number of elements in the `dashes` array.
- * @param traverse_func The callback function to be called for each element of the path.
+ * @param traverse_func The callback function to be called for each el of the path.
  * @param closure User-defined data passed to the callback.
  */
 NOVASVG_API void path_traverse_dashed(const path_t* path, float offset, const float* dashes, int ndashes, path_traverse_func_t traverse_func, void* closure);
@@ -712,10 +712,10 @@ NOVASVG_API float path_extents(const path_t* path, rect_t* extents, bool tight);
 NOVASVG_API float path_length(const path_t* path);
 
 /**
- * @brief Parses SVG path data into a `path_t` object.
+ * @brief Parses svg path data into a `path_t` object.
  *
  * @param path A pointer to the `path_t` object to populate.
- * @param data The SVG path data string.
+ * @param data The svg path data string.
  * @param length The length of `data`, or `-1` for null-terminated data.
  * @return `true` if successful; `false` otherwise.
  */
@@ -859,14 +859,14 @@ NOVASVG_API void font_face_get_glyph_metrics(font_face_t* face, float size, code
 NOVASVG_API float font_face_get_glyph_path(font_face_t* face, float size, float x, float y, codepoint_t codepoint, path_t* path);
 
 /**
- * @brief Traverses the path of a glyph and calls a callback for each path element.
+ * @brief Traverses the path of a glyph and calls a callback for each path el.
  *
  * @param face A pointer to a `font_face_t` object.
  * @param size The font size in pixels.
  * @param x The x-coordinate for positioning the glyph.
  * @param y The y-coordinate for positioning the glyph.
  * @param codepoint The Unicode code point of the glyph.
- * @param traverse_func The callback function to be called for each path element.
+ * @param traverse_func The callback function to be called for each path el.
  * @param closure User-defined data passed to the callback function.
  * @return The advance width of the glyph.
  */
@@ -2000,7 +2000,7 @@ NOVASVG_API void canvas_map_rect(const canvas_t* canvas, const rect_t* src, rect
  * @brief Moves the current point to a new position.
  *
  * Moves the current point to the specified coordinates without adding a line.
- * This operation is added to the current path. Equivalent to the SVG `M` command.
+ * This operation is added to the current path. Equivalent to the svg `M` command.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param x The x-coordinate of the new position.
@@ -2012,7 +2012,7 @@ NOVASVG_API void canvas_move_to(canvas_t* canvas, float x, float y);
  * @brief Adds a straight line segment to the current path.
  *
  * Adds a straight line from the current point to the specified coordinates.
- * This segment is added to the current path. Equivalent to the SVG `L` command.
+ * This segment is added to the current path. Equivalent to the svg `L` command.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param x The x-coordinate of the end point of the line.
@@ -2024,7 +2024,7 @@ NOVASVG_API void canvas_line_to(canvas_t* canvas, float x, float y);
  * @brief Adds a quadratic Bézier curve to the current path.
  *
  * Adds a quadratic Bézier curve from the current point to the specified end point,
- * using the given control point. This curve is added to the current path. Equivalent to the SVG `Q` command.
+ * using the given control point. This curve is added to the current path. Equivalent to the svg `Q` command.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param x1 The x-coordinate of the control point.
@@ -2038,7 +2038,7 @@ NOVASVG_API void canvas_quad_to(canvas_t* canvas, float x1, float y1, float x2, 
  * @brief Adds a cubic Bézier curve to the current path.
  *
  * Adds a cubic Bézier curve from the current point to the specified end point,
- * using the given control points. This curve is added to the current path. Equivalent to the SVG `C` command.
+ * using the given control points. This curve is added to the current path. Equivalent to the svg `C` command.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param x1 The x-coordinate of the first control point.
@@ -2055,7 +2055,7 @@ NOVASVG_API void canvas_cubic_to(canvas_t* canvas, float x1, float y1, float x2,
  *
  * Adds an elliptical arc from the current point to the specified end point,
  * defined by radii, rotation angle, and flags for arc type and direction.
- * This arc segment is added to the current path. Equivalent to the SVG `A` command.
+ * This arc segment is added to the current path. Equivalent to the svg `A` command.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param rx The x-radius of the ellipse.

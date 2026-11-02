@@ -7542,7 +7542,7 @@ class App {
 
     /// Set a version flag and version display string, replace the existing one if present
     Option *set_version_flag(std::string flag_name = "",
-                             const std::string &version_string = "",
+                             const std::string &versionString = "",
                              const std::string &version_help = "Display program version information and exit");
 
     /// Generate the version string through a callback function
@@ -8695,7 +8695,7 @@ CLI11_INLINE Option *App::set_help_all_flag(std::string help_name, const std::st
 }
 
 CLI11_INLINE Option *
-App::set_version_flag(std::string flag_name, const std::string &version_string, const std::string &version_help) {
+App::set_version_flag(std::string flag_name, const std::string &versionString, const std::string &version_help) {
     // take flag_description by const reference otherwise add_flag tries to assign to version_description
     if(version_ptr_ != nullptr) {
         remove_option(version_ptr_);
@@ -8705,7 +8705,7 @@ App::set_version_flag(std::string flag_name, const std::string &version_string, 
     // Empty name will simply remove the version flag
     if(!flag_name.empty()) {
         version_ptr_ = add_flag_callback(
-            flag_name, [version_string]() { throw(CLI::CallForVersion(version_string, 0)); }, version_help);
+            flag_name, [versionString]() { throw(CLI::CallForVersion(versionString, 0)); }, version_help);
         version_ptr_->configurable(false)->callback_priority(CallbackPriority::First);
     }
 

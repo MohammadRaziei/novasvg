@@ -15,12 +15,12 @@
 #include "svgparserutils.h"
 
 // ---------------------------------------------------------------
-// SVGElement and its family (SVGPaintElement, SVGGeometryElement,
-// SVGTextElement, SVGLayoutState) used to be 5 declaration/
+// svg_element and its family (svg_paint_element, svg_geometry_element,
+// svg_text_element, svg_layout_state) used to be 5 declaration/
 // implementation pairs (10 files). They're merged into this one
-// file because they're circularly dependent -- SVGElement's own
+// file because they're circularly dependent -- svg_element's own
 // implementation needs the derived classes fully declared, and the
-// derived classes need SVGElement fully declared to inherit from it
+// derived classes need svg_element fully declared to inherit from it
 // -- so a clean 1:1 .h/.hpp split was never actually possible for
 // this group; only a shared declare-everything-then-define-
 // everything file is. Order matters: declarations below follow the
@@ -143,26 +143,26 @@ enum class PropertyID : uint8_t {
 PropertyID propertyid(std::string_view name);
 PropertyID csspropertyid(std::string_view name);
 
-class SVGElement;
+class svg_element;
 
-class SVGProperty {
+class svg_property {
 public:
-    SVGProperty(PropertyID id);
-    virtual ~SVGProperty() = default;
+    svg_property(PropertyID id);
+    virtual ~svg_property() = default;
     PropertyID id() const { return m_id; }
 
     virtual bool parse(std::string_view input) = 0;
 
 private:
-    SVGProperty(const SVGProperty&) = delete;
-    SVGProperty& operator=(const SVGProperty&) = delete;
+    svg_property(const svg_property&) = delete;
+    svg_property& operator=(const svg_property&) = delete;
     PropertyID m_id;
 };
 
-class SVGString final : public SVGProperty {
+class svg_string final : public svg_property {
 public:
-    explicit SVGString(PropertyID id)
-        : SVGProperty(id)
+    explicit svg_string(PropertyID id)
+        : svg_property(id)
     {}
 
     const std::string& value() const { return m_value; }
@@ -319,13 +319,13 @@ enum class LengthAdjust : uint8_t {
 };
 
 template<typename Enum>
-using SVGEnumerationEntry = std::pair<Enum, std::string_view>;
+using svg_enumeration_entry = std::pair<Enum, std::string_view>;
 
 template<typename Enum>
-class SVGEnumeration final : public SVGProperty {
+class svg_enumeration final : public svg_property {
 public:
-    explicit SVGEnumeration(PropertyID id, Enum value)
-        : SVGProperty(id)
+    explicit svg_enumeration(PropertyID id, Enum value)
+        : svg_property(id)
         , m_value(value)
     {}
 
@@ -334,11 +334,11 @@ public:
 
 private:
     template<unsigned int N>
-    bool parseEnum(std::string_view input, const SVGEnumerationEntry<Enum>(&entries)[N]);
+    bool parseEnum(std::string_view input, const svg_enumeration_entry<Enum>(&entries)[N]);
     Enum m_value;
 };
 
-class SVGAngle final : public SVGProperty {
+class svg_angle final : public svg_property {
 public:
     enum class OrientType {
         Auto,
@@ -346,8 +346,8 @@ public:
         Angle
     };
 
-    explicit SVGAngle(PropertyID id)
-        : SVGProperty(id)
+    explicit svg_angle(PropertyID id)
+        : svg_property(id)
     {}
 
     float value() const { return m_value; }
@@ -395,10 +395,10 @@ private:
     LengthUnits m_units = LengthUnits::None;
 };
 
-class SVGLength final : public SVGProperty {
+class svg_length final : public svg_property {
 public:
-    SVGLength(PropertyID id, LengthDirection direction, LengthNegativeMode negativeMode, float value = 0, LengthUnits units = LengthUnits::None)
-        : SVGProperty(id)
+    svg_length(PropertyID id, LengthDirection direction, LengthNegativeMode negativeMode, float value = 0, LengthUnits units = LengthUnits::None)
+        : svg_property(id)
         , m_direction(direction)
         , m_negativeMode(negativeMode)
         , m_value(value, units)
@@ -419,25 +419,25 @@ private:
 
 class LengthContext {
 public:
-    LengthContext(const SVGElement* element, Units units = Units::UserSpaceOnUse)
-        : m_element(element), m_units(units)
+    LengthContext(const svg_element* el, Units units = Units::UserSpaceOnUse)
+        : m_element(el), m_units(units)
     {}
 
     float valueForLength(const Length& length, LengthDirection direction) const;
-    float valueForLength(const SVGLength& length) const { return valueForLength(length.value(), length.direction()); }
+    float valueForLength(const svg_length& length) const { return valueForLength(length.value(), length.direction()); }
 
 private:
     float viewportDimension(LengthDirection direction) const;
-    const SVGElement* m_element;
+    const svg_element* m_element;
     const Units m_units;
 };
 
 using LengthList = std::vector<Length>;
 
-class SVGLengthList final : public SVGProperty {
+class svg_length_list final : public svg_property {
 public:
-    SVGLengthList(PropertyID id, LengthDirection direction, LengthNegativeMode negativeMode)
-        : SVGProperty(id)
+    svg_length_list(PropertyID id, LengthDirection direction, LengthNegativeMode negativeMode)
+        : svg_property(id)
         , m_direction(direction)
         , m_negativeMode(negativeMode)
     {}
@@ -474,10 +474,10 @@ private:
     Length m_length;
 };
 
-class SVGNumber : public SVGProperty {
+class svg_number : public svg_property {
 public:
-    SVGNumber(PropertyID id, float value)
-        : SVGProperty(id)
+    svg_number(PropertyID id, float value)
+        : svg_property(id)
         , m_value(value)
     {}
 
@@ -488,10 +488,10 @@ private:
     float m_value;
 };
 
-class SVGNumberPercentage final : public SVGProperty {
+class svg_number_percentage final : public svg_property {
 public:
-    SVGNumberPercentage(PropertyID id, float value)
-        : SVGProperty(id)
+    svg_number_percentage(PropertyID id, float value)
+        : svg_property(id)
         , m_value(value)
     {}
 
@@ -504,10 +504,10 @@ private:
 
 using NumberList = std::vector<float>;
 
-class SVGNumberList final : public SVGProperty {
+class svg_number_list final : public svg_property {
 public:
-    explicit SVGNumberList(PropertyID id)
-        : SVGProperty(id)
+    explicit svg_number_list(PropertyID id)
+        : svg_property(id)
     {}
 
     const NumberList& values() const { return m_values; }
@@ -517,10 +517,10 @@ private:
     NumberList m_values;
 };
 
-class SVGPath final : public SVGProperty {
+class svg_path final : public svg_property {
 public:
-    explicit SVGPath(PropertyID id)
-        : SVGProperty(id)
+    explicit svg_path(PropertyID id)
+        : svg_property(id)
     {}
 
     const Path& value() const { return m_value; }
@@ -530,10 +530,10 @@ private:
     Path m_value;
 };
 
-class SVGPoint final : public SVGProperty {
+class svg_point final : public svg_property {
 public:
-   explicit SVGPoint(PropertyID id)
-        : SVGProperty(id)
+   explicit svg_point(PropertyID id)
+        : svg_property(id)
     {}
 
     const Point& value() const { return m_value; }
@@ -545,10 +545,10 @@ private:
 
 using PointList = std::vector<Point>;
 
-class SVGPointList final : public SVGProperty {
+class svg_point_list final : public svg_property {
 public:
-    explicit SVGPointList(PropertyID id)
-        : SVGProperty(id)
+    explicit svg_point_list(PropertyID id)
+        : svg_property(id)
     {}
 
     const PointList& values() const { return m_values; }
@@ -558,10 +558,10 @@ private:
     PointList m_values;
 };
 
-class SVGRect final : public SVGProperty {
+class svg_rect final : public svg_property {
 public:
-    explicit SVGRect(PropertyID id)
-        : SVGProperty(id)
+    explicit svg_rect(PropertyID id)
+        : svg_property(id)
         , m_value(Rect::Invalid)
     {}
 
@@ -572,10 +572,10 @@ private:
     Rect m_value;
 };
 
-class SVGTransform final : public SVGProperty {
+class svg_transform final : public svg_property {
 public:
-    explicit SVGTransform(PropertyID id)
-        : SVGProperty(id)
+    explicit svg_transform(PropertyID id)
+        : svg_property(id)
     {}
 
     const Transform& value() const { return m_value; }
@@ -594,10 +594,10 @@ enum class TransformBoxType : uint8_t {
 // the same here) from the default view-box -- stroke-box and the various
 // *-box refinements aren't worth the extra bookkeeping for what this is
 // used for (resolving `transform-origin`'s reference box).
-class SVGTransformBox final : public SVGProperty {
+class svg_transform_box final : public svg_property {
 public:
-    explicit SVGTransformBox(PropertyID id)
-        : SVGProperty(id)
+    explicit svg_transform_box(PropertyID id)
+        : svg_property(id)
     {}
 
     TransformBoxType value() const { return m_value; }
@@ -614,10 +614,10 @@ private:
 // (left/center/right/top/bottom), percentages, and plain numbers (treated
 // as user-unit lengths) -- covers the common cases without pulling in the
 // full CSS <length-percentage> grammar.
-class SVGTransformOrigin final : public SVGProperty {
+class svg_transform_origin final : public svg_property {
 public:
-    explicit SVGTransformOrigin(PropertyID id)
-        : SVGProperty(id)
+    explicit svg_transform_origin(PropertyID id)
+        : svg_property(id)
     {}
 
     bool specified() const { return m_specified; }
@@ -637,7 +637,7 @@ private:
     bool m_specified = false;
 };
 
-class SVGPreserveAspectRatio final : public SVGProperty {
+class svg_preserve_aspect_ratio final : public svg_property {
 public:
     enum class AlignType {
         None,
@@ -657,8 +657,8 @@ public:
         Slice
     };
 
-    explicit SVGPreserveAspectRatio(PropertyID id)
-        : SVGProperty(id)
+    explicit svg_preserve_aspect_ratio(PropertyID id)
+        : svg_property(id)
     {}
 
     AlignType alignType() const { return m_alignType; }
@@ -678,17 +678,17 @@ private:
 
 // ---- svgelement ----
 
-class Document;
-class SVGElement;
-class SVGRootElement;
+class document;
+class svg_element;
+class svg_root_element;
 
-class SVGNode {
+class svg_node {
 public:
-    SVGNode(Document* document)
-        : m_document(document)
+    svg_node(document* dom)
+        : m_document(dom)
     {}
 
-    virtual ~SVGNode() = default;
+    virtual ~svg_node() = default;
     virtual bool is_text_node() const { return false; }
     virtual bool is_element() const { return false; }
     virtual bool isPaintElement() const { return false; }
@@ -696,33 +696,33 @@ public:
     virtual bool isGeometryElement() const { return false; }
     virtual bool isTextPositioningElement() const { return false; }
 
-    Document* document() const { return m_document; }
-    SVGRootElement* root_element() const { return m_document->root_element(); }
+    document* dom() const { return m_document; }
+    svg_root_element* root_element() const { return m_document->root_element(); }
 
-    SVGElement* parent_element() const { return m_parentElement; }
-    void setParentElement(SVGElement* parent) { m_parentElement = parent; }
+    svg_element* parent_element() const { return m_parentElement; }
+    void setParentElement(svg_element* parent) { m_parentElement = parent; }
 
     bool isRootElement() const { return m_parentElement == nullptr; }
 
-    virtual std::unique_ptr<SVGNode> clone(bool deep) const = 0;
+    virtual std::unique_ptr<svg_node> clone(bool deep) const = 0;
 
 private:
-    SVGNode(const SVGNode&) = delete;
-    SVGNode& operator=(const SVGNode&) = delete;
-    Document* m_document;
-    SVGElement* m_parentElement = nullptr;
+    svg_node(const svg_node&) = delete;
+    svg_node& operator=(const svg_node&) = delete;
+    document* m_document;
+    svg_element* m_parentElement = nullptr;
 };
 
-class SVGTextNode final : public SVGNode {
+class svg_text_node final : public svg_node {
 public:
-    SVGTextNode(Document* document);
+    svg_text_node(document* dom);
 
     bool is_text_node() const final { return true; }
 
     const std::string& data() const { return m_data; }
     void set_data(const std::string& data);
 
-    std::unique_ptr<SVGNode> clone(bool deep) const final;
+    std::unique_ptr<svg_node> clone(bool deep) const final;
 
 private:
     std::string m_data;
@@ -732,7 +732,7 @@ private:
  * Where an attribute value came from, as a number: when two sources set the same property the higher one
  * wins, and the later one wins a tie. This is CSS's cascade, lowest to highest:
  * presentation attribute, stylesheet, inline `style=""`, stylesheet `!important`, inline `!important`,
- * and finally a value set through the API (a program that loads a document and then changes a property
+ * and finally a value set through the API (a program that loads a dom and then changes a property
  * means it, whatever CSS the file carried).
  */
 namespace Specificity {
@@ -803,26 +803,26 @@ enum class ElementID : uint8_t {
 
 ElementID elementid(std::string_view name);
 
-using SVGNodeList = std::list<std::unique_ptr<SVGNode>>;
-using SVGPropertyList = std::forward_list<SVGProperty*>;
+using svg_node_list = std::list<std::unique_ptr<svg_node>>;
+using svg_property_list = std::forward_list<svg_property*>;
 
-class SVGMarkerElement;
-class SVGClipPathElement;
-class SVGMaskElement;
-class SVGFilterElement;
-class SVGFilterContext;
-class SVGPaintElement;
-class SVGLayoutState;
-class SVGRenderState;
+class svg_marker_element;
+class svg_clip_path_element;
+class svg_mask_element;
+class svg_filter_element;
+class svg_filter_context;
+class svg_paint_element;
+class svg_layout_state;
+class svg_render_state;
 
 extern const std::string emptyString;
 
-class SVGElement : public SVGNode {
+class svg_element : public svg_node {
 public:
-    static std::unique_ptr<SVGElement> create(Document* document, ElementID id);
+    static std::unique_ptr<svg_element> create(document* dom, ElementID id);
 
-    SVGElement(Document* document, ElementID id);
-    virtual ~SVGElement() = default;
+    svg_element(document* dom, ElementID id);
+    virtual ~svg_element() = default;
 
     bool has_attribute(std::string_view name) const;
     const std::string& attribute(std::string_view name) const;
@@ -837,69 +837,69 @@ public:
 
     virtual void parseAttribute(PropertyID id, const std::string& value);
 
-    // CSS custom properties (`--name: value`, from `style=""` or a stylesheet) declared on this element: the
+    // CSS custom properties (`--name: value`, from `style=""` or a stylesheet) declared on this el: the
     // higher cascade priority wins, a tie goes to the later one. Names are case-sensitive.
     void setCustomProperty(int specificity, const std::string& name, const std::string& value);
-    // The element (this one or the nearest ancestor: custom properties inherit) that gives `name` a value.
-    const SVGElement* findCustomPropertyOwner(const std::string& name) const;
+    // The el (this one or the nearest ancestor: custom properties inherit) that gives `name` a value.
+    const svg_element* findCustomPropertyOwner(const std::string& name) const;
     const std::string& customProperty(const std::string& name) const;
     // Gives every attribute whose value uses `var()` its value, now that the custom properties are known.
     // An attribute whose `var()` cannot be resolved (no such property and no fallback) is left as it was.
     void resolveVariables();
 
-    SVGElement* previousElement() const;
-    SVGElement* nextElement() const;
+    svg_element* previousElement() const;
+    svg_element* nextElement() const;
 
-    SVGNode* addChild(std::unique_ptr<SVGNode> child);
-    SVGNode* firstChild() const;
-    SVGNode* lastChild() const;
+    svg_node* addChild(std::unique_ptr<svg_node> child);
+    svg_node* firstChild() const;
+    svg_node* lastChild() const;
 
     ElementID id() const { return m_id; }
     const AttributeList& attributes() const { return m_attributes; }
-    const SVGPropertyList& properties() const { return m_properties; }
-    const SVGNodeList& children() const { return m_children; }
+    const svg_property_list& properties() const { return m_properties; }
+    const svg_node_list& children() const { return m_children; }
 
     virtual Transform local_transform() const { return Transform::Identity; }
     virtual Rect fillBoundingBox() const;
     virtual Rect strokeBoundingBox() const;
     virtual Rect paint_bounding_box() const;
 
-    SVGMarkerElement* getMarker(std::string_view id) const;
-    SVGClipPathElement* getClipper(std::string_view id) const;
-    SVGMaskElement* getMasker(std::string_view id) const;
-    SVGFilterElement* getFilterElement(std::string_view id) const;
-    SVGPaintElement* getPainter(std::string_view id) const;
+    svg_marker_element* getMarker(std::string_view id) const;
+    svg_clip_path_element* getClipper(std::string_view id) const;
+    svg_mask_element* getMasker(std::string_view id) const;
+    svg_filter_element* getFilterElement(std::string_view id) const;
+    svg_paint_element* getPainter(std::string_view id) const;
 
-    SVGElement* element_from_point(float x, float y);
+    svg_element* element_from_point(float x, float y);
 
     template<typename T>
     void transverse(T callback);
 
-    void addProperty(SVGProperty& value);
-    SVGProperty* getProperty(PropertyID id) const;
+    void addProperty(svg_property& value);
+    svg_property* getProperty(PropertyID id) const;
     Size currentViewportSize() const;
     float font_size() const { return m_font_size; }
 
-    void cloneChildren(SVGElement* parent_element) const;
-    std::unique_ptr<SVGNode> clone(bool deep) const final;
+    void cloneChildren(svg_element* parent_element) const;
+    std::unique_ptr<svg_node> clone(bool deep) const final;
 
     virtual void build();
 
-    virtual void layoutElement(const SVGLayoutState& state);
-    void layoutChildren(SVGLayoutState& state);
-    virtual void layout(SVGLayoutState& state);
+    virtual void layoutElement(const svg_layout_state& state);
+    void layoutChildren(svg_layout_state& state);
+    virtual void layout(svg_layout_state& state);
 
-    void renderChildren(SVGRenderState& state) const;
-    virtual void render(SVGRenderState& state) const;
+    void renderChildren(svg_render_state& state) const;
+    virtual void render(svg_render_state& state) const;
 
     // Template Method hook for filter-primitive elements (feGaussianBlur,
     // feOffset, feFlood, feComposite, feMerge, feDropShadow, ...): given
     // the running filter pipeline context, compute and return this
-    // primitive's output. Default (every non-primitive element,
+    // primitive's output. Default (every non-primitive el,
     // including feMergeNode which only makes sense as feMerge's child)
-    // is "not a primitive" -- returns nullptr, which SVGFilterElement's
+    // is "not a primitive" -- returns nullptr, which svg_filter_element's
     // pipeline simply skips over.
-    virtual std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const { return nullptr; }
+    virtual std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const { return nullptr; }
 
     bool isDisplayNone() const { return m_display == Display::None; }
     bool isOverflowHidden() const { return m_overflow == Overflow::Hidden; }
@@ -908,9 +908,9 @@ public:
     bool isHiddenElement() const;
     bool isPointableElement() const;
 
-    const SVGClipPathElement* clipper() const { return m_clipper; }
-    const SVGMaskElement* masker() const { return m_masker; }
-    const SVGFilterElement* filterElement() const { return m_filter; }
+    const svg_clip_path_element* clipper() const { return m_clipper; }
+    const svg_mask_element* masker() const { return m_masker; }
+    const svg_filter_element* filterElement() const { return m_filter; }
     float opacity() const { return m_opacity; }
     MixBlendMode mixBlendMode() const { return m_mix_blend_mode; }
 
@@ -918,9 +918,9 @@ public:
 
 private:
     mutable Rect m_paintBoundingBox = Rect::Invalid;
-    const SVGClipPathElement* m_clipper = nullptr;
-    const SVGMaskElement* m_masker = nullptr;
-    const SVGFilterElement* m_filter = nullptr;
+    const svg_clip_path_element* m_clipper = nullptr;
+    const svg_mask_element* m_masker = nullptr;
+    const svg_filter_element* m_filter = nullptr;
     float m_opacity = 1.f;
     MixBlendMode m_mix_blend_mode = MixBlendMode::Normal;
 
@@ -932,8 +932,8 @@ private:
 
     ElementID m_id;
     AttributeList m_attributes;
-    SVGPropertyList m_properties;
-    SVGNodeList m_children;
+    svg_property_list m_properties;
+    svg_node_list m_children;
     // `--name` -> (cascade priority, value as written, possibly with var() of its own)
     std::map<std::string, std::pair<int, std::string>> m_customProperties;
     // Attributes whose value uses var(), as written. Their value in m_attributes is the resolved one (or this
@@ -942,128 +942,128 @@ private:
     std::map<PropertyID, std::string> m_variableSources;
 };
 
-inline const SVGElement* toSVGElement(const SVGNode* node)
+inline const svg_element* toSVGElement(const svg_node* nd)
 {
-    if(node && node->is_element())
-        return static_cast<const SVGElement*>(node);
+    if(nd && nd->is_element())
+        return static_cast<const svg_element*>(nd);
     return nullptr;
 }
 
-inline SVGElement* toSVGElement(SVGNode* node)
+inline svg_element* toSVGElement(svg_node* nd)
 {
-    if(node && node->is_element())
-        return static_cast<SVGElement*>(node);
+    if(nd && nd->is_element())
+        return static_cast<svg_element*>(nd);
     return nullptr;
 }
 
-inline SVGElement* toSVGElement(const std::unique_ptr<SVGNode>& node)
+inline svg_element* toSVGElement(const std::unique_ptr<svg_node>& nd)
 {
-    return toSVGElement(node.get());
+    return toSVGElement(nd.get());
 }
 
 template<typename T>
-inline void SVGElement::transverse(T callback)
+inline void svg_element::transverse(T callback)
 {
     callback(this);
     for(const auto& child : m_children) {
-        if(auto element = toSVGElement(child)) {
-            element->transverse(callback);
+        if(auto el = toSVGElement(child)) {
+            el->transverse(callback);
         }
     }
 }
 
-class SVGStyleElement final : public SVGElement {
+class svg_style_element final : public svg_element {
 public:
-    SVGStyleElement(Document* document);
+    svg_style_element(document* dom);
 };
 
-class SVGFitToViewBox {
+class svg_fit_to_view_box {
 public:
-    SVGFitToViewBox(SVGElement* element);
+    svg_fit_to_view_box(svg_element* el);
 
-    const SVGRect& viewBox() const { return m_viewBox; }
-    const SVGPreserveAspectRatio& preserveAspectRatio() const { return m_preserveAspectRatio; }
+    const svg_rect& viewBox() const { return m_viewBox; }
+    const svg_preserve_aspect_ratio& preserveAspectRatio() const { return m_preserveAspectRatio; }
     Transform viewBoxToViewTransform(const Size& viewportSize) const;
     Rect getClipRect(const Size& viewportSize) const;
 
 private:
-    SVGRect m_viewBox;
-    SVGPreserveAspectRatio m_preserveAspectRatio;
+    svg_rect m_viewBox;
+    svg_preserve_aspect_ratio m_preserveAspectRatio;
 };
 
-class SVGURIReference {
+class svg_uri_reference {
 public:
-    SVGURIReference(SVGElement* element);
+    svg_uri_reference(svg_element* el);
 
-    const SVGString& href() const { return m_href; }
+    const svg_string& href() const { return m_href; }
     const std::string& hrefString() const { return m_href.value(); }
-    SVGElement* getTargetElement(const Document* document) const;
+    svg_element* getTargetElement(const document* dom) const;
 
 private:
-    SVGString m_href;
+    svg_string m_href;
 };
 
-class SVGPaintServer {
+class svg_paint_server {
 public:
-    SVGPaintServer() = default;
-    SVGPaintServer(const SVGPaintElement* element, const Color& color, float opacity)
-        : m_element(element), m_color(color), m_opacity(opacity)
+    svg_paint_server() = default;
+    svg_paint_server(const svg_paint_element* el, const Color& color, float opacity)
+        : m_element(el), m_color(color), m_opacity(opacity)
     {}
 
     bool isRenderable() const { return m_opacity > 0.f && (m_element || m_color.getA() > 0); }
 
-    const SVGPaintElement* element() const { return m_element; }
+    const svg_paint_element* el() const { return m_element; }
     const Color& color() const { return  m_color; }
     float opacity() const { return m_opacity; }
 
-    bool applyPaint(SVGRenderState& state) const;
+    bool applyPaint(svg_render_state& state) const;
 
 private:
-    const SVGPaintElement* m_element = nullptr;
+    const svg_paint_element* m_element = nullptr;
     Color m_color = Color::Transparent;
     float m_opacity = 0.f;
 };
 
-class SVGGraphicsElement : public SVGElement {
+class svg_graphics_element : public svg_element {
 public:
-    SVGGraphicsElement(Document* document, ElementID id);
+    svg_graphics_element(document* dom, ElementID id);
 
     bool isGraphicsElement() const final { return true; }
 
-    const SVGTransform& transform() const { return m_transform; }
+    const svg_transform& transform() const { return m_transform; }
     Transform local_transform() const override;
 
-    SVGPaintServer getPaintServer(const Paint& paint, float opacity) const;
-    StrokeData getStrokeData(const SVGLayoutState& state) const;
+    svg_paint_server getPaintServer(const Paint& paint, float opacity) const;
+    StrokeData getStrokeData(const svg_layout_state& state) const;
 
 private:
-    SVGTransform m_transform;
-    SVGTransformOrigin m_transformOrigin;
-    SVGTransformBox m_transformBox;
+    svg_transform m_transform;
+    svg_transform_origin m_transformOrigin;
+    svg_transform_box m_transformBox;
 };
 
-class SVGSVGElement : public SVGGraphicsElement, public SVGFitToViewBox {
+class svg_svg_element : public svg_graphics_element, public svg_fit_to_view_box {
 public:
-    SVGSVGElement(Document* document);
+    svg_svg_element(document* dom);
 
-    const SVGLength& x() const { return m_x; }
-    const SVGLength& y() const { return m_y; }
-    const SVGLength& width() const { return m_width; }
-    const SVGLength& height() const { return m_height; }
+    const svg_length& x() const { return m_x; }
+    const svg_length& y() const { return m_y; }
+    const svg_length& width() const { return m_width; }
+    const svg_length& height() const { return m_height; }
 
     Transform local_transform() const override;
-    void render(SVGRenderState& state) const override;
+    void render(svg_render_state& state) const override;
 
 private:
-    SVGLength m_x;
-    SVGLength m_y;
-    SVGLength m_width;
-    SVGLength m_height;
+    svg_length m_x;
+    svg_length m_y;
+    svg_length m_width;
+    svg_length m_height;
 };
 
-class SVGRootElement final : public SVGSVGElement {
+class svg_root_element final : public svg_svg_element {
 public:
-    SVGRootElement(Document* document);
+    svg_root_element(document* dom);
 
     float intrinsic_width() const { return m_intrinsicWidth; }
     float intrinsic_height() const { return m_intrinsicHeight; }
@@ -1071,75 +1071,75 @@ public:
     void setNeedsLayout() { m_intrinsicWidth = -1.f; }
     bool needsLayout() const { return m_intrinsicWidth == -1.f; }
 
-    SVGRootElement* layout_if_needed();
+    svg_root_element* layout_if_needed();
 
-    SVGElement* element_by_id(std::string_view id) const;
-    void addElementById(const std::string& id, SVGElement* element);
-    void layout(SVGLayoutState& state) final;
+    svg_element* element_by_id(std::string_view id) const;
+    void addElementById(const std::string& id, svg_element* el);
+    void layout(svg_layout_state& state) final;
 
     void force_layout();
 
-    // Every stylesheet applied to the document -- the <style> text found while parsing, then anything
-    // passed to Document::apply_style_sheet() -- kept verbatim and in order. The HTML inside a
-    // <foreignObject> sits outside the SVG element tree and so never goes through the resolver that sets
-    // SVG presentation properties; it is styled from these (see resolveForeignObjectStyle()).
+    // Every stylesheet applied to the dom -- the <style> text found while parsing, then anything
+    // passed to document::apply_style_sheet() -- kept verbatim and in order. The HTML inside a
+    // <foreignObject> sits outside the svg el tree and so never goes through the resolver that sets
+    // svg presentation properties; it is styled from these (see resolveForeignObjectStyle()).
     const std::vector<std::string>& styleSheets() const { return m_styleSheets; }
     void addStyleSheet(std::string text) { m_styleSheets.push_back(std::move(text)); }
 
 private:
-    std::map<std::string, SVGElement*, std::less<>> m_idCache;
+    std::map<std::string, svg_element*, std::less<>> m_idCache;
     float m_intrinsicWidth{-1.f};
     float m_intrinsicHeight{-1.f};
     std::vector<std::string> m_styleSheets;
 };
 
-class SVGUseElement final : public SVGGraphicsElement, public SVGURIReference {
+class svg_use_element final : public svg_graphics_element, public svg_uri_reference {
 public:
-    SVGUseElement(Document* document);
+    svg_use_element(document* dom);
 
-    const SVGLength& x() const { return m_x; }
-    const SVGLength& y() const { return m_y; }
-    const SVGLength& width() const { return m_width; }
-    const SVGLength& height() const { return m_height; }
+    const svg_length& x() const { return m_x; }
+    const svg_length& y() const { return m_y; }
+    const svg_length& width() const { return m_width; }
+    const svg_length& height() const { return m_height; }
 
     Transform local_transform() const final;
-    void render(SVGRenderState& state) const final;
+    void render(svg_render_state& state) const final;
     void build() final;
 
 private:
-    std::unique_ptr<SVGElement> cloneTargetElement(SVGElement* targetElement);
-    SVGLength m_x;
-    SVGLength m_y;
-    SVGLength m_width;
-    SVGLength m_height;
+    std::unique_ptr<svg_element> cloneTargetElement(svg_element* targetElement);
+    svg_length m_x;
+    svg_length m_y;
+    svg_length m_width;
+    svg_length m_height;
 };
 
-class SVGImageElement final : public SVGGraphicsElement {
+class svg_image_element final : public svg_graphics_element {
 public:
-    SVGImageElement(Document* document);
+    svg_image_element(document* dom);
 
-    const SVGLength& x() const { return m_x; }
-    const SVGLength& y() const { return m_y; }
-    const SVGLength& width() const { return m_width; }
-    const SVGLength& height() const { return m_height; }
-    const SVGPreserveAspectRatio& preserveAspectRatio() const { return m_preserveAspectRatio; }
+    const svg_length& x() const { return m_x; }
+    const svg_length& y() const { return m_y; }
+    const svg_length& width() const { return m_width; }
+    const svg_length& height() const { return m_height; }
+    const svg_preserve_aspect_ratio& preserveAspectRatio() const { return m_preserveAspectRatio; }
     const Bitmap& image() const { return m_image; }
 
     Rect fillBoundingBox() const final;
     Rect strokeBoundingBox() const final;
-    void render(SVGRenderState& state) const final;
+    void render(svg_render_state& state) const final;
     void parseAttribute(PropertyID id, const std::string& value) final;
 
 private:
-    SVGLength m_x;
-    SVGLength m_y;
-    SVGLength m_width;
-    SVGLength m_height;
-    SVGPreserveAspectRatio m_preserveAspectRatio;
+    svg_length m_x;
+    svg_length m_y;
+    svg_length m_width;
+    svg_length m_height;
+    svg_preserve_aspect_ratio m_preserveAspectRatio;
     Bitmap m_image;
 };
 
-class SVGForeignObjectElement;
+class svg_foreign_object_element;
 
 /**
  * @brief Renders the (HTML-ish) content captured inside a <foreignObject>.
@@ -1148,20 +1148,20 @@ class SVGForeignObjectElement;
  * understands a small, deliberately shallow slice of HTML5 -- it strips
  * every tag (div/span/p/i/b/...) and just draws the remaining plain text
  * centered in the foreignObject's box, using the font/fill already
- * inherited through the normal SVG/CSS cascade. That's enough to cover
+ * inherited through the normal svg/CSS cascade. That's enough to cover
  * what tools like Mermaid actually emit (a single short, non-wrapping,
  * centered text run per foreignObject), without pretending to be a real
  * HTML/CSS layout engine.
  *
  * A more complete renderer (e.g. one backed by litehtml) can be hooked in
- * later without touching SVGForeignObjectElement itself: implement this
- * interface and call SVGForeignObjectElement::setRenderer() (or replace
+ * later without touching svg_foreign_object_element itself: implement this
+ * interface and call svg_foreign_object_element::setRenderer() (or replace
  * ForeignObjectSimple::instance() below) to swap it in.
  */
 class ForeignObjectRenderer {
 public:
     virtual ~ForeignObjectRenderer() = default;
-    virtual void render(const SVGForeignObjectElement* element, SVGRenderState& state) const = 0;
+    virtual void render(const svg_foreign_object_element* el, svg_render_state& state) const = 0;
 };
 
 /**
@@ -1171,7 +1171,7 @@ class ForeignObjectSimple final : public ForeignObjectRenderer {
 public:
     static ForeignObjectSimple* instance();
 
-    void render(const SVGForeignObjectElement* element, SVGRenderState& state) const final;
+    void render(const svg_foreign_object_element* el, svg_render_state& state) const final;
 };
 
 /**
@@ -1179,7 +1179,7 @@ public:
  * of it that <b>, <strong>, <i>, <em> and inline `font-weight` / `font-style` ask for.
  *
  * Indexed by style bits (bit 0 = bold, bit 1 = italic), so `get(Bold | Italic)` is the bold italic
- * face. Variants nothing asked for may stay null. Each one is looked up exactly like SVG <text>
+ * face. Variants nothing asked for may stay null. Each one is looked up exactly like svg <text>
  * looks up its font for the same weight/style, so the result is whatever faces the machine (or an
  * @font-face) provides -- there is no synthetic emboldening or slanting: with no bold face
  * installed, bold text simply renders in the regular face, as it does for <text>.
@@ -1192,18 +1192,18 @@ struct ForeignObjectFonts {
     const Font& get(unsigned char style) const { return face[style & 3]; }
 };
 
-class SVGForeignObjectElement final : public SVGGraphicsElement {
+class svg_foreign_object_element final : public svg_graphics_element {
 public:
-    SVGForeignObjectElement(Document* document);
+    svg_foreign_object_element(document* dom);
 
-    const SVGLength& x() const { return m_x; }
-    const SVGLength& y() const { return m_y; }
-    const SVGLength& width() const { return m_width; }
-    const SVGLength& height() const { return m_height; }
+    const svg_length& x() const { return m_x; }
+    const svg_length& y() const { return m_y; }
+    const svg_length& width() const { return m_width; }
+    const svg_length& height() const { return m_height; }
     const Font& font() const { return m_font; }
-    const SVGPaintServer& fill() const { return m_fill; }
+    const svg_paint_server& fill() const { return m_fill; }
 
-    /// Bold/italic bits (ForeignObjectFonts::Bold/Italic) the element itself inherits, i.e. the style of font().
+    /// Bold/italic bits (ForeignObjectFonts::Bold/Italic) the el itself inherits, i.e. the style of font().
     unsigned char baseFontStyle() const { return m_baseFontStyle; }
     /// font() plus the variants named by `usedStyles` (a bit mask: bit n set = style n is needed). Nothing
     /// is looked up for styles that are not in the mask, so unstyled text costs nothing extra.
@@ -1211,7 +1211,7 @@ public:
 
     /**
      * @brief Raw markup captured between <foreignObject ...> and
-     * </foreignObject> (whatever HTML/XML the document embedded there),
+     * </foreignObject> (whatever HTML/XML the dom embedded there),
      * exactly as it appeared in the source -- untouched, unparsed. What a
      * ForeignObjectRenderer does with it is entirely up to that renderer.
      */
@@ -1222,7 +1222,7 @@ public:
     void setRenderer(ForeignObjectRenderer* renderer) { m_renderer = renderer; }
 
     /**
-     * The text colour and the box colour the document's CSS gives this element's HTML, worked out when a
+     * The text colour and the box colour the dom's CSS gives this el's HTML, worked out when a
      * stylesheet is applied (see resolveForeignObjectStyle()). Unset = nothing in the CSS asked for one
      * (text is then black, and no box is painted).
      */
@@ -1236,134 +1236,134 @@ public:
 
     Rect fillBoundingBox() const final;
     Rect strokeBoundingBox() const final;
-    void layoutElement(const SVGLayoutState& state) final;
-    void render(SVGRenderState& state) const final;
+    void layoutElement(const svg_layout_state& state) final;
+    void render(svg_render_state& state) const final;
 
 private:
-    SVGLength m_x;
-    SVGLength m_y;
-    SVGLength m_width;
-    SVGLength m_height;
+    svg_length m_x;
+    svg_length m_y;
+    svg_length m_width;
+    svg_length m_height;
     Font m_font;
     std::string m_fontFamily;
     unsigned char m_baseFontStyle = 0;
-    SVGPaintServer m_fill;
+    svg_paint_server m_fill;
     std::string m_rawContent;
     ForeignObjectRenderer* m_renderer = nullptr;
     std::optional<Color> m_htmlTextColor;
     std::optional<Color> m_htmlBackgroundColor;
 };
 
-class SVGSymbolElement final : public SVGGraphicsElement, public SVGFitToViewBox {
+class svg_symbol_element final : public svg_graphics_element, public svg_fit_to_view_box {
 public:
-    SVGSymbolElement(Document* document);
+    svg_symbol_element(document* dom);
 };
 
-class SVGGElement final : public SVGGraphicsElement {
+class svg_g_element final : public svg_graphics_element {
 public:
-    SVGGElement(Document* document);
+    svg_g_element(document* dom);
 
-    void render(SVGRenderState& state) const final;
+    void render(svg_render_state& state) const final;
 };
 
 // <switch>: renders ONLY the first direct child whose conditional-processing attributes all
 // evaluate true (a child with none always does), exactly as a browser does. mermaid's journey
 // diagram writes every label as `<switch><foreignObject>...</foreignObject><text>...</text></switch>`:
 // the foreignObject (which this library paints) wins and the native <text> is only the fallback
-// for renderers without foreignObject support. Before this element existed, `switch` was an
-// unknown element and its whole subtree -- label included -- was skipped.
-class SVGSwitchElement final : public SVGGraphicsElement {
+// for renderers without foreignObject support. Before this el existed, `switch` was an
+// unknown el and its whole subtree -- label included -- was skipped.
+class svg_switch_element final : public svg_graphics_element {
 public:
-    SVGSwitchElement(Document* document);
+    svg_switch_element(document* dom);
 
-    void render(SVGRenderState& state) const final;
+    void render(svg_render_state& state) const final;
 
 private:
-    const SVGElement* selectedChild() const;
+    const svg_element* selectedChild() const;
 };
 
-class SVGDefsElement final : public SVGGraphicsElement {
+class svg_defs_element final : public svg_graphics_element {
 public:
-    SVGDefsElement(Document* document);
+    svg_defs_element(document* dom);
 };
 
-class SVGMarkerElement final : public SVGElement, public SVGFitToViewBox {
+class svg_marker_element final : public svg_element, public svg_fit_to_view_box {
 public:
-    SVGMarkerElement(Document* document);
+    svg_marker_element(document* dom);
 
-    const SVGLength& refX() const { return m_refX; }
-    const SVGLength& refY() const { return m_refY; }
-    const SVGLength& markerWidth() const { return m_markerWidth; }
-    const SVGLength& markerHeight() const { return m_markerHeight; }
-    const SVGEnumeration<MarkerUnits>& markerUnits() const { return m_markerUnits; }
-    const SVGAngle& orient() const { return m_orient; }
+    const svg_length& refX() const { return m_refX; }
+    const svg_length& refY() const { return m_refY; }
+    const svg_length& markerWidth() const { return m_markerWidth; }
+    const svg_length& markerHeight() const { return m_markerHeight; }
+    const svg_enumeration<MarkerUnits>& markerUnits() const { return m_markerUnits; }
+    const svg_angle& orient() const { return m_orient; }
 
     Point refPoint() const;
     Size markerSize() const;
 
     Transform markerTransform(const Point& origin, float angle, float strokeWidth) const;
     Rect markerBoundingBox(const Point& origin, float angle, float strokeWidth) const;
-    void renderMarker(SVGRenderState& state, const Point& origin, float angle, float strokeWidth) const;
+    void renderMarker(svg_render_state& state, const Point& origin, float angle, float strokeWidth) const;
 
     Transform local_transform() const final;
 
 private:
-    SVGLength m_refX;
-    SVGLength m_refY;
-    SVGLength m_markerWidth;
-    SVGLength m_markerHeight;
-    SVGEnumeration<MarkerUnits> m_markerUnits;
-    SVGAngle m_orient;
+    svg_length m_refX;
+    svg_length m_refY;
+    svg_length m_markerWidth;
+    svg_length m_markerHeight;
+    svg_enumeration<MarkerUnits> m_markerUnits;
+    svg_angle m_orient;
 };
 
-class SVGClipPathElement final : public SVGGraphicsElement {
+class svg_clip_path_element final : public svg_graphics_element {
 public:
-    SVGClipPathElement(Document* document);
+    svg_clip_path_element(document* dom);
 
-    const SVGEnumeration<Units>& clipPathUnits() const { return m_clipPathUnits; }
-    Rect clipBoundingBox(const SVGElement* element) const;
+    const svg_enumeration<Units>& clipPathUnits() const { return m_clipPathUnits; }
+    Rect clipBoundingBox(const svg_element* el) const;
 
-    void applyClipMask(SVGRenderState& state) const;
-    void applyClipPath(SVGRenderState& state) const;
+    void applyClipMask(svg_render_state& state) const;
+    void applyClipPath(svg_render_state& state) const;
 
     bool requiresMasking() const;
 
 private:
-    SVGEnumeration<Units> m_clipPathUnits;
+    svg_enumeration<Units> m_clipPathUnits;
 };
 
-class SVGMaskElement final : public SVGElement {
+class svg_mask_element final : public svg_element {
 public:
-    SVGMaskElement(Document* document);
+    svg_mask_element(document* dom);
 
-    const SVGLength& x() const { return m_x; }
-    const SVGLength& y() const { return m_y; }
-    const SVGLength& width() const { return m_width; }
-    const SVGLength& height() const { return m_height; }
-    const SVGEnumeration<Units>& maskUnits() const { return m_maskUnits; }
-    const SVGEnumeration<Units>& maskContentUnits() const { return m_maskContentUnits; }
+    const svg_length& x() const { return m_x; }
+    const svg_length& y() const { return m_y; }
+    const svg_length& width() const { return m_width; }
+    const svg_length& height() const { return m_height; }
+    const svg_enumeration<Units>& maskUnits() const { return m_maskUnits; }
+    const svg_enumeration<Units>& maskContentUnits() const { return m_maskContentUnits; }
 
-    Rect maskRect(const SVGElement* element) const;
-    Rect maskBoundingBox(const SVGElement* element) const;
-    void applyMask(SVGRenderState& state) const;
+    Rect maskRect(const svg_element* el) const;
+    Rect maskBoundingBox(const svg_element* el) const;
+    void applyMask(svg_render_state& state) const;
 
-    void layoutElement(const SVGLayoutState& state) final;
+    void layoutElement(const svg_layout_state& state) final;
 
 private:
-    SVGLength m_x;
-    SVGLength m_y;
-    SVGLength m_width;
-    SVGLength m_height;
-    SVGEnumeration<Units> m_maskUnits;
-    SVGEnumeration<Units> m_maskContentUnits;
+    svg_length m_x;
+    svg_length m_y;
+    svg_length m_width;
+    svg_length m_height;
+    svg_enumeration<Units> m_maskUnits;
+    svg_enumeration<Units> m_maskContentUnits;
     MaskType m_mask_type = MaskType::Luminance;
 };
 
 // ---- svgfilterelement ----
-// Real SVG filter-primitive pipeline: SVGFilterContext carries the
+// Real svg filter-primitive pipeline: svg_filter_context carries the
 // running state (SourceGraphic, named `result=` buffers, implicit
-// chaining, device scale); each primitive is its own SVGElement subclass
-// overriding the applyFilterPrimitive() Template Method; SVGFilterElement
+// chaining, device scale); each primitive is its own svg_element subclass
+// overriding the applyFilterPrimitive() Template Method; svg_filter_element
 // itself is just a pipeline executor with no per-type switch statement --
 // it asks each child to compute its own output and threads the result
 // through. Adding a new primitive later means adding one small class, not
@@ -1375,9 +1375,9 @@ static float parseFirstFloat(std::string_view input, float fallback)
     return std::strtof(std::string(input).c_str(), nullptr);
 }
 
-class SVGFilterContext {
+class svg_filter_context {
 public:
-    SVGFilterContext(const std::shared_ptr<Canvas>& sourceGraphic, float scale)
+    svg_filter_context(const std::shared_ptr<Canvas>& sourceGraphic, float scale)
         : m_sourceGraphic(sourceGraphic), m_lastResult(sourceGraphic), m_scale(scale)
     {}
 
@@ -1401,7 +1401,7 @@ public:
 
     // Resolves an `in=`/`in2=` reference: empty -> implicit chain (result
     // of the previous primitive, or SourceGraphic for the first one);
-    // "SourceGraphic"/"SourceAlpha" -> the original rendered element (full
+    // "SourceGraphic"/"SourceAlpha" -> the original rendered el (full
     // or alpha-only); otherwise a named `result=` from an earlier
     // primitive, falling back to the implicit chain if the name is
     // unresolvable (spec says this is undefined behavior; failing soft
@@ -1441,11 +1441,11 @@ private:
     float m_scale;
 };
 
-class SVGFEGaussianBlurElement final : public SVGElement {
+class svg_fe_gaussian_blur_element final : public svg_element {
 public:
-    SVGFEGaussianBlurElement(Document* document) : SVGElement(document, ElementID::FeGaussianBlur) {}
+    svg_fe_gaussian_blur_element(document* dom) : svg_element(dom, ElementID::FeGaussianBlur) {}
 
-    std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
+    std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto sigma = parseFirstFloat(attribute(PropertyID::StdDeviation), 0.f) * context.scale();
         auto output = context.cloneCanvas(*context.resolveInput(attribute(PropertyID::In)));
@@ -1454,11 +1454,11 @@ public:
     }
 };
 
-class SVGFEOffsetElement final : public SVGElement {
+class svg_fe_offset_element final : public svg_element {
 public:
-    SVGFEOffsetElement(Document* document) : SVGElement(document, ElementID::FeOffset) {}
+    svg_fe_offset_element(document* dom) : svg_element(dom, ElementID::FeOffset) {}
 
-    std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
+    std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto dx = parseFirstFloat(attribute(PropertyID::Dx), 0.f) * context.scale();
         auto dy = parseFirstFloat(attribute(PropertyID::Dy), 0.f) * context.scale();
@@ -1468,11 +1468,11 @@ public:
     }
 };
 
-class SVGFEFloodElement final : public SVGElement {
+class svg_fe_flood_element final : public svg_element {
 public:
-    SVGFEFloodElement(Document* document) : SVGElement(document, ElementID::FeFlood) {}
+    svg_fe_flood_element(document* dom) : svg_element(dom, ElementID::FeFlood) {}
 
-    std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
+    std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto floodColorAttr = attribute(PropertyID::Flood_Color);
         Color floodColor = floodColorAttr.empty() ? Color(0, 0, 0) : Color(floodColorAttr);
@@ -1485,28 +1485,28 @@ public:
     }
 };
 
-class SVGFEMergeElement final : public SVGElement {
+class svg_fe_merge_element final : public svg_element {
 public:
-    SVGFEMergeElement(Document* document) : SVGElement(document, ElementID::FeMerge) {}
+    svg_fe_merge_element(document* dom) : svg_element(dom, ElementID::FeMerge) {}
 
-    std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
+    std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto output = context.newCanvas();
         for(const auto& child : children()) {
-            auto element = toSVGElement(child);
-            if(element && element->id() == ElementID::FeMergeNode)
-                output->compositeOver(*context.resolveInput(element->attribute(PropertyID::In)));
+            auto el = toSVGElement(child);
+            if(el && el->id() == ElementID::FeMergeNode)
+                output->compositeOver(*context.resolveInput(el->attribute(PropertyID::In)));
         }
 
         return output;
     }
 };
 
-class SVGFECompositeElement final : public SVGElement {
+class svg_fe_composite_element final : public svg_element {
 public:
-    SVGFECompositeElement(Document* document) : SVGElement(document, ElementID::FeComposite) {}
+    svg_fe_composite_element(document* dom) : svg_element(dom, ElementID::FeComposite) {}
 
-    std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
+    std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto input = context.resolveInput(attribute(PropertyID::In));
         auto input2 = context.resolveInput(attribute(PropertyID::In2));
@@ -1533,11 +1533,11 @@ public:
     }
 };
 
-class SVGFEDropShadowElement final : public SVGElement {
+class svg_fe_drop_shadow_element final : public svg_element {
 public:
-    SVGFEDropShadowElement(Document* document) : SVGElement(document, ElementID::FeDropShadow) {}
+    svg_fe_drop_shadow_element(document* dom) : svg_element(dom, ElementID::FeDropShadow) {}
 
-    std::shared_ptr<Canvas> applyFilterPrimitive(SVGFilterContext& context) const final
+    std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto sigma = parseFirstFloat(attribute(PropertyID::StdDeviation), 2.f) * context.scale();
         auto dx = parseFirstFloat(attribute(PropertyID::Dx), 2.f) * context.scale();
@@ -1556,249 +1556,249 @@ public:
     }
 };
 
-class SVGFilterElement final : public SVGElement {
+class svg_filter_element final : public svg_element {
 public:
-    SVGFilterElement(Document* document);
+    svg_filter_element(document* dom);
 
-    // Extra space (in the *filtered element's own* user-space units,
+    // Extra space (in the *filtered el's own* user-space units,
     // unscaled) the offscreen buffer needs so blur/shadow spread doesn't
-    // get clipped at the element's plain bounding box.
+    // get clipped at the el's plain bounding box.
     float pixelMargin() const;
 
-    // Runs every child primitive in document order, threading each
-    // result through SVGFilterContext, then writes the final result back
+    // Runs every child primitive in dom order, threading each
+    // result through svg_filter_context, then writes the final result back
     // into `state`'s current (already-rendered) canvas. `scale` converts
     // user-space stdDeviation/dx/dy to device pixels.
-    void applyFilter(SVGRenderState& state, float scale) const;
+    void applyFilter(svg_render_state& state, float scale) const;
 };
 
 // ---- svgrenderstate ----
-enum class SVGRenderMode {
+enum class svg_render_mode {
     Painting,
     Clipping
 };
 
-class SVGBlendInfo {
+class svg_blend_info {
 public:
-    explicit SVGBlendInfo(const SVGElement* element);
-    SVGBlendInfo(const SVGClipPathElement* clipper, const SVGMaskElement* masker, const SVGFilterElement* filter, float opacity,
+    explicit svg_blend_info(const svg_element* el);
+    svg_blend_info(const svg_clip_path_element* clipper, const svg_mask_element* masker, const svg_filter_element* filter, float opacity,
                  MixBlendMode mixBlendMode = MixBlendMode::Normal)
         : m_clipper(clipper), m_masker(masker), m_filter(filter), m_opacity(opacity), m_mixBlendMode(mixBlendMode)
     {}
 
-    bool requiresCompositing(SVGRenderMode mode) const;
-    const SVGClipPathElement* clipper() const { return m_clipper; }
-    const SVGMaskElement* masker() const { return m_masker; }
-    const SVGFilterElement* filterElement() const { return m_filter; }
+    bool requiresCompositing(svg_render_mode mode) const;
+    const svg_clip_path_element* clipper() const { return m_clipper; }
+    const svg_mask_element* masker() const { return m_masker; }
+    const svg_filter_element* filterElement() const { return m_filter; }
     float opacity() const { return m_opacity; }
     MixBlendMode mixBlendMode() const { return m_mixBlendMode; }
 
 private:
-    const SVGClipPathElement* m_clipper;
-    const SVGMaskElement* m_masker;
-    const SVGFilterElement* m_filter;
+    const svg_clip_path_element* m_clipper;
+    const svg_mask_element* m_masker;
+    const svg_filter_element* m_filter;
     const float m_opacity;
     const MixBlendMode m_mixBlendMode;
 };
 
-class SVGRenderState {
+class svg_render_state {
 public:
-    SVGRenderState(const SVGElement* element, const SVGRenderState& parent, const Transform& local_transform)
-        : m_element(element), m_parent(&parent), m_currentTransform(parent.currentTransform() * local_transform)
+    svg_render_state(const svg_element* el, const svg_render_state& parent, const Transform& local_transform)
+        : m_element(el), m_parent(&parent), m_currentTransform(parent.currentTransform() * local_transform)
         , m_mode(parent.mode()), m_canvas(parent.canvas())
     {}
 
-    SVGRenderState(const SVGElement* element, const SVGRenderState* parent, const Transform& currentTransform, SVGRenderMode mode, std::shared_ptr<Canvas> canvas)
-        : m_element(element), m_parent(parent), m_currentTransform(currentTransform), m_mode(mode), m_canvas(std::move(canvas))
+    svg_render_state(const svg_element* el, const svg_render_state* parent, const Transform& currentTransform, svg_render_mode mode, std::shared_ptr<Canvas> canvas)
+        : m_element(el), m_parent(parent), m_currentTransform(currentTransform), m_mode(mode), m_canvas(std::move(canvas))
     {}
 
     Canvas& operator*() const { return *m_canvas; }
     Canvas* operator->() const { return &*m_canvas; }
 
-    const SVGElement* element() const { return m_element; }
-    const SVGRenderState* parent() const { return m_parent; }
+    const svg_element* el() const { return m_element; }
+    const svg_render_state* parent() const { return m_parent; }
     const Transform& currentTransform() const { return m_currentTransform; }
-    const SVGRenderMode mode() const { return m_mode; }
+    const svg_render_mode mode() const { return m_mode; }
     const std::shared_ptr<Canvas>& canvas() const { return m_canvas; }
 
     Rect fillBoundingBox() const { return m_element->fillBoundingBox(); }
     Rect paint_bounding_box() const { return m_element->paint_bounding_box(); }
 
-    bool hasCycleReference(const SVGElement* element) const;
+    bool hasCycleReference(const svg_element* el) const;
 
-    void beginGroup(const SVGBlendInfo& blendInfo);
-    void endGroup(const SVGBlendInfo& blendInfo);
+    void beginGroup(const svg_blend_info& blendInfo);
+    void endGroup(const svg_blend_info& blendInfo);
 
 private:
-    const SVGElement* m_element;
-    const SVGRenderState* m_parent;
+    const svg_element* m_element;
+    const svg_render_state* m_parent;
     const Transform m_currentTransform;
-    const SVGRenderMode m_mode;
+    const svg_render_mode m_mode;
     std::shared_ptr<Canvas> m_canvas;
 };
 
 // ---- svgpaintelement ----
 
-class SVGPaintElement : public SVGElement {
+class svg_paint_element : public svg_element {
 public:
-    SVGPaintElement(Document* document, ElementID id);
+    svg_paint_element(document* dom, ElementID id);
 
     bool isPaintElement() const final { return true; }
 
-    virtual bool applyPaint(SVGRenderState& state, float opacity) const = 0;
+    virtual bool applyPaint(svg_render_state& state, float opacity) const = 0;
 };
 
-class SVGStopElement final : public SVGElement {
+class svg_stop_element final : public svg_element {
 public:
-    SVGStopElement(Document* document);
+    svg_stop_element(document* dom);
 
-    void layoutElement(const SVGLayoutState& state) final;
-    const SVGNumberPercentage& offset() const { return m_offset; }
+    void layoutElement(const svg_layout_state& state) final;
+    const svg_number_percentage& offset() const { return m_offset; }
     GradientStop gradientStop(float opacity) const;
 
 private:
-    SVGNumberPercentage m_offset;
+    svg_number_percentage m_offset;
     Color m_stop_color = Color::Black;
     float m_stop_opacity = 1.f;
 };
 
-class SVGGradientAttributes;
+class svg_gradient_attributes;
 
-class SVGGradientElement : public SVGPaintElement, public SVGURIReference {
+class svg_gradient_element : public svg_paint_element, public svg_uri_reference {
 public:
-    SVGGradientElement(Document* document, ElementID id);
+    svg_gradient_element(document* dom, ElementID id);
 
-    const SVGTransform& gradientTransform() const { return m_gradientTransform; }
-    const SVGEnumeration<Units>& gradientUnits() const { return m_gradientUnits; }
-    const SVGEnumeration<SpreadMethod>& spreadMethod() const { return m_spreadMethod; }
-    void collectGradientAttributes(SVGGradientAttributes& attributes) const;
+    const svg_transform& gradientTransform() const { return m_gradientTransform; }
+    const svg_enumeration<Units>& gradientUnits() const { return m_gradientUnits; }
+    const svg_enumeration<SpreadMethod>& spreadMethod() const { return m_spreadMethod; }
+    void collectGradientAttributes(svg_gradient_attributes& attributes) const;
 
 private:
-    SVGTransform m_gradientTransform;
-    SVGEnumeration<Units> m_gradientUnits;
-    SVGEnumeration<SpreadMethod> m_spreadMethod;
+    svg_transform m_gradientTransform;
+    svg_enumeration<Units> m_gradientUnits;
+    svg_enumeration<SpreadMethod> m_spreadMethod;
 };
 
-class SVGGradientAttributes {
+class svg_gradient_attributes {
 public:
-    SVGGradientAttributes() = default;
+    svg_gradient_attributes() = default;
 
     const Transform& gradientTransform() const { return m_gradientTransform->gradientTransform().value(); }
     SpreadMethod spreadMethod() const { return m_spreadMethod->spreadMethod().value(); }
     Units gradientUnits() const { return m_gradientUnits->gradientUnits().value(); }
-    const SVGGradientElement* gradientContentElement() const { return m_gradientContentElement; }
+    const svg_gradient_element* gradientContentElement() const { return m_gradientContentElement; }
 
     bool hasGradientTransform() const { return m_gradientTransform; }
     bool hasSpreadMethod() const { return m_spreadMethod; }
     bool hasGradientUnits() const { return m_gradientUnits; }
     bool hasGradientContentElement() const { return m_gradientContentElement; }
 
-    void setGradientTransform(const SVGGradientElement* value) { m_gradientTransform = value; }
-    void setSpreadMethod(const SVGGradientElement* value) { m_spreadMethod = value; }
-    void setGradientUnits(const SVGGradientElement* value) { m_gradientUnits = value; }
-    void setGradientContentElement(const SVGGradientElement* value) { m_gradientContentElement = value; }
+    void setGradientTransform(const svg_gradient_element* value) { m_gradientTransform = value; }
+    void setSpreadMethod(const svg_gradient_element* value) { m_spreadMethod = value; }
+    void setGradientUnits(const svg_gradient_element* value) { m_gradientUnits = value; }
+    void setGradientContentElement(const svg_gradient_element* value) { m_gradientContentElement = value; }
 
-    void setDefaultValues(const SVGGradientElement* element) {
-        if(!m_gradientTransform) { m_gradientTransform = element; }
-        if(!m_spreadMethod) { m_spreadMethod = element; }
-        if(!m_gradientUnits) { m_gradientUnits = element; }
-        if(!m_gradientContentElement) { m_gradientContentElement = element; }
+    void setDefaultValues(const svg_gradient_element* el) {
+        if(!m_gradientTransform) { m_gradientTransform = el; }
+        if(!m_spreadMethod) { m_spreadMethod = el; }
+        if(!m_gradientUnits) { m_gradientUnits = el; }
+        if(!m_gradientContentElement) { m_gradientContentElement = el; }
     }
 
 private:
-    const SVGGradientElement* m_gradientTransform{nullptr};
-    const SVGGradientElement* m_spreadMethod{nullptr};
-    const SVGGradientElement* m_gradientUnits{nullptr};
-    const SVGGradientElement* m_gradientContentElement{nullptr};
+    const svg_gradient_element* m_gradientTransform{nullptr};
+    const svg_gradient_element* m_spreadMethod{nullptr};
+    const svg_gradient_element* m_gradientUnits{nullptr};
+    const svg_gradient_element* m_gradientContentElement{nullptr};
 };
 
-class SVGLinearGradientAttributes;
+class svg_linear_gradient_attributes;
 
-class SVGLinearGradientElement final : public SVGGradientElement {
+class svg_linear_gradient_element final : public svg_gradient_element {
 public:
-    SVGLinearGradientElement(Document* document);
+    svg_linear_gradient_element(document* dom);
 
-    const SVGLength& x1() const { return m_x1; }
-    const SVGLength& y1() const { return m_y1; }
-    const SVGLength& x2() const { return m_x2; }
-    const SVGLength& y2() const { return m_y2; }
+    const svg_length& x1() const { return m_x1; }
+    const svg_length& y1() const { return m_y1; }
+    const svg_length& x2() const { return m_x2; }
+    const svg_length& y2() const { return m_y2; }
 
-    bool applyPaint(SVGRenderState& state, float opacity) const final;
+    bool applyPaint(svg_render_state& state, float opacity) const final;
 
 private:
-    SVGLinearGradientAttributes collectGradientAttributes() const;
-    SVGLength m_x1;
-    SVGLength m_y1;
-    SVGLength m_x2;
-    SVGLength m_y2;
+    svg_linear_gradient_attributes collectGradientAttributes() const;
+    svg_length m_x1;
+    svg_length m_y1;
+    svg_length m_x2;
+    svg_length m_y2;
 };
 
-class SVGLinearGradientAttributes : public SVGGradientAttributes {
+class svg_linear_gradient_attributes : public svg_gradient_attributes {
 public:
-    SVGLinearGradientAttributes() = default;
+    svg_linear_gradient_attributes() = default;
 
-    const SVGLength& x1() const { return m_x1->x1(); }
-    const SVGLength& y1() const { return m_y1->y1(); }
-    const SVGLength& x2() const { return m_x2->x2(); }
-    const SVGLength& y2() const { return m_y2->y2(); }
+    const svg_length& x1() const { return m_x1->x1(); }
+    const svg_length& y1() const { return m_y1->y1(); }
+    const svg_length& x2() const { return m_x2->x2(); }
+    const svg_length& y2() const { return m_y2->y2(); }
 
     bool hasX1() const { return m_x1; }
     bool hasY1() const { return m_y1; }
     bool hasX2() const { return m_x2; }
     bool hasY2() const { return m_y2; }
 
-    void setX1(const SVGLinearGradientElement* value) { m_x1 = value; }
-    void setY1(const SVGLinearGradientElement* value) { m_y1 = value; }
-    void setX2(const SVGLinearGradientElement* value) { m_x2 = value; }
-    void setY2(const SVGLinearGradientElement* value) { m_y2 = value; }
+    void setX1(const svg_linear_gradient_element* value) { m_x1 = value; }
+    void setY1(const svg_linear_gradient_element* value) { m_y1 = value; }
+    void setX2(const svg_linear_gradient_element* value) { m_x2 = value; }
+    void setY2(const svg_linear_gradient_element* value) { m_y2 = value; }
 
-    void setDefaultValues(const SVGLinearGradientElement* element) {
-        SVGGradientAttributes::setDefaultValues(element);
-        if(!m_x1) { m_x1 = element; }
-        if(!m_y1) { m_y1 = element; }
-        if(!m_x2) { m_x2 = element; }
-        if(!m_y2) { m_y2 = element; }
+    void setDefaultValues(const svg_linear_gradient_element* el) {
+        svg_gradient_attributes::setDefaultValues(el);
+        if(!m_x1) { m_x1 = el; }
+        if(!m_y1) { m_y1 = el; }
+        if(!m_x2) { m_x2 = el; }
+        if(!m_y2) { m_y2 = el; }
     }
 
 private:
-    const SVGLinearGradientElement* m_x1{nullptr};
-    const SVGLinearGradientElement* m_y1{nullptr};
-    const SVGLinearGradientElement* m_x2{nullptr};
-    const SVGLinearGradientElement* m_y2{nullptr};
+    const svg_linear_gradient_element* m_x1{nullptr};
+    const svg_linear_gradient_element* m_y1{nullptr};
+    const svg_linear_gradient_element* m_x2{nullptr};
+    const svg_linear_gradient_element* m_y2{nullptr};
 };
 
-class SVGRadialGradientAttributes;
+class svg_radial_gradient_attributes;
 
-class SVGRadialGradientElement final : public SVGGradientElement {
+class svg_radial_gradient_element final : public svg_gradient_element {
 public:
-    SVGRadialGradientElement(Document* document);
+    svg_radial_gradient_element(document* dom);
 
-    const SVGLength& cx() const { return m_cx; }
-    const SVGLength& cy() const { return m_cy; }
-    const SVGLength& r() const { return m_r; }
-    const SVGLength& fx() const { return m_fx; }
-    const SVGLength& fy() const { return m_fy; }
+    const svg_length& cx() const { return m_cx; }
+    const svg_length& cy() const { return m_cy; }
+    const svg_length& r() const { return m_r; }
+    const svg_length& fx() const { return m_fx; }
+    const svg_length& fy() const { return m_fy; }
 
-    bool applyPaint(SVGRenderState& state, float opacity) const final;
+    bool applyPaint(svg_render_state& state, float opacity) const final;
 
 private:
-    SVGRadialGradientAttributes collectGradientAttributes() const;
-    SVGLength m_cx;
-    SVGLength m_cy;
-    SVGLength m_r;
-    SVGLength m_fx;
-    SVGLength m_fy;
+    svg_radial_gradient_attributes collectGradientAttributes() const;
+    svg_length m_cx;
+    svg_length m_cy;
+    svg_length m_r;
+    svg_length m_fx;
+    svg_length m_fy;
 };
 
-class SVGRadialGradientAttributes : public SVGGradientAttributes {
+class svg_radial_gradient_attributes : public svg_gradient_attributes {
 public:
-    SVGRadialGradientAttributes() = default;
+    svg_radial_gradient_attributes() = default;
 
-    const SVGLength& cx() const { return m_cx->cx(); }
-    const SVGLength& cy() const { return m_cy->cy(); }
-    const SVGLength& r() const { return m_r->r(); }
-    const SVGLength& fx() const { return m_fx ? m_fx->fx() : m_cx->cx(); }
-    const SVGLength& fy() const { return m_fy ? m_fy->fy() : m_cy->cy(); }
+    const svg_length& cx() const { return m_cx->cx(); }
+    const svg_length& cy() const { return m_cy->cy(); }
+    const svg_length& r() const { return m_r->r(); }
+    const svg_length& fx() const { return m_fx ? m_fx->fx() : m_cx->cx(); }
+    const svg_length& fy() const { return m_fy ? m_fy->fy() : m_cy->cy(); }
 
     bool hasCx() const { return m_cx; }
     bool hasCy() const { return m_cy; }
@@ -1806,68 +1806,68 @@ public:
     bool hasFx() const { return m_fx; }
     bool hasFy() const { return m_fy; }
 
-    void setCx(const SVGRadialGradientElement* value) { m_cx = value; }
-    void setCy(const SVGRadialGradientElement* value) { m_cy = value; }
-    void setR(const SVGRadialGradientElement* value) { m_r = value; }
-    void setFx(const SVGRadialGradientElement* value) { m_fx = value; }
-    void setFy(const SVGRadialGradientElement* value) { m_fy = value; }
+    void setCx(const svg_radial_gradient_element* value) { m_cx = value; }
+    void setCy(const svg_radial_gradient_element* value) { m_cy = value; }
+    void setR(const svg_radial_gradient_element* value) { m_r = value; }
+    void setFx(const svg_radial_gradient_element* value) { m_fx = value; }
+    void setFy(const svg_radial_gradient_element* value) { m_fy = value; }
 
-    void setDefaultValues(const SVGRadialGradientElement* element) {
-        SVGGradientAttributes::setDefaultValues(element);
-        if(!m_cx) { m_cx = element; }
-        if(!m_cy) { m_cy = element; }
-        if(!m_r) { m_r = element; }
+    void setDefaultValues(const svg_radial_gradient_element* el) {
+        svg_gradient_attributes::setDefaultValues(el);
+        if(!m_cx) { m_cx = el; }
+        if(!m_cy) { m_cy = el; }
+        if(!m_r) { m_r = el; }
     }
 
 private:
-    const SVGRadialGradientElement* m_cx{nullptr};
-    const SVGRadialGradientElement* m_cy{nullptr};
-    const SVGRadialGradientElement* m_r{nullptr};
-    const SVGRadialGradientElement* m_fx{nullptr};
-    const SVGRadialGradientElement* m_fy{nullptr};
+    const svg_radial_gradient_element* m_cx{nullptr};
+    const svg_radial_gradient_element* m_cy{nullptr};
+    const svg_radial_gradient_element* m_r{nullptr};
+    const svg_radial_gradient_element* m_fx{nullptr};
+    const svg_radial_gradient_element* m_fy{nullptr};
 };
 
-class SVGPatternAttributes;
+class svg_pattern_attributes;
 
-class SVGPatternElement final : public SVGPaintElement, public SVGURIReference, public SVGFitToViewBox {
+class svg_pattern_element final : public svg_paint_element, public svg_uri_reference, public svg_fit_to_view_box {
 public:
-    SVGPatternElement(Document* document);
+    svg_pattern_element(document* dom);
 
-    const SVGLength& x() const { return m_x; }
-    const SVGLength& y() const { return m_y; }
-    const SVGLength& width() const { return m_width; }
-    const SVGLength& height() const { return m_height; }
-    const SVGTransform& patternTransform() const { return m_patternTransform; }
-    const SVGEnumeration<Units>& patternUnits() const { return m_patternUnits; }
-    const SVGEnumeration<Units>& patternContentUnits() const { return m_patternContentUnits; }
+    const svg_length& x() const { return m_x; }
+    const svg_length& y() const { return m_y; }
+    const svg_length& width() const { return m_width; }
+    const svg_length& height() const { return m_height; }
+    const svg_transform& patternTransform() const { return m_patternTransform; }
+    const svg_enumeration<Units>& patternUnits() const { return m_patternUnits; }
+    const svg_enumeration<Units>& patternContentUnits() const { return m_patternContentUnits; }
 
-    bool applyPaint(SVGRenderState& state, float opacity) const final;
+    bool applyPaint(svg_render_state& state, float opacity) const final;
 
 private:
-    SVGPatternAttributes collectPatternAttributes() const;
-    SVGLength m_x;
-    SVGLength m_y;
-    SVGLength m_width;
-    SVGLength m_height;
-    SVGTransform m_patternTransform;
-    SVGEnumeration<Units> m_patternUnits;
-    SVGEnumeration<Units> m_patternContentUnits;
+    svg_pattern_attributes collectPatternAttributes() const;
+    svg_length m_x;
+    svg_length m_y;
+    svg_length m_width;
+    svg_length m_height;
+    svg_transform m_patternTransform;
+    svg_enumeration<Units> m_patternUnits;
+    svg_enumeration<Units> m_patternContentUnits;
 };
 
-class SVGPatternAttributes {
+class svg_pattern_attributes {
 public:
-    SVGPatternAttributes() = default;
+    svg_pattern_attributes() = default;
 
-    const SVGLength& x() const { return m_x->x(); }
-    const SVGLength& y() const { return m_y->y(); }
-    const SVGLength& width() const { return m_width->width(); }
-    const SVGLength& height() const { return m_height->height(); }
+    const svg_length& x() const { return m_x->x(); }
+    const svg_length& y() const { return m_y->y(); }
+    const svg_length& width() const { return m_width->width(); }
+    const svg_length& height() const { return m_height->height(); }
     const Transform& patternTransform() const { return m_patternTransform->patternTransform().value(); }
     Units patternUnits() const { return m_patternUnits->patternUnits().value(); }
     Units patternContentUnits() const { return m_patternContentUnits->patternContentUnits().value(); }
     const Rect& viewBox() const { return m_viewBox->viewBox().value(); }
-    const SVGPreserveAspectRatio& preserveAspectRatio() const { return m_preserveAspectRatio->preserveAspectRatio(); }
-    const SVGPatternElement* patternContentElement() const { return m_patternContentElement; }
+    const svg_preserve_aspect_ratio& preserveAspectRatio() const { return m_preserveAspectRatio->preserveAspectRatio(); }
+    const svg_pattern_element* patternContentElement() const { return m_patternContentElement; }
 
     bool hasX() const { return m_x; }
     bool hasY() const { return m_y; }
@@ -1880,75 +1880,75 @@ public:
     bool hasPreserveAspectRatio() const { return m_preserveAspectRatio; }
     bool hasPatternContentElement() const { return m_patternContentElement; }
 
-    void setX(const SVGPatternElement* value) { m_x = value; }
-    void setY(const SVGPatternElement* value) { m_y = value; }
-    void setWidth(const SVGPatternElement* value) { m_width = value; }
-    void setHeight(const SVGPatternElement* value) { m_height = value; }
-    void setPatternTransform(const SVGPatternElement* value) { m_patternTransform = value; }
-    void setPatternUnits(const SVGPatternElement* value) { m_patternUnits = value; }
-    void setPatternContentUnits(const SVGPatternElement* value) { m_patternContentUnits = value; }
-    void setViewBox(const SVGPatternElement* value) { m_viewBox = value; }
-    void setPreserveAspectRatio(const SVGPatternElement* value) { m_preserveAspectRatio = value; }
-    void setPatternContentElement(const SVGPatternElement* value) { m_patternContentElement = value; }
+    void setX(const svg_pattern_element* value) { m_x = value; }
+    void setY(const svg_pattern_element* value) { m_y = value; }
+    void setWidth(const svg_pattern_element* value) { m_width = value; }
+    void setHeight(const svg_pattern_element* value) { m_height = value; }
+    void setPatternTransform(const svg_pattern_element* value) { m_patternTransform = value; }
+    void setPatternUnits(const svg_pattern_element* value) { m_patternUnits = value; }
+    void setPatternContentUnits(const svg_pattern_element* value) { m_patternContentUnits = value; }
+    void setViewBox(const svg_pattern_element* value) { m_viewBox = value; }
+    void setPreserveAspectRatio(const svg_pattern_element* value) { m_preserveAspectRatio = value; }
+    void setPatternContentElement(const svg_pattern_element* value) { m_patternContentElement = value; }
 
-    void setDefaultValues(const SVGPatternElement* element) {
-        if(!m_x) { m_x = element; }
-        if(!m_y) { m_y = element; }
-        if(!m_width) { m_width = element; }
-        if(!m_height) { m_height = element; }
-        if(!m_patternTransform) { m_patternTransform = element; }
-        if(!m_patternUnits) { m_patternUnits = element; }
-        if(!m_patternContentUnits) { m_patternContentUnits = element; }
-        if(!m_viewBox) { m_viewBox = element; }
-        if(!m_preserveAspectRatio) { m_preserveAspectRatio = element; }
-        if(!m_patternContentElement) { m_patternContentElement = element; }
+    void setDefaultValues(const svg_pattern_element* el) {
+        if(!m_x) { m_x = el; }
+        if(!m_y) { m_y = el; }
+        if(!m_width) { m_width = el; }
+        if(!m_height) { m_height = el; }
+        if(!m_patternTransform) { m_patternTransform = el; }
+        if(!m_patternUnits) { m_patternUnits = el; }
+        if(!m_patternContentUnits) { m_patternContentUnits = el; }
+        if(!m_viewBox) { m_viewBox = el; }
+        if(!m_preserveAspectRatio) { m_preserveAspectRatio = el; }
+        if(!m_patternContentElement) { m_patternContentElement = el; }
     }
 
 private:
-    const SVGPatternElement* m_x{nullptr};
-    const SVGPatternElement* m_y{nullptr};
-    const SVGPatternElement* m_width{nullptr};
-    const SVGPatternElement* m_height{nullptr};
-    const SVGPatternElement* m_patternTransform{nullptr};
-    const SVGPatternElement* m_patternUnits{nullptr};
-    const SVGPatternElement* m_patternContentUnits{nullptr};
-    const SVGPatternElement* m_viewBox{nullptr};
-    const SVGPatternElement* m_preserveAspectRatio{nullptr};
-    const SVGPatternElement* m_patternContentElement{nullptr};
+    const svg_pattern_element* m_x{nullptr};
+    const svg_pattern_element* m_y{nullptr};
+    const svg_pattern_element* m_width{nullptr};
+    const svg_pattern_element* m_height{nullptr};
+    const svg_pattern_element* m_patternTransform{nullptr};
+    const svg_pattern_element* m_patternUnits{nullptr};
+    const svg_pattern_element* m_patternContentUnits{nullptr};
+    const svg_pattern_element* m_viewBox{nullptr};
+    const svg_pattern_element* m_preserveAspectRatio{nullptr};
+    const svg_pattern_element* m_patternContentElement{nullptr};
 };
 
 // ---- svggeometryelement ----
 
-class SVGMarkerPosition {
+class svg_marker_position {
 public:
-    SVGMarkerPosition(const SVGMarkerElement* element, const Point& origin, float angle)
-        : m_element(element), m_origin(origin), m_angle(angle)
+    svg_marker_position(const svg_marker_element* el, const Point& origin, float angle)
+        : m_element(el), m_origin(origin), m_angle(angle)
     {}
 
-    const SVGMarkerElement* element() const { return m_element; }
+    const svg_marker_element* el() const { return m_element; }
     const Point& origin() const { return m_origin; }
     float angle() const { return m_angle; }
 
     Rect markerBoundingBox(float strokeWidth) const;
-    void renderMarker(SVGRenderState& state, float strokeWidth) const;
+    void renderMarker(svg_render_state& state, float strokeWidth) const;
 
 private:
-    const SVGMarkerElement* m_element;
+    const svg_marker_element* m_element;
     Point m_origin;
     float m_angle;
 };
 
-using SVGMarkerPositionList = std::vector<SVGMarkerPosition>;
+using svg_marker_position_list = std::vector<svg_marker_position>;
 
-class SVGGeometryElement : public SVGGraphicsElement {
+class svg_geometry_element : public svg_graphics_element {
 public:
-    SVGGeometryElement(Document* document, ElementID id);
+    svg_geometry_element(document* dom, ElementID id);
 
     bool isGeometryElement() const final { return true; }
 
     Rect fillBoundingBox() const override { return m_fillBoundingBox; }
     Rect strokeBoundingBox() const override;
-    void layoutElement(const SVGLayoutState& state) override;
+    void layoutElement(const svg_layout_state& state) override;
 
     bool isRenderable() const { return !m_path.is_null() && !isDisplayNone() && !isVisibilityHidden(); }
 
@@ -1957,8 +1957,8 @@ public:
 
     virtual Rect updateShape(Path& path) = 0;
 
-    void updateMarkerPositions(SVGMarkerPositionList& positions, const SVGLayoutState& state);
-    void render(SVGRenderState& state) const override;
+    void updateMarkerPositions(svg_marker_position_list& positions, const svg_layout_state& state);
+    void render(svg_render_state& state) const override;
 
     const Path& path() const { return m_path; }
 
@@ -1967,93 +1967,93 @@ private:
     Rect m_fillBoundingBox;
     StrokeData m_strokeData;
 
-    SVGPaintServer m_fill;
-    SVGPaintServer m_stroke;
-    SVGMarkerPositionList m_markerPositions;
+    svg_paint_server m_fill;
+    svg_paint_server m_stroke;
+    svg_marker_position_list m_markerPositions;
 
     FillRule m_fill_rule = FillRule::NonZero;
     FillRule m_clip_rule = FillRule::NonZero;
 };
 
-class SVGLineElement final : public SVGGeometryElement {
+class svg_line_element final : public svg_geometry_element {
 public:
-    SVGLineElement(Document* document);
+    svg_line_element(document* dom);
 
     Rect updateShape(Path& path) final;
 
 private:
-    SVGLength m_x1;
-    SVGLength m_y1;
-    SVGLength m_x2;
-    SVGLength m_y2;
+    svg_length m_x1;
+    svg_length m_y1;
+    svg_length m_x2;
+    svg_length m_y2;
 };
 
-class SVGRectElement final : public SVGGeometryElement {
+class svg_rect_element final : public svg_geometry_element {
 public:
-    SVGRectElement(Document* document);
+    svg_rect_element(document* dom);
 
     Rect updateShape(Path& path) final;
 
 private:
-    SVGLength m_x;
-    SVGLength m_y;
-    SVGLength m_width;
-    SVGLength m_height;
-    SVGLength m_rx;
-    SVGLength m_ry;
+    svg_length m_x;
+    svg_length m_y;
+    svg_length m_width;
+    svg_length m_height;
+    svg_length m_rx;
+    svg_length m_ry;
 };
 
-class SVGEllipseElement final : public SVGGeometryElement {
+class svg_ellipse_element final : public svg_geometry_element {
 public:
-    SVGEllipseElement(Document* document);
+    svg_ellipse_element(document* dom);
 
     Rect updateShape(Path& path) final;
 
 private:
-    SVGLength m_cx;
-    SVGLength m_cy;
-    SVGLength m_rx;
-    SVGLength m_ry;
+    svg_length m_cx;
+    svg_length m_cy;
+    svg_length m_rx;
+    svg_length m_ry;
 };
 
-class SVGCircleElement final : public SVGGeometryElement {
+class svg_circle_element final : public svg_geometry_element {
 public:
-    SVGCircleElement(Document* document);
+    svg_circle_element(document* dom);
 
     Rect updateShape(Path& path) final;
 
 private:
-    SVGLength m_cx;
-    SVGLength m_cy;
-    SVGLength m_r;
+    svg_length m_cx;
+    svg_length m_cy;
+    svg_length m_r;
 };
 
-class SVGPolyElement final : public SVGGeometryElement {
+class svg_poly_element final : public svg_geometry_element {
 public:
-    SVGPolyElement(Document* document, ElementID id);
+    svg_poly_element(document* dom, ElementID id);
 
     Rect updateShape(Path& path) final;
 
 private:
-    SVGPointList m_points;
+    svg_point_list m_points;
 };
 
-class SVGPathElement final : public SVGGeometryElement {
+class svg_path_element final : public svg_geometry_element {
 public:
-    SVGPathElement(Document* document);
+    svg_path_element(document* dom);
 
     Rect updateShape(Path& path) final;
 
 private:
-    SVGPath m_d;
+    svg_path m_d;
 };
 
 // ---- svgtextelement ----
 
-class SVGTextPositioningElement;
-class SVGTextElement;
+class svg_text_positioning_element;
+class svg_text_element;
 
-struct SVGCharacterPosition {
+struct svg_character_position {
     std::optional<float> x;
     std::optional<float> y;
     std::optional<float> dx;
@@ -2061,23 +2061,23 @@ struct SVGCharacterPosition {
     std::optional<float> rotate;
 };
 
-using SVGCharacterPositions = std::map<size_t, SVGCharacterPosition>;
+using svg_character_positions = std::map<size_t, svg_character_position>;
 
-struct SVGTextPosition {
-    SVGTextPosition(const SVGNode* node, size_t startOffset, size_t endOffset)
-        : node(node), startOffset(startOffset), endOffset(endOffset)
+struct svg_text_position {
+    svg_text_position(const svg_node* nd, size_t startOffset, size_t endOffset)
+        : nd(nd), startOffset(startOffset), endOffset(endOffset)
     {}
 
-    const SVGNode* node;
+    const svg_node* nd;
     size_t startOffset;
     size_t endOffset;
 };
 
-using SVGTextPositionList = std::vector<SVGTextPosition>;
+using svg_text_position_list = std::vector<svg_text_position>;
 
-struct SVGTextFragment {
-    explicit SVGTextFragment(const SVGTextPositioningElement* element) : element(element) {}
-    const SVGTextPositioningElement* element;
+struct svg_text_fragment {
+    explicit svg_text_fragment(const svg_text_positioning_element* el) : el(el) {}
+    const svg_text_positioning_element* el;
     Transform lengthAdjustTransform;
     size_t offset = 0;
     size_t length = 0;
@@ -2089,30 +2089,30 @@ struct SVGTextFragment {
     float angle = 0;
 };
 
-using SVGTextFragmentList = std::vector<SVGTextFragment>;
+using svg_text_fragment_list = std::vector<svg_text_fragment>;
 
-class SVGTextFragmentsBuilder {
+class svg_text_fragments_builder {
 public:
-    SVGTextFragmentsBuilder(std::u32string& text, SVGTextFragmentList& fragments);
+    svg_text_fragments_builder(std::u32string& text, svg_text_fragment_list& fragments);
 
-    void build(const SVGTextElement* textElement);
+    void build(const svg_text_element* textElement);
 
 private:
-    void handleText(const SVGTextNode* node);
-    void handleElement(const SVGTextPositioningElement* element);
-    void fillCharacterPositions(const SVGTextPosition& position);
+    void handleText(const svg_text_node* nd);
+    void handleElement(const svg_text_positioning_element* el);
+    void fillCharacterPositions(const svg_text_position& position);
     std::u32string& m_text;
-    SVGTextFragmentList& m_fragments;
-    SVGCharacterPositions m_characterPositions;
-    SVGTextPositionList m_textPositions;
+    svg_text_fragment_list& m_fragments;
+    svg_character_positions m_characterPositions;
+    svg_text_position_list m_textPositions;
     size_t m_characterOffset = 0;
     float m_x = 0;
     float m_y = 0;
 };
 
-class SVGTextPositioningElement : public SVGGraphicsElement {
+class svg_text_positioning_element : public svg_graphics_element {
 public:
-    SVGTextPositioningElement(Document* document, ElementID id);
+    svg_text_positioning_element(document* dom, ElementID id);
 
     bool isTextPositioningElement() const final { return true; }
 
@@ -2122,12 +2122,12 @@ public:
     const LengthList& dy() const { return m_dy.values(); }
     const NumberList& rotate() const { return m_rotate.values(); }
 
-    const SVGLength& textLength() const { return m_textLength; }
+    const svg_length& textLength() const { return m_textLength; }
     LengthAdjust lengthAdjust() const { return m_lengthAdjust.value(); }
 
     const Font& font() const { return m_font; }
-    const SVGPaintServer& fill() const { return m_fill; }
-    const SVGPaintServer& stroke() const { return m_stroke; }
+    const svg_paint_server& fill() const { return m_fill; }
+    const svg_paint_server& stroke() const { return m_stroke; }
 
     bool isVerticalWritingMode() const { return m_writing_mode == WritingMode::Vertical; }
     bool isUprightTextOrientation() const { return m_text_orientation == TextOrientation::Upright; }
@@ -2142,22 +2142,22 @@ public:
     WhiteSpace white_space() const { return m_white_space; }
     Direction direction() const { return m_direction; }
 
-    void layoutElement(const SVGLayoutState& state) override;
+    void layoutElement(const svg_layout_state& state) override;
 
 private:
     float convertBaselineOffset(const BaselineShift& baselineShift) const;
-    SVGLengthList m_x;
-    SVGLengthList m_y;
-    SVGLengthList m_dx;
-    SVGLengthList m_dy;
-    SVGNumberList m_rotate;
+    svg_length_list m_x;
+    svg_length_list m_y;
+    svg_length_list m_dx;
+    svg_length_list m_dy;
+    svg_number_list m_rotate;
 
-    SVGLength m_textLength;
-    SVGEnumeration<LengthAdjust> m_lengthAdjust;
+    svg_length m_textLength;
+    svg_enumeration<LengthAdjust> m_lengthAdjust;
 
     Font m_font;
-    SVGPaintServer m_fill;
-    SVGPaintServer m_stroke;
+    svg_paint_server m_fill;
+    svg_paint_server m_stroke;
 
     float m_stroke_width = 1.f;
     float m_letter_spacing = 0.f;
@@ -2172,36 +2172,36 @@ private:
     Direction m_direction = Direction::Ltr;
 };
 
-class SVGTSpanElement final : public SVGTextPositioningElement {
+class svg_t_span_element final : public svg_text_positioning_element {
 public:
-    SVGTSpanElement(Document* document);
+    svg_t_span_element(document* dom);
 };
 
-class SVGTextElement final : public SVGTextPositioningElement {
+class svg_text_element final : public svg_text_positioning_element {
 public:
-    SVGTextElement(Document* document);
+    svg_text_element(document* dom);
 
     Rect fillBoundingBox() const final { return bounding_box(false); }
     Rect strokeBoundingBox() const final { return bounding_box(true); }
 
-    void layout(SVGLayoutState& state) final;
-    void render(SVGRenderState& state) const final;
+    void layout(svg_layout_state& state) final;
+    void render(svg_render_state& state) const final;
 
 private:
     Rect bounding_box(bool includeStroke) const;
-    SVGTextFragmentList m_fragments;
+    svg_text_fragment_list m_fragments;
     std::u32string m_text;
 };
 
 // ---- svglayoutstate ----
 
-class SVGLayoutState {
+class svg_layout_state {
 public:
-    SVGLayoutState() = default;
-    SVGLayoutState(const SVGLayoutState& parent, const SVGElement* element);
+    svg_layout_state() = default;
+    svg_layout_state(const svg_layout_state& parent, const svg_element* el);
 
-    const SVGLayoutState* parent() const { return m_parent; }
-    const SVGElement* element() const { return m_element; }
+    const svg_layout_state* parent() const { return m_parent; }
+    const svg_element* el() const { return m_element; }
 
     const Paint& fill() const { return m_fill; }
     const Paint& stroke() const { return m_stroke; }
@@ -2260,8 +2260,8 @@ public:
     Font font() const;
 
 private:
-    const SVGLayoutState* m_parent = nullptr;
-    const SVGElement* m_element = nullptr;
+    const svg_layout_state* m_parent = nullptr;
+    const svg_element* m_element = nullptr;
 
     Paint m_fill{Color::Black};
     Paint m_stroke{Color::Transparent};
@@ -2458,12 +2458,12 @@ NOVASVG_INLINE PropertyID csspropertyid(std::string_view name)
     return it->value;
 }
 
-NOVASVG_INLINE SVGProperty::SVGProperty(PropertyID id)
+NOVASVG_INLINE svg_property::svg_property(PropertyID id)
     : m_id(id)
 {
 }
 
-NOVASVG_INLINE bool SVGString::parse(std::string_view input)
+NOVASVG_INLINE bool svg_string::parse(std::string_view input)
 {
     stripLeadingAndTrailingSpaces(input);
     m_value.assign(input);
@@ -2471,9 +2471,9 @@ NOVASVG_INLINE bool SVGString::parse(std::string_view input)
 }
 
 template<>
-NOVASVG_INLINE bool SVGEnumeration<SpreadMethod>::parse(std::string_view input)
+NOVASVG_INLINE bool svg_enumeration<SpreadMethod>::parse(std::string_view input)
 {
-    static const SVGEnumerationEntry<SpreadMethod> entries[] = {
+    static const svg_enumeration_entry<SpreadMethod> entries[] = {
         {SpreadMethod::Pad, "pad"},
         {SpreadMethod::Reflect, "reflect"},
         {SpreadMethod::Repeat, "repeat"}
@@ -2483,9 +2483,9 @@ NOVASVG_INLINE bool SVGEnumeration<SpreadMethod>::parse(std::string_view input)
 }
 
 template<>
-NOVASVG_INLINE bool SVGEnumeration<Units>::parse(std::string_view input)
+NOVASVG_INLINE bool svg_enumeration<Units>::parse(std::string_view input)
 {
-    static const SVGEnumerationEntry<Units> entries[] = {
+    static const svg_enumeration_entry<Units> entries[] = {
         {Units::UserSpaceOnUse, "userSpaceOnUse"},
         {Units::ObjectBoundingBox, "objectBoundingBox"}
     };
@@ -2494,9 +2494,9 @@ NOVASVG_INLINE bool SVGEnumeration<Units>::parse(std::string_view input)
 }
 
 template<>
-NOVASVG_INLINE bool SVGEnumeration<MarkerUnits>::parse(std::string_view input)
+NOVASVG_INLINE bool svg_enumeration<MarkerUnits>::parse(std::string_view input)
 {
-    static const SVGEnumerationEntry<MarkerUnits> entries[] = {
+    static const svg_enumeration_entry<MarkerUnits> entries[] = {
         {MarkerUnits::StrokeWidth, "strokeWidth"},
         {MarkerUnits::UserSpaceOnUse, "userSpaceOnUse"}
     };
@@ -2505,9 +2505,9 @@ NOVASVG_INLINE bool SVGEnumeration<MarkerUnits>::parse(std::string_view input)
 }
 
 template<>
-NOVASVG_INLINE bool SVGEnumeration<LengthAdjust>::parse(std::string_view input)
+NOVASVG_INLINE bool svg_enumeration<LengthAdjust>::parse(std::string_view input)
 {
-    static const SVGEnumerationEntry<LengthAdjust> entries[] = {
+    static const svg_enumeration_entry<LengthAdjust> entries[] = {
         {LengthAdjust::Spacing, "spacing"},
         {LengthAdjust::SpacingAndGlyphs, "spacingAndGlyphs"}
     };
@@ -2517,7 +2517,7 @@ NOVASVG_INLINE bool SVGEnumeration<LengthAdjust>::parse(std::string_view input)
 
 template<typename Enum>
 template<unsigned int N>
-NOVASVG_INLINE bool SVGEnumeration<Enum>::parseEnum(std::string_view input, const SVGEnumerationEntry<Enum>(&entries)[N])
+NOVASVG_INLINE bool svg_enumeration<Enum>::parseEnum(std::string_view input, const svg_enumeration_entry<Enum>(&entries)[N])
 {
     stripLeadingAndTrailingSpaces(input);
     for(const auto& entry : entries) {
@@ -2530,7 +2530,7 @@ NOVASVG_INLINE bool SVGEnumeration<Enum>::parseEnum(std::string_view input, cons
     return false;
 }
 
-NOVASVG_INLINE bool SVGAngle::parse(std::string_view input)
+NOVASVG_INLINE bool svg_angle::parse(std::string_view input)
 {
     stripLeadingAndTrailingSpaces(input);
     if(input == "auto") {
@@ -2682,12 +2682,12 @@ NOVASVG_INLINE float LengthContext::viewportDimension(LengthDirection direction)
     }
 }
 
-NOVASVG_INLINE bool SVGLength::parse(std::string_view input)
+NOVASVG_INLINE bool svg_length::parse(std::string_view input)
 {
     return m_value.parse(input, m_negativeMode);
 }
 
-NOVASVG_INLINE bool SVGLengthList::parse(std::string_view input)
+NOVASVG_INLINE bool svg_length_list::parse(std::string_view input)
 {
     m_values.clear();
     while(!input.empty()) {
@@ -2707,7 +2707,7 @@ NOVASVG_INLINE bool SVGLengthList::parse(std::string_view input)
     return true;
 }
 
-NOVASVG_INLINE bool SVGNumber::parse(std::string_view input)
+NOVASVG_INLINE bool svg_number::parse(std::string_view input)
 {
     float value = 0.f;
     stripLeadingAndTrailingSpaces(input);
@@ -2719,7 +2719,7 @@ NOVASVG_INLINE bool SVGNumber::parse(std::string_view input)
     return true;
 }
 
-NOVASVG_INLINE bool SVGNumberPercentage::parse(std::string_view input)
+NOVASVG_INLINE bool svg_number_percentage::parse(std::string_view input)
 {
     float value = 0.f;
     stripLeadingAndTrailingSpaces(input);
@@ -2736,7 +2736,7 @@ NOVASVG_INLINE bool SVGNumberPercentage::parse(std::string_view input)
     return true;
 }
 
-NOVASVG_INLINE bool SVGNumberList::parse(std::string_view input)
+NOVASVG_INLINE bool svg_number_list::parse(std::string_view input)
 {
     m_values.clear();
     stripLeadingSpaces(input);
@@ -2751,12 +2751,12 @@ NOVASVG_INLINE bool SVGNumberList::parse(std::string_view input)
     return true;
 }
 
-NOVASVG_INLINE bool SVGPath::parse(std::string_view input)
+NOVASVG_INLINE bool svg_path::parse(std::string_view input)
 {
     return m_value.parse(input.data(), input.length());
 }
 
-NOVASVG_INLINE bool SVGPoint::parse(std::string_view input)
+NOVASVG_INLINE bool svg_point::parse(std::string_view input)
 {
     Point value;
     stripLeadingAndTrailingSpaces(input);
@@ -2771,7 +2771,7 @@ NOVASVG_INLINE bool SVGPoint::parse(std::string_view input)
     return true;
 }
 
-NOVASVG_INLINE bool SVGPointList::parse(std::string_view input)
+NOVASVG_INLINE bool svg_point_list::parse(std::string_view input)
 {
     m_values.clear();
     stripLeadingSpaces(input);
@@ -2790,7 +2790,7 @@ NOVASVG_INLINE bool SVGPointList::parse(std::string_view input)
     return true;
 }
 
-NOVASVG_INLINE bool SVGRect::parse(std::string_view input)
+NOVASVG_INLINE bool svg_rect::parse(std::string_view input)
 {
     Rect value;
     stripLeadingAndTrailingSpaces(input);
@@ -2811,12 +2811,12 @@ NOVASVG_INLINE bool SVGRect::parse(std::string_view input)
     return true;
 }
 
-NOVASVG_INLINE bool SVGTransform::parse(std::string_view input)
+NOVASVG_INLINE bool svg_transform::parse(std::string_view input)
 {
     return m_value.parse(input.data(), input.length());
 }
 
-NOVASVG_INLINE bool SVGTransformBox::parse(std::string_view input)
+NOVASVG_INLINE bool svg_transform_box::parse(std::string_view input)
 {
     stripLeadingAndTrailingSpaces(input);
     if(input == "fill-box" || input == "content-box") {
@@ -2833,7 +2833,7 @@ NOVASVG_INLINE bool SVGTransformBox::parse(std::string_view input)
     return true;
 }
 
-NOVASVG_INLINE bool SVGTransformOrigin::parse(std::string_view input)
+NOVASVG_INLINE bool svg_transform_origin::parse(std::string_view input)
 {
     auto parseComponent = [](std::string_view token, float& value, bool& isPercent) {
         if(token == "left" || token == "top") { value = 0.f; isPercent = true; return true; }
@@ -2889,7 +2889,7 @@ NOVASVG_INLINE bool SVGTransformOrigin::parse(std::string_view input)
     return true;
 }
 
-NOVASVG_INLINE bool SVGPreserveAspectRatio::parse(std::string_view input)
+NOVASVG_INLINE bool svg_preserve_aspect_ratio::parse(std::string_view input)
 {
     auto alignType = AlignType::xMidYMid;
     stripLeadingSpaces(input);
@@ -2935,9 +2935,9 @@ NOVASVG_INLINE bool SVGPreserveAspectRatio::parse(std::string_view input)
     return true;
 }
 
-NOVASVG_INLINE Rect SVGPreserveAspectRatio::getClipRect(const Rect& viewBoxRect, const Size& viewportSize) const
+NOVASVG_INLINE Rect svg_preserve_aspect_ratio::getClipRect(const Rect& viewBoxRect, const Size& viewportSize) const
 {
-    assert(!viewBoxRect.is_empty() && !viewportSize.is_empty());
+    assert(!viewBoxRect.empty() && !viewportSize.empty());
     auto xScale = viewportSize.w / viewBoxRect.w;
     auto yScale = viewportSize.h / viewBoxRect.h;
     if(m_alignType == AlignType::None) {
@@ -2982,9 +2982,9 @@ NOVASVG_INLINE Rect SVGPreserveAspectRatio::getClipRect(const Rect& viewBoxRect,
     return Rect(-xOffset / scale, -yOffset / scale, viewportSize.w / scale, viewportSize.h / scale);
 }
 
-NOVASVG_INLINE Transform SVGPreserveAspectRatio::getTransform(const Rect& viewBoxRect, const Size& viewportSize) const
+NOVASVG_INLINE Transform svg_preserve_aspect_ratio::getTransform(const Rect& viewBoxRect, const Size& viewportSize) const
 {
-    assert(!viewBoxRect.is_empty() && !viewportSize.is_empty());
+    assert(!viewBoxRect.empty() && !viewportSize.empty());
     auto xScale = viewportSize.w / viewBoxRect.w;
     auto yScale = viewportSize.h / viewBoxRect.h;
     if(m_alignType == AlignType::None) {
@@ -3029,7 +3029,7 @@ NOVASVG_INLINE Transform SVGPreserveAspectRatio::getTransform(const Rect& viewBo
     return Transform(scale, 0, 0, scale, xOffset, yOffset);
 }
 
-NOVASVG_INLINE void SVGPreserveAspectRatio::transformRect(Rect& dstRect, Rect& srcRect) const
+NOVASVG_INLINE void svg_preserve_aspect_ratio::transformRect(Rect& dstRect, Rect& srcRect) const
 {
     if(m_alignType == AlignType::None)
         return;
@@ -3113,37 +3113,37 @@ NOVASVG_INLINE void SVGPreserveAspectRatio::transformRect(Rect& dstRect, Rect& s
 }
 
 // ---- svgrenderstate (impl) ----
-NOVASVG_INLINE SVGBlendInfo::SVGBlendInfo(const SVGElement* element)
-    : m_clipper(element->clipper())
-    , m_masker(element->masker())
-    , m_filter(element->filterElement())
-    , m_opacity(element->opacity())
-    , m_mixBlendMode(element->mixBlendMode())
+NOVASVG_INLINE svg_blend_info::svg_blend_info(const svg_element* el)
+    : m_clipper(el->clipper())
+    , m_masker(el->masker())
+    , m_filter(el->filterElement())
+    , m_opacity(el->opacity())
+    , m_mixBlendMode(el->mixBlendMode())
 {
 }
 
-NOVASVG_INLINE bool SVGBlendInfo::requiresCompositing(SVGRenderMode mode) const
+NOVASVG_INLINE bool svg_blend_info::requiresCompositing(svg_render_mode mode) const
 {
-    return (m_clipper && m_clipper->requiresMasking()) || (mode == SVGRenderMode::Painting && (m_masker || m_filter || m_opacity < 1.f || m_mixBlendMode != MixBlendMode::Normal));
+    return (m_clipper && m_clipper->requiresMasking()) || (mode == svg_render_mode::Painting && (m_masker || m_filter || m_opacity < 1.f || m_mixBlendMode != MixBlendMode::Normal));
 }
 
-NOVASVG_INLINE bool SVGRenderState::hasCycleReference(const SVGElement* element) const
+NOVASVG_INLINE bool svg_render_state::hasCycleReference(const svg_element* el) const
 {
     auto current = this;
     do {
-        if(element == current->element())
+        if(el == current->el())
             return true;
         current = current->parent();
     } while(current);
     return false;
 }
 
-NOVASVG_INLINE void SVGRenderState::beginGroup(const SVGBlendInfo& blendInfo)
+NOVASVG_INLINE void svg_render_state::beginGroup(const svg_blend_info& blendInfo)
 {
     auto requiresCompositing = blendInfo.requiresCompositing(m_mode);
     if(requiresCompositing) {
         auto bounding_box = m_currentTransform.map_rect(m_element->paint_bounding_box());
-        if(m_mode == SVGRenderMode::Painting && blendInfo.filterElement()) {
+        if(m_mode == svg_render_mode::Painting && blendInfo.filterElement()) {
             bounding_box.inflate(blendInfo.filterElement()->pixelMargin() * m_currentTransform.xScale());
         }
         bounding_box.intersect(m_canvas->extents());
@@ -3157,26 +3157,26 @@ NOVASVG_INLINE void SVGRenderState::beginGroup(const SVGBlendInfo& blendInfo)
     }
 }
 
-NOVASVG_INLINE void SVGRenderState::endGroup(const SVGBlendInfo& blendInfo)
+NOVASVG_INLINE void svg_render_state::endGroup(const svg_blend_info& blendInfo)
 {
     if(m_canvas == m_parent->canvas()) {
         m_canvas->restore();
         return;
     }
 
-    auto opacity = m_mode == SVGRenderMode::Clipping ? 1.f : blendInfo.opacity();
+    auto opacity = m_mode == svg_render_mode::Clipping ? 1.f : blendInfo.opacity();
     if(blendInfo.clipper())
         blendInfo.clipper()->applyClipMask(*this);
-    if(m_mode == SVGRenderMode::Painting && blendInfo.masker()) {
+    if(m_mode == svg_render_mode::Painting && blendInfo.masker()) {
         blendInfo.masker()->applyMask(*this);
     }
-    if(m_mode == SVGRenderMode::Painting && blendInfo.filterElement()) {
+    if(m_mode == svg_render_mode::Painting && blendInfo.filterElement()) {
         blendInfo.filterElement()->applyFilter(*this, m_currentTransform.xScale());
     }
 
     // the finished group is blended into what is already painted under it, with its mix-blend-mode
     BlendMode blendMode = BlendMode::Src_Over;
-    if(m_mode == SVGRenderMode::Painting) {
+    if(m_mode == svg_render_mode::Painting) {
         switch(blendInfo.mixBlendMode()) {
         case MixBlendMode::Multiply: blendMode = BlendMode::Multiply; break;
         case MixBlendMode::Screen: blendMode = BlendMode::Screen; break;
@@ -3193,26 +3193,26 @@ NOVASVG_INLINE void SVGRenderState::endGroup(const SVGBlendInfo& blendInfo)
 
 // ---- svgpaintelement (impl) ----
 
-NOVASVG_INLINE SVGPaintElement::SVGPaintElement(Document* document, ElementID id)
-    : SVGElement(document, id)
+NOVASVG_INLINE svg_paint_element::svg_paint_element(document* dom, ElementID id)
+    : svg_element(dom, id)
 {
 }
 
-NOVASVG_INLINE SVGStopElement::SVGStopElement(Document* document)
-    : SVGElement(document, ElementID::Stop)
+NOVASVG_INLINE svg_stop_element::svg_stop_element(document* dom)
+    : svg_element(dom, ElementID::Stop)
     , m_offset(PropertyID::Offset, 0.f)
 {
     addProperty(m_offset);
 }
 
-NOVASVG_INLINE void SVGStopElement::layoutElement(const SVGLayoutState& state)
+NOVASVG_INLINE void svg_stop_element::layoutElement(const svg_layout_state& state)
 {
     m_stop_color = state.stop_color();
     m_stop_opacity = state.stop_opacity();
-    SVGElement::layoutElement(state);
+    svg_element::layoutElement(state);
 }
 
-NOVASVG_INLINE GradientStop SVGStopElement::gradientStop(float opacity) const
+NOVASVG_INLINE GradientStop svg_stop_element::gradientStop(float opacity) const
 {
     Color stopColor = m_stop_color.colorWithAlpha(m_stop_opacity * opacity);
     GradientStop gradientStop = {
@@ -3222,9 +3222,9 @@ NOVASVG_INLINE GradientStop SVGStopElement::gradientStop(float opacity) const
     return gradientStop;
 }
 
-NOVASVG_INLINE SVGGradientElement::SVGGradientElement(Document* document, ElementID id)
-    : SVGPaintElement(document, id)
-    , SVGURIReference(this)
+NOVASVG_INLINE svg_gradient_element::svg_gradient_element(document* dom, ElementID id)
+    : svg_paint_element(dom, id)
+    , svg_uri_reference(this)
     , m_gradientTransform(PropertyID::GradientTransform)
     , m_gradientUnits(PropertyID::GradientUnits, Units::ObjectBoundingBox)
     , m_spreadMethod(PropertyID::SpreadMethod, SpreadMethod::Pad)
@@ -3234,7 +3234,7 @@ NOVASVG_INLINE SVGGradientElement::SVGGradientElement(Document* document, Elemen
     addProperty(m_spreadMethod);
 }
 
-NOVASVG_INLINE void SVGGradientElement::collectGradientAttributes(SVGGradientAttributes& attributes) const
+NOVASVG_INLINE void svg_gradient_element::collectGradientAttributes(svg_gradient_attributes& attributes) const
 {
     if(!attributes.hasGradientTransform() && has_attribute(PropertyID::GradientTransform))
         attributes.setGradientTransform(this);
@@ -3244,7 +3244,7 @@ NOVASVG_INLINE void SVGGradientElement::collectGradientAttributes(SVGGradientAtt
         attributes.setGradientUnits(this);
     if(!attributes.hasGradientContentElement()) {
         for(const auto& child : children()) {
-            if(auto element = toSVGElement(child); element && element->id() == ElementID::Stop) {
+            if(auto el = toSVGElement(child); el && el->id() == ElementID::Stop) {
                 attributes.setGradientContentElement(this);
                 break;
             }
@@ -3252,8 +3252,8 @@ NOVASVG_INLINE void SVGGradientElement::collectGradientAttributes(SVGGradientAtt
     }
 }
 
-NOVASVG_INLINE SVGLinearGradientElement::SVGLinearGradientElement(Document* document)
-    : SVGGradientElement(document, ElementID::LinearGradient)
+NOVASVG_INLINE svg_linear_gradient_element::svg_linear_gradient_element(document* dom)
+    : svg_gradient_element(dom, ElementID::LinearGradient)
     , m_x1(PropertyID::X1, LengthDirection::Horizontal, LengthNegativeMode::Allow, 0.f, LengthUnits::Percent)
     , m_y1(PropertyID::Y1, LengthDirection::Vertical, LengthNegativeMode::Allow, 0.f, LengthUnits::Percent)
     , m_x2(PropertyID::X2, LengthDirection::Horizontal, LengthNegativeMode::Allow, 100.f, LengthUnits::Percent)
@@ -3265,31 +3265,31 @@ NOVASVG_INLINE SVGLinearGradientElement::SVGLinearGradientElement(Document* docu
     addProperty(m_y2);
 }
 
-NOVASVG_INLINE SVGLinearGradientAttributes SVGLinearGradientElement::collectGradientAttributes() const
+NOVASVG_INLINE svg_linear_gradient_attributes svg_linear_gradient_element::collectGradientAttributes() const
 {
-    SVGLinearGradientAttributes attributes;
-    std::set<const SVGGradientElement*> processedGradients;
-    const SVGGradientElement* current = this;
+    svg_linear_gradient_attributes attributes;
+    std::set<const svg_gradient_element*> processedGradients;
+    const svg_gradient_element* current = this;
     while(true) {
         current->collectGradientAttributes(attributes);
         if(current->id() == ElementID::LinearGradient) {
-            auto element = static_cast<const SVGLinearGradientElement*>(current);
-            if(!attributes.hasX1() && element->has_attribute(PropertyID::X1))
-                attributes.setX1(element);
-            if(!attributes.hasY1() && element->has_attribute(PropertyID::Y1))
-                attributes.setY1(element);
-            if(!attributes.hasX2() && element->has_attribute(PropertyID::X2))
-                attributes.setX2(element);
-            if(!attributes.hasY2() && element->has_attribute(PropertyID::Y2)) {
-                attributes.setY2(element);
+            auto el = static_cast<const svg_linear_gradient_element*>(current);
+            if(!attributes.hasX1() && el->has_attribute(PropertyID::X1))
+                attributes.setX1(el);
+            if(!attributes.hasY1() && el->has_attribute(PropertyID::Y1))
+                attributes.setY1(el);
+            if(!attributes.hasX2() && el->has_attribute(PropertyID::X2))
+                attributes.setX2(el);
+            if(!attributes.hasY2() && el->has_attribute(PropertyID::Y2)) {
+                attributes.setY2(el);
             }
         }
 
-        auto targetElement = current->getTargetElement(document());
+        auto targetElement = current->getTargetElement(dom());
         if(!targetElement || !(targetElement->id() == ElementID::LinearGradient || targetElement->id() == ElementID::RadialGradient))
             break;
         processedGradients.insert(current);
-        current = static_cast<const SVGGradientElement*>(targetElement);
+        current = static_cast<const svg_gradient_element*>(targetElement);
         if(processedGradients.count(current) > 0) {
             break;
         }
@@ -3299,16 +3299,16 @@ NOVASVG_INLINE SVGLinearGradientAttributes SVGLinearGradientElement::collectGrad
     return attributes;
 }
 
-NOVASVG_INLINE GradientStops buildGradientStops(const SVGGradientElement* element, float opacity)
+NOVASVG_INLINE GradientStops buildGradientStops(const svg_gradient_element* el, float opacity)
 {
     GradientStops gradientStops;
 
-    const auto& children = element->children();
+    const auto& children = el->children();
     gradientStops.reserve(children.size());
     for(const auto& child : children) {
         auto childElement = toSVGElement(child);
         if(childElement && childElement->id() == ElementID::Stop) {
-            auto stopElement = static_cast<SVGStopElement*>(childElement);
+            auto stopElement = static_cast<svg_stop_element*>(childElement);
             gradientStops.push_back(stopElement->gradientStop(opacity));
         }
     }
@@ -3316,7 +3316,7 @@ NOVASVG_INLINE GradientStops buildGradientStops(const SVGGradientElement* elemen
     return gradientStops;
 }
 
-NOVASVG_INLINE bool SVGLinearGradientElement::applyPaint(SVGRenderState& state, float opacity) const
+NOVASVG_INLINE bool svg_linear_gradient_element::applyPaint(svg_render_state& state, float opacity) const
 {
     auto attributes = collectGradientAttributes();
     auto gradientContentElement = attributes.gradientContentElement();
@@ -3346,8 +3346,8 @@ NOVASVG_INLINE bool SVGLinearGradientElement::applyPaint(SVGRenderState& state, 
     return true;
 }
 
-NOVASVG_INLINE SVGRadialGradientElement::SVGRadialGradientElement(Document* document)
-    : SVGGradientElement(document, ElementID::RadialGradient)
+NOVASVG_INLINE svg_radial_gradient_element::svg_radial_gradient_element(document* dom)
+    : svg_gradient_element(dom, ElementID::RadialGradient)
     , m_cx(PropertyID::Cx, LengthDirection::Horizontal, LengthNegativeMode::Allow, 50.f, LengthUnits::Percent)
     , m_cy(PropertyID::Cy, LengthDirection::Vertical, LengthNegativeMode::Allow, 50.f, LengthUnits::Percent)
     , m_r(PropertyID::R, LengthDirection::Diagonal, LengthNegativeMode::Forbid, 50.f, LengthUnits::Percent)
@@ -3361,7 +3361,7 @@ NOVASVG_INLINE SVGRadialGradientElement::SVGRadialGradientElement(Document* docu
     addProperty(m_fy);
 }
 
-NOVASVG_INLINE bool SVGRadialGradientElement::applyPaint(SVGRenderState& state, float opacity) const
+NOVASVG_INLINE bool svg_radial_gradient_element::applyPaint(svg_render_state& state, float opacity) const
 {
     auto attributes = collectGradientAttributes();
     auto gradientContentElement = attributes.gradientContentElement();
@@ -3393,33 +3393,33 @@ NOVASVG_INLINE bool SVGRadialGradientElement::applyPaint(SVGRenderState& state, 
     return true;
 }
 
-NOVASVG_INLINE SVGRadialGradientAttributes SVGRadialGradientElement::collectGradientAttributes() const
+NOVASVG_INLINE svg_radial_gradient_attributes svg_radial_gradient_element::collectGradientAttributes() const
 {
-    SVGRadialGradientAttributes attributes;
-    std::set<const SVGGradientElement*> processedGradients;
-    const SVGGradientElement* current = this;
+    svg_radial_gradient_attributes attributes;
+    std::set<const svg_gradient_element*> processedGradients;
+    const svg_gradient_element* current = this;
     while(true) {
         current->collectGradientAttributes(attributes);
         if(current->id() == ElementID::RadialGradient) {
-            auto element = static_cast<const SVGRadialGradientElement*>(current);
-            if(!attributes.hasCx() && element->has_attribute(PropertyID::Cx))
-                attributes.setCx(element);
-            if(!attributes.hasCy() && element->has_attribute(PropertyID::Cy))
-                attributes.setCy(element);
-            if(!attributes.hasR() && element->has_attribute(PropertyID::R))
-                attributes.setR(element);
-            if(!attributes.hasFx() && element->has_attribute(PropertyID::Fx))
-                attributes.setFx(element);
-            if(!attributes.hasFy() && element->has_attribute(PropertyID::Fy)) {
-                attributes.setFy(element);
+            auto el = static_cast<const svg_radial_gradient_element*>(current);
+            if(!attributes.hasCx() && el->has_attribute(PropertyID::Cx))
+                attributes.setCx(el);
+            if(!attributes.hasCy() && el->has_attribute(PropertyID::Cy))
+                attributes.setCy(el);
+            if(!attributes.hasR() && el->has_attribute(PropertyID::R))
+                attributes.setR(el);
+            if(!attributes.hasFx() && el->has_attribute(PropertyID::Fx))
+                attributes.setFx(el);
+            if(!attributes.hasFy() && el->has_attribute(PropertyID::Fy)) {
+                attributes.setFy(el);
             }
         }
 
-        auto targetElement = current->getTargetElement(document());
+        auto targetElement = current->getTargetElement(dom());
         if(!targetElement || !(targetElement->id() == ElementID::LinearGradient || targetElement->id() == ElementID::RadialGradient))
             break;
         processedGradients.insert(current);
-        current = static_cast<const SVGGradientElement*>(targetElement);
+        current = static_cast<const svg_gradient_element*>(targetElement);
         if(processedGradients.count(current) > 0) {
             break;
         }
@@ -3429,10 +3429,10 @@ NOVASVG_INLINE SVGRadialGradientAttributes SVGRadialGradientElement::collectGrad
     return attributes;
 }
 
-NOVASVG_INLINE SVGPatternElement::SVGPatternElement(Document* document)
-    : SVGPaintElement(document, ElementID::Pattern)
-    , SVGURIReference(this)
-    , SVGFitToViewBox(this)
+NOVASVG_INLINE svg_pattern_element::svg_pattern_element(document* dom)
+    : svg_paint_element(dom, ElementID::Pattern)
+    , svg_uri_reference(this)
+    , svg_fit_to_view_box(this)
     , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow)
     , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow)
     , m_width(PropertyID::Width, LengthDirection::Horizontal, LengthNegativeMode::Forbid)
@@ -3450,7 +3450,7 @@ NOVASVG_INLINE SVGPatternElement::SVGPatternElement(Document* document)
     addProperty(m_patternContentUnits);
 }
 
-NOVASVG_INLINE bool SVGPatternElement::applyPaint(SVGRenderState& state, float opacity) const
+NOVASVG_INLINE bool svg_pattern_element::applyPaint(svg_render_state& state, float opacity) const
 {
     if(state.hasCycleReference(this))
         return false;
@@ -3490,7 +3490,7 @@ NOVASVG_INLINE bool SVGPatternElement::applyPaint(SVGRenderState& state, float o
         patternImageTransform.scale(bbox.w, bbox.h);
     }
 
-    SVGRenderState newState(this, &state, patternImageTransform, SVGRenderMode::Painting, patternImage);
+    svg_render_state newState(this, &state, patternImageTransform, svg_render_mode::Painting, patternImage);
     patternContentElement->renderChildren(newState);
 
     auto patternTransform = attributes.patternTransform();
@@ -3500,11 +3500,11 @@ NOVASVG_INLINE bool SVGPatternElement::applyPaint(SVGRenderState& state, float o
     return true;
 }
 
-NOVASVG_INLINE SVGPatternAttributes SVGPatternElement::collectPatternAttributes() const
+NOVASVG_INLINE svg_pattern_attributes svg_pattern_element::collectPatternAttributes() const
 {
-    SVGPatternAttributes attributes;
-    std::set<const SVGPatternElement*> processedPatterns;
-    const SVGPatternElement* current = this;
+    svg_pattern_attributes attributes;
+    std::set<const svg_pattern_element*> processedPatterns;
+    const svg_pattern_element* current = this;
     while(true) {
         if(!attributes.hasX() && current->has_attribute(PropertyID::X))
             attributes.setX(current);
@@ -3533,11 +3533,11 @@ NOVASVG_INLINE SVGPatternAttributes SVGPatternElement::collectPatternAttributes(
             }
         }
 
-        auto targetElement = current->getTargetElement(document());
+        auto targetElement = current->getTargetElement(dom());
         if(!targetElement || targetElement->id() != ElementID::Pattern)
             break;
         processedPatterns.insert(current);
-        current = static_cast<const SVGPatternElement*>(targetElement);
+        current = static_cast<const svg_pattern_element*>(targetElement);
         if(processedPatterns.count(current) > 0) {
             break;
         }
@@ -3550,22 +3550,22 @@ NOVASVG_INLINE SVGPatternAttributes SVGPatternElement::collectPatternAttributes(
 // ---- svggeometryelement (impl) ----
 using namespace gfx; // render/ layer (novasvg::render), the former plutovg
 
-NOVASVG_INLINE Rect SVGMarkerPosition::markerBoundingBox(float strokeWidth) const
+NOVASVG_INLINE Rect svg_marker_position::markerBoundingBox(float strokeWidth) const
 {
     return m_element->markerBoundingBox(m_origin, m_angle, strokeWidth);
 }
 
-NOVASVG_INLINE void SVGMarkerPosition::renderMarker(SVGRenderState& state, float strokeWidth) const
+NOVASVG_INLINE void svg_marker_position::renderMarker(svg_render_state& state, float strokeWidth) const
 {
     m_element->renderMarker(state, m_origin, m_angle, strokeWidth);
 }
 
-NOVASVG_INLINE SVGGeometryElement::SVGGeometryElement(Document* document, ElementID id)
-    : SVGGraphicsElement(document, id)
+NOVASVG_INLINE svg_geometry_element::svg_geometry_element(document* dom, ElementID id)
+    : svg_graphics_element(dom, id)
 {
 }
 
-NOVASVG_INLINE Rect SVGGeometryElement::strokeBoundingBox() const
+NOVASVG_INLINE Rect svg_geometry_element::strokeBoundingBox() const
 {
     auto strokeBoundingBox = fillBoundingBox();
     if(m_stroke.isRenderable()) {
@@ -3585,14 +3585,14 @@ NOVASVG_INLINE Rect SVGGeometryElement::strokeBoundingBox() const
     return strokeBoundingBox;
 }
 
-NOVASVG_INLINE void SVGGeometryElement::layoutElement(const SVGLayoutState& state)
+NOVASVG_INLINE void svg_geometry_element::layoutElement(const svg_layout_state& state)
 {
     m_fill_rule = state.fill_rule();
     m_clip_rule = state.clip_rule();
     m_fill = getPaintServer(state.fill(), state.fill_opacity());
     m_stroke = getPaintServer(state.stroke(), state.stroke_opacity());
     m_strokeData = getStrokeData(state);
-    SVGGraphicsElement::layoutElement(state);
+    svg_graphics_element::layoutElement(state);
 
     m_path.reset();
     m_markerPositions.clear();
@@ -3600,9 +3600,9 @@ NOVASVG_INLINE void SVGGeometryElement::layoutElement(const SVGLayoutState& stat
     updateMarkerPositions(m_markerPositions, state);
 }
 
-NOVASVG_INLINE void SVGGeometryElement::updateMarkerPositions(SVGMarkerPositionList& positions, const SVGLayoutState& state)
+NOVASVG_INLINE void svg_geometry_element::updateMarkerPositions(svg_marker_position_list& positions, const svg_layout_state& state)
 {
-    if(m_path.is_empty())
+    if(m_path.empty())
         return;
     auto markerStart = getMarker(state.marker_start());
     auto markerMid = getMarker(state.marker_mid());
@@ -3655,7 +3655,7 @@ NOVASVG_INLINE void SVGGeometryElement::updateMarkerPositions(SVGMarkerPositionL
                 auto slope = outslopePoints[1] - outslopePoints[0];
                 auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVASVG_PI;
                 const auto& orient = markerStart->orient();
-                if(orient.orientType() == SVGAngle::OrientType::AutoStartReverse)
+                if(orient.orientType() == svg_angle::OrientType::AutoStartReverse)
                     angle -= 180.f;
                 positions.emplace_back(markerStart, origin, angle);
             }
@@ -3682,14 +3682,14 @@ NOVASVG_INLINE void SVGGeometryElement::updateMarkerPositions(SVGMarkerPositionL
     }
 }
 
-NOVASVG_INLINE void SVGGeometryElement::render(SVGRenderState& state) const
+NOVASVG_INLINE void svg_geometry_element::render(svg_render_state& state) const
 {
     if(!isRenderable())
         return;
-    SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, local_transform());
+    svg_blend_info blendInfo(this);
+    svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
-    if(newState.mode() == SVGRenderMode::Clipping) {
+    if(newState.mode() == svg_render_mode::Clipping) {
         newState->setColor(Color::White);
         newState->fillPath(m_path, m_clip_rule, newState.currentTransform());
     } else {
@@ -3707,8 +3707,8 @@ NOVASVG_INLINE void SVGGeometryElement::render(SVGRenderState& state) const
     newState.endGroup(blendInfo);
 }
 
-NOVASVG_INLINE SVGLineElement::SVGLineElement(Document* document)
-    : SVGGeometryElement(document, ElementID::Line)
+NOVASVG_INLINE svg_line_element::svg_line_element(document* dom)
+    : svg_geometry_element(dom, ElementID::Line)
     , m_x1(PropertyID::X1, LengthDirection::Horizontal, LengthNegativeMode::Allow)
     , m_y1(PropertyID::Y1, LengthDirection::Vertical, LengthNegativeMode::Allow)
     , m_x2(PropertyID::X2, LengthDirection::Horizontal, LengthNegativeMode::Allow)
@@ -3720,7 +3720,7 @@ NOVASVG_INLINE SVGLineElement::SVGLineElement(Document* document)
     addProperty(m_y2);
 }
 
-NOVASVG_INLINE Rect SVGLineElement::updateShape(Path& path)
+NOVASVG_INLINE Rect svg_line_element::updateShape(Path& path)
 {
     LengthContext lengthContext(this);
     auto x1 = lengthContext.valueForLength(m_x1);
@@ -3733,8 +3733,8 @@ NOVASVG_INLINE Rect SVGLineElement::updateShape(Path& path)
     return Rect(x1, y1, x2 - x1, y2 - y1);
 }
 
-NOVASVG_INLINE SVGRectElement::SVGRectElement(Document* document)
-    : SVGGeometryElement(document, ElementID::Rect)
+NOVASVG_INLINE svg_rect_element::svg_rect_element(document* dom)
+    : svg_geometry_element(dom, ElementID::Rect)
     , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow)
     , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow)
     , m_width(PropertyID::Width, LengthDirection::Horizontal, LengthNegativeMode::Forbid)
@@ -3750,7 +3750,7 @@ NOVASVG_INLINE SVGRectElement::SVGRectElement(Document* document)
     addProperty(m_ry);
 }
 
-NOVASVG_INLINE Rect SVGRectElement::updateShape(Path& path)
+NOVASVG_INLINE Rect svg_rect_element::updateShape(Path& path)
 {
     LengthContext lengthContext(this);
     auto width = lengthContext.valueForLength(m_width);
@@ -3775,8 +3775,8 @@ NOVASVG_INLINE Rect SVGRectElement::updateShape(Path& path)
     return Rect(x, y, width, height);
 }
 
-NOVASVG_INLINE SVGEllipseElement::SVGEllipseElement(Document* document)
-    : SVGGeometryElement(document, ElementID::Ellipse)
+NOVASVG_INLINE svg_ellipse_element::svg_ellipse_element(document* dom)
+    : svg_geometry_element(dom, ElementID::Ellipse)
     , m_cx(PropertyID::Cx, LengthDirection::Horizontal, LengthNegativeMode::Allow)
     , m_cy(PropertyID::Cy, LengthDirection::Vertical, LengthNegativeMode::Allow)
     , m_rx(PropertyID::Rx, LengthDirection::Diagonal, LengthNegativeMode::Forbid)
@@ -3788,7 +3788,7 @@ NOVASVG_INLINE SVGEllipseElement::SVGEllipseElement(Document* document)
     addProperty(m_ry);
 }
 
-NOVASVG_INLINE Rect SVGEllipseElement::updateShape(Path& path)
+NOVASVG_INLINE Rect svg_ellipse_element::updateShape(Path& path)
 {
     LengthContext lengthContext(this);
     auto rx = lengthContext.valueForLength(m_rx);
@@ -3803,8 +3803,8 @@ NOVASVG_INLINE Rect SVGEllipseElement::updateShape(Path& path)
     return Rect(cx - rx, cy - ry, rx + rx, ry + ry);
 }
 
-NOVASVG_INLINE SVGCircleElement::SVGCircleElement(Document* document)
-    : SVGGeometryElement(document, ElementID::Circle)
+NOVASVG_INLINE svg_circle_element::svg_circle_element(document* dom)
+    : svg_geometry_element(dom, ElementID::Circle)
     , m_cx(PropertyID::Cx, LengthDirection::Horizontal, LengthNegativeMode::Allow)
     , m_cy(PropertyID::Cy, LengthDirection::Vertical, LengthNegativeMode::Allow)
     , m_r(PropertyID::R, LengthDirection::Diagonal, LengthNegativeMode::Forbid)
@@ -3814,7 +3814,7 @@ NOVASVG_INLINE SVGCircleElement::SVGCircleElement(Document* document)
     addProperty(m_r);
 }
 
-NOVASVG_INLINE Rect SVGCircleElement::updateShape(Path& path)
+NOVASVG_INLINE Rect svg_circle_element::updateShape(Path& path)
 {
     LengthContext lengthContext(this);
     auto r = lengthContext.valueForLength(m_r);
@@ -3828,14 +3828,14 @@ NOVASVG_INLINE Rect SVGCircleElement::updateShape(Path& path)
     return Rect(cx - r, cy - r, r + r, r + r);
 }
 
-NOVASVG_INLINE SVGPolyElement::SVGPolyElement(Document* document, ElementID id)
-    : SVGGeometryElement(document, id)
+NOVASVG_INLINE svg_poly_element::svg_poly_element(document* dom, ElementID id)
+    : svg_geometry_element(dom, id)
     , m_points(PropertyID::Points)
 {
     addProperty(m_points);
 }
 
-NOVASVG_INLINE Rect SVGPolyElement::updateShape(Path& path)
+NOVASVG_INLINE Rect svg_poly_element::updateShape(Path& path)
 {
     const auto& points = m_points.values();
     if(points.empty()) {
@@ -3852,14 +3852,14 @@ NOVASVG_INLINE Rect SVGPolyElement::updateShape(Path& path)
     return path.boundingRect();
 }
 
-NOVASVG_INLINE SVGPathElement::SVGPathElement(Document* document)
-    : SVGGeometryElement(document, ElementID::Path)
+NOVASVG_INLINE svg_path_element::svg_path_element(document* dom)
+    : svg_geometry_element(dom, ElementID::Path)
     , m_d(PropertyID::D)
 {
     addProperty(m_d);
 }
 
-NOVASVG_INLINE Rect SVGPathElement::updateShape(Path& path)
+NOVASVG_INLINE Rect svg_path_element::updateShape(Path& path)
 {
     path = m_d.value();
     return path.boundingRect();
@@ -3868,23 +3868,23 @@ NOVASVG_INLINE Rect SVGPathElement::updateShape(Path& path)
 // ---- svgtextelement (impl) ----
 using namespace gfx; // render/ layer (novasvg::render), the former plutovg
 
-inline const SVGTextNode* toSVGTextNode(const SVGNode* node)
+inline const svg_text_node* toSVGTextNode(const svg_node* nd)
 {
-    assert(node && node->is_text_node());
-    return static_cast<const SVGTextNode*>(node);
+    assert(nd && nd->is_text_node());
+    return static_cast<const svg_text_node*>(nd);
 }
 
-inline const SVGTextPositioningElement* toSVGTextPositioningElement(const SVGNode* node)
+inline const svg_text_positioning_element* toSVGTextPositioningElement(const svg_node* nd)
 {
-    assert(node && node->isTextPositioningElement());
-    return static_cast<const SVGTextPositioningElement*>(node);
+    assert(nd && nd->isTextPositioningElement());
+    return static_cast<const svg_text_positioning_element*>(nd);
 }
 
-NOVASVG_INLINE AlignmentBaseline resolveDominantBaseline(const SVGTextPositioningElement* element)
+NOVASVG_INLINE AlignmentBaseline resolveDominantBaseline(const svg_text_positioning_element* el)
 {
-    switch(element->dominant_baseline()) {
+    switch(el->dominant_baseline()) {
     case DominantBaseline::Auto:
-        if(element->isVerticalWritingMode())
+        if(el->isVerticalWritingMode())
             return AlignmentBaseline::Central;
         return AlignmentBaseline::Alphabetic;
     case DominantBaseline::UseScript:
@@ -3914,21 +3914,21 @@ NOVASVG_INLINE AlignmentBaseline resolveDominantBaseline(const SVGTextPositionin
     return AlignmentBaseline::Auto;
 }
 
-NOVASVG_INLINE float calculateBaselineOffset(const SVGTextPositioningElement* element)
+NOVASVG_INLINE float calculateBaselineOffset(const svg_text_positioning_element* el)
 {
-    auto offset = element->baseline_offset();
-    auto parent = element->parent_element();
+    auto offset = el->baseline_offset();
+    auto parent = el->parent_element();
     while(parent->isTextPositioningElement()) {
         offset += toSVGTextPositioningElement(parent)->baseline_offset();
         parent = parent->parent_element();
     }
 
-    auto baseline = element->alignment_baseline();
+    auto baseline = el->alignment_baseline();
     if(baseline == AlignmentBaseline::Auto || baseline == AlignmentBaseline::Baseline) {
-        baseline = resolveDominantBaseline(element);
+        baseline = resolveDominantBaseline(el);
     }
 
-    const auto& font = element->font();
+    const auto& font = el->font();
     switch(baseline) {
     case AlignmentBaseline::BeforeEdge:
     case AlignmentBaseline::TextBeforeEdge:
@@ -3958,10 +3958,10 @@ NOVASVG_INLINE float calculateBaselineOffset(const SVGTextPositioningElement* el
     return offset;
 }
 
-NOVASVG_INLINE bool needsTextAnchorAdjustment(const SVGTextPositioningElement* element)
+NOVASVG_INLINE bool needsTextAnchorAdjustment(const svg_text_positioning_element* el)
 {
-    auto direction = element->direction();
-    switch(element->text_anchor()) {
+    auto direction = el->direction();
+    switch(el->text_anchor()) {
     case TextAnchor::Start:
         return direction == Direction::Rtl;
     case TextAnchor::Middle:
@@ -3975,10 +3975,10 @@ NOVASVG_INLINE bool needsTextAnchorAdjustment(const SVGTextPositioningElement* e
     return false;
 }
 
-NOVASVG_INLINE float calculateTextAnchorOffset(const SVGTextPositioningElement* element, float width)
+NOVASVG_INLINE float calculateTextAnchorOffset(const svg_text_positioning_element* el, float width)
 {
-    auto direction = element->direction();
-    switch(element->text_anchor()) {
+    auto direction = el->direction();
+    switch(el->text_anchor()) {
     case TextAnchor::Start:
         if(direction == Direction::Ltr)
             return 0.f;
@@ -3996,14 +3996,14 @@ NOVASVG_INLINE float calculateTextAnchorOffset(const SVGTextPositioningElement* 
     return 0.f;
 }
 
-using SVGTextFragmentIterator = SVGTextFragmentList::iterator;
+using svg_text_fragment_iterator = svg_text_fragment_list::iterator;
 
-NOVASVG_INLINE float calculateTextChunkLength(SVGTextFragmentIterator begin, SVGTextFragmentIterator end, bool isVerticalText)
+NOVASVG_INLINE float calculateTextChunkLength(svg_text_fragment_iterator begin, svg_text_fragment_iterator end, bool isVerticalText)
 {
     float chunkLength = 0;
-    const SVGTextFragment* lastFragment = nullptr;
+    const svg_text_fragment* lastFragment = nullptr;
     for(auto it = begin; it != end; ++it) {
-        const SVGTextFragment& fragment = *it;
+        const svg_text_fragment& fragment = *it;
         chunkLength += isVerticalText ? fragment.height : fragment.width;
         if(!lastFragment) {
             lastFragment = &fragment;
@@ -4022,22 +4022,22 @@ NOVASVG_INLINE float calculateTextChunkLength(SVGTextFragmentIterator begin, SVG
     return chunkLength;
 }
 
-NOVASVG_INLINE void handleTextChunk(SVGTextFragmentIterator begin, SVGTextFragmentIterator end)
+NOVASVG_INLINE void handleTextChunk(svg_text_fragment_iterator begin, svg_text_fragment_iterator end)
 {
-    const SVGTextFragment& firstFragment = *begin;
-    const auto isVerticalText = firstFragment.element->isVerticalWritingMode();
-    if(firstFragment.element->has_attribute(PropertyID::TextLength)) {
-        LengthContext lengthContext(firstFragment.element);
-        auto textLength = lengthContext.valueForLength(firstFragment.element->textLength());
+    const svg_text_fragment& firstFragment = *begin;
+    const auto isVerticalText = firstFragment.el->isVerticalWritingMode();
+    if(firstFragment.el->has_attribute(PropertyID::TextLength)) {
+        LengthContext lengthContext(firstFragment.el);
+        auto textLength = lengthContext.valueForLength(firstFragment.el->textLength());
         auto chunkLength = calculateTextChunkLength(begin, end, isVerticalText);
         if(textLength > 0.f && chunkLength > 0.f) {
             size_t numCharacters = 0;
             for(auto it = begin; it != end; ++it) {
-                const SVGTextFragment& fragment = *it;
+                const svg_text_fragment& fragment = *it;
                 numCharacters += fragment.length;
             }
 
-            if(firstFragment.element->lengthAdjust() == LengthAdjust::SpacingAndGlyphs) {
+            if(firstFragment.el->lengthAdjust() == LengthAdjust::SpacingAndGlyphs) {
                 auto textLengthScale = textLength / chunkLength;
                 auto lengthAdjustTransform = Transform::translated(firstFragment.x, firstFragment.y);
                 if(isVerticalText) {
@@ -4048,15 +4048,15 @@ NOVASVG_INLINE void handleTextChunk(SVGTextFragmentIterator begin, SVGTextFragme
 
                 lengthAdjustTransform.translate(-firstFragment.x, -firstFragment.y);
                 for(auto it = begin; it != end; ++it) {
-                    SVGTextFragment& fragment = *it;
+                    svg_text_fragment& fragment = *it;
                     fragment.lengthAdjustTransform = lengthAdjustTransform;
                 }
             } else if(numCharacters > 1) {
-                assert(firstFragment.element->lengthAdjust() == LengthAdjust::Spacing);
+                assert(firstFragment.el->lengthAdjust() == LengthAdjust::Spacing);
                 size_t characterOffset = 0;
                 auto textLengthShift = (textLength - chunkLength) / (numCharacters - 1);
                 for(auto it = begin; it != end; ++it) {
-                    SVGTextFragment& fragment = *it;
+                    svg_text_fragment& fragment = *it;
                     if(isVerticalText) {
                         fragment.y += textLengthShift * characterOffset;
                     } else {
@@ -4069,11 +4069,11 @@ NOVASVG_INLINE void handleTextChunk(SVGTextFragmentIterator begin, SVGTextFragme
         }
     }
 
-    if(needsTextAnchorAdjustment(firstFragment.element)) {
+    if(needsTextAnchorAdjustment(firstFragment.el)) {
         auto chunkLength = calculateTextChunkLength(begin, end, isVerticalText);
-        auto chunkOffset = calculateTextAnchorOffset(firstFragment.element, chunkLength);
+        auto chunkOffset = calculateTextAnchorOffset(firstFragment.el, chunkLength);
         for(auto it = begin; it != end; ++it) {
-            SVGTextFragment& fragment = *it;
+            svg_text_fragment& fragment = *it;
             if(isVerticalText) {
                 fragment.y += chunkOffset;
             } else {
@@ -4083,14 +4083,14 @@ NOVASVG_INLINE void handleTextChunk(SVGTextFragmentIterator begin, SVGTextFragme
     }
 }
 
-NOVASVG_INLINE SVGTextFragmentsBuilder::SVGTextFragmentsBuilder(std::u32string& text, SVGTextFragmentList& fragments)
+NOVASVG_INLINE svg_text_fragments_builder::svg_text_fragments_builder(std::u32string& text, svg_text_fragment_list& fragments)
     : m_text(text), m_fragments(fragments)
 {
     m_text.clear();
     m_fragments.clear();
 }
 
-NOVASVG_INLINE void SVGTextFragmentsBuilder::build(const SVGTextElement* textElement)
+NOVASVG_INLINE void svg_text_fragments_builder::build(const svg_text_element* textElement)
 {
     handleElement(textElement);
     for(const auto& position : m_textPositions) {
@@ -4099,14 +4099,14 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::build(const SVGTextElement* textEle
 
     std::u32string_view wholeText(m_text);
     for(const auto& textPosition : m_textPositions) {
-        if(!textPosition.node->is_text_node())
+        if(!textPosition.nd->is_text_node())
             continue;
-        auto element = toSVGTextPositioningElement(textPosition.node->parent_element());
-        const auto isVerticalText = element->isVerticalWritingMode();
-        const auto isUprightText = element->isUprightTextOrientation();
-        const auto& font = element->font();
+        auto el = toSVGTextPositioningElement(textPosition.nd->parent_element());
+        const auto isVerticalText = el->isVerticalWritingMode();
+        const auto isUprightText = el->isUprightTextOrientation();
+        const auto& font = el->font();
 
-        SVGTextFragment fragment(element);
+        svg_text_fragment fragment(el);
         auto recordTextFragment = [&](auto startOffset, auto endOffset) {
             auto text = wholeText.substr(startOffset, endOffset - startOffset);
             fragment.offset = startOffset;
@@ -4122,8 +4122,8 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::build(const SVGTextElement* textEle
             m_fragments.push_back(fragment);
         };
 
-        auto needsTextLengthSpacing = element->lengthAdjust() == LengthAdjust::Spacing && element->has_attribute(PropertyID::TextLength);
-        auto baselineOffset = calculateBaselineOffset(element);
+        auto needsTextLengthSpacing = el->lengthAdjust() == LengthAdjust::Spacing && el->has_attribute(PropertyID::TextLength);
+        auto baselineOffset = calculateBaselineOffset(el);
         auto startOffset = textPosition.startOffset;
         auto textOffset = textPosition.startOffset;
         auto didStartTextFragment = false;
@@ -4131,7 +4131,7 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::build(const SVGTextElement* textEle
         auto lastCharacter = 0u;
         auto lastAngle = 0.f;
         while(textOffset < textPosition.endOffset) {
-            SVGCharacterPosition characterPosition;
+            svg_character_position characterPosition;
             if(auto it = m_characterPositions.find(m_characterOffset); it != m_characterPositions.end()) {
                 characterPosition = it->second;
             }
@@ -4168,10 +4168,10 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::build(const SVGTextElement* textEle
                 didStartTextFragment = true;
             }
 
-            auto spacing = element->letter_spacing();
-            if(currentCharacter && lastCharacter && element->word_spacing()) {
+            auto spacing = el->letter_spacing();
+            if(currentCharacter && lastCharacter && el->word_spacing()) {
                 if(currentCharacter == ' ' && lastCharacter != ' ') {
-                    spacing += element->word_spacing();
+                    spacing += el->word_spacing();
                 }
             }
 
@@ -4199,7 +4199,7 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::build(const SVGTextElement* textEle
     auto begin = m_fragments.begin();
     auto end = m_fragments.end();
     for(++it; it != end; ++it) {
-        const SVGTextFragment& fragment = *it;
+        const svg_text_fragment& fragment = *it;
         if(!fragment.startsNewTextChunk)
             continue;
         handleTextChunk(begin, it);
@@ -4209,12 +4209,12 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::build(const SVGTextElement* textEle
     handleTextChunk(begin, it);
 }
 
-NOVASVG_INLINE void SVGTextFragmentsBuilder::handleText(const SVGTextNode* node)
+NOVASVG_INLINE void svg_text_fragments_builder::handleText(const svg_text_node* nd)
 {
-    const auto& text = node->data();
+    const auto& text = nd->data();
     if(text.empty())
         return;
-    auto element = toSVGTextPositioningElement(node->parent_element());
+    auto el = toSVGTextPositioningElement(nd->parent_element());
     const auto startOffset = m_text.length();
     uint32_t lastCharacter = ' ';
     if(!m_text.empty()) {
@@ -4227,24 +4227,24 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::handleText(const SVGTextNode* node)
         auto currentCharacter = text_iterator_next(&it);
         if(currentCharacter == '\t' || currentCharacter == '\n' || currentCharacter == '\r')
             currentCharacter = ' ';
-        if(currentCharacter == ' ' && lastCharacter == ' ' && element->white_space() == WhiteSpace::Default)
+        if(currentCharacter == ' ' && lastCharacter == ' ' && el->white_space() == WhiteSpace::Default)
             continue;
         m_text.push_back(currentCharacter);
         lastCharacter = currentCharacter;
     }
 
     if(startOffset < m_text.length()) {
-        m_textPositions.emplace_back(node, startOffset, m_text.length());
+        m_textPositions.emplace_back(nd, startOffset, m_text.length());
     }
 }
 
-NOVASVG_INLINE void SVGTextFragmentsBuilder::handleElement(const SVGTextPositioningElement* element)
+NOVASVG_INLINE void svg_text_fragments_builder::handleElement(const svg_text_positioning_element* el)
 {
-    if(element->isDisplayNone())
+    if(el->isDisplayNone())
         return;
     const auto itemIndex = m_textPositions.size();
-    m_textPositions.emplace_back(element, m_text.length(), m_text.length());
-    for(const auto& child : element->children()) {
+    m_textPositions.emplace_back(el, m_text.length(), m_text.length());
+    for(const auto& child : el->children()) {
         if(child->is_text_node()) {
             handleText(toSVGTextNode(child.get()));
         } else if(child->isTextPositioningElement()) {
@@ -4253,20 +4253,20 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::handleElement(const SVGTextPosition
     }
 
     auto& position = m_textPositions[itemIndex];
-    assert(position.node == element);
+    assert(position.nd == el);
     position.endOffset = m_text.length();
 }
 
-NOVASVG_INLINE void SVGTextFragmentsBuilder::fillCharacterPositions(const SVGTextPosition& position)
+NOVASVG_INLINE void svg_text_fragments_builder::fillCharacterPositions(const svg_text_position& position)
 {
-    if(!position.node->isTextPositioningElement())
+    if(!position.nd->isTextPositioningElement())
         return;
-    auto element = toSVGTextPositioningElement(position.node);
-    const auto& xList = element->x();
-    const auto& yList = element->y();
-    const auto& dxList = element->dx();
-    const auto& dyList = element->dy();
-    const auto& rotateList = element->rotate();
+    auto el = toSVGTextPositioningElement(position.nd);
+    const auto& xList = el->x();
+    const auto& yList = el->y();
+    const auto& dxList = el->dx();
+    const auto& dyList = el->dy();
+    const auto& rotateList = el->rotate();
 
     auto xListSize = xList.size();
     auto yListSize = yList.size();
@@ -4277,7 +4277,7 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::fillCharacterPositions(const SVGTex
         return;
     }
 
-    LengthContext lengthContext(element);
+    LengthContext lengthContext(el);
     std::optional<float> lastRotation;
     for(auto offset = position.startOffset; offset < position.endOffset; ++offset) {
         auto index = offset - position.startOffset;
@@ -4306,8 +4306,8 @@ NOVASVG_INLINE void SVGTextFragmentsBuilder::fillCharacterPositions(const SVGTex
     }
 }
 
-NOVASVG_INLINE SVGTextPositioningElement::SVGTextPositioningElement(Document* document, ElementID id)
-    : SVGGraphicsElement(document, id)
+NOVASVG_INLINE svg_text_positioning_element::svg_text_positioning_element(document* dom, ElementID id)
+    : svg_graphics_element(dom, id)
     , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow)
     , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow)
     , m_dx(PropertyID::Dx, LengthDirection::Horizontal, LengthNegativeMode::Allow)
@@ -4325,12 +4325,12 @@ NOVASVG_INLINE SVGTextPositioningElement::SVGTextPositioningElement(Document* do
     addProperty(m_lengthAdjust);
 }
 
-NOVASVG_INLINE void SVGTextPositioningElement::layoutElement(const SVGLayoutState& state)
+NOVASVG_INLINE void svg_text_positioning_element::layoutElement(const svg_layout_state& state)
 {
     m_font = state.font();
     m_fill = getPaintServer(state.fill(), state.fill_opacity());
     m_stroke = getPaintServer(state.stroke(), state.stroke_opacity());
-    SVGGraphicsElement::layoutElement(state);
+    svg_graphics_element::layoutElement(state);
 
     LengthContext lengthContext(this);
     m_stroke_width = lengthContext.valueForLength(state.stroke_width(), LengthDirection::Diagonal);
@@ -4347,7 +4347,7 @@ NOVASVG_INLINE void SVGTextPositioningElement::layoutElement(const SVGLayoutStat
     m_direction = state.direction();
 }
 
-NOVASVG_INLINE float SVGTextPositioningElement::convertBaselineOffset(const BaselineShift& baselineShift) const
+NOVASVG_INLINE float svg_text_positioning_element::convertBaselineOffset(const BaselineShift& baselineShift) const
 {
     if(baselineShift.type() == BaselineShift::Type::Baseline)
         return 0.f;
@@ -4367,48 +4367,48 @@ NOVASVG_INLINE float SVGTextPositioningElement::convertBaselineOffset(const Base
     return length.value();
 }
 
-NOVASVG_INLINE SVGTSpanElement::SVGTSpanElement(Document* document)
-    : SVGTextPositioningElement(document, ElementID::Tspan)
+NOVASVG_INLINE svg_t_span_element::svg_t_span_element(document* dom)
+    : svg_text_positioning_element(dom, ElementID::Tspan)
 {
 }
 
-NOVASVG_INLINE SVGTextElement::SVGTextElement(Document* document)
-    : SVGTextPositioningElement(document, ElementID::Text)
+NOVASVG_INLINE svg_text_element::svg_text_element(document* dom)
+    : svg_text_positioning_element(dom, ElementID::Text)
 {
 }
 
-NOVASVG_INLINE void SVGTextElement::layout(SVGLayoutState& state)
+NOVASVG_INLINE void svg_text_element::layout(svg_layout_state& state)
 {
-    SVGTextPositioningElement::layout(state);
-    SVGTextFragmentsBuilder(m_text, m_fragments).build(this);
+    svg_text_positioning_element::layout(state);
+    svg_text_fragments_builder(m_text, m_fragments).build(this);
 }
 
-NOVASVG_INLINE void SVGTextElement::render(SVGRenderState& state) const
+NOVASVG_INLINE void svg_text_element::render(svg_render_state& state) const
 {
     if(m_fragments.empty() || isVisibilityHidden() || isDisplayNone())
         return;
-    SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, local_transform());
+    svg_blend_info blendInfo(this);
+    svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
-    if(newState.mode() == SVGRenderMode::Clipping) {
+    if(newState.mode() == svg_render_mode::Clipping) {
         newState->setColor(Color::White);
     }
 
     std::u32string_view wholeText(m_text);
     for(const auto& fragment : m_fragments) {
-        if(fragment.element->isVisibilityHidden())
+        if(fragment.el->isVisibilityHidden())
             continue;
         auto transform = newState.currentTransform() * Transform::rotated(fragment.angle, fragment.x, fragment.y) * fragment.lengthAdjustTransform;
         auto text = wholeText.substr(fragment.offset, fragment.length);
         auto origin = Point(fragment.x, fragment.y);
 
-        const auto& font = fragment.element->font();
-        if(newState.mode() == SVGRenderMode::Clipping) {
+        const auto& font = fragment.el->font();
+        if(newState.mode() == svg_render_mode::Clipping) {
             newState->fillText(text, font, origin, transform);
         } else {
-            const auto& fill = fragment.element->fill();
-            const auto& stroke = fragment.element->stroke();
-            auto stroke_width = fragment.element->stroke_width();
+            const auto& fill = fragment.el->fill();
+            const auto& stroke = fragment.el->stroke();
+            auto stroke_width = fragment.el->stroke_width();
             if(fill.applyPaint(newState))
                 newState->fillText(text, font, origin, transform);
             if(stroke.applyPaint(newState)) {
@@ -4420,16 +4420,16 @@ NOVASVG_INLINE void SVGTextElement::render(SVGRenderState& state) const
     newState.endGroup(blendInfo);
 }
 
-NOVASVG_INLINE Rect SVGTextElement::bounding_box(bool includeStroke) const
+NOVASVG_INLINE Rect svg_text_element::bounding_box(bool includeStroke) const
 {
     auto bounding_box = Rect::Invalid;
     for(const auto& fragment : m_fragments) {
-        const auto& font = fragment.element->font();
-        const auto& stroke = fragment.element->stroke();
+        const auto& font = fragment.el->font();
+        const auto& stroke = fragment.el->stroke();
         auto fragmentTranform = Transform::rotated(fragment.angle, fragment.x, fragment.y) * fragment.lengthAdjustTransform;
         auto fragmentRect = Rect(fragment.x, fragment.y - font.ascent(), fragment.width, fragment.height);
         if(includeStroke && stroke.isRenderable())
-            fragmentRect.inflate(fragment.element->stroke_width() / 2.f);
+            fragmentRect.inflate(fragment.el->stroke_width() / 2.f);
         bounding_box.unite(fragmentTranform.map_rect(fragmentRect));
     }
 
@@ -4441,7 +4441,7 @@ NOVASVG_INLINE Rect SVGTextElement::bounding_box(bool includeStroke) const
 // ---- svglayoutstate (impl) ----
 using namespace gfx; // render/ layer (novasvg::render), the former plutovg
 
-NOVASVG_INLINE std::optional<Color> parseColorValue(std::string_view& input, const SVGLayoutState* state)
+NOVASVG_INLINE std::optional<Color> parseColorValue(std::string_view& input, const svg_layout_state* state)
 {
     if(skipString(input, "currentColor")) {
         return state->color();
@@ -4459,7 +4459,7 @@ NOVASVG_INLINE std::optional<Color> parseColorValue(std::string_view& input, con
     return Color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff);
 }
 
-NOVASVG_INLINE Color parseColor(std::string_view input, const SVGLayoutState* state, const Color& defaultValue)
+NOVASVG_INLINE Color parseColor(std::string_view input, const svg_layout_state* state, const Color& defaultValue)
 {
     auto color = parseColorValue(input, state);
     if(!color || !input.empty())
@@ -4467,7 +4467,7 @@ NOVASVG_INLINE Color parseColor(std::string_view input, const SVGLayoutState* st
     return color.value();
 }
 
-NOVASVG_INLINE Color parseColorOrNone(std::string_view input, const SVGLayoutState* state, const Color& defaultValue)
+NOVASVG_INLINE Color parseColorOrNone(std::string_view input, const svg_layout_state* state, const Color& defaultValue)
 {
     if(input.compare("none") == 0)
         return Color::Transparent;
@@ -4523,7 +4523,7 @@ NOVASVG_INLINE std::string parseUrl(std::string_view input)
     return value;
 }
 
-NOVASVG_INLINE Paint parsePaint(std::string_view input, const SVGLayoutState* state, const Color& defaultValue)
+NOVASVG_INLINE Paint parsePaint(std::string_view input, const svg_layout_state* state, const Color& defaultValue)
 {
     std::string id;
     if(!parseUrlValue(input, id))
@@ -4593,7 +4593,7 @@ NOVASVG_INLINE Length parseLengthOrNormal(std::string_view input)
     return parseLength(input, LengthNegativeMode::Allow, Length(0, LengthUnits::None));
 }
 
-NOVASVG_INLINE float parseFontSize(std::string_view input, const SVGLayoutState* state)
+NOVASVG_INLINE float parseFontSize(std::string_view input, const svg_layout_state* state)
 {
     auto length = parseLength(input, LengthNegativeMode::Forbid, Length(12, LengthUnits::None));
     if(length.units() == LengthUnits::Percent)
@@ -4606,7 +4606,7 @@ NOVASVG_INLINE float parseFontSize(std::string_view input, const SVGLayoutState*
 }
 
 template<typename Enum, unsigned int N>
-NOVASVG_INLINE Enum parseEnumValue(std::string_view input, const SVGEnumerationEntry<Enum>(&entries)[N], Enum defaultValue)
+NOVASVG_INLINE Enum parseEnumValue(std::string_view input, const svg_enumeration_entry<Enum>(&entries)[N], Enum defaultValue)
 {
     for(const auto& entry : entries) {
         if(input == entry.second) {
@@ -4619,7 +4619,7 @@ NOVASVG_INLINE Enum parseEnumValue(std::string_view input, const SVGEnumerationE
 
 NOVASVG_INLINE Display parseDisplay(std::string_view input)
 {
-    static const SVGEnumerationEntry<Display> entries[] = {
+    static const svg_enumeration_entry<Display> entries[] = {
         {Display::Inline, "inline"},
         {Display::None, "none"}
     };
@@ -4629,7 +4629,7 @@ NOVASVG_INLINE Display parseDisplay(std::string_view input)
 
 NOVASVG_INLINE Visibility parseVisibility(std::string_view input)
 {
-    static const SVGEnumerationEntry<Visibility> entries[] = {
+    static const svg_enumeration_entry<Visibility> entries[] = {
         {Visibility::Visible, "visible"},
         {Visibility::Hidden, "hidden"},
         {Visibility::Collapse, "collapse"}
@@ -4640,7 +4640,7 @@ NOVASVG_INLINE Visibility parseVisibility(std::string_view input)
 
 NOVASVG_INLINE Overflow parseOverflow(std::string_view input)
 {
-    static const SVGEnumerationEntry<Overflow> entries[] = {
+    static const svg_enumeration_entry<Overflow> entries[] = {
         {Overflow::Visible, "visible"},
         {Overflow::Hidden, "hidden"}
     };
@@ -4650,7 +4650,7 @@ NOVASVG_INLINE Overflow parseOverflow(std::string_view input)
 
 NOVASVG_INLINE PointerEvents parsePointerEvents(std::string_view input)
 {
-    static const SVGEnumerationEntry<PointerEvents> entries[] = {
+    static const svg_enumeration_entry<PointerEvents> entries[] = {
         {PointerEvents::None,"none"},
         {PointerEvents::Auto,"auto"},
         {PointerEvents::Stroke,"stroke"},
@@ -4669,7 +4669,7 @@ NOVASVG_INLINE PointerEvents parsePointerEvents(std::string_view input)
 
 NOVASVG_INLINE FontWeight parseFontWeight(std::string_view input)
 {
-    static const SVGEnumerationEntry<FontWeight> entries[] = {
+    static const svg_enumeration_entry<FontWeight> entries[] = {
         {FontWeight::Normal, "normal"},
         {FontWeight::Bold, "bold"},
         {FontWeight::Bold, "bolder"},
@@ -4690,7 +4690,7 @@ NOVASVG_INLINE FontWeight parseFontWeight(std::string_view input)
 
 NOVASVG_INLINE FontStyle parseFontStyle(std::string_view input)
 {
-    static const SVGEnumerationEntry<FontStyle> entries[] = {
+    static const svg_enumeration_entry<FontStyle> entries[] = {
         {FontStyle::Normal, "normal"},
         {FontStyle::Italic, "italic"},
         {FontStyle::Italic, "oblique"}
@@ -4701,7 +4701,7 @@ NOVASVG_INLINE FontStyle parseFontStyle(std::string_view input)
 
 NOVASVG_INLINE AlignmentBaseline parseAlignmentBaseline(std::string_view input)
 {
-    static const SVGEnumerationEntry<AlignmentBaseline> entries[] = {
+    static const svg_enumeration_entry<AlignmentBaseline> entries[] = {
         {AlignmentBaseline::Auto, "auto"},
         {AlignmentBaseline::Baseline, "baseline"},
         {AlignmentBaseline::BeforeEdge, "before-edge"},
@@ -4721,7 +4721,7 @@ NOVASVG_INLINE AlignmentBaseline parseAlignmentBaseline(std::string_view input)
 
 NOVASVG_INLINE DominantBaseline parseDominantBaseline(std::string_view input)
 {
-    static const SVGEnumerationEntry<DominantBaseline> entries[] = {
+    static const svg_enumeration_entry<DominantBaseline> entries[] = {
         {DominantBaseline::Auto, "auto"},
         {DominantBaseline::UseScript, "use-script"},
         {DominantBaseline::NoChange, "no-change"},
@@ -4741,7 +4741,7 @@ NOVASVG_INLINE DominantBaseline parseDominantBaseline(std::string_view input)
 
 NOVASVG_INLINE Direction parseDirection(std::string_view input)
 {
-    static const SVGEnumerationEntry<Direction> entries[] = {
+    static const svg_enumeration_entry<Direction> entries[] = {
         {Direction::Ltr, "ltr"},
         {Direction::Rtl, "rtl"}
     };
@@ -4751,7 +4751,7 @@ NOVASVG_INLINE Direction parseDirection(std::string_view input)
 
 NOVASVG_INLINE WritingMode parseWritingMode(std::string_view input)
 {
-    static const SVGEnumerationEntry<WritingMode> entries[] = {
+    static const svg_enumeration_entry<WritingMode> entries[] = {
         {WritingMode::Horizontal, "horizontal-tb"},
         {WritingMode::Vertical, "vertical-rl"},
         {WritingMode::Vertical, "vertical-lr"},
@@ -4768,7 +4768,7 @@ NOVASVG_INLINE WritingMode parseWritingMode(std::string_view input)
 
 NOVASVG_INLINE TextOrientation parseTextOrientation(std::string_view input)
 {
-    static const SVGEnumerationEntry<TextOrientation> entries[] = {
+    static const svg_enumeration_entry<TextOrientation> entries[] = {
         {TextOrientation::Mixed, "mixed"},
         {TextOrientation::Upright, "upright"}
     };
@@ -4778,7 +4778,7 @@ NOVASVG_INLINE TextOrientation parseTextOrientation(std::string_view input)
 
 NOVASVG_INLINE TextAnchor parseTextAnchor(std::string_view input)
 {
-    static const SVGEnumerationEntry<TextAnchor> entries[] = {
+    static const svg_enumeration_entry<TextAnchor> entries[] = {
         {TextAnchor::Start, "start"},
         {TextAnchor::Middle, "middle"},
         {TextAnchor::End, "end"}
@@ -4789,7 +4789,7 @@ NOVASVG_INLINE TextAnchor parseTextAnchor(std::string_view input)
 
 NOVASVG_INLINE WhiteSpace parseWhiteSpace(std::string_view input)
 {
-    static const SVGEnumerationEntry<WhiteSpace> entries[] = {
+    static const svg_enumeration_entry<WhiteSpace> entries[] = {
         {WhiteSpace::Default, "default"},
         {WhiteSpace::Preserve, "preserve"},
         {WhiteSpace::Default, "normal"},
@@ -4804,7 +4804,7 @@ NOVASVG_INLINE WhiteSpace parseWhiteSpace(std::string_view input)
 
 NOVASVG_INLINE MixBlendMode parseMixBlendMode(std::string_view input)
 {
-    static const SVGEnumerationEntry<MixBlendMode> entries[] = {
+    static const svg_enumeration_entry<MixBlendMode> entries[] = {
         {MixBlendMode::Normal, "normal"},
         {MixBlendMode::Multiply, "multiply"},
         {MixBlendMode::Screen, "screen"},
@@ -4823,7 +4823,7 @@ NOVASVG_INLINE MixBlendMode parseMixBlendMode(std::string_view input)
 
 NOVASVG_INLINE MaskType parseMaskType(std::string_view input)
 {
-    static const SVGEnumerationEntry<MaskType> entries[] = {
+    static const svg_enumeration_entry<MaskType> entries[] = {
         {MaskType::Luminance, "luminance"},
         {MaskType::Alpha, "alpha"}
     };
@@ -4833,7 +4833,7 @@ NOVASVG_INLINE MaskType parseMaskType(std::string_view input)
 
 NOVASVG_INLINE FillRule parseFillRule(std::string_view input)
 {
-    static const SVGEnumerationEntry<FillRule> entries[] = {
+    static const svg_enumeration_entry<FillRule> entries[] = {
         {FillRule::NonZero, "nonzero"},
         {FillRule::EvenOdd, "evenodd"}
     };
@@ -4843,7 +4843,7 @@ NOVASVG_INLINE FillRule parseFillRule(std::string_view input)
 
 NOVASVG_INLINE LineCap parseLineCap(std::string_view input)
 {
-    static const SVGEnumerationEntry<LineCap> entries[] = {
+    static const svg_enumeration_entry<LineCap> entries[] = {
         {LineCap::Butt, "butt"},
         {LineCap::Round, "round"},
         {LineCap::Square, "square"}
@@ -4854,7 +4854,7 @@ NOVASVG_INLINE LineCap parseLineCap(std::string_view input)
 
 NOVASVG_INLINE LineJoin parseLineJoin(std::string_view input)
 {
-    static const SVGEnumerationEntry<LineJoin> entries[] = {
+    static const svg_enumeration_entry<LineJoin> entries[] = {
         {LineJoin::Miter, "miter"},
         {LineJoin::Round, "round"},
         {LineJoin::Bevel, "bevel"}
@@ -4863,9 +4863,9 @@ NOVASVG_INLINE LineJoin parseLineJoin(std::string_view input)
     return parseEnumValue(input, entries, LineJoin::Miter);
 }
 
-NOVASVG_INLINE SVGLayoutState::SVGLayoutState(const SVGLayoutState& parent, const SVGElement* element)
+NOVASVG_INLINE svg_layout_state::svg_layout_state(const svg_layout_state& parent, const svg_element* el)
     : m_parent(&parent)
-    , m_element(element)
+    , m_element(el)
     , m_fill(parent.fill())
     , m_stroke(parent.stroke())
     , m_color(parent.color())
@@ -4891,14 +4891,14 @@ NOVASVG_INLINE SVGLayoutState::SVGLayoutState(const SVGLayoutState& parent, cons
     , m_text_orientation(parent.text_orientation())
     , m_direction(parent.direction())
     , m_visibility(parent.visibility())
-    , m_overflow(element->isRootElement() ? Overflow::Visible : Overflow::Hidden)
+    , m_overflow(el->isRootElement() ? Overflow::Visible : Overflow::Hidden)
     , m_pointer_events(parent.pointer_events())
     , m_marker_start(parent.marker_start())
     , m_marker_mid(parent.marker_mid())
     , m_marker_end(parent.marker_end())
     , m_font_family(parent.font_family())
 {
-    for(const auto& attribute : element->attributes()) {
+    for(const auto& attribute : el->attributes()) {
         std::string_view input(attribute.value());
         stripLeadingAndTrailingSpaces(input);
         if(input.empty() || input.compare("inherit") == 0)
@@ -5036,8 +5036,8 @@ NOVASVG_INLINE SVGLayoutState::SVGLayoutState(const SVGLayoutState& parent, cons
     }
 }
 
-// The one place a (font-family stack, weight, style) triple becomes a Font, shared by SVG <text>
-// (SVGLayoutState::font()) and by the bold/italic runs inside a <foreignObject>, so both always
+// The one place a (font-family stack, weight, style) triple becomes a Font, shared by svg <text>
+// (svg_layout_state::font()) and by the bold/italic runs inside a <foreignObject>, so both always
 // pick the very same face for the same request.
 NOVASVG_INLINE Font makeFont(const std::string& family, float size, bool bold, bool italic)
 {
@@ -5053,7 +5053,7 @@ NOVASVG_INLINE Font makeFont(const std::string& family, float size, bool bold, b
     return Font(face, size);
 }
 
-NOVASVG_INLINE Font SVGLayoutState::font() const
+NOVASVG_INLINE Font svg_layout_state::font() const
 {
     return makeFont(m_font_family, m_font_size, m_font_weight == FontWeight::Bold, m_font_style == FontStyle::Italic);
 }
@@ -5109,94 +5109,94 @@ NOVASVG_INLINE ElementID elementid(std::string_view name)
     return it->value;
 }
 
-NOVASVG_INLINE SVGTextNode::SVGTextNode(Document* document)
-    : SVGNode(document)
+NOVASVG_INLINE svg_text_node::svg_text_node(document* dom)
+    : svg_node(dom)
 {
 }
 
-NOVASVG_INLINE void SVGTextNode::set_data(const std::string& data)
+NOVASVG_INLINE void svg_text_node::set_data(const std::string& data)
 {
     root_element()->setNeedsLayout();
     m_data.assign(data);
 }
 
-NOVASVG_INLINE std::unique_ptr<SVGNode> SVGTextNode::clone(bool deep) const
+NOVASVG_INLINE std::unique_ptr<svg_node> svg_text_node::clone(bool deep) const
 {
-    auto node = std::make_unique<SVGTextNode>(document());
-    node->set_data(m_data);
-    return node;
+    auto nd = std::make_unique<svg_text_node>(dom());
+    nd->set_data(m_data);
+    return nd;
 }
 
 NOVASVG_INLINE const std::string emptyString;
 
-NOVASVG_INLINE std::unique_ptr<SVGElement> SVGElement::create(Document* document, ElementID id)
+NOVASVG_INLINE std::unique_ptr<svg_element> svg_element::create(document* dom, ElementID id)
 {
     switch(id) {
     case ElementID::Svg:
-        return std::make_unique<SVGSVGElement>(document);
+        return std::make_unique<svg_svg_element>(dom);
     case ElementID::Path:
-        return std::make_unique<SVGPathElement>(document);
+        return std::make_unique<svg_path_element>(dom);
     case ElementID::G:
-        return std::make_unique<SVGGElement>(document);
+        return std::make_unique<svg_g_element>(dom);
     case ElementID::Switch:
-        return std::make_unique<SVGSwitchElement>(document);
+        return std::make_unique<svg_switch_element>(dom);
     case ElementID::Rect:
-        return std::make_unique<SVGRectElement>(document);
+        return std::make_unique<svg_rect_element>(dom);
     case ElementID::Circle:
-        return std::make_unique<SVGCircleElement>(document);
+        return std::make_unique<svg_circle_element>(dom);
     case ElementID::Ellipse:
-        return std::make_unique<SVGEllipseElement>(document);
+        return std::make_unique<svg_ellipse_element>(dom);
     case ElementID::Line:
-        return std::make_unique<SVGLineElement>(document);
+        return std::make_unique<svg_line_element>(dom);
     case ElementID::Defs:
-        return std::make_unique<SVGDefsElement>(document);
+        return std::make_unique<svg_defs_element>(dom);
     case ElementID::Polygon:
     case ElementID::Polyline:
-        return std::make_unique<SVGPolyElement>(document, id);
+        return std::make_unique<svg_poly_element>(dom, id);
     case ElementID::Stop:
-        return std::make_unique<SVGStopElement>(document);
+        return std::make_unique<svg_stop_element>(dom);
     case ElementID::LinearGradient:
-        return std::make_unique<SVGLinearGradientElement>(document);
+        return std::make_unique<svg_linear_gradient_element>(dom);
     case ElementID::RadialGradient:
-        return std::make_unique<SVGRadialGradientElement>(document);
+        return std::make_unique<svg_radial_gradient_element>(dom);
     case ElementID::Symbol:
-        return std::make_unique<SVGSymbolElement>(document);
+        return std::make_unique<svg_symbol_element>(dom);
     case ElementID::Use:
-        return std::make_unique<SVGUseElement>(document);
+        return std::make_unique<svg_use_element>(dom);
     case ElementID::Pattern:
-        return std::make_unique<SVGPatternElement>(document);
+        return std::make_unique<svg_pattern_element>(dom);
     case ElementID::Mask:
-        return std::make_unique<SVGMaskElement>(document);
+        return std::make_unique<svg_mask_element>(dom);
     case ElementID::ClipPath:
-        return std::make_unique<SVGClipPathElement>(document);
+        return std::make_unique<svg_clip_path_element>(dom);
     case ElementID::Filter:
-        return std::make_unique<SVGFilterElement>(document);
+        return std::make_unique<svg_filter_element>(dom);
     case ElementID::FeGaussianBlur:
-        return std::make_unique<SVGFEGaussianBlurElement>(document);
+        return std::make_unique<svg_fe_gaussian_blur_element>(dom);
     case ElementID::FeDropShadow:
-        return std::make_unique<SVGFEDropShadowElement>(document);
+        return std::make_unique<svg_fe_drop_shadow_element>(dom);
     case ElementID::FeOffset:
-        return std::make_unique<SVGFEOffsetElement>(document);
+        return std::make_unique<svg_fe_offset_element>(dom);
     case ElementID::FeFlood:
-        return std::make_unique<SVGFEFloodElement>(document);
+        return std::make_unique<svg_fe_flood_element>(dom);
     case ElementID::FeComposite:
-        return std::make_unique<SVGFECompositeElement>(document);
+        return std::make_unique<svg_fe_composite_element>(dom);
     case ElementID::FeMerge:
-        return std::make_unique<SVGFEMergeElement>(document);
+        return std::make_unique<svg_fe_merge_element>(dom);
     case ElementID::FeMergeNode:
-        return std::make_unique<SVGElement>(document, id);
+        return std::make_unique<svg_element>(dom, id);
     case ElementID::Marker:
-        return std::make_unique<SVGMarkerElement>(document);
+        return std::make_unique<svg_marker_element>(dom);
     case ElementID::Image:
-        return std::make_unique<SVGImageElement>(document);
+        return std::make_unique<svg_image_element>(dom);
     case ElementID::ForeignObject:
-        return std::make_unique<SVGForeignObjectElement>(document);
+        return std::make_unique<svg_foreign_object_element>(dom);
     case ElementID::Style:
-        return std::make_unique<SVGStyleElement>(document);
+        return std::make_unique<svg_style_element>(dom);
     case ElementID::Text:
-        return std::make_unique<SVGTextElement>(document);
+        return std::make_unique<svg_text_element>(dom);
     case ElementID::Tspan:
-        return std::make_unique<SVGTSpanElement>(document);
+        return std::make_unique<svg_t_span_element>(dom);
     default:
         assert(false);
     }
@@ -5204,13 +5204,13 @@ NOVASVG_INLINE std::unique_ptr<SVGElement> SVGElement::create(Document* document
     return nullptr;
 }
 
-NOVASVG_INLINE SVGElement::SVGElement(Document* document, ElementID id)
-    : SVGNode(document)
+NOVASVG_INLINE svg_element::svg_element(document* dom, ElementID id)
+    : svg_node(dom)
     , m_id(id)
 {
 }
 
-NOVASVG_INLINE bool SVGElement::has_attribute(std::string_view name) const
+NOVASVG_INLINE bool svg_element::has_attribute(std::string_view name) const
 {
     auto id = propertyid(name);
     if(id == PropertyID::Unknown)
@@ -5218,7 +5218,7 @@ NOVASVG_INLINE bool SVGElement::has_attribute(std::string_view name) const
     return has_attribute(id);
 }
 
-NOVASVG_INLINE const std::string& SVGElement::attribute(std::string_view name) const
+NOVASVG_INLINE const std::string& svg_element::attribute(std::string_view name) const
 {
     auto id = propertyid(name);
     if(id == PropertyID::Unknown)
@@ -5226,7 +5226,7 @@ NOVASVG_INLINE const std::string& SVGElement::attribute(std::string_view name) c
     return attribute(id);
 }
 
-NOVASVG_INLINE bool SVGElement::set_attribute(std::string_view name, const std::string& value)
+NOVASVG_INLINE bool svg_element::set_attribute(std::string_view name, const std::string& value)
 {
     auto id = propertyid(name);
     if(id == PropertyID::Unknown)
@@ -5234,7 +5234,7 @@ NOVASVG_INLINE bool SVGElement::set_attribute(std::string_view name, const std::
     return set_attribute(Specificity::Api, id, value);
 }
 
-NOVASVG_INLINE const Attribute* SVGElement::findAttribute(PropertyID id) const
+NOVASVG_INLINE const Attribute* svg_element::findAttribute(PropertyID id) const
 {
     for(const auto& attribute : m_attributes) {
         if(id == attribute.id()) {
@@ -5245,7 +5245,7 @@ NOVASVG_INLINE const Attribute* SVGElement::findAttribute(PropertyID id) const
     return nullptr;
 }
 
-NOVASVG_INLINE bool SVGElement::has_attribute(PropertyID id) const
+NOVASVG_INLINE bool svg_element::has_attribute(PropertyID id) const
 {
     for(const auto& attribute : m_attributes) {
         if(id == attribute.id()) {
@@ -5256,7 +5256,7 @@ NOVASVG_INLINE bool SVGElement::has_attribute(PropertyID id) const
     return false;
 }
 
-NOVASVG_INLINE const std::string& SVGElement::attribute(PropertyID id) const
+NOVASVG_INLINE const std::string& svg_element::attribute(PropertyID id) const
 {
     for(const auto& attribute : m_attributes) {
         if(id == attribute.id()) {
@@ -5279,10 +5279,10 @@ inline bool usesVariables(PropertyID id, const std::string& value)
     return false;
 }
 
-NOVASVG_INLINE bool SVGElement::set_attribute(int specificity, PropertyID id, const std::string& value)
+NOVASVG_INLINE bool svg_element::set_attribute(int specificity, PropertyID id, const std::string& value)
 {
     // A value with var() cannot be parsed before the custom properties it names are all known (a stylesheet
-    // can come after the element): it is kept, and parsed by resolveVariables() when the document is complete.
+    // can come after the el): it is kept, and parsed by resolveVariables() when the dom is complete.
     const bool deferred = usesVariables(id, value);
     for(auto& attribute : m_attributes) {
         if(id == attribute.id()) {
@@ -5307,7 +5307,7 @@ NOVASVG_INLINE bool SVGElement::set_attribute(int specificity, PropertyID id, co
     return true;
 }
 
-NOVASVG_INLINE void SVGElement::setCustomProperty(int specificity, const std::string& name, const std::string& value)
+NOVASVG_INLINE void svg_element::setCustomProperty(int specificity, const std::string& name, const std::string& value)
 {
     auto it = m_customProperties.find(name);
     if(it != m_customProperties.end() && specificity < it->second.first)
@@ -5317,26 +5317,26 @@ NOVASVG_INLINE void SVGElement::setCustomProperty(int specificity, const std::st
     m_customProperties[name] = {specificity, std::string(trimmed)};
 }
 
-NOVASVG_INLINE const SVGElement* SVGElement::findCustomPropertyOwner(const std::string& name) const
+NOVASVG_INLINE const svg_element* svg_element::findCustomPropertyOwner(const std::string& name) const
 {
-    for(auto element = this; element != nullptr; element = element->parent_element()) {
-        if(element->m_customProperties.count(name))
-            return element;
+    for(auto el = this; el != nullptr; el = el->parent_element()) {
+        if(el->m_customProperties.count(name))
+            return el;
     }
     return nullptr;
 }
 
-NOVASVG_INLINE const std::string& SVGElement::customProperty(const std::string& name) const
+NOVASVG_INLINE const std::string& svg_element::customProperty(const std::string& name) const
 {
     if(auto owner = findCustomPropertyOwner(name))
         return owner->m_customProperties.at(name).second;
     return emptyString;
 }
 
-// Replaces each `var(--name, fallback)` in `text` with the value `--name` has on `element` -- or the fallback, if
+// Replaces each `var(--name, fallback)` in `text` with the value `--name` has on `el` -- or the fallback, if
 // there is no such property or its own var() cannot be resolved (a cycle, say). False if one cannot be replaced
 // at all: the value is then invalid and the caller leaves the attribute alone. `depth` stops a cycle.
-inline bool substituteVariables(std::string_view text, const SVGElement* element, std::string& out, int depth)
+inline bool substituteVariables(std::string_view text, const svg_element* el, std::string& out, int depth)
 {
     constexpr int MaxDepth = 32;
     if(depth > MaxDepth)
@@ -5385,7 +5385,7 @@ inline bool substituteVariables(std::string_view text, const SVGElement* element
 
         std::string value;
         bool found = false;
-        if(auto owner = element->findCustomPropertyOwner(std::string(name))) {
+        if(auto owner = el->findCustomPropertyOwner(std::string(name))) {
             // Resolved where it is declared, then inherited as that.
             found = substituteVariables(owner->customProperty(std::string(name)), owner, value, depth + 1);
         }
@@ -5394,7 +5394,7 @@ inline bool substituteVariables(std::string_view text, const SVGElement* element
                 return false;
             auto fallback = text.substr(comma + 1, end - comma - 1);
             stripLeadingAndTrailingSpaces(fallback);
-            if(!substituteVariables(fallback, element, value, depth + 1))
+            if(!substituteVariables(fallback, el, value, depth + 1))
                 return false;
         }
         out.append(value);
@@ -5403,7 +5403,7 @@ inline bool substituteVariables(std::string_view text, const SVGElement* element
     return true;
 }
 
-NOVASVG_INLINE void SVGElement::resolveVariables()
+NOVASVG_INLINE void svg_element::resolveVariables()
 {
     for(const auto& [id, source] : m_variableSources) {
         std::string resolved;
@@ -5419,19 +5419,19 @@ NOVASVG_INLINE void SVGElement::resolveVariables()
     }
 }
 
-NOVASVG_INLINE void SVGElement::setAttributes(const AttributeList& attributes)
+NOVASVG_INLINE void svg_element::setAttributes(const AttributeList& attributes)
 {
     for(const auto& attribute : attributes) {
         set_attribute(attribute);
     }
 }
 
-NOVASVG_INLINE bool SVGElement::set_attribute(const Attribute& attribute)
+NOVASVG_INLINE bool svg_element::set_attribute(const Attribute& attribute)
 {
     return set_attribute(attribute.specificity(), attribute.id(), attribute.value());
 }
 
-NOVASVG_INLINE void SVGElement::parseAttribute(PropertyID id, const std::string& value)
+NOVASVG_INLINE void svg_element::parseAttribute(PropertyID id, const std::string& value)
 {
     root_element()->setNeedsLayout();
     if(auto property = getProperty(id)) {
@@ -5439,7 +5439,7 @@ NOVASVG_INLINE void SVGElement::parseAttribute(PropertyID id, const std::string&
     }
 }
 
-NOVASVG_INLINE SVGElement* SVGElement::previousElement() const
+NOVASVG_INLINE svg_element* svg_element::previousElement() const
 {
     auto parent = parent_element();
     if(parent == nullptr)
@@ -5447,20 +5447,20 @@ NOVASVG_INLINE SVGElement* SVGElement::previousElement() const
     const auto& children = parent->children();
     auto it = children.begin();
     auto end = children.end();
-    SVGElement* element = nullptr;
+    svg_element* el = nullptr;
     for(; it != end; ++it) {
-        SVGNode* node = &**it;
-        if(node->is_text_node())
+        svg_node* nd = &**it;
+        if(nd->is_text_node())
             continue;
-        if(node == this)
-            return element;
-        element = static_cast<SVGElement*>(node);
+        if(nd == this)
+            return el;
+        el = static_cast<svg_element*>(nd);
     }
 
     return nullptr;
 }
 
-NOVASVG_INLINE SVGElement* SVGElement::nextElement() const
+NOVASVG_INLINE svg_element* svg_element::nextElement() const
 {
     auto parent = parent_element();
     if(parent == nullptr)
@@ -5468,46 +5468,46 @@ NOVASVG_INLINE SVGElement* SVGElement::nextElement() const
     const auto& children = parent->children();
     auto it = children.rbegin();
     auto end = children.rend();
-    SVGElement* element = nullptr;
+    svg_element* el = nullptr;
     for(; it != end; ++it) {
-        SVGNode* node = &**it;
-        if(node->is_text_node())
+        svg_node* nd = &**it;
+        if(nd->is_text_node())
             continue;
-        if(node == this)
-            return element;
-        element = static_cast<SVGElement*>(node);
+        if(nd == this)
+            return el;
+        el = static_cast<svg_element*>(nd);
     }
 
     return nullptr;
 }
 
-NOVASVG_INLINE SVGNode* SVGElement::addChild(std::unique_ptr<SVGNode> child)
+NOVASVG_INLINE svg_node* svg_element::addChild(std::unique_ptr<svg_node> child)
 {
     child->setParentElement(this);
     m_children.push_back(std::move(child));
     return &*m_children.back();
 }
 
-NOVASVG_INLINE SVGNode* SVGElement::firstChild() const
+NOVASVG_INLINE svg_node* svg_element::firstChild() const
 {
     if(m_children.empty())
         return nullptr;
     return &*m_children.front();
 }
 
-NOVASVG_INLINE SVGNode* SVGElement::lastChild() const
+NOVASVG_INLINE svg_node* svg_element::lastChild() const
 {
     if(m_children.empty())
         return nullptr;
     return &*m_children.back();
 }
 
-NOVASVG_INLINE Rect SVGElement::fillBoundingBox() const
+NOVASVG_INLINE Rect svg_element::fillBoundingBox() const
 {
     auto fillBoundingBox = Rect::Invalid;
     for(const auto& child : m_children) {
-        if(auto element = toSVGElement(child); element && !element->isHiddenElement()) {
-            fillBoundingBox.unite(element->local_transform().map_rect(element->fillBoundingBox()));
+        if(auto el = toSVGElement(child); el && !el->isHiddenElement()) {
+            fillBoundingBox.unite(el->local_transform().map_rect(el->fillBoundingBox()));
         }
     }
 
@@ -5516,12 +5516,12 @@ NOVASVG_INLINE Rect SVGElement::fillBoundingBox() const
     return fillBoundingBox;
 }
 
-NOVASVG_INLINE Rect SVGElement::strokeBoundingBox() const
+NOVASVG_INLINE Rect svg_element::strokeBoundingBox() const
 {
     auto strokeBoundingBox = Rect::Invalid;
     for(const auto& child : m_children) {
-        if(auto element = toSVGElement(child); element && !element->isHiddenElement()) {
-            strokeBoundingBox.unite(element->local_transform().map_rect(element->strokeBoundingBox()));
+        if(auto el = toSVGElement(child); el && !el->isHiddenElement()) {
+            strokeBoundingBox.unite(el->local_transform().map_rect(el->strokeBoundingBox()));
         }
     }
 
@@ -5530,7 +5530,7 @@ NOVASVG_INLINE Rect SVGElement::strokeBoundingBox() const
     return strokeBoundingBox;
 }
 
-NOVASVG_INLINE Rect SVGElement::paint_bounding_box() const
+NOVASVG_INLINE Rect svg_element::paint_bounding_box() const
 {
     if(m_paintBoundingBox.isValid())
         return m_paintBoundingBox;
@@ -5542,55 +5542,55 @@ NOVASVG_INLINE Rect SVGElement::paint_bounding_box() const
     return m_paintBoundingBox;
 }
 
-NOVASVG_INLINE SVGMarkerElement* SVGElement::getMarker(std::string_view id) const
+NOVASVG_INLINE svg_marker_element* svg_element::getMarker(std::string_view id) const
 {
-    auto element = root_element()->element_by_id(id);
-    if(element && element->id() == ElementID::Marker)
-        return static_cast<SVGMarkerElement*>(element);
+    auto el = root_element()->element_by_id(id);
+    if(el && el->id() == ElementID::Marker)
+        return static_cast<svg_marker_element*>(el);
     return nullptr;
 }
 
-NOVASVG_INLINE SVGClipPathElement* SVGElement::getClipper(std::string_view id) const
+NOVASVG_INLINE svg_clip_path_element* svg_element::getClipper(std::string_view id) const
 {
-    auto element = root_element()->element_by_id(id);
-    if(element && element->id() == ElementID::ClipPath)
-        return static_cast<SVGClipPathElement*>(element);
+    auto el = root_element()->element_by_id(id);
+    if(el && el->id() == ElementID::ClipPath)
+        return static_cast<svg_clip_path_element*>(el);
     return nullptr;
 }
 
-NOVASVG_INLINE SVGMaskElement* SVGElement::getMasker(std::string_view id) const
+NOVASVG_INLINE svg_mask_element* svg_element::getMasker(std::string_view id) const
 {
-    auto element = root_element()->element_by_id(id);
-    if(element && element->id() == ElementID::Mask)
-        return static_cast<SVGMaskElement*>(element);
+    auto el = root_element()->element_by_id(id);
+    if(el && el->id() == ElementID::Mask)
+        return static_cast<svg_mask_element*>(el);
     return nullptr;
 }
 
-NOVASVG_INLINE SVGFilterElement* SVGElement::getFilterElement(std::string_view id) const
+NOVASVG_INLINE svg_filter_element* svg_element::getFilterElement(std::string_view id) const
 {
-    auto element = root_element()->element_by_id(id);
-    if(element && element->id() == ElementID::Filter)
-        return static_cast<SVGFilterElement*>(element);
+    auto el = root_element()->element_by_id(id);
+    if(el && el->id() == ElementID::Filter)
+        return static_cast<svg_filter_element*>(el);
     return nullptr;
 }
 
-NOVASVG_INLINE SVGPaintElement* SVGElement::getPainter(std::string_view id) const
+NOVASVG_INLINE svg_paint_element* svg_element::getPainter(std::string_view id) const
 {
-    auto element = root_element()->element_by_id(id);
-    if(element && element->isPaintElement())
-        return static_cast<SVGPaintElement*>(element);
+    auto el = root_element()->element_by_id(id);
+    if(el && el->isPaintElement())
+        return static_cast<svg_paint_element*>(el);
     return nullptr;
 }
 
-NOVASVG_INLINE SVGElement* SVGElement::element_from_point(float x, float y)
+NOVASVG_INLINE svg_element* svg_element::element_from_point(float x, float y)
 {
     auto it = m_children.rbegin();
     auto end = m_children.rend();
     for(; it != end; ++it) {
         auto child = toSVGElement(*it);
         if(child && !child->isHiddenElement()) {
-            if(auto element = child->element_from_point(x, y)) {
-                return element;
+            if(auto el = child->element_from_point(x, y)) {
+                return el;
             }
         }
     }
@@ -5608,12 +5608,12 @@ NOVASVG_INLINE SVGElement* SVGElement::element_from_point(float x, float y)
     return nullptr;
 }
 
-NOVASVG_INLINE void SVGElement::addProperty(SVGProperty& value)
+NOVASVG_INLINE void svg_element::addProperty(svg_property& value)
 {
     m_properties.push_front(&value);
 }
 
-NOVASVG_INLINE SVGProperty* SVGElement::getProperty(PropertyID id) const
+NOVASVG_INLINE svg_property* svg_element::getProperty(PropertyID id) const
 {
     for(auto property : m_properties) {
         if(id == property->id()) {
@@ -5624,56 +5624,56 @@ NOVASVG_INLINE SVGProperty* SVGElement::getProperty(PropertyID id) const
     return nullptr;
 }
 
-NOVASVG_INLINE Size SVGElement::currentViewportSize() const
+NOVASVG_INLINE Size svg_element::currentViewportSize() const
 {
     auto parent = parent_element();
     if(parent == nullptr) {
-        auto element = static_cast<const SVGSVGElement*>(this);
-        const auto& viewBox = element->viewBox();
+        auto el = static_cast<const svg_svg_element*>(this);
+        const auto& viewBox = el->viewBox();
         if(viewBox.value().isValid())
             return viewBox.value().size();
         return Size(300, 150);
     }
 
     if(parent->id() == ElementID::Svg) {
-        auto element = static_cast<const SVGSVGElement*>(parent);
-        const auto& viewBox = element->viewBox();
+        auto el = static_cast<const svg_svg_element*>(parent);
+        const auto& viewBox = el->viewBox();
         if(viewBox.value().isValid())
             return viewBox.value().size();
-        LengthContext lengthContext(element);
-        auto width = lengthContext.valueForLength(element->width());
-        auto height = lengthContext.valueForLength(element->height());
+        LengthContext lengthContext(el);
+        auto width = lengthContext.valueForLength(el->width());
+        auto height = lengthContext.valueForLength(el->height());
         return Size(width, height);
     }
 
     return parent->currentViewportSize();
 }
 
-NOVASVG_INLINE void SVGElement::cloneChildren(SVGElement* parent_element) const
+NOVASVG_INLINE void svg_element::cloneChildren(svg_element* parent_element) const
 {
     for(const auto& child : m_children) {
         parent_element->addChild(child->clone(true));
     }
 }
 
-NOVASVG_INLINE std::unique_ptr<SVGNode> SVGElement::clone(bool deep) const
+NOVASVG_INLINE std::unique_ptr<svg_node> svg_element::clone(bool deep) const
 {
-    auto element = SVGElement::create(document(), m_id);
-    element->setAttributes(m_attributes);
-    if(deep) { cloneChildren(element.get()); }
-    return element;
+    auto el = svg_element::create(dom(), m_id);
+    el->setAttributes(m_attributes);
+    if(deep) { cloneChildren(el.get()); }
+    return el;
 }
 
-NOVASVG_INLINE void SVGElement::build()
+NOVASVG_INLINE void svg_element::build()
 {
     for(const auto& child : m_children) {
-        if(auto element = toSVGElement(child)) {
-            element->build();
+        if(auto el = toSVGElement(child)) {
+            el->build();
         }
     }
 }
 
-NOVASVG_INLINE void SVGElement::layoutElement(const SVGLayoutState& state)
+NOVASVG_INLINE void svg_element::layoutElement(const svg_layout_state& state)
 {
     m_paintBoundingBox = Rect::Invalid;
     m_clipper = getClipper(state.clip_path());
@@ -5689,36 +5689,36 @@ NOVASVG_INLINE void SVGElement::layoutElement(const SVGLayoutState& state)
     m_pointer_events = state.pointer_events();
 }
 
-NOVASVG_INLINE void SVGElement::layoutChildren(SVGLayoutState& state)
+NOVASVG_INLINE void svg_element::layoutChildren(svg_layout_state& state)
 {
     for(const auto& child : m_children) {
-        if(auto element = toSVGElement(child)) {
-            element->layout(state);
+        if(auto el = toSVGElement(child)) {
+            el->layout(state);
         }
     }
 }
 
-NOVASVG_INLINE void SVGElement::layout(SVGLayoutState& state)
+NOVASVG_INLINE void svg_element::layout(svg_layout_state& state)
 {
-    SVGLayoutState newState(state, this);
+    svg_layout_state newState(state, this);
     layoutElement(newState);
     layoutChildren(newState);
 }
 
-NOVASVG_INLINE void SVGElement::renderChildren(SVGRenderState& state) const
+NOVASVG_INLINE void svg_element::renderChildren(svg_render_state& state) const
 {
     for(const auto& child : m_children) {
-        if(auto element = toSVGElement(child)) {
-            element->render(state);
+        if(auto el = toSVGElement(child)) {
+            el->render(state);
         }
     }
 }
 
-NOVASVG_INLINE void SVGElement::render(SVGRenderState& state) const
+NOVASVG_INLINE void svg_element::render(svg_render_state& state) const
 {
 }
 
-NOVASVG_INLINE bool SVGElement::isHiddenElement() const
+NOVASVG_INLINE bool svg_element::isHiddenElement() const
 {
     if(isDisplayNone())
         return true;
@@ -5746,7 +5746,7 @@ NOVASVG_INLINE bool SVGElement::isHiddenElement() const
     }
 }
 
-NOVASVG_INLINE bool SVGElement::isPointableElement() const
+NOVASVG_INLINE bool svg_element::isPointableElement() const
 {
     if(m_pointer_events != PointerEvents::None
         && m_visibility != Visibility::Hidden
@@ -5772,50 +5772,50 @@ NOVASVG_INLINE bool SVGElement::isPointableElement() const
     return false;
 }
 
-NOVASVG_INLINE SVGStyleElement::SVGStyleElement(Document* document)
-    : SVGElement(document, ElementID::Style)
+NOVASVG_INLINE svg_style_element::svg_style_element(document* dom)
+    : svg_element(dom, ElementID::Style)
 {
 }
 
-NOVASVG_INLINE SVGFitToViewBox::SVGFitToViewBox(SVGElement* element)
+NOVASVG_INLINE svg_fit_to_view_box::svg_fit_to_view_box(svg_element* el)
     : m_viewBox(PropertyID::ViewBox)
     , m_preserveAspectRatio(PropertyID::PreserveAspectRatio)
 {
-    element->addProperty(m_viewBox);
-    element->addProperty(m_preserveAspectRatio);
+    el->addProperty(m_viewBox);
+    el->addProperty(m_preserveAspectRatio);
 }
 
-NOVASVG_INLINE Transform SVGFitToViewBox::viewBoxToViewTransform(const Size& viewportSize) const
+NOVASVG_INLINE Transform svg_fit_to_view_box::viewBoxToViewTransform(const Size& viewportSize) const
 {
     const auto& viewBoxRect = m_viewBox.value();
-    if(viewBoxRect.is_empty() || viewportSize.is_empty())
+    if(viewBoxRect.empty() || viewportSize.empty())
         return Transform::Identity;
     return m_preserveAspectRatio.getTransform(viewBoxRect, viewportSize);
 }
 
-NOVASVG_INLINE Rect SVGFitToViewBox::getClipRect(const Size& viewportSize) const
+NOVASVG_INLINE Rect svg_fit_to_view_box::getClipRect(const Size& viewportSize) const
 {
     const auto& viewBoxRect = m_viewBox.value();
-    if(viewBoxRect.is_empty() || viewportSize.is_empty())
+    if(viewBoxRect.empty() || viewportSize.empty())
         return Rect(0, 0, viewportSize.w, viewportSize.h);
     return m_preserveAspectRatio.getClipRect(viewBoxRect, viewportSize);
 }
 
-NOVASVG_INLINE SVGURIReference::SVGURIReference(SVGElement* element)
+NOVASVG_INLINE svg_uri_reference::svg_uri_reference(svg_element* el)
     : m_href(PropertyID::Href)
 {
-    element->addProperty(m_href);
+    el->addProperty(m_href);
 }
 
-NOVASVG_INLINE SVGElement* SVGURIReference::getTargetElement(const Document* document) const
+NOVASVG_INLINE svg_element* svg_uri_reference::getTargetElement(const document* dom) const
 {
     std::string_view value(m_href.value());
     if(value.empty() || value.front() != '#')
         return nullptr;
-    return document->root_element()->element_by_id(value.substr(1));
+    return dom->root_element()->element_by_id(value.substr(1));
 }
 
-NOVASVG_INLINE bool SVGPaintServer::applyPaint(SVGRenderState& state) const
+NOVASVG_INLINE bool svg_paint_server::applyPaint(svg_render_state& state) const
 {
     if(!isRenderable())
         return false;
@@ -5824,8 +5824,8 @@ NOVASVG_INLINE bool SVGPaintServer::applyPaint(SVGRenderState& state) const
     return true;
 }
 
-NOVASVG_INLINE SVGGraphicsElement::SVGGraphicsElement(Document* document, ElementID id)
-    : SVGElement(document, id)
+NOVASVG_INLINE svg_graphics_element::svg_graphics_element(document* dom, ElementID id)
+    : svg_element(dom, id)
     , m_transform(PropertyID::Transform)
     , m_transformOrigin(PropertyID::Transform_Origin)
     , m_transformBox(PropertyID::Transform_Box)
@@ -5835,11 +5835,11 @@ NOVASVG_INLINE SVGGraphicsElement::SVGGraphicsElement(Document* document, Elemen
     addProperty(m_transformBox);
 }
 
-NOVASVG_INLINE Transform SVGGraphicsElement::local_transform() const
+NOVASVG_INLINE Transform svg_graphics_element::local_transform() const
 {
     // Only shift the pivot when transform-origin was actually specified --
     // matches legacy behavior (origin at the current user-space (0,0)) for
-    // every element that doesn't use it, i.e. everything except elements
+    // every el that doesn't use it, i.e. everything except elements
     // that explicitly opt in the way feature-css-use-symbol.svg's `.rot`
     // class does.
     if(!m_transformOrigin.specified())
@@ -5853,23 +5853,23 @@ NOVASVG_INLINE Transform SVGGraphicsElement::local_transform() const
         box = Rect(0.f, 0.f, size.w, size.h);
     }
 
-    if(box.is_empty())
+    if(box.empty())
         return m_transform.value();
 
     auto origin = m_transformOrigin.resolve(box);
     return Transform::translated(origin.x, origin.y) * m_transform.value() * Transform::translated(-origin.x, -origin.y);
 }
 
-NOVASVG_INLINE SVGPaintServer SVGGraphicsElement::getPaintServer(const Paint& paint, float opacity) const
+NOVASVG_INLINE svg_paint_server svg_graphics_element::getPaintServer(const Paint& paint, float opacity) const
 {
     if(paint.isNone())
-        return SVGPaintServer();
-    if(auto element = getPainter(paint.id()))
-        return SVGPaintServer(element, paint.color(), opacity);
-    return SVGPaintServer(nullptr, paint.color(), opacity);
+        return svg_paint_server();
+    if(auto el = getPainter(paint.id()))
+        return svg_paint_server(el, paint.color(), opacity);
+    return svg_paint_server(nullptr, paint.color(), opacity);
 }
 
-NOVASVG_INLINE StrokeData SVGGraphicsElement::getStrokeData(const SVGLayoutState& state) const
+NOVASVG_INLINE StrokeData svg_graphics_element::getStrokeData(const svg_layout_state& state) const
 {
     LengthContext lengthContext(this);
     StrokeData strokeData(lengthContext.valueForLength(state.stroke_width(), LengthDirection::Diagonal));
@@ -5885,9 +5885,9 @@ NOVASVG_INLINE StrokeData SVGGraphicsElement::getStrokeData(const SVGLayoutState
     return strokeData;
 }
 
-NOVASVG_INLINE SVGSVGElement::SVGSVGElement(Document* document)
-    : SVGGraphicsElement(document, ElementID::Svg)
-    , SVGFitToViewBox(this)
+NOVASVG_INLINE svg_svg_element::svg_svg_element(document* dom)
+    : svg_graphics_element(dom, ElementID::Svg)
+    , svg_fit_to_view_box(this)
     , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
     , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
     , m_width(PropertyID::Width, LengthDirection::Horizontal, LengthNegativeMode::Forbid, 100.f, LengthUnits::Percent)
@@ -5899,7 +5899,7 @@ NOVASVG_INLINE SVGSVGElement::SVGSVGElement(Document* document)
     addProperty(m_height);
 }
 
-NOVASVG_INLINE Transform SVGSVGElement::local_transform() const
+NOVASVG_INLINE Transform svg_svg_element::local_transform() const
 {
     LengthContext lengthContext(this);
     const Rect viewportRect = {
@@ -5911,10 +5911,10 @@ NOVASVG_INLINE Transform SVGSVGElement::local_transform() const
 
     if(isRootElement())
         return viewBoxToViewTransform(viewportRect.size());
-    return SVGGraphicsElement::local_transform() * Transform::translated(viewportRect.x, viewportRect.y) * viewBoxToViewTransform(viewportRect.size());
+    return svg_graphics_element::local_transform() * Transform::translated(viewportRect.x, viewportRect.y) * viewBoxToViewTransform(viewportRect.size());
 }
 
-NOVASVG_INLINE void SVGSVGElement::render(SVGRenderState& state) const
+NOVASVG_INLINE void svg_svg_element::render(svg_render_state& state) const
 {
     if(isDisplayNone())
         return;
@@ -5924,10 +5924,10 @@ NOVASVG_INLINE void SVGSVGElement::render(SVGRenderState& state) const
         lengthContext.valueForLength(m_height)
     };
 
-    if(viewportSize.is_empty())
+    if(viewportSize.empty())
         return;
-    SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, local_transform());
+    svg_blend_info blendInfo(this);
+    svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     if(isOverflowHidden())
         newState->clipRect(getClipRect(viewportSize), FillRule::NonZero, newState.currentTransform());
@@ -5935,19 +5935,19 @@ NOVASVG_INLINE void SVGSVGElement::render(SVGRenderState& state) const
     newState.endGroup(blendInfo);
 }
 
-NOVASVG_INLINE SVGRootElement::SVGRootElement(Document* document)
-    : SVGSVGElement(document)
+NOVASVG_INLINE svg_root_element::svg_root_element(document* dom)
+    : svg_svg_element(dom)
 {
 }
 
-NOVASVG_INLINE SVGRootElement* SVGRootElement::layout_if_needed()
+NOVASVG_INLINE svg_root_element* svg_root_element::layout_if_needed()
 {
     if(needsLayout())
         force_layout();
     return this;
 }
 
-NOVASVG_INLINE SVGElement* SVGRootElement::element_by_id(std::string_view id) const
+NOVASVG_INLINE svg_element* svg_root_element::element_by_id(std::string_view id) const
 {
     auto it = m_idCache.find(id);
     if(it == m_idCache.end())
@@ -5955,14 +5955,14 @@ NOVASVG_INLINE SVGElement* SVGRootElement::element_by_id(std::string_view id) co
     return it->second;
 }
 
-NOVASVG_INLINE void SVGRootElement::addElementById(const std::string& id, SVGElement* element)
+NOVASVG_INLINE void svg_root_element::addElementById(const std::string& id, svg_element* el)
 {
-    m_idCache.emplace(id, element);
+    m_idCache.emplace(id, el);
 }
 
-NOVASVG_INLINE void SVGRootElement::layout(SVGLayoutState& state)
+NOVASVG_INLINE void svg_root_element::layout(svg_layout_state& state)
 {
-    SVGSVGElement::layout(state);
+    svg_svg_element::layout(state);
 
     LengthContext lengthContext(this);
     if(!width().isPercent()) {
@@ -5978,7 +5978,7 @@ NOVASVG_INLINE void SVGRootElement::layout(SVGLayoutState& state)
     }
 
     const auto& viewBoxRect = viewBox().value();
-    if(!viewBoxRect.is_empty() && (!m_intrinsicWidth || !m_intrinsicHeight)) {
+    if(!viewBoxRect.empty() && (!m_intrinsicWidth || !m_intrinsicHeight)) {
         auto intrinsicRatio = viewBoxRect.w / viewBoxRect.h;
         if(!m_intrinsicWidth && m_intrinsicHeight)
             m_intrinsicWidth = m_intrinsicHeight * intrinsicRatio;
@@ -6002,15 +6002,15 @@ NOVASVG_INLINE void SVGRootElement::layout(SVGLayoutState& state)
     }
 }
 
-NOVASVG_INLINE void SVGRootElement::force_layout()
+NOVASVG_INLINE void svg_root_element::force_layout()
 {
-    SVGLayoutState state;
+    svg_layout_state state;
     layout(state);
 }
 
-NOVASVG_INLINE SVGUseElement::SVGUseElement(Document* document)
-    : SVGGraphicsElement(document, ElementID::Use)
-    , SVGURIReference(this)
+NOVASVG_INLINE svg_use_element::svg_use_element(document* dom)
+    : svg_graphics_element(dom, ElementID::Use)
+    , svg_uri_reference(this)
     , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
     , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
     , m_width(PropertyID::Width, LengthDirection::Horizontal, LengthNegativeMode::Forbid, 100.f, LengthUnits::Percent)
@@ -6022,7 +6022,7 @@ NOVASVG_INLINE SVGUseElement::SVGUseElement(Document* document)
     addProperty(m_height);
 }
 
-NOVASVG_INLINE Transform SVGUseElement::local_transform() const
+NOVASVG_INLINE Transform svg_use_element::local_transform() const
 {
     LengthContext lengthContext(this);
     const Point translation = {
@@ -6030,34 +6030,34 @@ NOVASVG_INLINE Transform SVGUseElement::local_transform() const
         lengthContext.valueForLength(m_y)
     };
 
-    return SVGGraphicsElement::local_transform() * Transform::translated(translation.x, translation.y);
+    return svg_graphics_element::local_transform() * Transform::translated(translation.x, translation.y);
 }
 
-NOVASVG_INLINE void SVGUseElement::render(SVGRenderState& state) const
+NOVASVG_INLINE void svg_use_element::render(svg_render_state& state) const
 {
     if(isDisplayNone())
         return;
-    SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, local_transform());
+    svg_blend_info blendInfo(this);
+    svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     renderChildren(newState);
     newState.endGroup(blendInfo);
 }
 
-NOVASVG_INLINE void SVGUseElement::build()
+NOVASVG_INLINE void svg_use_element::build()
 {
-    if(auto targetElement = getTargetElement(document())) {
+    if(auto targetElement = getTargetElement(dom())) {
         if(auto newElement = cloneTargetElement(targetElement)) {
             addChild(std::move(newElement));
         }
     }
 
-    SVGGraphicsElement::build();
+    svg_graphics_element::build();
 }
 
-inline bool isDisallowedElement(const SVGElement* element)
+inline bool isDisallowedElement(const svg_element* el)
 {
-    switch(element->id()) {
+    switch(el->id()) {
     case ElementID::Circle:
     case ElementID::Ellipse:
     case ElementID::ForeignObject:
@@ -6080,7 +6080,7 @@ inline bool isDisallowedElement(const SVGElement* element)
     }
 }
 
-NOVASVG_INLINE std::unique_ptr<SVGElement> SVGUseElement::cloneTargetElement(SVGElement* targetElement)
+NOVASVG_INLINE std::unique_ptr<svg_element> svg_use_element::cloneTargetElement(svg_element* targetElement)
 {
     if(targetElement == this || isDisallowedElement(targetElement))
         return nullptr;
@@ -6098,7 +6098,7 @@ NOVASVG_INLINE std::unique_ptr<SVGElement> SVGUseElement::cloneTargetElement(SVG
         tagId = ElementID::Svg;
     }
 
-    auto newElement = SVGElement::create(document(), tagId);
+    auto newElement = svg_element::create(dom(), tagId);
     newElement->setAttributes(targetElement->attributes());
     if(newElement->id() == ElementID::Svg) {
         for(const auto& attribute : attributes()) {
@@ -6113,8 +6113,8 @@ NOVASVG_INLINE std::unique_ptr<SVGElement> SVGUseElement::cloneTargetElement(SVG
     return newElement;
 }
 
-NOVASVG_INLINE SVGImageElement::SVGImageElement(Document* document)
-    : SVGGraphicsElement(document, ElementID::Image)
+NOVASVG_INLINE svg_image_element::svg_image_element(document* dom)
+    : svg_graphics_element(dom, ElementID::Image)
     , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
     , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
     , m_width(PropertyID::Width, LengthDirection::Horizontal, LengthNegativeMode::Forbid, 100.f, LengthUnits::Percent)
@@ -6128,7 +6128,7 @@ NOVASVG_INLINE SVGImageElement::SVGImageElement(Document* document)
     addProperty(m_preserveAspectRatio);
 }
 
-NOVASVG_INLINE Rect SVGImageElement::fillBoundingBox() const
+NOVASVG_INLINE Rect svg_image_element::fillBoundingBox() const
 {
     LengthContext lengthContext(this);
     const Rect viewportRect = {
@@ -6141,23 +6141,23 @@ NOVASVG_INLINE Rect SVGImageElement::fillBoundingBox() const
     return viewportRect;
 }
 
-NOVASVG_INLINE Rect SVGImageElement::strokeBoundingBox() const
+NOVASVG_INLINE Rect svg_image_element::strokeBoundingBox() const
 {
     return fillBoundingBox();
 }
 
-NOVASVG_INLINE void SVGImageElement::render(SVGRenderState& state) const
+NOVASVG_INLINE void svg_image_element::render(svg_render_state& state) const
 {
     if(m_image.is_null() || isDisplayNone() || isVisibilityHidden())
         return;
     Rect dstRect(fillBoundingBox());
     Rect srcRect(0, 0, m_image.width(), m_image.height());
-    if(dstRect.is_empty() || srcRect.is_empty())
+    if(dstRect.empty() || srcRect.empty())
         return;
     m_preserveAspectRatio.transformRect(dstRect, srcRect);
 
-    SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, local_transform());
+    svg_blend_info blendInfo(this);
+    svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     newState->drawImage(m_image, dstRect, srcRect, newState.currentTransform());
     newState.endGroup(blendInfo);
@@ -6177,21 +6177,21 @@ NOVASVG_INLINE Bitmap loadImageResource(const std::string& href)
     return surface_load_from_image_file(href.data());
 }
 
-NOVASVG_INLINE void SVGImageElement::parseAttribute(PropertyID id, const std::string& value)
+NOVASVG_INLINE void svg_image_element::parseAttribute(PropertyID id, const std::string& value)
 {
     if(id == PropertyID::Href) {
         m_image = loadImageResource(value);
     } else {
-        SVGGraphicsElement::parseAttribute(id, value);
+        svg_graphics_element::parseAttribute(id, value);
     }
 }
 
 // ---------------------------------------------------------------
-// SVGForeignObjectElement / ForeignObjectSimple
+// svg_foreign_object_element / ForeignObjectSimple
 // ---------------------------------------------------------------
 
-NOVASVG_INLINE SVGForeignObjectElement::SVGForeignObjectElement(Document* document)
-    : SVGGraphicsElement(document, ElementID::ForeignObject)
+NOVASVG_INLINE svg_foreign_object_element::svg_foreign_object_element(document* dom)
+    : svg_graphics_element(dom, ElementID::ForeignObject)
     , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
     , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
     , m_width(PropertyID::Width, LengthDirection::Horizontal, LengthNegativeMode::Forbid, 0.f, LengthUnits::None)
@@ -6203,7 +6203,7 @@ NOVASVG_INLINE SVGForeignObjectElement::SVGForeignObjectElement(Document* docume
     addProperty(m_height);
 }
 
-NOVASVG_INLINE Rect SVGForeignObjectElement::fillBoundingBox() const
+NOVASVG_INLINE Rect svg_foreign_object_element::fillBoundingBox() const
 {
     LengthContext lengthContext(this);
     return Rect(
@@ -6214,12 +6214,12 @@ NOVASVG_INLINE Rect SVGForeignObjectElement::fillBoundingBox() const
     );
 }
 
-NOVASVG_INLINE Rect SVGForeignObjectElement::strokeBoundingBox() const
+NOVASVG_INLINE Rect svg_foreign_object_element::strokeBoundingBox() const
 {
     return fillBoundingBox();
 }
 
-NOVASVG_INLINE ForeignObjectFonts SVGForeignObjectElement::fontsFor(unsigned usedStyles) const
+NOVASVG_INLINE ForeignObjectFonts svg_foreign_object_element::fontsFor(unsigned usedStyles) const
 {
     ForeignObjectFonts fonts;
     for(unsigned style = 0; style < 4; ++style) {
@@ -6230,28 +6230,28 @@ NOVASVG_INLINE ForeignObjectFonts SVGForeignObjectElement::fontsFor(unsigned use
             continue;
         }
         auto variant = makeFont(m_fontFamily, m_font.size(), (style & ForeignObjectFonts::Bold) != 0, (style & ForeignObjectFonts::Italic) != 0);
-        // A variant the machine can't provide at all must not blank the text: use the element's own face.
+        // A variant the machine can't provide at all must not blank the text: use the el's own face.
         fonts.face[style] = variant.is_null() ? m_font : variant;
     }
     return fonts;
 }
 
-NOVASVG_INLINE void SVGForeignObjectElement::layoutElement(const SVGLayoutState& state)
+NOVASVG_INLINE void svg_foreign_object_element::layoutElement(const svg_layout_state& state)
 {
     m_font = state.font();
     m_fontFamily = state.font_family();
     m_baseFontStyle = (unsigned char)((state.font_weight() == FontWeight::Bold ? ForeignObjectFonts::Bold : 0)
                                       | (state.font_style() == FontStyle::Italic ? ForeignObjectFonts::Italic : 0));
     m_fill = getPaintServer(state.fill(), state.fill_opacity());
-    SVGGraphicsElement::layoutElement(state);
+    svg_graphics_element::layoutElement(state);
 }
 
-NOVASVG_INLINE void SVGForeignObjectElement::render(SVGRenderState& state) const
+NOVASVG_INLINE void svg_foreign_object_element::render(svg_render_state& state) const
 {
     if(m_rawContent.empty() || isDisplayNone() || isVisibilityHidden())
         return;
-    SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, local_transform());
+    svg_blend_info blendInfo(this);
+    svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     auto renderer = m_renderer ? m_renderer : ForeignObjectSimple::instance();
     renderer->render(this, newState);
@@ -6448,15 +6448,15 @@ inline std::optional<std::string_view> htmlAttribute(std::string_view tag, std::
 // Roughly "element.innerText" for the tiny subset of HTML this cares about, but keeping what a reader
 // can SEE of the markup: which stretches are bold and which are italic. Deliberately not a real HTML
 // engine -- no box model, no per-tag display, margins or sizes -- because mermaid (and most
-// SVG-generating tools) only put one short run of text, perhaps with <br>, <b>/<strong> and <i>/<em>
+// svg-generating tools) only put one short run of text, perhaps with <br>, <b>/<strong> and <i>/<em>
 // in it.
 //
 // Style bits (ForeignObjectFonts::Bold / Italic) come from, in this order:
-//   * the style the foreignObject itself inherits from the SVG around it (the `baseStyle` argument);
+//   * the style the foreignObject itself inherits from the svg around it (the `baseStyle` argument);
 //   * the tag: <b> <strong> = bold, <i> <em> <cite> <var> <dfn> = italic;
 //   * an inline style="font-weight: ..." / style="font-style: ...", which wins over the tag and may
 //     also turn a style OFF again (`font-weight: normal` inside a bold stretch).
-// Styles nest and are inherited by everything inside the element, and end with its closing tag.
+// Styles nest and are inherited by everything inside the el, and end with its closing tag.
 // ---------------------------------------------------------------------------------------------------
 struct ForeignObjectSegment {
     std::string text; ///< UTF-8; '\n' marks a forced line break (<br>, <p>, <div>, ...)
@@ -6534,7 +6534,7 @@ inline std::string foreignObjectDeclaration(std::string_view block, std::string_
     return result;
 }
 
-// The style in effect inside an element that is being opened.
+// The style in effect inside an el that is being opened.
 inline unsigned char foreignObjectStyleOfOpening(const std::string& tag, std::string_view attributes, unsigned char inherited)
 {
     unsigned char style = inherited;
@@ -6748,7 +6748,7 @@ inline std::optional<float> foreignObjectLineHeight(std::string_view rawHtml, fl
 }
 
 // Whether the HTML's own CSS lets its text wrap at the box edge. Decided
-// exactly like a browser would: the OUTERMOST element that declares
+// exactly like a browser would: the OUTERMOST el that declares
 // `white-space` wins, and `nowrap` / `pre` mean "never soft-wrap" -- that is
 // what mermaid's default labels say (`display:table-cell; white-space:nowrap`),
 // so those keep laying out on one line (an overflowing line is handled by
@@ -6781,7 +6781,7 @@ inline bool foreignObjectAllowsWrap(std::string_view rawHtml)
 }
 
 // The px width the HTML itself constrains its text to, when it says so:
-// the outermost element declaring `width` and/or `max-width` in px (both ->
+// the outermost el declaring `width` and/or `max-width` in px (both ->
 // the smaller, as in CSS). Only px is understood; anything else (%, em, auto)
 // means "no declared width" and the caller falls back to the box it has.
 inline std::optional<float> foreignObjectDeclaredWidth(std::string_view rawHtml)
@@ -7056,10 +7056,10 @@ inline unsigned foreignObjectStylesUsed(const std::vector<ForeignObjectSegment>&
  * @brief Metrics for how ForeignObjectSimple::render() will lay out and
  * size a <foreignObject>'s content, computed WITHOUT actually rendering it.
  *
- * Exists so a caller building the SVG in the first place (i.e. before any
- * SVGForeignObjectElement exists to query) -- e.g. mermaid.js's own layout
+ * Exists so a caller building the svg in the first place (i.e. before any
+ * svg_foreign_object_element exists to query) -- e.g. mermaid.js's own layout
  * pass, run headless inside mermaidx's QuickJS/V8 DOM shim, computing a
- * node box's height to fit a multi-line HTML label -- can ask novasvg
+ * nd box's height to fit a multi-line HTML label -- can ask novasvg
  * itself what height that content will need, rather than reimplementing
  * (and risking drifting out of sync with) the line-counting/line-height
  * logic ForeignObjectSimple::render() uses at actual paint time. See
@@ -7126,7 +7126,7 @@ inline ForeignObjectMetrics measureForeignObjectSegments(std::string_view rawHtm
 
 /**
  * @brief measureForeignObjectContent() for text that may carry bold and italic: `fonts` supplies the face
- * for each style (see ForeignObjectFonts; SVGForeignObjectElement::fontsFor() builds it the way painting
+ * for each style (see ForeignObjectFonts; svg_foreign_object_element::fontsFor() builds it the way painting
  * does), `baseStyle` is the style the foreignObject itself has. This is exactly what painting does, so the
  * metrics and the painted box cannot disagree about a bold label being wider than a regular one.
  */
@@ -7151,39 +7151,39 @@ inline ForeignObjectMetrics measureForeignObjectContent(std::string_view rawHtml
     return measureForeignObjectSegments(rawHtml, segments, fonts, 0, maxWidth);
 }
 
-NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* element, SVGRenderState& state) const
+NOVASVG_INLINE void ForeignObjectSimple::render(const svg_foreign_object_element* el, svg_render_state& state) const
 {
-    auto segments = foreignObjectStyledText(element->rawContent(), element->baseFontStyle());
+    auto segments = foreignObjectStyledText(el->rawContent(), el->baseFontStyle());
     if(segments.empty())
         return;
 
-    const auto& font = element->font();
+    const auto& font = el->font();
     if(font.is_null())
         return;
 
     // One face per style that actually occurs (just font() for unstyled text, nothing else is looked up).
-    const auto fonts = element->fontsFor(foreignObjectStylesUsed(segments));
+    const auto fonts = el->fontsFor(foreignObjectStylesUsed(segments));
 
-    auto box = element->fillBoundingBox();
+    auto box = el->fillBoundingBox();
     // A browser wraps HTML text at its box's edge unless CSS says nowrap/pre.
-    auto lines = layoutForeignObjectText(segments, fonts, foreignObjectAllowsWrap(element->rawContent()) ? box.w : 0.f);
+    auto lines = layoutForeignObjectText(segments, fonts, foreignObjectAllowsWrap(el->rawContent()) ? box.w : 0.f);
 
     // Real line-height from the HTML's own `line-height:` (mermaid's
     // content usually says 1.5) when present and parseable; falls back
     // to a 1.2x default (roughly a browser's own "normal") otherwise --
     // e.g. for %/em values or "normal" itself, which aren't handled.
-    auto lineHeight = foreignObjectLineHeight(element->rawContent(), font.size()).value_or(font.height() * 1.2f);
+    auto lineHeight = foreignObjectLineHeight(el->rawContent(), font.size()).value_or(font.height() * 1.2f);
     auto totalHeight = lineHeight * float(lines.size());
     auto topY = box.y + (box.h - totalHeight) / 2.f;
 
-    if(auto backgroundColor = element->htmlBackgroundColor()) {
+    if(auto backgroundColor = el->htmlBackgroundColor()) {
         state->setColor(*backgroundColor);
         Path backgroundPath;
         backgroundPath.addRect(box);
         state->fillPath(backgroundPath, FillRule::NonZero, state.currentTransform());
     }
 
-    state->setColor(element->htmlTextColor().value_or(Color(0, 0, 0)));
+    state->setColor(el->htmlTextColor().value_or(Color(0, 0, 0)));
 
     for(size_t i = 0; i < lines.size(); ++i) {
         const auto& line = lines[i];
@@ -7245,38 +7245,38 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
     }
 }
 
-NOVASVG_INLINE SVGSymbolElement::SVGSymbolElement(Document* document)
-    : SVGGraphicsElement(document, ElementID::Symbol)
-    , SVGFitToViewBox(this)
+NOVASVG_INLINE svg_symbol_element::svg_symbol_element(document* dom)
+    : svg_graphics_element(dom, ElementID::Symbol)
+    , svg_fit_to_view_box(this)
 {
 }
 
-NOVASVG_INLINE SVGGElement::SVGGElement(Document* document)
-    : SVGGraphicsElement(document, ElementID::G)
+NOVASVG_INLINE svg_g_element::svg_g_element(document* dom)
+    : svg_graphics_element(dom, ElementID::G)
 {
 }
 
-NOVASVG_INLINE void SVGGElement::render(SVGRenderState& state) const
+NOVASVG_INLINE void svg_g_element::render(svg_render_state& state) const
 {
     if(isDisplayNone())
         return;
-    SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, local_transform());
+    svg_blend_info blendInfo(this);
+    svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     renderChildren(newState);
     newState.endGroup(blendInfo);
 }
 
-NOVASVG_INLINE SVGSwitchElement::SVGSwitchElement(Document* document)
-    : SVGGraphicsElement(document, ElementID::Switch)
+NOVASVG_INLINE svg_switch_element::svg_switch_element(document* dom)
+    : svg_graphics_element(dom, ElementID::Switch)
 {
 }
 
-// SVG conditional processing for one switch child. `requiredExtensions` must be non-empty
+// svg conditional processing for one switch child. `requiredExtensions` must be non-empty
 // and name an extension we implement (the XHTML namespace -- <foreignObject> content);
 // `systemLanguage` must list a tag matching the user language ("en"); no attribute -> true.
-// (requiredFeatures was removed in SVG 2 and browsers treat it as always true.)
-inline bool switchChildPasses(const SVGElement* child)
+// (requiredFeatures was removed in svg 2 and browsers treat it as always true.)
+inline bool switchChildPasses(const svg_element* child)
 {
     auto trim = [](std::string_view v) {
         while(!v.empty() && std::isspace(static_cast<unsigned char>(v.front())))
@@ -7322,39 +7322,39 @@ inline bool switchChildPasses(const SVGElement* child)
     return true;
 }
 
-NOVASVG_INLINE const SVGElement* SVGSwitchElement::selectedChild() const
+NOVASVG_INLINE const svg_element* svg_switch_element::selectedChild() const
 {
     for(const auto& child : children()) {
-        auto element = toSVGElement(child);
+        auto el = toSVGElement(child);
         // only graphics elements take part; <title>, <desc>, <defs>... are skipped
-        if(!element || isDisallowedElement(element))
+        if(!el || isDisallowedElement(el))
             continue;
-        if(switchChildPasses(element))
-            return element;
+        if(switchChildPasses(el))
+            return el;
     }
     return nullptr;
 }
 
-NOVASVG_INLINE void SVGSwitchElement::render(SVGRenderState& state) const
+NOVASVG_INLINE void svg_switch_element::render(svg_render_state& state) const
 {
     if(isDisplayNone())
         return;
-    SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, local_transform());
+    svg_blend_info blendInfo(this);
+    svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     if(auto child = selectedChild())
         child->render(newState);
     newState.endGroup(blendInfo);
 }
 
-NOVASVG_INLINE SVGDefsElement::SVGDefsElement(Document* document)
-    : SVGGraphicsElement(document, ElementID::Defs)
+NOVASVG_INLINE svg_defs_element::svg_defs_element(document* dom)
+    : svg_graphics_element(dom, ElementID::Defs)
 {
 }
 
-NOVASVG_INLINE SVGMarkerElement::SVGMarkerElement(Document* document)
-    : SVGElement(document, ElementID::Marker)
-    , SVGFitToViewBox(this)
+NOVASVG_INLINE svg_marker_element::svg_marker_element(document* dom)
+    : svg_element(dom, ElementID::Marker)
+    , svg_fit_to_view_box(this)
     , m_refX(PropertyID::RefX, LengthDirection::Horizontal, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
     , m_refY(PropertyID::RefY, LengthDirection::Vertical, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
     , m_markerWidth(PropertyID::MarkerWidth, LengthDirection::Horizontal, LengthNegativeMode::Forbid, 3.f, LengthUnits::None)
@@ -7370,7 +7370,7 @@ NOVASVG_INLINE SVGMarkerElement::SVGMarkerElement(Document* document)
     addProperty(m_orient);
 }
 
-NOVASVG_INLINE Point SVGMarkerElement::refPoint() const
+NOVASVG_INLINE Point svg_marker_element::refPoint() const
 {
     LengthContext lengthContext(this);
     const Point refPoint = {
@@ -7381,7 +7381,7 @@ NOVASVG_INLINE Point SVGMarkerElement::refPoint() const
     return refPoint;
 }
 
-NOVASVG_INLINE Size SVGMarkerElement::markerSize() const
+NOVASVG_INLINE Size svg_marker_element::markerSize() const
 {
     LengthContext lengthContext(this);
     const Size markerSize = {
@@ -7392,10 +7392,10 @@ NOVASVG_INLINE Size SVGMarkerElement::markerSize() const
     return markerSize;
 }
 
-NOVASVG_INLINE Transform SVGMarkerElement::markerTransform(const Point& origin, float angle, float strokeWidth) const
+NOVASVG_INLINE Transform svg_marker_element::markerTransform(const Point& origin, float angle, float strokeWidth) const
 {
     auto transform = Transform::translated(origin.x, origin.y);
-    if(m_orient.orientType() == SVGAngle::OrientType::Angle) {
+    if(m_orient.orientType() == svg_angle::OrientType::Angle) {
         transform.rotate(m_orient.value());
     } else {
         transform.rotate(angle);
@@ -7409,17 +7409,17 @@ NOVASVG_INLINE Transform SVGMarkerElement::markerTransform(const Point& origin, 
     return transform * viewTransform;
 }
 
-NOVASVG_INLINE Rect SVGMarkerElement::markerBoundingBox(const Point& origin, float angle, float strokeWidth) const
+NOVASVG_INLINE Rect svg_marker_element::markerBoundingBox(const Point& origin, float angle, float strokeWidth) const
 {
     return markerTransform(origin, angle, strokeWidth).map_rect(paint_bounding_box());
 }
 
-NOVASVG_INLINE void SVGMarkerElement::renderMarker(SVGRenderState& state, const Point& origin, float angle, float strokeWidth) const
+NOVASVG_INLINE void svg_marker_element::renderMarker(svg_render_state& state, const Point& origin, float angle, float strokeWidth) const
 {
     if(state.hasCycleReference(this))
         return;
-    SVGBlendInfo blendInfo(this);
-    SVGRenderState newState(this, state, markerTransform(origin, angle, strokeWidth));
+    svg_blend_info blendInfo(this);
+    svg_render_state newState(this, state, markerTransform(origin, angle, strokeWidth));
     newState.beginGroup(blendInfo);
     if(isOverflowHidden())
         newState->clipRect(getClipRect(markerSize()), FillRule::NonZero, newState.currentTransform());
@@ -7427,23 +7427,23 @@ NOVASVG_INLINE void SVGMarkerElement::renderMarker(SVGRenderState& state, const 
     newState.endGroup(blendInfo);
 }
 
-NOVASVG_INLINE Transform SVGMarkerElement::local_transform() const
+NOVASVG_INLINE Transform svg_marker_element::local_transform() const
 {
     return viewBoxToViewTransform(markerSize());
 }
 
-NOVASVG_INLINE SVGClipPathElement::SVGClipPathElement(Document* document)
-    : SVGGraphicsElement(document, ElementID::ClipPath)
+NOVASVG_INLINE svg_clip_path_element::svg_clip_path_element(document* dom)
+    : svg_graphics_element(dom, ElementID::ClipPath)
     , m_clipPathUnits(PropertyID::ClipPathUnits, Units::UserSpaceOnUse)
 {
     addProperty(m_clipPathUnits);
 }
 
-NOVASVG_INLINE Rect SVGClipPathElement::clipBoundingBox(const SVGElement* element) const
+NOVASVG_INLINE Rect svg_clip_path_element::clipBoundingBox(const svg_element* el) const
 {
     auto clipBoundingBox = paint_bounding_box();
     if(m_clipPathUnits.value() == Units::ObjectBoundingBox) {
-        auto bbox = element->fillBoundingBox();
+        auto bbox = el->fillBoundingBox();
         clipBoundingBox.x = clipBoundingBox.x * bbox.w + bbox.x;
         clipBoundingBox.y = clipBoundingBox.y * bbox.h + bbox.y;
         clipBoundingBox.w = clipBoundingBox.w * bbox.w;
@@ -7453,7 +7453,7 @@ NOVASVG_INLINE Rect SVGClipPathElement::clipBoundingBox(const SVGElement* elemen
     return local_transform().map_rect(clipBoundingBox);
 }
 
-NOVASVG_INLINE void SVGClipPathElement::applyClipMask(SVGRenderState& state) const
+NOVASVG_INLINE void svg_clip_path_element::applyClipMask(svg_render_state& state) const
 {
     if(state.hasCycleReference(this))
         return;
@@ -7465,7 +7465,7 @@ NOVASVG_INLINE void SVGClipPathElement::applyClipMask(SVGRenderState& state) con
         currentTransform.scale(bbox.w, bbox.h);
     }
 
-    SVGRenderState newState(this, &state, currentTransform, SVGRenderMode::Clipping, maskImage);
+    svg_render_state newState(this, &state, currentTransform, svg_render_mode::Clipping, maskImage);
     renderChildren(newState);
     if(clipper()) {
         clipper()->applyClipMask(newState);
@@ -7474,14 +7474,14 @@ NOVASVG_INLINE void SVGClipPathElement::applyClipMask(SVGRenderState& state) con
     state->blendCanvas(*maskImage, BlendMode::Dst_In, 1.f);
 }
 
-inline const SVGGeometryElement* toSVGGeometryElement(const SVGNode* node)
+inline const svg_geometry_element* toSVGGeometryElement(const svg_node* nd)
 {
-    if(node && node->isGeometryElement())
-        return static_cast<const SVGGeometryElement*>(node);
+    if(nd && nd->isGeometryElement())
+        return static_cast<const svg_geometry_element*>(nd);
     return nullptr;
 }
 
-NOVASVG_INLINE void SVGClipPathElement::applyClipPath(SVGRenderState& state) const
+NOVASVG_INLINE void svg_clip_path_element::applyClipPath(svg_render_state& state) const
 {
     auto currentTransform = state.currentTransform() * local_transform();
     if(m_clipPathUnits.value() == Units::ObjectBoundingBox) {
@@ -7491,16 +7491,16 @@ NOVASVG_INLINE void SVGClipPathElement::applyClipPath(SVGRenderState& state) con
     }
 
     for(const auto& child : children()) {
-        auto element = toSVGElement(child);
-        if(element == nullptr || element->isDisplayNone())
+        auto el = toSVGElement(child);
+        if(el == nullptr || el->isDisplayNone())
             continue;
         Transform clipTransform(currentTransform);
-        auto shapeElement = toSVGGeometryElement(element);
+        auto shapeElement = toSVGGeometryElement(el);
         if(shapeElement == nullptr) {
-            if(element->id() != ElementID::Use)
+            if(el->id() != ElementID::Use)
                 continue;
-            clipTransform.multiply(element->local_transform());
-            shapeElement = toSVGGeometryElement(element->firstChild());
+            clipTransform.multiply(el->local_transform());
+            shapeElement = toSVGGeometryElement(el->firstChild());
         }
 
         if(shapeElement == nullptr || !shapeElement->isRenderable())
@@ -7512,24 +7512,24 @@ NOVASVG_INLINE void SVGClipPathElement::applyClipPath(SVGRenderState& state) con
     state->clipRect(Rect::Empty, FillRule::NonZero, Transform::Identity);
 }
 
-NOVASVG_INLINE bool SVGClipPathElement::requiresMasking() const
+NOVASVG_INLINE bool svg_clip_path_element::requiresMasking() const
 {
     if(clipper())
         return true;
-    const SVGGeometryElement* prevShapeElement = nullptr;
+    const svg_geometry_element* prevShapeElement = nullptr;
     for(const auto& child : children()) {
-        auto element = toSVGElement(child);
-        if(element == nullptr || element->isDisplayNone())
+        auto el = toSVGElement(child);
+        if(el == nullptr || el->isDisplayNone())
             continue;
-        auto shapeElement = toSVGGeometryElement(element);
+        auto shapeElement = toSVGGeometryElement(el);
         if(shapeElement == nullptr) {
-            if(element->isTextPositioningElement())
+            if(el->isTextPositioningElement())
                 return true;
-            if(element->id() != ElementID::Use)
+            if(el->id() != ElementID::Use)
                 continue;
-            if(element->clipper())
+            if(el->clipper())
                 return true;
-            shapeElement = toSVGGeometryElement(element->firstChild());
+            shapeElement = toSVGGeometryElement(el->firstChild());
         }
 
         if(shapeElement == nullptr || !shapeElement->isRenderable())
@@ -7542,8 +7542,8 @@ NOVASVG_INLINE bool SVGClipPathElement::requiresMasking() const
     return false;
 }
 
-NOVASVG_INLINE SVGMaskElement::SVGMaskElement(Document* document)
-    : SVGElement(document, ElementID::Mask)
+NOVASVG_INLINE svg_mask_element::svg_mask_element(document* dom)
+    : svg_element(dom, ElementID::Mask)
     , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow, -10.f, LengthUnits::Percent)
     , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow, -10.f, LengthUnits::Percent)
     , m_width(PropertyID::Width, LengthDirection::Horizontal, LengthNegativeMode::Forbid, 120.f, LengthUnits::Percent)
@@ -7559,7 +7559,7 @@ NOVASVG_INLINE SVGMaskElement::SVGMaskElement(Document* document)
     addProperty(m_maskContentUnits);
 }
 
-NOVASVG_INLINE Rect SVGMaskElement::maskRect(const SVGElement* element) const
+NOVASVG_INLINE Rect svg_mask_element::maskRect(const svg_element* el) const
 {
     LengthContext lengthContext(this, m_maskUnits.value());
     Rect maskRect = {
@@ -7570,7 +7570,7 @@ NOVASVG_INLINE Rect SVGMaskElement::maskRect(const SVGElement* element) const
     };
 
     if(m_maskUnits.value() == Units::ObjectBoundingBox) {
-        auto bbox = element->fillBoundingBox();
+        auto bbox = el->fillBoundingBox();
         maskRect.x = maskRect.x * bbox.w + bbox.x;
         maskRect.y = maskRect.y * bbox.h + bbox.y;
         maskRect.w = maskRect.w * bbox.w;
@@ -7580,26 +7580,26 @@ NOVASVG_INLINE Rect SVGMaskElement::maskRect(const SVGElement* element) const
     return maskRect;
 }
 
-NOVASVG_INLINE Rect SVGMaskElement::maskBoundingBox(const SVGElement* element) const
+NOVASVG_INLINE Rect svg_mask_element::maskBoundingBox(const svg_element* el) const
 {
     auto maskBoundingBox = paint_bounding_box();
     if(m_maskContentUnits.value() == Units::ObjectBoundingBox) {
-        auto bbox = element->fillBoundingBox();
+        auto bbox = el->fillBoundingBox();
         maskBoundingBox.x = maskBoundingBox.x * bbox.w + bbox.x;
         maskBoundingBox.y = maskBoundingBox.y * bbox.h + bbox.y;
         maskBoundingBox.w = maskBoundingBox.w * bbox.w;
         maskBoundingBox.h = maskBoundingBox.h * bbox.h;
     }
 
-    return maskBoundingBox.intersected(maskRect(element));
+    return maskBoundingBox.intersected(maskRect(el));
 }
 
-NOVASVG_INLINE void SVGMaskElement::applyMask(SVGRenderState& state) const
+NOVASVG_INLINE void svg_mask_element::applyMask(svg_render_state& state) const
 {
     if(state.hasCycleReference(this))
         return;
     auto maskImage = Canvas::create(state.currentTransform().map_rect(state.paint_bounding_box()));
-    maskImage->clipRect(maskRect(state.element()), FillRule::NonZero, state.currentTransform());
+    maskImage->clipRect(maskRect(state.el()), FillRule::NonZero, state.currentTransform());
 
     auto currentTransform = state.currentTransform();
     if(m_maskContentUnits.value() == Units::ObjectBoundingBox) {
@@ -7608,7 +7608,7 @@ NOVASVG_INLINE void SVGMaskElement::applyMask(SVGRenderState& state) const
         currentTransform.scale(bbox.w, bbox.h);
     }
 
-    SVGRenderState newState(this, &state, currentTransform, SVGRenderMode::Painting, maskImage);
+    svg_render_state newState(this, &state, currentTransform, svg_render_mode::Painting, maskImage);
     renderChildren(newState);
     if(clipper())
         clipper()->applyClipMask(newState);
@@ -7622,29 +7622,29 @@ NOVASVG_INLINE void SVGMaskElement::applyMask(SVGRenderState& state) const
 }
 
 // ---- svgfilterelement (impl) ----
-NOVASVG_INLINE SVGFilterElement::SVGFilterElement(Document* document)
-    : SVGElement(document, ElementID::Filter)
+NOVASVG_INLINE svg_filter_element::svg_filter_element(document* dom)
+    : svg_element(dom, ElementID::Filter)
 {
 }
 
-NOVASVG_INLINE float SVGFilterElement::pixelMargin() const
+NOVASVG_INLINE float svg_filter_element::pixelMargin() const
 {
     float margin = 0.f;
     for(const auto& child : children()) {
-        auto element = toSVGElement(child);
-        if(!element)
+        auto el = toSVGElement(child);
+        if(!el)
             continue;
-        if(element->id() == ElementID::FeGaussianBlur) {
-            auto sigma = parseFirstFloat(element->attribute(PropertyID::StdDeviation), 0.f);
+        if(el->id() == ElementID::FeGaussianBlur) {
+            auto sigma = parseFirstFloat(el->attribute(PropertyID::StdDeviation), 0.f);
             margin = NOVASVG_MAX(margin, sigma * 3.f);
-        } else if(element->id() == ElementID::FeDropShadow) {
-            auto sigma = parseFirstFloat(element->attribute(PropertyID::StdDeviation), 2.f);
-            auto dx = parseFirstFloat(element->attribute(PropertyID::Dx), 2.f);
-            auto dy = parseFirstFloat(element->attribute(PropertyID::Dy), 2.f);
+        } else if(el->id() == ElementID::FeDropShadow) {
+            auto sigma = parseFirstFloat(el->attribute(PropertyID::StdDeviation), 2.f);
+            auto dx = parseFirstFloat(el->attribute(PropertyID::Dx), 2.f);
+            auto dy = parseFirstFloat(el->attribute(PropertyID::Dy), 2.f);
             margin = NOVASVG_MAX(margin, sigma * 3.f + NOVASVG_MAX(std::abs(dx), std::abs(dy)));
-        } else if(element->id() == ElementID::FeOffset) {
-            auto dx = parseFirstFloat(element->attribute(PropertyID::Dx), 0.f);
-            auto dy = parseFirstFloat(element->attribute(PropertyID::Dy), 0.f);
+        } else if(el->id() == ElementID::FeOffset) {
+            auto dx = parseFirstFloat(el->attribute(PropertyID::Dx), 0.f);
+            auto dy = parseFirstFloat(el->attribute(PropertyID::Dy), 0.f);
             margin = NOVASVG_MAX(margin, NOVASVG_MAX(std::abs(dx), std::abs(dy)));
         }
         // feFlood/feComposite/feMerge don't themselves need extra margin;
@@ -7655,26 +7655,26 @@ NOVASVG_INLINE float SVGFilterElement::pixelMargin() const
     return margin;
 }
 
-NOVASVG_INLINE void SVGFilterElement::applyFilter(SVGRenderState& state, float scale) const
+NOVASVG_INLINE void svg_filter_element::applyFilter(svg_render_state& state, float scale) const
 {
-    SVGFilterContext context(state.canvas(), scale);
+    svg_filter_context context(state.canvas(), scale);
     for(const auto& child : children()) {
-        auto element = toSVGElement(child);
-        if(!element)
+        auto el = toSVGElement(child);
+        if(!el)
             continue;
-        auto output = element->applyFilterPrimitive(context);
+        auto output = el->applyFilterPrimitive(context);
         if(!output)
             continue; // not a primitive (e.g. a stray feMergeNode outside feMerge)
-        context.setResult(element->attribute(PropertyID::Result), std::move(output));
+        context.setResult(el->attribute(PropertyID::Result), std::move(output));
     }
 
     state.canvas()->copyPixelsFrom(*context.lastResult());
 }
 
-NOVASVG_INLINE void SVGMaskElement::layoutElement(const SVGLayoutState& state)
+NOVASVG_INLINE void svg_mask_element::layoutElement(const svg_layout_state& state)
 {
     m_mask_type = state.mask_type();
-    SVGElement::layoutElement(state);
+    svg_element::layoutElement(state);
 }
 
 } // namespace novasvg
