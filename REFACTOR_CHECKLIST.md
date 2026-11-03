@@ -329,3 +329,10 @@ Still camelCase in the svg layer: non-`SVG*` internal types and members (e.g. `L
 4. Filters: whole `svg_filter_context` works on `raster_canvas` pixels (raster-only by nature; a PDF backend rasterizes filtered groups).
 Also open: the interface classes live in `novasvg`, the C API in `novasvg::gfx` (namespace consolidation), and `Path/Transform/Rect/Color/Font` are still local types (step 5 swaps in `stb::`).
 Gate: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
+
+### libstb version note (2026-11-03)
+`NOVASVG_LIBSTB_GIT_TAG` floats on `master` (by design for now). The `e655ce9` recorded above was only true up to the step-A configure; a later reconfigure silently moved the build to `955870f` (`stb::path`, `stb::matrix`, glyph `outline`), and now `a0726ba` (MSVC fix, `STB_MIN`/`STB_MAX`). Gate on `a0726ba`: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ. Python not rerun for this bump (C++ side only changed). libstb still has no rasterizer / stroker (`stb/raster.hpp`), so `src/gfx/vendor/` stays.
+
+### NOVASVG_MIN/MAX -> STB_MIN/STB_MAX (2026-11-03)
+Macros removed from `config.h` and `gfx/color.h`; all uses switched to libstb's `STB_MIN/STB_MAX` (`<stb/export.hpp>`, included by `config.h` and `color.h`). Note the tie semantics differ (STB follows `std::min/max`: returns the first argument on equality; the old macros returned the second), which only matters for `+0/-0` and NaN. Golden 67 images / 0 differ says it does not matter in any rendered case. Gate on libstb `a0726ba`: C++ 79 / 552, font 71, link OK, golden 0 differ, Python 433.
+Build note: the Python build (`/tmp/pybuild`) fetches its own libstb; after a libstb bump it needs `cmake /tmp/pybuild` once.

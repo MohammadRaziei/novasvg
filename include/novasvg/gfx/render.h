@@ -27,9 +27,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "../config.h"   // NOVASVG_API, NOVASVG_INLINE, NOVASVG_MAX/MIN (one definition, shared with novasvg.h)
+#include "../config.h"   // NOVASVG_API, NOVASVG_INLINE, STB_MAX/MIN (one definition, shared with novasvg.h)
 
-// NOVASVG_MAX/NOVASVG_MIN are defined in detail/config.h, which #includes
+// STB_MAX/STB_MIN are defined in detail/config.h, which #includes
 // (transitively, via canvas.h) this header -- always available by the
 // time any of the macros below are actually used at a call site.
 

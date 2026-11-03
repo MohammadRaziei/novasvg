@@ -188,11 +188,11 @@ NOVASVG_INLINE int blend_mode_channel(int cs, int cb, int as, int ab)
     else if(Mode == NOVASVG_OPERATOR_SCREEN)
         value = cs + cb - blend_mul255(cs, cb);
     else if(Mode == NOVASVG_OPERATOR_DARKEN)
-        value = cs + cb - NOVASVG_MAX(blend_mul255(cs, ab), blend_mul255(cb, as));
+        value = cs + cb - STB_MAX(blend_mul255(cs, ab), blend_mul255(cb, as));
     else if(Mode == NOVASVG_OPERATOR_LIGHTEN)
-        value = cs + cb - NOVASVG_MIN(blend_mul255(cs, ab), blend_mul255(cb, as));
+        value = cs + cb - STB_MIN(blend_mul255(cs, ab), blend_mul255(cb, as));
     else if(Mode == NOVASVG_OPERATOR_DIFFERENCE)
-        value = cs + cb - 2 * NOVASVG_MIN(blend_mul255(cs, ab), blend_mul255(cb, as));
+        value = cs + cb - 2 * STB_MIN(blend_mul255(cs, ab), blend_mul255(cb, as));
     else
         value = cs + cb - 2 * blend_mul255(cs, cb);
     return value;
@@ -209,7 +209,7 @@ NOVASVG_INLINE uint32_t blend_mode_pixel(uint32_t dest, uint32_t src)
     uint32_t result = uint32_t(ar) << 24;
     for(int shift = 16; shift >= 0; shift -= 8) {
         int c = blend_mode_channel<Mode>(int((src >> shift) & 0xff), int((dest >> shift) & 0xff), as, ab);
-        c = NOVASVG_MAX(0, NOVASVG_MIN(c, ar)); // a premultiplied channel never exceeds the alpha
+        c = STB_MAX(0, STB_MIN(c, ar)); // a premultiplied channel never exceeds the alpha
         result |= uint32_t(c) << shift;
     }
 

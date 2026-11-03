@@ -1,18 +1,9 @@
 #ifndef NOVASVG_COLOR_H
 #define NOVASVG_COLOR_H
 
-// Self-contained on purpose (see NOVASVG_MAX() usage below): this header
-// is included standalone by tests/cpp/test_novacolor.cpp, not just via
-// the novasvg.h umbrella. novasvg.h defines these same two macros before
-// it includes this file, so the guards below are a no-op in that path;
-// here they're what makes plain `#include "novasvg/gfx/color.h"` work
-// on its own too.
-#ifndef NOVASVG_MAX
-#define NOVASVG_MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif
-#ifndef NOVASVG_MIN
-#define NOVASVG_MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
+// Self-contained on purpose: this header is included standalone by
+// tests/cpp/test_novacolor.cpp, not just via the novasvg.h umbrella.
+#include <stb/export.hpp> // STB_MIN / STB_MAX
 
 #include <stdexcept>
 #include <string>
@@ -480,7 +471,7 @@ public:
      * @endcode
      */
     Color blend(const Color& other, int percentage) const {
-        int pct = NOVASVG_MAX(0, NOVASVG_MIN(100, percentage));
+        int pct = STB_MAX(0, STB_MIN(100, percentage));
         double p = pct / 100.0;
         double q = 1.0 - p;
 

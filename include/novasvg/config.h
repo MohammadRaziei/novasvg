@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stb/export.hpp> // STB_MIN / STB_MAX
+
 // Build configuration shared by every novasvg header: linkage/export macros and the small
 // min/max helpers. Kept in its own header so internal headers (and the compiled sources in src/)
 // can use them without pulling in the whole public API.
@@ -41,13 +43,3 @@
 // pattern the vendored FreeType rasterizer already uses for its own
 // internals (PVG_FT_MIN/PVG_FT_MAX in src/gfx/vendor/), just
 // under this project's own prefix for general-purpose call sites.
-// ponytail: no protection against double-evaluating a/b if either has
-// side effects -- fine for every current call site (plain variable/
-// member reads), just don't reach for these with e.g. `x++` as an
-// argument.
-#ifndef NOVASVG_MAX
-#define NOVASVG_MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif
-#ifndef NOVASVG_MIN
-#define NOVASVG_MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif

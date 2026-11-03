@@ -2944,7 +2944,7 @@ NOVASVG_INLINE Rect svg_preserve_aspect_ratio::getClipRect(const Rect& viewBoxRe
         return Rect(viewBoxRect.x, viewBoxRect.y, viewportSize.w / xScale, viewportSize.h / yScale);
     }
 
-    auto scale = (m_meetOrSlice == MeetOrSlice::Meet) ? NOVASVG_MIN(xScale, yScale) : NOVASVG_MAX(xScale, yScale);
+    auto scale = (m_meetOrSlice == MeetOrSlice::Meet) ? STB_MIN(xScale, yScale) : STB_MAX(xScale, yScale);
     auto xOffset = -viewBoxRect.x * scale;
     auto yOffset = -viewBoxRect.y * scale;
     auto viewWidth = viewBoxRect.w * scale;
@@ -2991,7 +2991,7 @@ NOVASVG_INLINE Transform svg_preserve_aspect_ratio::getTransform(const Rect& vie
         return Transform(xScale, 0, 0, yScale, -viewBoxRect.x * xScale, -viewBoxRect.y * yScale);
     }
 
-    auto scale = (m_meetOrSlice == MeetOrSlice::Meet) ? NOVASVG_MIN(xScale, yScale) : NOVASVG_MAX(xScale, yScale);
+    auto scale = (m_meetOrSlice == MeetOrSlice::Meet) ? STB_MIN(xScale, yScale) : STB_MAX(xScale, yScale);
     auto xOffset = -viewBoxRect.x * scale;
     auto yOffset = -viewBoxRect.y * scale;
     auto viewWidth = viewBoxRect.w * scale;
@@ -3577,7 +3577,7 @@ NOVASVG_INLINE Rect svg_geometry_element::strokeBoundingBox() const
             joinLimit *= m_strokeData.miterLimit();
         }
 
-        strokeBoundingBox.inflate(NOVASVG_MAX(capLimit, joinLimit));
+        strokeBoundingBox.inflate(STB_MAX(capLimit, joinLimit));
     }
 
     for(const auto& markerPosition : m_markerPositions)
@@ -3768,8 +3768,8 @@ NOVASVG_INLINE Rect svg_rect_element::updateShape(Path& path)
     if(rx <= 0.f) rx = ry;
     if(ry <= 0.f) ry = rx;
 
-    rx = NOVASVG_MIN(rx, width / 2.f);
-    ry = NOVASVG_MIN(ry, height / 2.f);
+    rx = STB_MIN(rx, width / 2.f);
+    ry = STB_MIN(ry, height / 2.f);
 
     path.addRoundRect(x, y, width, height, rx, ry);
     return Rect(x, y, width, height);
@@ -6608,7 +6608,7 @@ inline std::vector<ForeignObjectSegment> foreignObjectStyledText(std::string_vie
                 ++gt;
             }
             auto inside = html.substr(i + 1, gt - i - 1);
-            i = NOVASVG_MIN(gt + 1, html.size());
+            i = STB_MIN(gt + 1, html.size());
 
             const bool closing = !inside.empty() && inside.front() == '/';
             const bool selfClosing = !inside.empty() && inside.back() == '/';
@@ -6804,7 +6804,7 @@ inline std::optional<float> foreignObjectDeclaredWidth(std::string_view rawHtml)
             if(auto d = parseNumericDeclaration(*style, "width"); d && d->isPixels)
                 width = d->raw;
             if(auto d = parseNumericDeclaration(*style, "max-width"); d && d->isPixels)
-                width = width ? NOVASVG_MIN(*width, d->raw) : d->raw;
+                width = width ? STB_MIN(*width, d->raw) : d->raw;
             if(width)
                 return width;
         }
@@ -7116,11 +7116,11 @@ inline ForeignObjectMetrics measureForeignObjectSegments(std::string_view rawHtm
     metrics.lineHeight = foreignObjectLineHeight(rawHtml, font.size()).value_or(font.height() * 1.2f);
     metrics.height = metrics.lineHeight * float(metrics.lineCount);
     for(const auto& line : lines)
-        // NOVASVG_MAX(), not std::max(): see novasvg.h's own
+        // STB_MAX(), not std::max(): see novasvg.h's own
         // comment on why this codebase avoids std::max/std::min entirely
         // rather than special-casing each call site against the
         // Windows.h max/min macro collision.
-        metrics.width = NOVASVG_MAX(metrics.width, measureForeignObjectLine(line, fonts));
+        metrics.width = STB_MAX(metrics.width, measureForeignObjectLine(line, fonts));
     return metrics;
 }
 
@@ -7197,8 +7197,8 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const svg_foreign_object_element
             ascent = 0.f;
             fontHeight = 0.f;
             for(const auto& run : line) {
-                ascent = NOVASVG_MAX(ascent, fonts.get(run.style).ascent());
-                fontHeight = NOVASVG_MAX(fontHeight, fonts.get(run.style).height());
+                ascent = STB_MAX(ascent, fonts.get(run.style).ascent());
+                fontHeight = STB_MAX(fontHeight, fonts.get(run.style).height());
             }
         }
 
@@ -7636,16 +7636,16 @@ NOVASVG_INLINE float svg_filter_element::pixelMargin() const
             continue;
         if(el->id() == ElementID::FeGaussianBlur) {
             auto sigma = parseFirstFloat(el->attribute(PropertyID::StdDeviation), 0.f);
-            margin = NOVASVG_MAX(margin, sigma * 3.f);
+            margin = STB_MAX(margin, sigma * 3.f);
         } else if(el->id() == ElementID::FeDropShadow) {
             auto sigma = parseFirstFloat(el->attribute(PropertyID::StdDeviation), 2.f);
             auto dx = parseFirstFloat(el->attribute(PropertyID::Dx), 2.f);
             auto dy = parseFirstFloat(el->attribute(PropertyID::Dy), 2.f);
-            margin = NOVASVG_MAX(margin, sigma * 3.f + NOVASVG_MAX(std::abs(dx), std::abs(dy)));
+            margin = STB_MAX(margin, sigma * 3.f + STB_MAX(std::abs(dx), std::abs(dy)));
         } else if(el->id() == ElementID::FeOffset) {
             auto dx = parseFirstFloat(el->attribute(PropertyID::Dx), 0.f);
             auto dy = parseFirstFloat(el->attribute(PropertyID::Dy), 0.f);
-            margin = NOVASVG_MAX(margin, NOVASVG_MAX(std::abs(dx), std::abs(dy)));
+            margin = STB_MAX(margin, STB_MAX(std::abs(dx), std::abs(dy)));
         }
         // feFlood/feComposite/feMerge don't themselves need extra margin;
         // if they combine an already-blurred/offset named result, that

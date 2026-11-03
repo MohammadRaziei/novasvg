@@ -11,8 +11,8 @@ namespace gfx {
 static inline float hsl_component(float h, float s, float l, float n)
 {
     const float k = fmodf(n + h / 30.f, 12.f);
-    const float a = s * NOVASVG_MIN(l, 1.f - l);
-    return l - a * NOVASVG_MAX(-1.f, NOVASVG_MIN(1.f, NOVASVG_MIN(k - 3.f, 9.f - k)));
+    const float a = s * STB_MIN(l, 1.f - l);
+    return l - a * STB_MAX(-1.f, STB_MIN(1.f, STB_MIN(k - 3.f, 9.f - k)));
 }
 
 static inline uint8_t hex_digit(uint8_t c)
@@ -89,7 +89,7 @@ static gradient_paint_t* gradient_create(gradient_type_t type, spread_method_t s
     float prev_offset = 0.f;
     for(int i = 0; i < nstops; ++i) {
         const gradient_stop_t* stop = stops + i;
-        gradient->stops[i].offset = NOVASVG_MAX(prev_offset, std::clamp(stop->offset, 0.f, 1.f));
+        gradient->stops[i].offset = STB_MAX(prev_offset, std::clamp(stop->offset, 0.f, 1.f));
         gradient->stops[i].color.r = std::clamp(stop->color.r, 0.f, 1.f);
         gradient->stops[i].color.g = std::clamp(stop->color.g, 0.f, 1.f);
         gradient->stops[i].color.b = std::clamp(stop->color.b, 0.f, 1.f);
