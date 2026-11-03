@@ -21,7 +21,7 @@ if(NOVASVG_DIST_DIR)
     add_dependencies(test_novasvg_cpp novasvg_dist_header)
 endif()
 
-target_include_directories(test_novasvg_cpp PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}")
+target_include_directories(test_novasvg_cpp PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}" "${PROJECT_SOURCE_DIR}/src")
 # These two take their headers from NOVASVG_TEST_INCLUDE_DIR (which can be the dist header), so they link
 # libstb directly instead of going through the novasvg target.
 target_link_libraries(test_novasvg_cpp PRIVATE novasvg::noflag)

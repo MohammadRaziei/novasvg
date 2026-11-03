@@ -32,6 +32,8 @@ if(DEFINED SKBUILD)
 
     # Link against the novasvg library
     target_link_libraries(novasvg_py PRIVATE novasvg::novasvg)
+    # The binding reaches into the private SVG layer (foreignObject text measurement); see REFACTOR_CHECKLIST.md.
+    target_include_directories(novasvg_py PRIVATE "${PROJECT_SOURCE_DIR}/src")
 
     # libstb is a shared library and the wheel puts it in site-packages/libstb/lib (next to the `novasvg`
     # package). Without this runpath `import novasvg` only works if something imported `libstb` first.

@@ -12,7 +12,7 @@
 #include <cctype>
 #include <set>
 #include <cassert>
-#include "svgparserutils.h"
+#include "novasvg/svg/svgparserutils.h"
 
 // ---------------------------------------------------------------
 // svg_element and its family (svg_paint_element, svg_geometry_element,

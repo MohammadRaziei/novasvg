@@ -336,3 +336,11 @@ Gate: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
 ### NOVASVG_MIN/MAX -> STB_MIN/STB_MAX (2026-11-03)
 Macros removed from `config.h` and `gfx/color.h`; all uses switched to libstb's `STB_MIN/STB_MAX` (`<stb/export.hpp>`, included by `config.h` and `color.h`). Note the tie semantics differ (STB follows `std::min/max`: returns the first argument on equality; the old macros returned the second), which only matters for `+0/-0` and NaN. Golden 67 images / 0 differ says it does not matter in any rendered case. Gate on libstb `a0726ba`: C++ 79 / 552, font 71, link OK, golden 0 differ, Python 433.
 Build note: the Python build (`/tmp/pybuild`) fetches its own libstb; after a libstb bump it needs `cmake /tmp/pybuild` once.
+
+### Step D1: the library is compiled, `novasvg.h` is declarations only (2026-11-03)
+- `include/novasvg/novasvg.h` (1180 -> 647 lines) now only declares; its former inline tail is `src/svg/novasvg.cpp` (compiled into `novasvg_core`).
+- `svgelement.h` and `svgparser.hpp` moved to `src/svg/` (private). Definitions of public-class members that lived in them (3, e.g. `document::query_selector_all`) moved to `novasvg.cpp`; everything else in them stays `inline` for now.
+- Consumers of `novasvg.h` no longer parse the SVG layer. `gfx/canvas.h`, `gfx/font.h` (+ `font_impl.h` = stb_truetype, 6266 lines), `internal.h`, `utils.h`, `default_font.h` are STILL public and header-only (tests and the Python binding use `Transform` / `Font` from them): this is the next thing to move.
+- Debt: the Python binding and `test_foreignobject_style.cpp` include the private `svg/svgelement.h` (CMake adds `src/` to their include path). Needed: a public text-measure API (`Font`, `utf8ToU32`, `measure_foreign_object`).
+- Remaining header-only code, honestly: `svgelement.h` ~7.7k lines (236 `NOVASVG_INLINE`), `font_impl.h` 6.3k, `canvas.h` 1.4k, `svgparser.hpp` 1.8k, `color.h`, `bitmap.h`, `font.h`. `NOVASVG_INLINE` itself still exists. Next: D2 = move bodies of `svgelement.h` / `svgparser.hpp` / `canvas.h` into `.cpp` files (split by element family), D3 = fonts onto libstb and delete `font_impl.h`.
+- Gate (libstb a0726ba): C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.

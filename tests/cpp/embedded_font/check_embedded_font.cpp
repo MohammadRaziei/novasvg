@@ -4,6 +4,8 @@
 #include "../doctest.h"
 
 #include <novasvg/novasvg.h>
+#include <novasvg/gfx/canvas.h>
+#include <novasvg/gfx/font.h>
 
 #include <string>
 

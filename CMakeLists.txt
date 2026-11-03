@@ -82,7 +82,8 @@ endif()
 # time. What has been moved is compiled once, here; what has not is still header-only and is compiled
 # into whatever includes it. Each module directory under src/ is globbed.
 file(GLOB NOVASVG_CORE_SOURCES CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gfx/*.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/gfx/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/svg/*.cpp")
 add_library(novasvg_core STATIC ${NOVASVG_CORE_SOURCES})
 set_target_properties(novasvg_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(novasvg_core PRIVATE NOVASVG_BUILDING_LIBRARY)
