@@ -12,10 +12,10 @@
 #include <array>
 #include <string>
 
-// Canvas: novasvg's 2D drawing surface (paths, fills, strokes, gradients,
+// raster_canvas: novasvg's 2D drawing surface (paths, fills, strokes, gradients,
 // text, blending), plus the Path/Rect/Transform/Point primitives that go
 // with it. Self-contained -- pulls in exactly the gfx:: engine pieces
-// it needs plus Font (for fillText/strokeText) -- so it's usable without
+// it needs plus Font (for fill_text/stroke_text) -- so it's usable without
 // the svg/parsing layer, e.g. to draw directly onto a Bitmap.
 #include "color.h"
 #include "font.h"
@@ -432,54 +432,84 @@ using GradientStops = std::vector<GradientStop>;
 
 class Bitmap;
 
-class Canvas {
+/// Backend-independent vector drawing target.
+///
+/// Holds exactly the operations every backend (raster today, PDF later) can express: a paint source,
+/// fill/stroke of paths and text, clipping, images, and a save/restore stack. Pixel-level operations
+/// (textures, layer blending, masks, filters) are NOT part of it yet: they live in `raster_canvas`
+/// and are the remaining work before an SVG document can be rendered to a non-raster backend.
+class canvas {
 public:
-    static std::shared_ptr<Canvas> create(const Bitmap& bitmap);
-    static std::shared_ptr<Canvas> create(float x, float y, float width, float height);
-    static std::shared_ptr<Canvas> create(const Rect& extents);
+    virtual ~canvas() = default;
 
-    void setColor(const Color& color);
-    void setColor(float r, float g, float b, float a);
-    void setLinearGradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform);
-    void setRadialGradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform);
-    void setTexture(const Canvas& source, TextureType type, float opacity, const Transform& transform);
+    virtual void set_color(const Color& color) = 0;
+    virtual void set_color(float r, float g, float b, float a) = 0;
+    virtual void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform) = 0;
+    virtual void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform) = 0;
 
-    void fillPath(const Path& path, FillRule fillRule, const Transform& transform);
-    void strokePath(const Path& path, const StrokeData& strokeData, const Transform& transform);
+    virtual void fill_path(const Path& path, FillRule fill_rule, const Transform& transform) = 0;
+    virtual void stroke_path(const Path& path, const StrokeData& stroke_data, const Transform& transform) = 0;
 
-    void fillText(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform);
-    void strokeText(const std::u32string_view& text, float strokeWidth, const Font& font, const Point& origin, const Transform& transform);
+    virtual void fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform) = 0;
+    virtual void stroke_text(const std::u32string_view& text, float stroke_width, const Font& font, const Point& origin, const Transform& transform) = 0;
 
-    void clipPath(const Path& path, FillRule clipRule, const Transform& transform);
-    void clipRect(const Rect& rect, FillRule clipRule, const Transform& transform);
+    virtual void clip_path(const Path& path, FillRule clip_rule, const Transform& transform) = 0;
+    virtual void clip_rect(const Rect& rect, FillRule clip_rule, const Transform& transform) = 0;
 
-    void drawImage(const Bitmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform);
-    void blendCanvas(const Canvas& canvas, BlendMode blendMode, float opacity);
+    virtual void draw_image(const Bitmap& image, const Rect& dst_rect, const Rect& src_rect, const Transform& transform) = 0;
 
-    void save();
-    void restore();
+    virtual void save() = 0;
+    virtual void restore() = 0;
+};
 
-    void convertToLuminanceMask();
+class raster_canvas final : public canvas {
+public:
+    static std::shared_ptr<raster_canvas> create(const Bitmap& bitmap);
+    static std::shared_ptr<raster_canvas> create(float x, float y, float width, float height);
+    static std::shared_ptr<raster_canvas> create(const Rect& extents);
+
+    void set_color(const Color& color) override;
+    void set_color(float r, float g, float b, float a) override;
+    void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform) override;
+    void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform) override;
+    void set_texture(const raster_canvas& source, TextureType type, float opacity, const Transform& transform);
+
+    void fill_path(const Path& path, FillRule fillRule, const Transform& transform) override;
+    void stroke_path(const Path& path, const StrokeData& strokeData, const Transform& transform) override;
+
+    void fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform) override;
+    void stroke_text(const std::u32string_view& text, float strokeWidth, const Font& font, const Point& origin, const Transform& transform) override;
+
+    void clip_path(const Path& path, FillRule clipRule, const Transform& transform) override;
+    void clip_rect(const Rect& rect, FillRule clipRule, const Transform& transform) override;
+
+    void draw_image(const Bitmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform) override;
+    void blend_canvas(const raster_canvas& canvas, BlendMode blendMode, float opacity);
+
+    void save() override;
+    void restore() override;
+
+    void convert_to_luminance_mask();
     // standard "fast almost-gaussian" trick browsers/thorvg also use)
     // rather than a true gaussian convolution kernel -- visually
     // indistinguishable for the stdDeviation ranges svg content actually
     // uses, and O(w*h) instead of O(w*h*kernel). Upgrade path: replace the
     // naive per-pixel box blur loop with a moving-sum/summed-area version
     // if profiling ever shows this mattering for very large canvases.
-    void boxBlur(float stdDeviationX, float stdDeviationY);
+    void box_blur(float stdDeviationX, float stdDeviationY);
 
     // Composites `this` (already blurred, tinted to floodColor/floodOpacity
     // by the caller) as a drop shadow: offsets by (dx, dy) and draws
     // `original` on top of it, replacing this canvas's contents in place.
-    void compositeDropShadowUnder(const Canvas& original, float dx, float dy);
+    void composite_drop_shadow_under(const raster_canvas& original, float dx, float dy);
 
     // Recolors every pixel to floodColor while preserving its alpha
     // (scaled by floodOpacity), for feDropShadow/feFlood.
-    void tintToFloodColor(const Color& floodColor, float floodOpacity);
+    void tint_to_flood_color(const Color& floodColor, float floodOpacity);
 
-    // Fills every pixel fully opaque white; paired with tintToFloodColor()
+    // Fills every pixel fully opaque white; paired with tint_to_flood_color()
     // this gives feFlood's "solid flood-color rectangle" result.
-    void fillOpaqueWhite();
+    void fill_opaque_white();
 
     // Shifts this canvas's pixels by (dx, dy) in place; area exposed at
     // the edges becomes transparent.
@@ -487,19 +517,19 @@ public:
 
     // Porter-Duff compositing operators needed by feComposite/feMerge.
     // (arithmetic is intentionally not offered -- see svg_fe_composite_element)
-    enum class PorterDuff { Over, In, Out, Atop, Xor };
-    void compositeWith(const Canvas& src, PorterDuff mode);
-    void compositeOver(const Canvas& src) ;
+    enum class porter_duff { Over, In, Out, Atop, Xor };
+    void composite_with(const raster_canvas& src, porter_duff mode);
+    void composite_over(const raster_canvas& src) ;
 
     // feComposite operator="arithmetic": result = k1*i1*i2 + k2*i1 + k3*i2 + k4
     // per channel, in normalized [0,1] premultiplied space, clamped back to
     // [0,1]. `src` is i1, `this` (already holding in2's pixels) is i2 --
     // the result replaces `this` in place.
-    void compositeArithmetic(const Canvas& src, float k1, float k2, float k3, float k4);
+    void composite_arithmetic(const raster_canvas& src, float k1, float k2, float k3, float k4);
 
     // Raw memcpy of `other`'s pixel buffer into this one -- both must be
     // the same width/height/stride (caller's responsibility).
-    void copyPixelsFrom(const Canvas& other);
+    void copy_pixels_from(const raster_canvas& other);
 
     int x() const { return m_x; }
     int y() const { return m_y; }
@@ -509,13 +539,13 @@ public:
     Rect extents() const { return Rect(m_x, m_y, width(), height()); }
 
     surface_t* surface() const { return m_surface; }
-    canvas_t* canvas() const { return m_canvas; }
+    canvas_t* handle() const { return m_canvas; }
 
-    ~Canvas();
+    ~raster_canvas();
 
 private:
-    Canvas(const Bitmap& bitmap);
-    Canvas(int x, int y, int width, int height);
+    raster_canvas(const Bitmap& bitmap);
+    raster_canvas(int x, int y, int width, int height);
     surface_t* m_surface;
     canvas_t* m_canvas;
     matrix_t m_translation;
@@ -886,54 +916,54 @@ NOVASVG_INLINE void PathIterator::next()
 }
 
 
-NOVASVG_INLINE std::shared_ptr<Canvas> Canvas::create(const Bitmap& bitmap)
+NOVASVG_INLINE std::shared_ptr<raster_canvas> raster_canvas::create(const Bitmap& bitmap)
 {
-    return std::shared_ptr<Canvas>(new Canvas(bitmap));
+    return std::shared_ptr<raster_canvas>(new raster_canvas(bitmap));
 }
 
-NOVASVG_INLINE std::shared_ptr<Canvas> Canvas::create(float x, float y, float width, float height)
+NOVASVG_INLINE std::shared_ptr<raster_canvas> raster_canvas::create(float x, float y, float width, float height)
 {
     constexpr int kMaxSize = 1 << 15;
     if(width <= 0 || height <= 0 || width >= kMaxSize || height >= kMaxSize)
-        return std::shared_ptr<Canvas>(new Canvas(0, 0, 1, 1));
+        return std::shared_ptr<raster_canvas>(new raster_canvas(0, 0, 1, 1));
     auto l = static_cast<int>(std::floor(x));
     auto t = static_cast<int>(std::floor(y));
     auto r = static_cast<int>(std::ceil(x + width));
     auto b = static_cast<int>(std::ceil(y + height));
-    return std::shared_ptr<Canvas>(new Canvas(l, t, r - l, b - t));
+    return std::shared_ptr<raster_canvas>(new raster_canvas(l, t, r - l, b - t));
 }
 
-NOVASVG_INLINE std::shared_ptr<Canvas> Canvas::create(const Rect& extents)
+NOVASVG_INLINE std::shared_ptr<raster_canvas> raster_canvas::create(const Rect& extents)
 {
     return create(extents.x, extents.y, extents.w, extents.h);
 }
 
-NOVASVG_INLINE void Canvas::setColor(const Color& color)
+NOVASVG_INLINE void raster_canvas::set_color(const Color& color)
 {
-    setColor(color.getRF(), color.getGF(), color.getBF(), color.getAF());
+    set_color(color.getRF(), color.getGF(), color.getBF(), color.getAF());
 }
 
-NOVASVG_INLINE void Canvas::setColor(float r, float g, float b, float a)
+NOVASVG_INLINE void raster_canvas::set_color(float r, float g, float b, float a)
 {
     canvas_set_rgba(m_canvas, r, g, b, a);
 }
 
-NOVASVG_INLINE void Canvas::setLinearGradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
+NOVASVG_INLINE void raster_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
 {
     canvas_set_linear_gradient(m_canvas, x1, y1, x2, y2, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform.matrix());
 }
 
-NOVASVG_INLINE void Canvas::setRadialGradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
+NOVASVG_INLINE void raster_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
 {
     canvas_set_radial_gradient(m_canvas, cx, cy, r, fx, fy, 0.f, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform.matrix());
 }
 
-NOVASVG_INLINE void Canvas::setTexture(const Canvas& source, TextureType type, float opacity, const Transform& transform)
+NOVASVG_INLINE void raster_canvas::set_texture(const raster_canvas& source, TextureType type, float opacity, const Transform& transform)
 {
     canvas_set_texture(m_canvas, source.surface(), static_cast<texture_type_t>(type), opacity, &transform.matrix());
 }
 
-NOVASVG_INLINE void Canvas::fillPath(const Path& path, FillRule fillRule, const Transform& transform)
+NOVASVG_INLINE void raster_canvas::fill_path(const Path& path, FillRule fillRule, const Transform& transform)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
@@ -942,7 +972,7 @@ NOVASVG_INLINE void Canvas::fillPath(const Path& path, FillRule fillRule, const 
     canvas_fill_path(m_canvas, path.data());
 }
 
-NOVASVG_INLINE void Canvas::strokePath(const Path& path, const StrokeData& strokeData, const Transform& transform)
+NOVASVG_INLINE void raster_canvas::stroke_path(const Path& path, const StrokeData& strokeData, const Transform& transform)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
@@ -956,7 +986,7 @@ NOVASVG_INLINE void Canvas::strokePath(const Path& path, const StrokeData& strok
     canvas_stroke_path(m_canvas, path.data());
 }
 
-NOVASVG_INLINE void Canvas::fillText(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform)
+NOVASVG_INLINE void raster_canvas::fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
@@ -966,7 +996,7 @@ NOVASVG_INLINE void Canvas::fillText(const std::u32string_view& text, const Font
     canvas_fill_text(m_canvas, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF32, origin.x, origin.y);
 }
 
-NOVASVG_INLINE void Canvas::strokeText(const std::u32string_view& text, float strokeWidth, const Font& font, const Point& origin, const Transform& transform)
+NOVASVG_INLINE void raster_canvas::stroke_text(const std::u32string_view& text, float strokeWidth, const Font& font, const Point& origin, const Transform& transform)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
@@ -981,7 +1011,7 @@ NOVASVG_INLINE void Canvas::strokeText(const std::u32string_view& text, float st
     canvas_stroke_text(m_canvas, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF32, origin.x, origin.y);
 }
 
-NOVASVG_INLINE void Canvas::clipPath(const Path& path, FillRule clipRule, const Transform& transform)
+NOVASVG_INLINE void raster_canvas::clip_path(const Path& path, FillRule clipRule, const Transform& transform)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
@@ -989,7 +1019,7 @@ NOVASVG_INLINE void Canvas::clipPath(const Path& path, FillRule clipRule, const 
     canvas_clip_path(m_canvas, path.data());
 }
 
-NOVASVG_INLINE void Canvas::clipRect(const Rect& rect, FillRule clipRule, const Transform& transform)
+NOVASVG_INLINE void raster_canvas::clip_rect(const Rect& rect, FillRule clipRule, const Transform& transform)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
@@ -997,7 +1027,7 @@ NOVASVG_INLINE void Canvas::clipRect(const Rect& rect, FillRule clipRule, const 
     canvas_clip_rect(m_canvas, rect.x, rect.y, rect.w, rect.h);
 }
 
-NOVASVG_INLINE void Canvas::drawImage(const Bitmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform)
+NOVASVG_INLINE void raster_canvas::draw_image(const Bitmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform)
 {
     auto xScale = dstRect.w / srcRect.w;
     auto yScale = dstRect.h / srcRect.h;
@@ -1011,7 +1041,7 @@ NOVASVG_INLINE void Canvas::drawImage(const Bitmap& image, const Rect& dstRect, 
     canvas_fill_rect(m_canvas, 0, 0, dstRect.w, dstRect.h);
 }
 
-NOVASVG_INLINE void Canvas::blendCanvas(const Canvas& canvas, BlendMode blendMode, float opacity)
+NOVASVG_INLINE void raster_canvas::blend_canvas(const raster_canvas& canvas, BlendMode blendMode, float opacity)
 {
     matrix_t matrix = { 1, 0, 0, 1, static_cast<float>(canvas.x()), static_cast<float>(canvas.y()) };
     canvas_set_matrix(m_canvas, &m_translation);
@@ -1020,27 +1050,27 @@ NOVASVG_INLINE void Canvas::blendCanvas(const Canvas& canvas, BlendMode blendMod
     canvas_paint(m_canvas);
 }
 
-NOVASVG_INLINE void Canvas::save()
+NOVASVG_INLINE void raster_canvas::save()
 {
     canvas_save(m_canvas);
 }
 
-NOVASVG_INLINE void Canvas::restore()
+NOVASVG_INLINE void raster_canvas::restore()
 {
     canvas_restore(m_canvas);
 }
 
-NOVASVG_INLINE int Canvas::width() const
+NOVASVG_INLINE int raster_canvas::width() const
 {
     return surface_get_width(m_surface);
 }
 
-NOVASVG_INLINE int Canvas::height() const
+NOVASVG_INLINE int raster_canvas::height() const
 {
     return surface_get_height(m_surface);
 }
 
-NOVASVG_INLINE void Canvas::convertToLuminanceMask()
+NOVASVG_INLINE void raster_canvas::convert_to_luminance_mask()
 {
     auto width = surface_get_width(m_surface);
     auto height = surface_get_height(m_surface);
@@ -1173,7 +1203,7 @@ static int gaussianRadiusForSigma(float sigma)
     return NOVASVG_MAX(1, int(d / 2.f + 0.5f));
 }
 
-NOVASVG_INLINE void Canvas::boxBlur(float stdDeviationX, float stdDeviationY)
+NOVASVG_INLINE void raster_canvas::box_blur(float stdDeviationX, float stdDeviationY)
 {
     auto width = surface_get_width(m_surface);
     auto height = surface_get_height(m_surface);
@@ -1188,7 +1218,7 @@ NOVASVG_INLINE void Canvas::boxBlur(float stdDeviationX, float stdDeviationY)
     }
 }
 
-NOVASVG_INLINE void Canvas::fillOpaqueWhite()
+NOVASVG_INLINE void raster_canvas::fill_opaque_white()
 {
     auto width = surface_get_width(m_surface);
     auto height = surface_get_height(m_surface);
@@ -1201,7 +1231,7 @@ NOVASVG_INLINE void Canvas::fillOpaqueWhite()
     }
 }
 
-NOVASVG_INLINE void Canvas::tintToFloodColor(const Color& floodColor, float floodOpacity)
+NOVASVG_INLINE void raster_canvas::tint_to_flood_color(const Color& floodColor, float floodOpacity)
 {
     auto width = surface_get_width(m_surface);
     auto height = surface_get_height(m_surface);
@@ -1222,7 +1252,7 @@ NOVASVG_INLINE void Canvas::tintToFloodColor(const Color& floodColor, float floo
     }
 }
 
-NOVASVG_INLINE void Canvas::shift(float dx, float dy)
+NOVASVG_INLINE void raster_canvas::shift(float dx, float dy)
 {
     auto width = surface_get_width(m_surface);
     auto height = surface_get_height(m_surface);
@@ -1252,7 +1282,7 @@ NOVASVG_INLINE void Canvas::shift(float dx, float dy)
     free(scratch);
 }
 
-NOVASVG_INLINE void Canvas::compositeWith(const Canvas& src, PorterDuff mode)
+NOVASVG_INLINE void raster_canvas::composite_with(const raster_canvas& src, porter_duff mode)
 {
     auto width = surface_get_width(m_surface);
     auto height = surface_get_height(m_surface);
@@ -1276,11 +1306,11 @@ NOVASVG_INLINE void Canvas::compositeWith(const Canvas& src, PorterDuff mode)
             // Porter-Duff coefficients (premultiplied): result = s*Fs + d*Fd
             int Fs, Fd;
             switch(mode) {
-            case PorterDuff::In:   Fs = dA;       Fd = 0;             break;
-            case PorterDuff::Out:  Fs = 255 - dA; Fd = 0;             break;
-            case PorterDuff::Atop: Fs = dA;       Fd = 255 - sA;      break;
-            case PorterDuff::Xor:  Fs = 255 - dA; Fd = 255 - sA;      break;
-            case PorterDuff::Over: default:       Fs = 255;          Fd = 255 - sA; break;
+            case porter_duff::In:   Fs = dA;       Fd = 0;             break;
+            case porter_duff::Out:  Fs = 255 - dA; Fd = 0;             break;
+            case porter_duff::Atop: Fs = dA;       Fd = 255 - sA;      break;
+            case porter_duff::Xor:  Fs = 255 - dA; Fd = 255 - sA;      break;
+            case porter_duff::Over: default:       Fs = 255;          Fd = 255 - sA; break;
             }
 
             auto sr = (s >> 16) & 0xFF, sg = (s >> 8) & 0xFF, sb = s & 0xFF;
@@ -1294,12 +1324,12 @@ NOVASVG_INLINE void Canvas::compositeWith(const Canvas& src, PorterDuff mode)
     }
 }
 
-NOVASVG_INLINE void Canvas::compositeOver(const Canvas& src)
+NOVASVG_INLINE void raster_canvas::composite_over(const raster_canvas& src)
 {
-    compositeWith(src, PorterDuff::Over);
+    composite_with(src, porter_duff::Over);
 }
 
-NOVASVG_INLINE void Canvas::compositeArithmetic(const Canvas& src, float k1, float k2, float k3, float k4)
+NOVASVG_INLINE void raster_canvas::composite_arithmetic(const raster_canvas& src, float k1, float k2, float k3, float k4)
 {
     auto width = surface_get_width(m_surface);
     auto height = surface_get_height(m_surface);
@@ -1333,26 +1363,26 @@ NOVASVG_INLINE void Canvas::compositeArithmetic(const Canvas& src, float k1, flo
     }
 }
 
-NOVASVG_INLINE void Canvas::compositeDropShadowUnder(const Canvas& original, float dx, float dy)
+NOVASVG_INLINE void raster_canvas::composite_drop_shadow_under(const raster_canvas& original, float dx, float dy)
 {
     shift(dx, dy);
-    compositeOver(original);
+    composite_over(original);
 }
 
-NOVASVG_INLINE void Canvas::copyPixelsFrom(const Canvas& other)
+NOVASVG_INLINE void raster_canvas::copy_pixels_from(const raster_canvas& other)
 {
     auto stride = surface_get_stride(m_surface);
     auto height = surface_get_height(m_surface);
     memcpy(surface_get_data(m_surface), surface_get_data(other.m_surface), size_t(stride) * size_t(height));
 }
 
-NOVASVG_INLINE Canvas::~Canvas()
+NOVASVG_INLINE raster_canvas::~raster_canvas()
 {
     canvas_destroy(m_canvas);
     surface_destroy(m_surface);
 }
 
-NOVASVG_INLINE Canvas::Canvas(const Bitmap& bitmap)
+NOVASVG_INLINE raster_canvas::raster_canvas(const Bitmap& bitmap)
     : m_surface(surface_reference(bitmap.surface()))
     , m_canvas(canvas_create(m_surface))
     , m_translation({1, 0, 0, 1, 0, 0})
@@ -1360,7 +1390,7 @@ NOVASVG_INLINE Canvas::Canvas(const Bitmap& bitmap)
 {
 }
 
-NOVASVG_INLINE Canvas::Canvas(int x, int y, int width, int height)
+NOVASVG_INLINE raster_canvas::raster_canvas(int x, int y, int width, int height)
     : m_surface(surface_create(width, height))
     , m_canvas(canvas_create(m_surface))
     , m_translation({1, 0, 0, 1, -static_cast<float>(x), -static_cast<float>(y)})

@@ -897,7 +897,7 @@ NOVASVG_INLINE void element::render(Bitmap& bitmap, const Matrix& matrix) const
 {
     if(m_node == nullptr || bitmap.is_null())
         return;
-    auto canvas = Canvas::create(bitmap);
+    auto canvas = raster_canvas::create(bitmap);
     svg_render_state state(nullptr, nullptr, matrix, svg_render_mode::Painting, canvas);
     el(true)->render(state);
 }
@@ -1099,7 +1099,7 @@ NOVASVG_INLINE void document::render(Bitmap& bitmap, const Matrix& matrix) const
         }
     }
 
-    auto canvas = Canvas::create(bitmap);
+    auto canvas = raster_canvas::create(bitmap);
     svg_render_state state(nullptr, nullptr, matrix, svg_render_mode::Painting, canvas);
     root_element(true)->render(state);
 }

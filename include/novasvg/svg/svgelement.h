@@ -899,7 +899,7 @@ public:
     // including feMergeNode which only makes sense as feMerge's child)
     // is "not a primitive" -- returns nullptr, which svg_filter_element's
     // pipeline simply skips over.
-    virtual std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const { return nullptr; }
+    virtual std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const { return nullptr; }
 
     bool isDisplayNone() const { return m_display == Display::None; }
     bool isOverflowHidden() const { return m_overflow == Overflow::Hidden; }
@@ -1377,7 +1377,7 @@ static float parseFirstFloat(std::string_view input, float fallback)
 
 class svg_filter_context {
 public:
-    svg_filter_context(const std::shared_ptr<Canvas>& sourceGraphic, float scale)
+    svg_filter_context(const std::shared_ptr<raster_canvas>& sourceGraphic, float scale)
         : m_sourceGraphic(sourceGraphic), m_lastResult(sourceGraphic), m_scale(scale)
     {}
 
@@ -1387,15 +1387,15 @@ public:
     // every primitive's output shares this geometry (ponytail: real UAs
     // allow per-primitive filter regions; one shared region for the whole
     // chain is a deliberate simplification, see checklist.md).
-    std::shared_ptr<Canvas> newCanvas() const
+    std::shared_ptr<raster_canvas> newCanvas() const
     {
-        return Canvas::create(float(m_sourceGraphic->x()), float(m_sourceGraphic->y()), float(m_sourceGraphic->width()), float(m_sourceGraphic->height()));
+        return raster_canvas::create(float(m_sourceGraphic->x()), float(m_sourceGraphic->y()), float(m_sourceGraphic->width()), float(m_sourceGraphic->height()));
     }
 
-    std::shared_ptr<Canvas> cloneCanvas(const Canvas& source) const
+    std::shared_ptr<raster_canvas> cloneCanvas(const raster_canvas& source) const
     {
         auto canvas = newCanvas();
-        canvas->compositeOver(source);
+        canvas->composite_over(source);
         return canvas;
     }
 
@@ -1406,7 +1406,7 @@ public:
     // primitive, falling back to the implicit chain if the name is
     // unresolvable (spec says this is undefined behavior; failing soft
     // beats crashing).
-    std::shared_ptr<Canvas> resolveInput(std::string_view in) const
+    std::shared_ptr<raster_canvas> resolveInput(std::string_view in) const
     {
         if(in.empty())
             return m_lastResult;
@@ -1414,7 +1414,7 @@ public:
             return m_sourceGraphic;
         if(in == "SourceAlpha") {
             auto alpha = cloneCanvas(*m_sourceGraphic);
-            alpha->tintToFloodColor(Color(0, 0, 0), 1.f);
+            alpha->tint_to_flood_color(Color(0, 0, 0), 1.f);
             return alpha;
         }
         auto it = m_namedResults.find(std::string(in));
@@ -1425,19 +1425,19 @@ public:
 
     // Records a primitive's output as the new implicit chain head, and
     // additionally under `name` if it declared `result=`.
-    void setResult(std::string_view name, std::shared_ptr<Canvas> canvas)
+    void setResult(std::string_view name, std::shared_ptr<raster_canvas> canvas)
     {
         if(!name.empty())
             m_namedResults.emplace(std::string(name), canvas);
         m_lastResult = std::move(canvas);
     }
 
-    const std::shared_ptr<Canvas>& lastResult() const { return m_lastResult; }
+    const std::shared_ptr<raster_canvas>& lastResult() const { return m_lastResult; }
 
 private:
-    std::shared_ptr<Canvas> m_sourceGraphic;
-    std::shared_ptr<Canvas> m_lastResult;
-    std::unordered_map<std::string, std::shared_ptr<Canvas>> m_namedResults;
+    std::shared_ptr<raster_canvas> m_sourceGraphic;
+    std::shared_ptr<raster_canvas> m_lastResult;
+    std::unordered_map<std::string, std::shared_ptr<raster_canvas>> m_namedResults;
     float m_scale;
 };
 
@@ -1445,11 +1445,11 @@ class svg_fe_gaussian_blur_element final : public svg_element {
 public:
     svg_fe_gaussian_blur_element(document* dom) : svg_element(dom, ElementID::FeGaussianBlur) {}
 
-    std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const final
+    std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto sigma = parseFirstFloat(attribute(PropertyID::StdDeviation), 0.f) * context.scale();
         auto output = context.cloneCanvas(*context.resolveInput(attribute(PropertyID::In)));
-        output->boxBlur(sigma, sigma);
+        output->box_blur(sigma, sigma);
         return output;
     }
 };
@@ -1458,7 +1458,7 @@ class svg_fe_offset_element final : public svg_element {
 public:
     svg_fe_offset_element(document* dom) : svg_element(dom, ElementID::FeOffset) {}
 
-    std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const final
+    std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto dx = parseFirstFloat(attribute(PropertyID::Dx), 0.f) * context.scale();
         auto dy = parseFirstFloat(attribute(PropertyID::Dy), 0.f) * context.scale();
@@ -1472,15 +1472,15 @@ class svg_fe_flood_element final : public svg_element {
 public:
     svg_fe_flood_element(document* dom) : svg_element(dom, ElementID::FeFlood) {}
 
-    std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const final
+    std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto floodColorAttr = attribute(PropertyID::Flood_Color);
         Color floodColor = floodColorAttr.empty() ? Color(0, 0, 0) : Color(floodColorAttr);
         auto floodOpacity = parseFirstFloat(attribute(PropertyID::Flood_Opacity), 1.f);
 
         auto output = context.newCanvas();
-        output->fillOpaqueWhite();
-        output->tintToFloodColor(floodColor, floodOpacity);
+        output->fill_opaque_white();
+        output->tint_to_flood_color(floodColor, floodOpacity);
         return output;
     }
 };
@@ -1489,13 +1489,13 @@ class svg_fe_merge_element final : public svg_element {
 public:
     svg_fe_merge_element(document* dom) : svg_element(dom, ElementID::FeMerge) {}
 
-    std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const final
+    std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto output = context.newCanvas();
         for(const auto& child : children()) {
             auto el = toSVGElement(child);
             if(el && el->id() == ElementID::FeMergeNode)
-                output->compositeOver(*context.resolveInput(el->attribute(PropertyID::In)));
+                output->composite_over(*context.resolveInput(el->attribute(PropertyID::In)));
         }
 
         return output;
@@ -1506,7 +1506,7 @@ class svg_fe_composite_element final : public svg_element {
 public:
     svg_fe_composite_element(document* dom) : svg_element(dom, ElementID::FeComposite) {}
 
-    std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const final
+    std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto input = context.resolveInput(attribute(PropertyID::In));
         auto input2 = context.resolveInput(attribute(PropertyID::In2));
@@ -1518,17 +1518,17 @@ public:
             auto k2 = parseFirstFloat(attribute(PropertyID::K2), 0.f);
             auto k3 = parseFirstFloat(attribute(PropertyID::K3), 0.f);
             auto k4 = parseFirstFloat(attribute(PropertyID::K4), 0.f);
-            output->compositeArithmetic(*input, k1, k2, k3, k4);
+            output->composite_arithmetic(*input, k1, k2, k3, k4);
             return output;
         }
 
-        auto mode = Canvas::PorterDuff::Over;
-        if(op == "in") mode = Canvas::PorterDuff::In;
-        else if(op == "out") mode = Canvas::PorterDuff::Out;
-        else if(op == "atop") mode = Canvas::PorterDuff::Atop;
-        else if(op == "xor") mode = Canvas::PorterDuff::Xor;
+        auto mode = raster_canvas::porter_duff::Over;
+        if(op == "in") mode = raster_canvas::porter_duff::In;
+        else if(op == "out") mode = raster_canvas::porter_duff::Out;
+        else if(op == "atop") mode = raster_canvas::porter_duff::Atop;
+        else if(op == "xor") mode = raster_canvas::porter_duff::Xor;
 
-        output->compositeWith(*input, mode);
+        output->composite_with(*input, mode);
         return output;
     }
 };
@@ -1537,7 +1537,7 @@ class svg_fe_drop_shadow_element final : public svg_element {
 public:
     svg_fe_drop_shadow_element(document* dom) : svg_element(dom, ElementID::FeDropShadow) {}
 
-    std::shared_ptr<Canvas> applyFilterPrimitive(svg_filter_context& context) const final
+    std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto sigma = parseFirstFloat(attribute(PropertyID::StdDeviation), 2.f) * context.scale();
         auto dx = parseFirstFloat(attribute(PropertyID::Dx), 2.f) * context.scale();
@@ -1548,10 +1548,10 @@ public:
 
         auto input = context.resolveInput(attribute(PropertyID::In));
         auto shadow = context.cloneCanvas(*input);
-        shadow->tintToFloodColor(floodColor, floodOpacity);
-        shadow->boxBlur(sigma, sigma);
+        shadow->tint_to_flood_color(floodColor, floodOpacity);
+        shadow->box_blur(sigma, sigma);
         shadow->shift(dx, dy);
-        shadow->compositeOver(*input);
+        shadow->composite_over(*input);
         return shadow;
     }
 };
@@ -1605,21 +1605,21 @@ class svg_render_state {
 public:
     svg_render_state(const svg_element* el, const svg_render_state& parent, const Transform& local_transform)
         : m_element(el), m_parent(&parent), m_currentTransform(parent.currentTransform() * local_transform)
-        , m_mode(parent.mode()), m_canvas(parent.canvas())
+        , m_mode(parent.mode()), m_canvas(parent.raster())
     {}
 
-    svg_render_state(const svg_element* el, const svg_render_state* parent, const Transform& currentTransform, svg_render_mode mode, std::shared_ptr<Canvas> canvas)
+    svg_render_state(const svg_element* el, const svg_render_state* parent, const Transform& currentTransform, svg_render_mode mode, std::shared_ptr<raster_canvas> canvas)
         : m_element(el), m_parent(parent), m_currentTransform(currentTransform), m_mode(mode), m_canvas(std::move(canvas))
     {}
 
-    Canvas& operator*() const { return *m_canvas; }
-    Canvas* operator->() const { return &*m_canvas; }
+    canvas& operator*() const { return *m_canvas; }
+    canvas* operator->() const { return &*m_canvas; }
 
     const svg_element* el() const { return m_element; }
     const svg_render_state* parent() const { return m_parent; }
     const Transform& currentTransform() const { return m_currentTransform; }
     const svg_render_mode mode() const { return m_mode; }
-    const std::shared_ptr<Canvas>& canvas() const { return m_canvas; }
+    const std::shared_ptr<raster_canvas>& raster() const { return m_canvas; }
 
     Rect fillBoundingBox() const { return m_element->fillBoundingBox(); }
     Rect paint_bounding_box() const { return m_element->paint_bounding_box(); }
@@ -1634,7 +1634,7 @@ private:
     const svg_render_state* m_parent;
     const Transform m_currentTransform;
     const svg_render_mode m_mode;
-    std::shared_ptr<Canvas> m_canvas;
+    std::shared_ptr<raster_canvas> m_canvas;
 };
 
 // ---- svgpaintelement ----
@@ -3147,7 +3147,7 @@ NOVASVG_INLINE void svg_render_state::beginGroup(const svg_blend_info& blendInfo
             bounding_box.inflate(blendInfo.filterElement()->pixelMargin() * m_currentTransform.xScale());
         }
         bounding_box.intersect(m_canvas->extents());
-        m_canvas = Canvas::create(bounding_box);
+        m_canvas = raster_canvas::create(bounding_box);
     } else {
         m_canvas->save();
     }
@@ -3159,7 +3159,7 @@ NOVASVG_INLINE void svg_render_state::beginGroup(const svg_blend_info& blendInfo
 
 NOVASVG_INLINE void svg_render_state::endGroup(const svg_blend_info& blendInfo)
 {
-    if(m_canvas == m_parent->canvas()) {
+    if(m_canvas == m_parent->raster()) {
         m_canvas->restore();
         return;
     }
@@ -3188,7 +3188,7 @@ NOVASVG_INLINE void svg_render_state::endGroup(const svg_blend_info& blendInfo)
         }
     }
 
-    m_parent->m_canvas->blendCanvas(*m_canvas, blendMode, opacity);
+    m_parent->m_canvas->blend_canvas(*m_canvas, blendMode, opacity);
 }
 
 // ---- svgpaintelement (impl) ----
@@ -3330,7 +3330,7 @@ NOVASVG_INLINE bool svg_linear_gradient_element::applyPaint(svg_render_state& st
     auto y2 = lengthContext.valueForLength(attributes.y2());
     if(gradientStops.size() == 1 || (x1 == x2 && y1 == y2)) {
         const auto& lastStop = gradientStops.back();
-        state->setColor(lastStop.color.r, lastStop.color.g, lastStop.color.b, lastStop.color.a);
+        state->set_color(lastStop.color.r, lastStop.color.g, lastStop.color.b, lastStop.color.a);
         return true;
     }
 
@@ -3342,7 +3342,7 @@ NOVASVG_INLINE bool svg_linear_gradient_element::applyPaint(svg_render_state& st
         gradientTransform.post_multiply(Transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
     }
 
-    state->setLinearGradient(x1, y1, x2, y2, spreadMethod, gradientStops, gradientTransform);
+    state->set_linear_gradient(x1, y1, x2, y2, spreadMethod, gradientStops, gradientTransform);
     return true;
 }
 
@@ -3372,7 +3372,7 @@ NOVASVG_INLINE bool svg_radial_gradient_element::applyPaint(svg_render_state& st
     auto r = lengthContext.valueForLength(attributes.r());
     if(r == 0.f || gradientStops.size() == 1) {
         const auto& lastStop = gradientStops.back();
-        state->setColor(lastStop.color.r, lastStop.color.g, lastStop.color.b, lastStop.color.a);
+        state->set_color(lastStop.color.r, lastStop.color.g, lastStop.color.b, lastStop.color.a);
         return true;
     }
 
@@ -3389,7 +3389,7 @@ NOVASVG_INLINE bool svg_radial_gradient_element::applyPaint(svg_render_state& st
         gradientTransform.post_multiply(Transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
     }
 
-    state->setRadialGradient(cx, cy, r, fx, fy, spreadMethod, gradientStops, gradientTransform);
+    state->set_radial_gradient(cx, cy, r, fx, fy, spreadMethod, gradientStops, gradientTransform);
     return true;
 }
 
@@ -3478,7 +3478,7 @@ NOVASVG_INLINE bool svg_pattern_element::applyPaint(svg_render_state& state, flo
     auto xScale = currentTransform.xScale();
     auto yScale = currentTransform.yScale();
 
-    auto patternImage = Canvas::create(0, 0, patternRect.w * xScale, patternRect.h * yScale);
+    auto patternImage = raster_canvas::create(0, 0, patternRect.w * xScale, patternRect.h * yScale);
     auto patternImageTransform = Transform::scaled(xScale, yScale);
 
     const auto& viewBoxRect = attributes.viewBox();
@@ -3496,7 +3496,7 @@ NOVASVG_INLINE bool svg_pattern_element::applyPaint(svg_render_state& state, flo
     auto patternTransform = attributes.patternTransform();
     patternTransform.translate(patternRect.x, patternRect.y);
     patternTransform.scale(patternRect.w / patternImage->width(), patternRect.h / patternImage->height());
-    state->setTexture(*patternImage, TextureType::Tiled, opacity, patternTransform);
+    state.raster()->set_texture(*patternImage, TextureType::Tiled, opacity, patternTransform);
     return true;
 }
 
@@ -3690,13 +3690,13 @@ NOVASVG_INLINE void svg_geometry_element::render(svg_render_state& state) const
     svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     if(newState.mode() == svg_render_mode::Clipping) {
-        newState->setColor(Color::White);
-        newState->fillPath(m_path, m_clip_rule, newState.currentTransform());
+        newState->set_color(Color::White);
+        newState->fill_path(m_path, m_clip_rule, newState.currentTransform());
     } else {
         if(m_fill.applyPaint(newState))
-            newState->fillPath(m_path, m_fill_rule, newState.currentTransform());
+            newState->fill_path(m_path, m_fill_rule, newState.currentTransform());
         if(m_stroke.applyPaint(newState)) {
-            newState->strokePath(m_path, m_strokeData, newState.currentTransform());
+            newState->stroke_path(m_path, m_strokeData, newState.currentTransform());
         }
 
         for(const auto& markerPosition : m_markerPositions) {
@@ -4391,7 +4391,7 @@ NOVASVG_INLINE void svg_text_element::render(svg_render_state& state) const
     svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     if(newState.mode() == svg_render_mode::Clipping) {
-        newState->setColor(Color::White);
+        newState->set_color(Color::White);
     }
 
     std::u32string_view wholeText(m_text);
@@ -4404,15 +4404,15 @@ NOVASVG_INLINE void svg_text_element::render(svg_render_state& state) const
 
         const auto& font = fragment.el->font();
         if(newState.mode() == svg_render_mode::Clipping) {
-            newState->fillText(text, font, origin, transform);
+            newState->fill_text(text, font, origin, transform);
         } else {
             const auto& fill = fragment.el->fill();
             const auto& stroke = fragment.el->stroke();
             auto stroke_width = fragment.el->stroke_width();
             if(fill.applyPaint(newState))
-                newState->fillText(text, font, origin, transform);
+                newState->fill_text(text, font, origin, transform);
             if(stroke.applyPaint(newState)) {
-                newState->strokeText(text, stroke_width, font, origin, transform);
+                newState->stroke_text(text, stroke_width, font, origin, transform);
             }
         }
     }
@@ -5820,7 +5820,7 @@ NOVASVG_INLINE bool svg_paint_server::applyPaint(svg_render_state& state) const
     if(!isRenderable())
         return false;
     if(m_element) return m_element->applyPaint(state, m_opacity);
-    state->setColor(m_color.colorWithAlpha(m_opacity));
+    state->set_color(m_color.colorWithAlpha(m_opacity));
     return true;
 }
 
@@ -5930,7 +5930,7 @@ NOVASVG_INLINE void svg_svg_element::render(svg_render_state& state) const
     svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     if(isOverflowHidden())
-        newState->clipRect(getClipRect(viewportSize), FillRule::NonZero, newState.currentTransform());
+        newState->clip_rect(getClipRect(viewportSize), FillRule::NonZero, newState.currentTransform());
     renderChildren(newState);
     newState.endGroup(blendInfo);
 }
@@ -6159,7 +6159,7 @@ NOVASVG_INLINE void svg_image_element::render(svg_render_state& state) const
     svg_blend_info blendInfo(this);
     svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
-    newState->drawImage(m_image, dstRect, srcRect, newState.currentTransform());
+    newState->draw_image(m_image, dstRect, srcRect, newState.currentTransform());
     newState.endGroup(blendInfo);
 }
 
@@ -7177,13 +7177,13 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const svg_foreign_object_element
     auto topY = box.y + (box.h - totalHeight) / 2.f;
 
     if(auto backgroundColor = el->htmlBackgroundColor()) {
-        state->setColor(*backgroundColor);
+        state->set_color(*backgroundColor);
         Path backgroundPath;
         backgroundPath.addRect(box);
-        state->fillPath(backgroundPath, FillRule::NonZero, state.currentTransform());
+        state->fill_path(backgroundPath, FillRule::NonZero, state.currentTransform());
     }
 
-    state->setColor(el->htmlTextColor().value_or(Color(0, 0, 0)));
+    state->set_color(el->htmlTextColor().value_or(Color(0, 0, 0)));
 
     for(size_t i = 0; i < lines.size(); ++i) {
         const auto& line = lines[i];
@@ -7239,7 +7239,7 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const svg_foreign_object_element
         for(const auto& run : line) {
             const std::u32string_view runView(run.text);
             const auto& runFont = fonts.get(run.style);
-            state->fillText(runView, runFont, Point(x, origin.y), textTransform);
+            state->fill_text(runView, runFont, Point(x, origin.y), textTransform);
             x += runFont.measureText(runView);
         }
     }
@@ -7422,7 +7422,7 @@ NOVASVG_INLINE void svg_marker_element::renderMarker(svg_render_state& state, co
     svg_render_state newState(this, state, markerTransform(origin, angle, strokeWidth));
     newState.beginGroup(blendInfo);
     if(isOverflowHidden())
-        newState->clipRect(getClipRect(markerSize()), FillRule::NonZero, newState.currentTransform());
+        newState->clip_rect(getClipRect(markerSize()), FillRule::NonZero, newState.currentTransform());
     renderChildren(newState);
     newState.endGroup(blendInfo);
 }
@@ -7457,7 +7457,7 @@ NOVASVG_INLINE void svg_clip_path_element::applyClipMask(svg_render_state& state
 {
     if(state.hasCycleReference(this))
         return;
-    auto maskImage = Canvas::create(state.currentTransform().map_rect(state.paint_bounding_box()));
+    auto maskImage = raster_canvas::create(state.currentTransform().map_rect(state.paint_bounding_box()));
     auto currentTransform = state.currentTransform() * local_transform();
     if(m_clipPathUnits.value() == Units::ObjectBoundingBox) {
         auto bbox = state.fillBoundingBox();
@@ -7471,7 +7471,7 @@ NOVASVG_INLINE void svg_clip_path_element::applyClipMask(svg_render_state& state
         clipper()->applyClipMask(newState);
     }
 
-    state->blendCanvas(*maskImage, BlendMode::Dst_In, 1.f);
+    state.raster()->blend_canvas(*maskImage, BlendMode::Dst_In, 1.f);
 }
 
 inline const svg_geometry_element* toSVGGeometryElement(const svg_node* nd)
@@ -7505,11 +7505,11 @@ NOVASVG_INLINE void svg_clip_path_element::applyClipPath(svg_render_state& state
 
         if(shapeElement == nullptr || !shapeElement->isRenderable())
             continue;
-        state->clipPath(shapeElement->path(), shapeElement->clip_rule(), clipTransform * shapeElement->local_transform());
+        state->clip_path(shapeElement->path(), shapeElement->clip_rule(), clipTransform * shapeElement->local_transform());
         return;
     }
 
-    state->clipRect(Rect::Empty, FillRule::NonZero, Transform::Identity);
+    state->clip_rect(Rect::Empty, FillRule::NonZero, Transform::Identity);
 }
 
 NOVASVG_INLINE bool svg_clip_path_element::requiresMasking() const
@@ -7598,8 +7598,8 @@ NOVASVG_INLINE void svg_mask_element::applyMask(svg_render_state& state) const
 {
     if(state.hasCycleReference(this))
         return;
-    auto maskImage = Canvas::create(state.currentTransform().map_rect(state.paint_bounding_box()));
-    maskImage->clipRect(maskRect(state.el()), FillRule::NonZero, state.currentTransform());
+    auto maskImage = raster_canvas::create(state.currentTransform().map_rect(state.paint_bounding_box()));
+    maskImage->clip_rect(maskRect(state.el()), FillRule::NonZero, state.currentTransform());
 
     auto currentTransform = state.currentTransform();
     if(m_maskContentUnits.value() == Units::ObjectBoundingBox) {
@@ -7617,8 +7617,8 @@ NOVASVG_INLINE void svg_mask_element::applyMask(svg_render_state& state) const
     }
 
     if(m_mask_type == MaskType::Luminance)
-        maskImage->convertToLuminanceMask();
-    state->blendCanvas(*maskImage, BlendMode::Dst_In, 1.f);
+        maskImage->convert_to_luminance_mask();
+    state.raster()->blend_canvas(*maskImage, BlendMode::Dst_In, 1.f);
 }
 
 // ---- svgfilterelement (impl) ----
@@ -7657,7 +7657,7 @@ NOVASVG_INLINE float svg_filter_element::pixelMargin() const
 
 NOVASVG_INLINE void svg_filter_element::applyFilter(svg_render_state& state, float scale) const
 {
-    svg_filter_context context(state.canvas(), scale);
+    svg_filter_context context(state.raster(), scale);
     for(const auto& child : children()) {
         auto el = toSVGElement(child);
         if(!el)
@@ -7668,7 +7668,7 @@ NOVASVG_INLINE void svg_filter_element::applyFilter(svg_render_state& state, flo
         context.setResult(el->attribute(PropertyID::Result), std::move(output));
     }
 
-    state.canvas()->copyPixelsFrom(*context.lastResult());
+    state.raster()->copy_pixels_from(*context.lastResult());
 }
 
 NOVASVG_INLINE void svg_mask_element::layoutElement(const svg_layout_state& state)

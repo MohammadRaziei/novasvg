@@ -165,7 +165,7 @@ typedef struct state {
     struct state* next;
 } state_t;
 
-struct canvas {
+struct canvas_context {
     ref_count_t ref_count;
     surface_t* surface;
     path_t* path;

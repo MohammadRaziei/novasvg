@@ -319,3 +319,13 @@ Open: per-module headers still carry `static inline` helpers (paint.h hex/hsl pa
 ### Step 6 continued: DOM types (2026-11-03)
 `Node` `TextNode` `Element` `Document` -> snake_case; every `SVG*` identifier -> `svg_*`; `isEmpty` -> `empty()` (critical review of ADR-0004: its `is_` rule for booleans contradicts the STL / libstb `empty()` it claims to follow). Colliding variables renamed (`element`->`el`, `node`->`nd`, `document`->`dom`). `Box` / `Matrix` wait for step 5. Gate: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
 Still camelCase in the svg layer: non-`SVG*` internal types and members (e.g. `Length`, `Paint`, `Color`, `Bitmap`, `Canvas`, `Font*`), to be done per module.
+
+### Step C: abstract `canvas` + `raster_canvas` (2026-11-03, ADR-0008)
+`include/novasvg/gfx/canvas.h`: new abstract `novasvg::canvas` (set_color, set_linear/radial_gradient, fill_path, stroke_path, fill_text, stroke_text, clip_path, clip_rect, draw_image, save, restore); `Canvas` is now `raster_canvas final : canvas` with snake_case methods (`Canvas::canvas()` -> `handle()`). `svg_render_state::operator->/*` return `canvas`; `raster()` returns the `raster_canvas`. C struct `gfx::canvas` renamed `canvas_context` (`canvas_t` unchanged) to free the name.
+**Remaining raster-only leaks in the SVG renderer (the exact C2 list):**
+1. Groups/layers: `svg_render_state::beginGroup/endGroup` create a `raster_canvas` and `blend_canvas` it (needs `begin_layer(bounds, opacity, blend_mode)` / `end_layer()`).
+2. Pattern fill: `set_texture(raster_canvas)` (needs a recorded/offscreen picture as paint source).
+3. Masks and clip masks: render into a canvas, `convert_to_luminance_mask`, `blend_canvas(Dst_In)` (needs a mask/soft-mask layer API).
+4. Filters: whole `svg_filter_context` works on `raster_canvas` pixels (raster-only by nature; a PDF backend rasterizes filtered groups).
+Also open: the interface classes live in `novasvg`, the C API in `novasvg::gfx` (namespace consolidation), and `Path/Transform/Rect/Color/Font` are still local types (step 5 swaps in `stb::`).
+Gate: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.

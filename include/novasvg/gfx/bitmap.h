@@ -3,7 +3,7 @@
 // Bitmap (INTERNAL; the public pixel type is stb::image): a premultiplied-ARGB32 pixel buffer -- novasvg's
 // drawable surface, texture source, and render target all in one. Self-contained:
 // needs only Color and the low-level gfx::surface_t it wraps, nothing
-// from the svg/Canvas/Font layers, so it can be used entirely on its own
+// from the svg/raster_canvas/Font layers, so it can be used entirely on its own
 // (e.g. to build up an image and write it out) without pulling in the
 // rest of novasvg.
 

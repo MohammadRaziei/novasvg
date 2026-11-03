@@ -1452,7 +1452,7 @@ typedef enum {
 /**
  * @brief Represents a drawing context.
  */
-typedef struct canvas canvas_t;
+typedef struct canvas_context canvas_t;
 
 /**
  * @brief Creates a drawing context on a surface.

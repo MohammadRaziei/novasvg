@@ -1,7 +1,7 @@
 #pragma once
 
 // Font: TrueType font loading, face caching, and text measurement.
-// Self-contained -- doesn't need Bitmap, Canvas, or the svg layer -- so it
+// Self-contained -- doesn't need Bitmap, raster_canvas, or the svg layer -- so it
 // can be used entirely on its own (e.g. to measure how wide some text
 // would come out in a given font) without pulling in the rest of novasvg.
 
