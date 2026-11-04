@@ -383,3 +383,12 @@ Scripted (not by hand): every namespace-scope `NOVASVG_INLINE` definition (non-t
   - points are mapped by libstb's `matrix::map` (compiled without FMA) instead of novasvg's `matrix_map_points`.
   - no clip: libstb needs a clip rect, so +-1,000,000 is passed (it limits coordinates there anyway).
 - Step 5b (still open): replace novasvg's own `Path`, `Transform`, `Rect`, `Color`, `Bitmap` with `stb::` types. Bigger, touches the whole svg layer and the public API.
+
+## Step C2/F part 1 (pdf_canvas) -- 2026-11-04
+
+- [x] `pdf_canvas` (`src/gfx/pdf_canvas.{h,cpp}`) for the `canvas` interface as it is: paints, gradients, fill/stroke, clip, images, text as outlines.
+- [x] `tests/cpp/test_pdf_canvas.cpp` (structure checks; `NOVASVG_PDF_OUT=x.pdf` writes the page). Smoke-checked once: `qpdf --check` clean, `pdftoppm` renders it right.
+- [ ] Grow `canvas` with `begin_layer(bounds)` / `end_layer(opacity, blend_mode)`; `raster_canvas` implements it with the offscreen surface + `blend_canvas` it uses today.
+- [ ] Pattern as an offscreen picture; mask and clip-mask as layers (luminance); PDF side: Form XObject with a transparency group, `SMask`, tiling pattern.
+- [ ] Make `svg_render_state` (svgelement.cpp ~l.768, 1097, 3985, 4119) use the interface instead of `raster()`; filters stay raster-only (PDF rasterizes them).
+- [ ] Public entry point (SVG to PDF), gradient reflect/repeat, per-stop alpha, optional font embedding.

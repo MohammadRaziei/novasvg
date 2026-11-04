@@ -1,6 +1,6 @@
 # ADR-0008: A drawing layer (`gfx`) behind an abstract canvas; no `detail/`
 
-**Status:** Accepted (direction); step A (layout) done, steps B-F open
+**Status:** Accepted (direction); steps A (layout) and F-part-1 (`pdf_canvas` for the interface as it is) done, the rest open
 **Date:** 2026-11-03
 **Deciders:** Mohammad Raziei (maintainer)
 
@@ -30,3 +30,11 @@ and libstb's rasterizer when it lands (then drop `src/gfx/vendor/`) -> F `pdf_ca
 ## Consequences
 `render::` is now `gfx::`. The C-style handle API stays until C and E replace it. A header-only single-file dist is
 no longer a goal (ADR-0001).
+
+## pdf_canvas, part 1 (2026-11-04)
+`src/gfx/pdf_canvas.{h,cpp}` implements `canvas` and writes a one-page PDF 1.5 (no dependencies besides libstb's `zlib_compress`).
+Done: solid paints with alpha (ExtGState), linear/radial gradients (shading patterns, stitched functions, pad), fill/stroke with caps, joins, miter
+limit and dashes (stroke goes through `cm`, so non-uniform scale is exact), clipping, images (Flate RGB + SMask), save/restore, text as glyph outlines
+(same ligature/kerning layout as `canvas_add_text`, so no font embedding and no text selection yet).
+Open: gradient `reflect`/`repeat` (written as pad), per-stop alpha (ignored), layers (group opacity, blend mode), masks, patterns, an SVG document
+rendering through the interface (the svg layer still reaches `raster_canvas` for layers, masks, patterns and filters).

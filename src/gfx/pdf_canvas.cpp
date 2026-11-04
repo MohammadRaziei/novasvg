@@ -1,0 +1,496 @@
+#include "gfx/pdf_canvas.h"
+#include "gfx/font_face.h"
+
+#include <stb/zlib.hpp>
+
+#include <cmath>
+#include <cstdio>
+
+namespace novasvg {
+
+namespace {
+
+constexpr float kPxToPt = 0.75f;
+
+std::string num(float v)
+{
+    if(!std::isfinite(v))
+        v = 0.f;
+    char buf[48];
+    snprintf(buf, sizeof buf, "%.4f", v);
+    std::string s = buf;
+    while(!s.empty() && s.back() == '0')
+        s.pop_back();
+    if(!s.empty() && s.back() == '.')
+        s.pop_back();
+    if(s.empty() || s == "-0")
+        s = "0";
+    return s;
+}
+
+// `first` is applied first, then `second` (PDF row-vector convention, same as matrix_t).
+matrix_t then(const matrix_t& first, const matrix_t& second)
+{
+    matrix_t r;
+    r.a = first.a * second.a + first.b * second.c;
+    r.b = first.a * second.b + first.b * second.d;
+    r.c = first.c * second.a + first.d * second.c;
+    r.d = first.c * second.b + first.d * second.d;
+    r.e = first.e * second.a + first.f * second.c + second.e;
+    r.f = first.e * second.b + first.f * second.d + second.f;
+    return r;
+}
+
+Point apply(const matrix_t& m, float x, float y)
+{
+    return Point(m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f);
+}
+
+std::string matrix_str(const matrix_t& m)
+{
+    return num(m.a) + " " + num(m.b) + " " + num(m.c) + " " + num(m.d) + " " + num(m.e) + " " + num(m.f);
+}
+
+float clamp01(float v) { return v < 0.f ? 0.f : (v > 1.f ? 1.f : v); }
+
+std::string rgb_str(float r, float g, float b) { return num(clamp01(r)) + " " + num(clamp01(g)) + " " + num(clamp01(b)); }
+
+} // namespace
+
+std::shared_ptr<pdf_canvas> pdf_canvas::create(float width, float height)
+{
+    return std::shared_ptr<pdf_canvas>(new pdf_canvas(width, height));
+}
+
+pdf_canvas::pdf_canvas(float width, float height)
+    : m_width(width > 0.f ? width : 1.f)
+    , m_height(height > 0.f ? height : 1.f)
+{
+    m_paints.emplace_back();
+    // y points down in novasvg; one cm at the top of the page turns PDF space into that.
+    matrix_t base = {kPxToPt, 0, 0, -kPxToPt, 0, m_height * kPxToPt};
+    m_content += matrix_str(base) + " cm\n";
+}
+
+int pdf_canvas::add_object(std::string dict)
+{
+    object o;
+    o.dict = std::move(dict);
+    m_objects.push_back(std::move(o));
+    return int(m_objects.size());
+}
+
+int pdf_canvas::add_stream(std::string dict, const std::string& bytes, bool compress)
+{
+    object o;
+    o.has_stream = true;
+    if(compress) {
+        auto z = stb::zlib_compress(bytes.data(), bytes.size());
+        o.stream.assign(reinterpret_cast<const char*>(z.data()), z.size());
+        dict += " /Filter /FlateDecode";
+    } else {
+        o.stream = bytes;
+    }
+    o.dict = "<< " + dict + " /Length " + std::to_string(o.stream.size()) + " >>";
+    m_objects.push_back(std::move(o));
+    return int(m_objects.size());
+}
+
+std::string pdf_canvas::alpha_state(float alpha)
+{
+    std::string key = num(clamp01(alpha));
+    auto it = m_ext_gstates.find(key);
+    if(it != m_ext_gstates.end())
+        return it->second;
+    std::string name = "GS" + std::to_string(m_ext_gstates.size());
+    m_ext_gstates.emplace(key, name);
+    return name;
+}
+
+void pdf_canvas::set_color(const Color& color)
+{
+    set_color(color.getRF(), color.getGF(), color.getBF(), color.getAF());
+}
+
+void pdf_canvas::set_color(float r, float g, float b, float a)
+{
+    paint& p = m_paints.back();
+    p = paint();
+    p.r = r;
+    p.g = g;
+    p.b = b;
+    p.a = a;
+}
+
+void pdf_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
+{
+    paint& p = m_paints.back();
+    p = paint();
+    p.type = paint::kind::linear;
+    p.p[0] = x1; p.p[1] = y1; p.p[2] = x2; p.p[3] = y2;
+    p.spread = spread;
+    p.stops = stops;
+    p.matrix = transform.matrix();
+}
+
+void pdf_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
+{
+    paint& p = m_paints.back();
+    p = paint();
+    p.type = paint::kind::radial;
+    p.p[0] = cx; p.p[1] = cy; p.p[2] = r; p.p[3] = fx; p.p[4] = fy;
+    p.spread = spread;
+    p.stops = stops;
+    p.matrix = transform.matrix();
+}
+
+// A shading pattern for the current gradient paint, drawn through `transform` (the matrix of the operation).
+// Returns the pattern's object number, or 0 when the gradient has no stops (nothing to paint).
+int pdf_canvas::shading_pattern(const matrix_t& transform)
+{
+    const paint& p = m_paints.back();
+    if(p.stops.empty())
+        return 0;
+
+    // Stops, extended to cover 0..1 so pad works through /Extend alone.
+    std::vector<gradient_stop_t> stops = p.stops;
+    if(stops.front().offset > 0.f)
+        stops.insert(stops.begin(), gradient_stop_t{0.f, stops.front().color});
+    if(stops.back().offset < 1.f)
+        stops.push_back(gradient_stop_t{1.f, stops.back().color});
+    for(size_t i = 1; i < stops.size(); ++i)
+        if(stops[i].offset < stops[i - 1].offset)
+            stops[i].offset = stops[i - 1].offset;
+
+    std::string function;
+    if(stops.size() == 2) {
+        function = "<< /FunctionType 2 /Domain [0 1] /N 1 /C0 [" + rgb_str(stops[0].color.r, stops[0].color.g, stops[0].color.b)
+            + "] /C1 [" + rgb_str(stops[1].color.r, stops[1].color.g, stops[1].color.b) + "] >>";
+    } else {
+        std::string functions, bounds, encode;
+        for(size_t i = 0; i + 1 < stops.size(); ++i) {
+            functions += "<< /FunctionType 2 /Domain [0 1] /N 1 /C0 [" + rgb_str(stops[i].color.r, stops[i].color.g, stops[i].color.b)
+                + "] /C1 [" + rgb_str(stops[i + 1].color.r, stops[i + 1].color.g, stops[i + 1].color.b) + "] >> ";
+            encode += "0 1 ";
+            if(i + 2 < stops.size()) {
+                float bound = stops[i + 1].offset;
+                // Bounds must increase: nudge a hard stop's second half a hair.
+                if(i > 0 && bound <= stops[i].offset)
+                    bound = stops[i].offset + 1e-5f;
+                bounds += num(bound) + " ";
+            }
+        }
+        function = "<< /FunctionType 3 /Domain [0 1] /Functions [" + functions + "] /Bounds [" + bounds + "] /Encode [" + encode + "] >>";
+    }
+
+    std::string shading;
+    if(p.type == paint::kind::linear) {
+        shading = "<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [" + num(p.p[0]) + " " + num(p.p[1]) + " " + num(p.p[2]) + " " + num(p.p[3])
+            + "] /Function " + function + " /Extend [true true] >>";
+    } else {
+        // Focal point as a zero-radius start circle.
+        shading = "<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [" + num(p.p[3]) + " " + num(p.p[4]) + " 0 " + num(p.p[0]) + " " + num(p.p[1]) + " "
+            + num(p.p[2]) + "] /Function " + function + " /Extend [true true] >>";
+    }
+
+    // The pattern matrix maps pattern space to the *default page space*, not to the current CTM.
+    matrix_t base = {kPxToPt, 0, 0, -kPxToPt, 0, m_height * kPxToPt};
+    matrix_t m = then(then(p.matrix, transform), base);
+    int obj = add_object("<< /Type /Pattern /PatternType 2 /Shading " + shading + " /Matrix [" + matrix_str(m) + "] >>");
+    std::string name = "P" + std::to_string(m_patterns.size());
+    m_patterns.emplace_back(name, obj);
+    return obj;
+}
+
+// Selects the current paint as fill or stroke color in the content stream. `transform` is the operation's matrix
+// (only gradients need it). Returns false when there is nothing to paint.
+void pdf_canvas::begin_paint(bool stroke, const matrix_t& transform)
+{
+    const paint& p = m_paints.back();
+    if(p.type == paint::kind::solid) {
+        m_content += "/" + alpha_state(p.a) + " gs\n";
+        m_content += rgb_str(p.r, p.g, p.b) + (stroke ? " RG\n" : " rg\n");
+        return;
+    }
+
+    if(shading_pattern(transform) == 0) {
+        m_content += "/" + alpha_state(0.f) + " gs\n";
+        return;
+    }
+    m_content += "/" + alpha_state(1.f) + " gs\n";
+    m_content += stroke ? "/Pattern CS /" : "/Pattern cs /";
+    m_content += m_patterns.back().first + (stroke ? " SCN\n" : " scn\n");
+}
+
+void pdf_canvas::emit_path(const Path& path, const matrix_t* transform)
+{
+    if(path.is_null())
+        return;
+    auto pt = [&](const Point& p) {
+        Point q = transform ? apply(*transform, p.x, p.y) : p;
+        return num(q.x) + " " + num(q.y);
+    };
+    std::array<Point, 3> pts;
+    for(PathIterator it(path); !it.isDone(); it.next()) {
+        switch(it.currentSegment(pts)) {
+        case PathCommand::MoveTo:
+            m_content += pt(pts[0]) + " m\n";
+            break;
+        case PathCommand::LineTo:
+            m_content += pt(pts[0]) + " l\n";
+            break;
+        case PathCommand::CubicTo:
+            m_content += pt(pts[0]) + " " + pt(pts[1]) + " " + pt(pts[2]) + " c\n";
+            break;
+        case PathCommand::Close:
+            m_content += "h\n";
+            break;
+        }
+    }
+}
+
+void pdf_canvas::emit_rect_path(const Rect& rect, const matrix_t* transform)
+{
+    Path path;
+    path.addRect(rect.x, rect.y, rect.w, rect.h);
+    emit_path(path, transform);
+}
+
+void pdf_canvas::emit_text_path(const std::u32string_view& text, const Font& font, const Point& origin, const matrix_t* transform)
+{
+    font_face_t* face = font.face().get();
+    if(face == nullptr || font.size() <= 0.f)
+        return;
+
+    struct sink {
+        pdf_canvas* self;
+        const matrix_t* transform;
+    } s{this, transform};
+
+    auto traverse = [](void* closure, path_command_t command, const point_t* points, int) {
+        auto* s = static_cast<sink*>(closure);
+        auto pt = [&](const point_t& p) {
+            Point q = s->transform ? apply(*s->transform, p.x, p.y) : Point(p.x, p.y);
+            return num(q.x) + " " + num(q.y);
+        };
+        switch(command) {
+        case NOVASVG_PATH_COMMAND_MOVE_TO:
+            s->self->m_content += pt(points[0]) + " m\n";
+            break;
+        case NOVASVG_PATH_COMMAND_LINE_TO:
+            s->self->m_content += pt(points[0]) + " l\n";
+            break;
+        case NOVASVG_PATH_COMMAND_CUBIC_TO:
+            s->self->m_content += pt(points[0]) + " " + pt(points[1]) + " " + pt(points[2]) + " c\n";
+            break;
+        case NOVASVG_PATH_COMMAND_CLOSE:
+            s->self->m_content += "h\n";
+            break;
+        }
+    };
+
+    // Same layout as canvas_add_text(): ligatures, then kerning, then the glyph's outline.
+    text_iterator_t it;
+    text_iterator_init(&it, text.data(), int(text.length()), NOVASVG_TEXT_ENCODING_UTF32);
+    float advance = 0.f;
+    codepoint_t previous = 0;
+    bool has_previous = false;
+    while(text_iterator_has_next(&it)) {
+        codepoint_t codepoint = text_iterator_next(&it);
+        codepoint = font_face_apply_ligature(face, &it, codepoint);
+        if(has_previous)
+            advance += font_face_get_kern_advance(face, font.size(), previous, codepoint);
+        advance += font_face_traverse_glyph_path(face, font.size(), origin.x + advance, origin.y, codepoint, traverse, &s);
+        previous = codepoint;
+        has_previous = true;
+    }
+}
+
+void pdf_canvas::fill_path(const Path& path, FillRule fill_rule, const Transform& transform)
+{
+    m_content += "q\n";
+    begin_paint(false, transform.matrix());
+    emit_path(path, &transform.matrix());
+    m_content += fill_rule == FillRule::EvenOdd ? "f*\n" : "f\n";
+    m_content += "Q\n";
+}
+
+void pdf_canvas::stroke_path(const Path& path, const StrokeData& sd, const Transform& transform)
+{
+    m_content += "q\n";
+    begin_paint(true, transform.matrix());
+    // The path stays in its own space and goes through `cm`, so the line width scales with the matrix, anisotropically if need be.
+    m_content += matrix_str(transform.matrix()) + " cm\n";
+    m_content += num(sd.lineWidth()) + " w\n";
+    m_content += std::to_string(int(sd.lineCap())) + " J\n";
+    m_content += std::to_string(int(sd.lineJoin())) + " j\n";
+    m_content += num(sd.miterLimit() < 1.f ? 1.f : sd.miterLimit()) + " M\n";
+    if(!sd.dashArray().empty()) {
+        m_content += "[";
+        for(float d : sd.dashArray())
+            m_content += num(d) + " ";
+        m_content += "] " + num(sd.dashOffset()) + " d\n";
+    }
+    emit_path(path, nullptr);
+    m_content += "S\nQ\n";
+}
+
+void pdf_canvas::fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform)
+{
+    m_content += "q\n";
+    begin_paint(false, transform.matrix());
+    emit_text_path(text, font, origin, &transform.matrix());
+    m_content += "f\nQ\n";
+}
+
+void pdf_canvas::stroke_text(const std::u32string_view& text, float stroke_width, const Font& font, const Point& origin, const Transform& transform)
+{
+    m_content += "q\n";
+    begin_paint(true, transform.matrix());
+    m_content += matrix_str(transform.matrix()) + " cm\n";
+    m_content += num(stroke_width) + " w\n0 J\n0 j\n4 M\n";
+    emit_text_path(text, font, origin, nullptr);
+    m_content += "S\nQ\n";
+}
+
+void pdf_canvas::clip_path(const Path& path, FillRule clip_rule, const Transform& transform)
+{
+    emit_path(path, &transform.matrix());
+    m_content += clip_rule == FillRule::EvenOdd ? "W* n\n" : "W n\n";
+}
+
+void pdf_canvas::clip_rect(const Rect& rect, FillRule clip_rule, const Transform& transform)
+{
+    emit_rect_path(rect, &transform.matrix());
+    m_content += clip_rule == FillRule::EvenOdd ? "W* n\n" : "W n\n";
+}
+
+void pdf_canvas::draw_image(const Bitmap& image, const Rect& dst, const Rect& src, const Transform& transform)
+{
+    if(image.is_null() || src.w <= 0.f || src.h <= 0.f || dst.w <= 0.f || dst.h <= 0.f)
+        return;
+    stb::image rgba = bitmap_to_rgba_image(image);
+    const int w = rgba.width();
+    const int h = rgba.height();
+    if(w <= 0 || h <= 0)
+        return;
+
+    std::string color(size_t(w) * h * 3, '\0'), alpha(size_t(w) * h, '\0');
+    bool translucent = false;
+    const uint8_t* px = rgba.data();
+    for(size_t i = 0, n = size_t(w) * h; i < n; ++i) {
+        color[i * 3 + 0] = char(px[i * 4 + 0]);
+        color[i * 3 + 1] = char(px[i * 4 + 1]);
+        color[i * 3 + 2] = char(px[i * 4 + 2]);
+        alpha[i] = char(px[i * 4 + 3]);
+        translucent |= px[i * 4 + 3] != 255;
+    }
+
+    std::string dict = "/Type /XObject /Subtype /Image /Width " + std::to_string(w) + " /Height " + std::to_string(h)
+        + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Interpolate true";
+    if(translucent) {
+        int mask = add_stream("/Type /XObject /Subtype /Image /Width " + std::to_string(w) + " /Height " + std::to_string(h)
+            + " /ColorSpace /DeviceGray /BitsPerComponent 8 /Interpolate true", alpha, true);
+        dict += " /SMask " + std::to_string(mask) + " 0 R";
+    }
+    int obj = add_stream(dict, color, true);
+    std::string name = "Im" + std::to_string(m_xobjects.size());
+    m_xobjects.emplace_back(name, obj);
+
+    // The whole bitmap, scaled so that `src` lands on `dst`; then clipped to `dst`.
+    const float xs = dst.w / src.w, ys = dst.h / src.h;
+    const float ix = dst.x - src.x * xs, iy = dst.y - src.y * ys;
+    const float iw = w * xs, ih = h * ys;
+    m_content += "q\n" + matrix_str(transform.matrix()) + " cm\n";
+    emit_rect_path(dst, nullptr);
+    m_content += "W n\n/" + alpha_state(1.f) + " gs\n";
+    m_content += num(iw) + " 0 0 " + num(-ih) + " " + num(ix) + " " + num(iy + ih) + " cm\n/" + name + " Do\nQ\n";
+}
+
+void pdf_canvas::save()
+{
+    m_content += "q\n";
+    m_paints.push_back(m_paints.back());
+    ++m_open_saves;
+}
+
+void pdf_canvas::restore()
+{
+    if(m_open_saves == 0)
+        return;
+    m_content += "Q\n";
+    m_paints.pop_back();
+    --m_open_saves;
+}
+
+std::vector<uint8_t> pdf_canvas::data() const
+{
+    // Work on a copy so the canvas stays usable: add the page's own objects after the ones drawing created.
+    std::vector<object> objects = m_objects;
+    auto add = [&](std::string dict) {
+        object o;
+        o.dict = std::move(dict);
+        objects.push_back(std::move(o));
+        return int(objects.size());
+    };
+
+    std::string content = m_content;
+    for(int i = 0; i < m_open_saves; ++i)
+        content += "Q\n";
+    auto z = stb::zlib_compress(content.data(), content.size());
+
+    object stream;
+    stream.has_stream = true;
+    stream.stream.assign(reinterpret_cast<const char*>(z.data()), z.size());
+    stream.dict = "<< /Filter /FlateDecode /Length " + std::to_string(stream.stream.size()) + " >>";
+    objects.push_back(std::move(stream));
+    const int contents = int(objects.size());
+
+    std::string gs, pat, xo;
+    for(const auto& e : m_ext_gstates) {
+        gs += "/" + e.second + " << /ca " + e.first + " /CA " + e.first + " >> ";
+    }
+    for(const auto& p : m_patterns)
+        pat += "/" + p.first + " " + std::to_string(p.second) + " 0 R ";
+    for(const auto& x : m_xobjects)
+        xo += "/" + x.first + " " + std::to_string(x.second) + " 0 R ";
+
+    const int pages_id = int(objects.size()) + 2; // page = +1, pages = +2
+    const int page = add("<< /Type /Page /Parent " + std::to_string(pages_id) + " 0 R /MediaBox [0 0 " + num(m_width * kPxToPt) + " " + num(m_height * kPxToPt)
+        + "] /Contents " + std::to_string(contents) + " 0 R /Resources << /ExtGState << " + gs + ">> /Pattern << " + pat + ">> /XObject << " + xo
+        + ">> >> /Group << /S /Transparency /CS /DeviceRGB >> >>");
+    const int pages = add("<< /Type /Pages /Kids [" + std::to_string(page) + " 0 R] /Count 1 >>");
+    const int catalog = add("<< /Type /Catalog /Pages " + std::to_string(pages) + " 0 R >>");
+
+    std::string out = "%PDF-1.5\n%\xE2\xE3\xCF\xD3\n";
+    std::vector<size_t> offsets;
+    for(size_t i = 0; i < objects.size(); ++i) {
+        offsets.push_back(out.size());
+        out += std::to_string(i + 1) + " 0 obj\n" + objects[i].dict + "\n";
+        if(objects[i].has_stream)
+            out += "stream\n" + objects[i].stream + "\nendstream\n";
+        out += "endobj\n";
+    }
+
+    const size_t xref = out.size();
+    out += "xref\n0 " + std::to_string(objects.size() + 1) + "\n0000000000 65535 f \n";
+    for(size_t off : offsets) {
+        char line[32];
+        snprintf(line, sizeof line, "%010zu 00000 n \n", off);
+        out += line;
+    }
+    out += "trailer\n<< /Size " + std::to_string(objects.size() + 1) + " /Root " + std::to_string(catalog) + " 0 R >>\nstartxref\n" + std::to_string(xref) + "\n%%EOF\n";
+    return std::vector<uint8_t>(out.begin(), out.end());
+}
+
+bool pdf_canvas::write_to_file(const char* filename) const
+{
+    FILE* fp = fopen(filename, "wb");
+    if(!fp)
+        return false;
+    auto bytes = data();
+    bool ok = fwrite(bytes.data(), 1, bytes.size(), fp) == bytes.size();
+    return fclose(fp) == 0 && ok;
+}
+
+} // namespace novasvg
