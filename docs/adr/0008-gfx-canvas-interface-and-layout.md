@@ -38,3 +38,16 @@ limit and dashes (stroke goes through `cm`, so non-uniform scale is exact), clip
 (same ligature/kerning layout as `canvas_add_text`, so no font embedding and no text selection yet).
 Open: gradient `reflect`/`repeat` (written as pad), per-stop alpha (ignored), layers (group opacity, blend mode), masks, patterns, an SVG document
 rendering through the interface (the svg layer still reaches `raster_canvas` for layers, masks, patterns and filters).
+
+## pdf_canvas, part 2: SVG to PDF, vector and raster (2026-11-04)
+`document::render_to_pdf(pdf_mode, dpi)` / `save_pdf(file, pdf_mode, dpi)`.
+- `pdf_mode::raster`: the page is one bitmap rendered at `dpi` (everything the renderer does works, nothing is vector).
+- `pdf_mode::vector`: `svg_render_state` runs on a `pdf_canvas`. Instead of growing `canvas` with a layer API first, the svg layer
+  chooses per group (`svg_render_state::beginGroup/endGroup`, `layer_kind`):
+  - opacity / mix-blend-mode only: a PDF transparency group (`pdf_canvas::begin_group/end_group`, Form XObject, `/ca` and `/BM`), still vector;
+  - mask, clip mask or filter: the group is rendered by `raster_canvas` at `dpi` (the state's transform is scaled by `dpi/96`, so masks and filters
+    work unchanged) and placed as an image (`draw_raster_group`);
+  - pattern fills: the tile is a bitmap at `dpi`, used as a PDF tiling pattern (`set_tiled_image`).
+  The pixel backend's own paths are untouched: `layer_kind::raster` is exactly what `beginGroup/endGroup` did before.
+- This is a deliberate shortcut: the svg layer knows two backends (`dynamic_cast` to `pdf_canvas`). If a third backend ever appears, the
+  layer calls above become virtuals of `canvas` (`begin_layer`, `end_layer`, `set_pattern`) and `raster_canvas` implements them with its surface stack.

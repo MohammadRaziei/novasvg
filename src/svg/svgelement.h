@@ -1608,10 +1608,10 @@ class svg_render_state {
 public:
     svg_render_state(const svg_element* el, const svg_render_state& parent, const Transform& local_transform)
         : m_element(el), m_parent(&parent), m_currentTransform(parent.currentTransform() * local_transform)
-        , m_mode(parent.mode()), m_canvas(parent.raster())
+        , m_mode(parent.mode()), m_canvas(parent.m_canvas)
     {}
 
-    svg_render_state(const svg_element* el, const svg_render_state* parent, const Transform& currentTransform, svg_render_mode mode, std::shared_ptr<raster_canvas> canvas)
+    svg_render_state(const svg_element* el, const svg_render_state* parent, const Transform& currentTransform, svg_render_mode mode, std::shared_ptr<canvas> canvas)
         : m_element(el), m_parent(parent), m_currentTransform(currentTransform), m_mode(mode), m_canvas(std::move(canvas))
     {}
 
@@ -1622,7 +1622,8 @@ public:
     const svg_render_state* parent() const { return m_parent; }
     const Transform& currentTransform() const { return m_currentTransform; }
     const svg_render_mode mode() const { return m_mode; }
-    const std::shared_ptr<raster_canvas>& raster() const { return m_canvas; }
+    // The pixel canvas this state draws on, or null when the target is a vector page (pdf_canvas).
+    std::shared_ptr<raster_canvas> raster() const { return std::dynamic_pointer_cast<raster_canvas>(m_canvas); }
 
     Rect fillBoundingBox() const { return m_element->fillBoundingBox(); }
     Rect paint_bounding_box() const { return m_element->paint_bounding_box(); }
@@ -1633,11 +1634,17 @@ public:
     void endGroup(const svg_blend_info& blendInfo);
 
 private:
+    // What beginGroup() made for this element: nothing (a save()), a pixel layer, a transparency group on a pdf_canvas,
+    // or a pixel layer that goes onto a pdf_canvas as an image when the group ends.
+    enum class layer_kind { none, raster, pdf_group, raster_in_pdf };
+
     const svg_element* m_element;
     const svg_render_state* m_parent;
-    const Transform m_currentTransform;
+    Transform m_currentTransform;
     const svg_render_mode m_mode;
-    std::shared_ptr<raster_canvas> m_canvas;
+    std::shared_ptr<canvas> m_canvas;
+    layer_kind m_layer = layer_kind::none;
+    float m_layerScale = 1.f; // raster_in_pdf: pixels per user unit of the layer
 };
 
 // ---- svgpaintelement ----

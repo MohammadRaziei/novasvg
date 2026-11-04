@@ -1,4 +1,5 @@
 // Definitions of the SVG element classes declared in svgelement.h.
+#include "gfx/pdf_canvas.h"
 #include "svgelement.h"
 
 namespace novasvg {
@@ -759,13 +760,39 @@ bool svg_render_state::hasCycleReference(const svg_element* el) const
 void svg_render_state::beginGroup(const svg_blend_info& blendInfo)
 {
     auto requiresCompositing = blendInfo.requiresCompositing(m_mode);
+    pdf_canvas* pdf = dynamic_cast<pdf_canvas*>(m_canvas.get());
+    m_layer = layer_kind::none;
+    if(requiresCompositing && pdf) {
+        // On a vector page: opacity and blend mode alone stay vector (a transparency group); what PDF cannot
+        // express (masks, clip masks, filters) is drawn into pixels at raster_scale() and placed as an image.
+        const bool masking = (blendInfo.clipper() && blendInfo.clipper()->requiresMasking()) || blendInfo.masker() || blendInfo.filterElement();
+        if(m_mode == svg_render_mode::Painting && !masking) {
+            pdf->begin_group();
+            m_layer = layer_kind::pdf_group;
+            if(blendInfo.clipper())
+                blendInfo.clipper()->applyClipPath(*this);
+        } else {
+            auto bounding_box = m_currentTransform.map_rect(m_element->paint_bounding_box());
+            if(m_mode == svg_render_mode::Painting && blendInfo.filterElement()) {
+                bounding_box.inflate(blendInfo.filterElement()->pixelMargin() * m_currentTransform.xScale());
+            }
+            bounding_box.intersect(pdf->extents());
+            m_layerScale = pdf->raster_scale();
+            m_canvas = raster_canvas::create(Rect(bounding_box.x * m_layerScale, bounding_box.y * m_layerScale, bounding_box.w * m_layerScale, bounding_box.h * m_layerScale));
+            m_currentTransform = Transform::scaled(m_layerScale, m_layerScale) * m_currentTransform;
+            m_layer = layer_kind::raster_in_pdf;
+        }
+        return;
+    }
+
     if(requiresCompositing) {
         auto bounding_box = m_currentTransform.map_rect(m_element->paint_bounding_box());
         if(m_mode == svg_render_mode::Painting && blendInfo.filterElement()) {
             bounding_box.inflate(blendInfo.filterElement()->pixelMargin() * m_currentTransform.xScale());
         }
-        bounding_box.intersect(m_canvas->extents());
+        bounding_box.intersect(static_cast<raster_canvas&>(*m_canvas).extents());
         m_canvas = raster_canvas::create(bounding_box);
+        m_layer = layer_kind::raster;
     } else {
         m_canvas->save();
     }
@@ -777,19 +804,9 @@ void svg_render_state::beginGroup(const svg_blend_info& blendInfo)
 
 void svg_render_state::endGroup(const svg_blend_info& blendInfo)
 {
-    if(m_canvas == m_parent->raster()) {
+    if(m_layer == layer_kind::none) {
         m_canvas->restore();
         return;
-    }
-
-    auto opacity = m_mode == svg_render_mode::Clipping ? 1.f : blendInfo.opacity();
-    if(blendInfo.clipper())
-        blendInfo.clipper()->applyClipMask(*this);
-    if(m_mode == svg_render_mode::Painting && blendInfo.masker()) {
-        blendInfo.masker()->applyMask(*this);
-    }
-    if(m_mode == svg_render_mode::Painting && blendInfo.filterElement()) {
-        blendInfo.filterElement()->applyFilter(*this, m_currentTransform.xScale());
     }
 
     // the finished group is blended into what is already painted under it, with its mix-blend-mode
@@ -806,7 +823,31 @@ void svg_render_state::endGroup(const svg_blend_info& blendInfo)
         }
     }
 
-    m_parent->m_canvas->blend_canvas(*m_canvas, blendMode, opacity);
+    auto opacity = m_mode == svg_render_mode::Clipping ? 1.f : blendInfo.opacity();
+    if(m_layer == layer_kind::pdf_group) {
+        static_cast<pdf_canvas&>(*m_canvas).end_group(blendMode, opacity);
+        m_layer = layer_kind::none;
+        return;
+    }
+
+    if(blendInfo.clipper())
+        blendInfo.clipper()->applyClipMask(*this);
+    if(m_mode == svg_render_mode::Painting && blendInfo.masker()) {
+        blendInfo.masker()->applyMask(*this);
+    }
+    if(m_mode == svg_render_mode::Painting && blendInfo.filterElement()) {
+        blendInfo.filterElement()->applyFilter(*this, m_currentTransform.xScale());
+    }
+
+    if(m_layer == layer_kind::raster_in_pdf) {
+        auto& layer = static_cast<raster_canvas&>(*m_canvas);
+        auto& page = static_cast<pdf_canvas&>(*m_parent->m_canvas);
+        const Rect e = layer.extents();
+        page.draw_raster_group(Bitmap(surface_reference(layer.surface())), Rect(e.x / m_layerScale, e.y / m_layerScale, e.w / m_layerScale, e.h / m_layerScale), blendMode, opacity);
+        return;
+    }
+
+    static_cast<raster_canvas&>(*m_parent->m_canvas).blend_canvas(static_cast<raster_canvas&>(*m_canvas), blendMode, opacity);
 }
 
 svg_paint_element::svg_paint_element(document* dom, ElementID id)
@@ -1091,8 +1132,11 @@ bool svg_pattern_element::applyPaint(svg_render_state& state, float opacity) con
     }
 
     auto currentTransform = attributes.patternTransform() * state.currentTransform();
-    auto xScale = currentTransform.xScale();
-    auto yScale = currentTransform.yScale();
+    // On a vector page the tile is a bitmap too; make it sharp at the page's raster scale.
+    auto* pdf = dynamic_cast<pdf_canvas*>(&*state);
+    const float tileScale = pdf ? pdf->raster_scale() : 1.f;
+    auto xScale = currentTransform.xScale() * tileScale;
+    auto yScale = currentTransform.yScale() * tileScale;
 
     auto patternImage = raster_canvas::create(0, 0, patternRect.w * xScale, patternRect.h * yScale);
     auto patternImageTransform = Transform::scaled(xScale, yScale);
@@ -1112,7 +1156,10 @@ bool svg_pattern_element::applyPaint(svg_render_state& state, float opacity) con
     auto patternTransform = attributes.patternTransform();
     patternTransform.translate(patternRect.x, patternRect.y);
     patternTransform.scale(patternRect.w / patternImage->width(), patternRect.h / patternImage->height());
-    state.raster()->set_texture(*patternImage, TextureType::Tiled, opacity, patternTransform);
+    if(pdf)
+        pdf->set_tiled_image(Bitmap(surface_reference(patternImage->surface())), patternTransform, opacity);
+    else
+        state.raster()->set_texture(*patternImage, TextureType::Tiled, opacity, patternTransform);
     return true;
 }
 

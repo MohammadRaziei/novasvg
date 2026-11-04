@@ -388,7 +388,9 @@ Scripted (not by hand): every namespace-scope `NOVASVG_INLINE` definition (non-t
 
 - [x] `pdf_canvas` (`src/gfx/pdf_canvas.{h,cpp}`) for the `canvas` interface as it is: paints, gradients, fill/stroke, clip, images, text as outlines.
 - [x] `tests/cpp/test_pdf_canvas.cpp` (structure checks; `NOVASVG_PDF_OUT=x.pdf` writes the page). Smoke-checked once: `qpdf --check` clean, `pdftoppm` renders it right.
-- [ ] Grow `canvas` with `begin_layer(bounds)` / `end_layer(opacity, blend_mode)`; `raster_canvas` implements it with the offscreen surface + `blend_canvas` it uses today.
-- [ ] Pattern as an offscreen picture; mask and clip-mask as layers (luminance); PDF side: Form XObject with a transparency group, `SMask`, tiling pattern.
-- [ ] Make `svg_render_state` (svgelement.cpp ~l.768, 1097, 3985, 4119) use the interface instead of `raster()`; filters stay raster-only (PDF rasterizes them).
-- [ ] Public entry point (SVG to PDF), gradient reflect/repeat, per-stop alpha, optional font embedding.
+- [~] Layers: done for `pdf_canvas` (`begin_group/end_group`, `draw_raster_group`) but NOT as virtuals of `canvas` (see ADR-0008, part 2); promote them when a third backend needs it.
+- [x] Pattern: tile bitmap as PDF tiling pattern. Mask, clip mask, filter: rasterized group placed as an image (a vector `SMask` luminosity mask is an upgrade).
+- [x] `svg_render_state` runs on any `canvas` (`raster()` is null on a PDF page); beginGroup/endGroup and the pattern fill know `pdf_canvas`.
+- [x] Public entry point: `document::render_to_pdf` / `save_pdf` with `pdf_mode::vector | raster` and `dpi`; `tests/cpp/test_pdf_render.cpp`.
+- [ ] Still open: gradient reflect/repeat and per-stop alpha in PDF, vector `SMask` for masks, element-level `render_to_pdf`, font embedding (selectable text), multi-page, PDF metadata (title), CLI flag, Python binding (off for now).
+- Gate note: `svg_render_state::beginGroup/endGroup` and the pattern code were edited; the pixel path is meant to be identical, the final golden gate must confirm.

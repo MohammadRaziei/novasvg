@@ -96,14 +96,29 @@ int pdf_canvas::add_stream(std::string dict, const std::string& bytes, bool comp
     return int(m_objects.size());
 }
 
-std::string pdf_canvas::alpha_state(float alpha)
+static const char* pdf_blend_name(BlendMode mode)
 {
-    std::string key = num(clamp01(alpha));
+    switch(mode) {
+    case BlendMode::Multiply: return "Multiply";
+    case BlendMode::Screen: return "Screen";
+    case BlendMode::Darken: return "Darken";
+    case BlendMode::Lighten: return "Lighten";
+    case BlendMode::Difference: return "Difference";
+    case BlendMode::Exclusion: return "Exclusion";
+    default: return "Normal";
+    }
+}
+
+std::string pdf_canvas::alpha_state(float alpha, BlendMode blend_mode)
+{
+    std::string alpha_text = num(clamp01(alpha));
+    std::string blend = pdf_blend_name(blend_mode);
+    std::string key = alpha_text + "|" + blend;
     auto it = m_ext_gstates.find(key);
     if(it != m_ext_gstates.end())
-        return it->second;
+        return it->second.name;
     std::string name = "GS" + std::to_string(m_ext_gstates.size());
-    m_ext_gstates.emplace(key, name);
+    m_ext_gstates.emplace(key, ext_gstate{name, alpha_text, blend});
     return name;
 }
 
@@ -210,6 +225,14 @@ void pdf_canvas::begin_paint(bool stroke, const matrix_t& transform)
     if(p.type == paint::kind::solid) {
         m_content += "/" + alpha_state(p.a) + " gs\n";
         m_content += rgb_str(p.r, p.g, p.b) + (stroke ? " RG\n" : " rg\n");
+        return;
+    }
+
+    if(p.type == paint::kind::tiled) {
+        tiling_pattern(transform);
+        m_content += "/" + alpha_state(p.a) + " gs\n";
+        m_content += stroke ? "/Pattern CS /" : "/Pattern cs /";
+        m_content += m_patterns.back().first + (stroke ? " SCN\n" : " scn\n");
         return;
     }
 
@@ -365,15 +388,15 @@ void pdf_canvas::clip_rect(const Rect& rect, FillRule clip_rule, const Transform
     m_content += clip_rule == FillRule::EvenOdd ? "W* n\n" : "W n\n";
 }
 
-void pdf_canvas::draw_image(const Bitmap& image, const Rect& dst, const Rect& src, const Transform& transform)
+int pdf_canvas::add_image(const Bitmap& image, int* width, int* height)
 {
-    if(image.is_null() || src.w <= 0.f || src.h <= 0.f || dst.w <= 0.f || dst.h <= 0.f)
-        return;
     stb::image rgba = bitmap_to_rgba_image(image);
     const int w = rgba.width();
     const int h = rgba.height();
+    *width = w;
+    *height = h;
     if(w <= 0 || h <= 0)
-        return;
+        return 0;
 
     std::string color(size_t(w) * h * 3, '\0'), alpha(size_t(w) * h, '\0');
     bool translucent = false;
@@ -393,18 +416,111 @@ void pdf_canvas::draw_image(const Bitmap& image, const Rect& dst, const Rect& sr
             + " /ColorSpace /DeviceGray /BitsPerComponent 8 /Interpolate true", alpha, true);
         dict += " /SMask " + std::to_string(mask) + " 0 R";
     }
-    int obj = add_stream(dict, color, true);
-    std::string name = "Im" + std::to_string(m_xobjects.size());
-    m_xobjects.emplace_back(name, obj);
+    return add_stream(dict, color, true);
+}
 
-    // The whole bitmap, scaled so that `src` lands on `dst`; then clipped to `dst`.
+// The whole image (w x h px) scaled so that `src` (in image pixels) lands on `dst`, clipped to `dst`.
+void pdf_canvas::place_image(int object, int w, int h, const Rect& dst, const Rect& src, const matrix_t* transform, float alpha, BlendMode blend_mode)
+{
+    std::string name = "Im" + std::to_string(m_xobjects.size());
+    m_xobjects.emplace_back(name, object);
+
     const float xs = dst.w / src.w, ys = dst.h / src.h;
     const float ix = dst.x - src.x * xs, iy = dst.y - src.y * ys;
     const float iw = w * xs, ih = h * ys;
-    m_content += "q\n" + matrix_str(transform.matrix()) + " cm\n";
+    m_content += "q\n";
+    if(transform)
+        m_content += matrix_str(*transform) + " cm\n";
     emit_rect_path(dst, nullptr);
-    m_content += "W n\n/" + alpha_state(1.f) + " gs\n";
+    m_content += "W n\n/" + alpha_state(alpha, blend_mode) + " gs\n";
     m_content += num(iw) + " 0 0 " + num(-ih) + " " + num(ix) + " " + num(iy + ih) + " cm\n/" + name + " Do\nQ\n";
+}
+
+void pdf_canvas::draw_image(const Bitmap& image, const Rect& dst, const Rect& src, const Transform& transform)
+{
+    if(image.is_null() || src.w <= 0.f || src.h <= 0.f || dst.w <= 0.f || dst.h <= 0.f)
+        return;
+    int w, h;
+    int object = add_image(image, &w, &h);
+    if(object == 0)
+        return;
+    place_image(object, w, h, dst, src, &transform.matrix(), 1.f, BlendMode::Src_Over);
+}
+
+void pdf_canvas::draw_raster_group(const Bitmap& image, const Rect& dst, BlendMode blend_mode, float opacity)
+{
+    if(image.is_null() || dst.w <= 0.f || dst.h <= 0.f)
+        return;
+    int w, h;
+    int object = add_image(image, &w, &h);
+    if(object == 0)
+        return;
+    place_image(object, w, h, dst, Rect(0, 0, float(w), float(h)), nullptr, opacity, blend_mode);
+}
+
+void pdf_canvas::set_tiled_image(const Bitmap& tile, const Transform& transform, float opacity)
+{
+    if(tile.is_null())
+        return;
+    int w, h;
+    int object = add_image(tile, &w, &h);
+    if(object == 0)
+        return;
+    paint& p = m_paints.back();
+    p = paint();
+    p.type = paint::kind::tiled;
+    p.tile_object = object;
+    p.tile_w = w;
+    p.tile_h = h;
+    p.a = opacity;
+    p.matrix = transform.matrix();
+}
+
+// A tiling pattern for the current tiled paint, drawn through `transform` (the matrix of the operation).
+int pdf_canvas::tiling_pattern(const matrix_t& transform)
+{
+    const paint& p = m_paints.back();
+    matrix_t base = {kPxToPt, 0, 0, -kPxToPt, 0, m_height * kPxToPt};
+    matrix_t m = then(then(p.matrix, transform), base);
+    const std::string w = std::to_string(p.tile_w), h = std::to_string(p.tile_h);
+    // Tile space is y-down like the bitmap: the image's top row sits at y = 0.
+    std::string content = w + " 0 0 -" + h + " 0 " + h + " cm\n/T Do\n";
+    int obj = add_stream("/Type /Pattern /PatternType 1 /PaintType 1 /TilingType 1 /BBox [0 0 " + w + " " + h + "] /XStep " + w + " /YStep " + h
+        + " /Matrix [" + matrix_str(m) + "] /Resources << /XObject << /T " + std::to_string(p.tile_object) + " 0 R >> >>", content, false);
+    std::string name = "P" + std::to_string(m_patterns.size());
+    m_patterns.emplace_back(name, obj);
+    return obj;
+}
+
+void pdf_canvas::begin_group()
+{
+    m_groups.push_back({std::move(m_content), m_open_saves});
+    m_content.clear();
+    m_paints.push_back(m_paints.back());
+}
+
+void pdf_canvas::end_group(BlendMode blend_mode, float opacity)
+{
+    if(m_groups.empty())
+        return;
+    group_frame frame = std::move(m_groups.back());
+    m_groups.pop_back();
+
+    // Saves opened inside the group and never restored die with the form.
+    while(m_open_saves > frame.open_saves) {
+        m_content += "Q\n";
+        m_paints.pop_back();
+        --m_open_saves;
+    }
+    m_paints.pop_back();
+
+    std::string body = std::move(m_content);
+    m_content = std::move(frame.outer_content);
+    int form = add_stream("/Type /XObject /Subtype /Form /BBox [0 0 " + num(m_width) + " " + num(m_height)
+        + "] /Group << /S /Transparency /CS /DeviceRGB >> /Resources %%RES%%", body, true);
+    std::string name = "Fm" + std::to_string(m_xobjects.size());
+    m_xobjects.emplace_back(name, form);
+    m_content += "q\n/" + alpha_state(opacity, blend_mode) + " gs\n/" + name + " Do\nQ\n";
 }
 
 void pdf_canvas::save()
@@ -416,7 +532,7 @@ void pdf_canvas::save()
 
 void pdf_canvas::restore()
 {
-    if(m_open_saves == 0)
+    if(m_open_saves == (m_groups.empty() ? 0 : m_groups.back().open_saves))
         return;
     m_content += "Q\n";
     m_paints.pop_back();
@@ -447,18 +563,22 @@ std::vector<uint8_t> pdf_canvas::data() const
     const int contents = int(objects.size());
 
     std::string gs, pat, xo;
-    for(const auto& e : m_ext_gstates) {
-        gs += "/" + e.second + " << /ca " + e.first + " /CA " + e.first + " >> ";
-    }
+    for(const auto& e : m_ext_gstates)
+        gs += "/" + e.second.name + " << /ca " + e.second.alpha + " /CA " + e.second.alpha + " /BM /" + e.second.blend + " >> ";
     for(const auto& p : m_patterns)
         pat += "/" + p.first + " " + std::to_string(p.second) + " 0 R ";
     for(const auto& x : m_xobjects)
         xo += "/" + x.first + " " + std::to_string(x.second) + " 0 R ";
+    const std::string resources = "<< /ExtGState << " + gs + ">> /Pattern << " + pat + ">> /XObject << " + xo + ">> >>";
+    for(auto& o : objects) {
+        for(size_t at = o.dict.find("%%RES%%"); at != std::string::npos; at = o.dict.find("%%RES%%", at + resources.size()))
+            o.dict.replace(at, 7, resources);
+    }
 
     const int pages_id = int(objects.size()) + 2; // page = +1, pages = +2
     const int page = add("<< /Type /Page /Parent " + std::to_string(pages_id) + " 0 R /MediaBox [0 0 " + num(m_width * kPxToPt) + " " + num(m_height * kPxToPt)
-        + "] /Contents " + std::to_string(contents) + " 0 R /Resources << /ExtGState << " + gs + ">> /Pattern << " + pat + ">> /XObject << " + xo
-        + ">> >> /Group << /S /Transparency /CS /DeviceRGB >> >>");
+        + "] /Contents " + std::to_string(contents) + " 0 R /Resources " + resources
+        + " /Group << /S /Transparency /CS /DeviceRGB >> >>");
     const int pages = add("<< /Type /Pages /Kids [" + std::to_string(page) + " 0 R] /Count 1 >>");
     const int catalog = add("<< /Type /Catalog /Pages " + std::to_string(pages) + " 0 R >>");
 

@@ -22,6 +22,7 @@
 
 #include "gfx/canvas.h"
 #include "gfx/font.h"
+#include "gfx/pdf_canvas.h"
 #include "svgelement.h"
 #include "svgparser.hpp"
 
@@ -483,6 +484,59 @@ Bitmap document::render_to_bitmap(int width, int height, const Color& background
     if(backgroundColor.value()) bitmap.clear(backgroundColor);
     render(bitmap, matrix);
     return bitmap;
+}
+
+std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
+{
+    const float width = root_element(true)->intrinsic_width();
+    const float height = root_element()->intrinsic_height();
+    if(!(width > 0.f) || !(height > 0.f))
+        return {};
+    if(!(dpi > 0.f))
+        dpi = 192.f;
+    const float scale = dpi / 96.f;
+
+    auto pdf = pdf_canvas::create(width, height);
+    pdf->set_raster_scale(scale);
+    if(mode == pdf_mode::raster) {
+        const int pixel_width = static_cast<int>(std::ceil(width * scale));
+        const int pixel_height = static_cast<int>(std::ceil(height * scale));
+        Bitmap bitmap = render_to_bitmap(pixel_width, pixel_height);
+        if(bitmap.is_null())
+            return {};
+        pdf->draw_image(bitmap, Rect(0, 0, width, height), Rect(0, 0, float(pixel_width), float(pixel_height)), Transform());
+        return pdf->data();
+    }
+
+    // Same rule as render(Bitmap&): a root `background-color` sits under everything.
+    if(const auto& bg = root_element(true)->attribute(PropertyID::Background_Color); !bg.empty()) {
+        color_t color;
+        if(color_parse(&color, bg.data(), static_cast<int>(bg.length())) > 0) {
+            auto argb = color_to_argb32(&color);
+            if((argb >> 24) & 0xff) {
+                Path page;
+                page.addRect(0, 0, width, height);
+                pdf->set_color(((argb >> 16) & 0xff) / 255.f, ((argb >> 8) & 0xff) / 255.f, (argb & 0xff) / 255.f, ((argb >> 24) & 0xff) / 255.f);
+                pdf->fill_path(page, FillRule::NonZero, Transform());
+            }
+        }
+    }
+
+    svg_render_state state(nullptr, nullptr, Transform(), svg_render_mode::Painting, pdf);
+    root_element(true)->render(state);
+    return pdf->data();
+}
+
+bool document::save_pdf(const std::string& filename, pdf_mode mode, float dpi) const
+{
+    auto bytes = render_to_pdf(mode, dpi);
+    if(bytes.empty())
+        return false;
+    std::ofstream out(filename, std::ios::binary);
+    if(!out)
+        return false;
+    out.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    return static_cast<bool>(out);
 }
 
 void document::render(stb::image& image, const Matrix& matrix) const

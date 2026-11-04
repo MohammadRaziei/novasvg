@@ -606,6 +606,30 @@ public:
     Bitmap render_to_bitmap(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
 
     /**
+     * @brief How render_to_pdf() writes the page.
+     *
+     * - vector: shapes, text (as outlines), gradients, clips, opacity groups and blend modes stay vector; what PDF
+     *   cannot express (masks, clip masks, filters) and pattern tiles are rendered to bitmaps at `dpi` and placed in the
+     *   same page, so the page is never worse than the raster mode and usually much smaller and sharper.
+     * - raster: the whole page is one bitmap rendered at `dpi`. Every feature of the renderer works, nothing is vector.
+     */
+    enum class pdf_mode { vector, raster };
+
+    /**
+     * @brief Renders the document as a one-page PDF (page size = the document's size, 1 px = 0.75 pt).
+     * @param mode See pdf_mode.
+     * @param dpi Resolution of every bitmap in the file (96 is the SVG's own pixel size).
+     * @return The PDF file's bytes, or empty when the document has no size.
+     */
+    std::vector<uint8_t> render_to_pdf(pdf_mode mode = pdf_mode::vector, float dpi = 192.f) const;
+
+    /**
+     * @brief render_to_pdf() written to a file.
+     * @return false if nothing could be rendered or the file could not be written.
+     */
+    bool save_pdf(const std::string& filename, pdf_mode mode = pdf_mode::vector, float dpi = 192.f) const;
+
+    /**
      * @brief Returns the topmost el under the specified point.
      * @param x The x-coordinate in viewport space.
      * @param y The y-coordinate in viewport space.

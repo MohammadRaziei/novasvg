@@ -3,10 +3,11 @@
 // pdf_canvas: the second backend of the abstract `canvas` (ADR-0008, step F). It writes one PDF page of vector
 // drawing commands instead of pixels. 1 user unit is 1 CSS px (1/96 in), so a 100x50 canvas is a 75x37.5 pt page.
 //
-// What it can do today is exactly what the `canvas` interface expresses: solid and gradient paints, fills and
-// strokes of paths and text (text is written as glyph outlines, so no font embedding), clipping, images and
-// save/restore. Not yet: layers (group opacity, blend modes), masks, patterns and filters; those need the
-// interface to grow first (see REFACTOR_CHECKLIST.md, C2).
+// Vector: solid and gradient paints, fills and strokes of paths and text (text is written as glyph outlines, so no
+// font embedding), clipping, images, save/restore, and transparency groups (begin_group/end_group: opacity and
+// blend mode). Raster inside the vector page: what PDF cannot express (masks, filters, clip masks) is rendered by
+// the svg layer to a bitmap at raster_scale() and placed with draw_raster_group(); pattern tiles come as bitmaps too
+// (set_tiled_image()).
 #include "gfx/canvas.h"
 
 #include <map>
@@ -35,6 +36,26 @@ public:
 
     void draw_image(const Bitmap& image, const Rect& dst_rect, const Rect& src_rect, const Transform& transform) override;
 
+    // ---- beyond the `canvas` interface; the svg layer calls these when its target is a pdf_canvas ----
+
+    // The page in user units: where a group's bitmap may be placed.
+    Rect extents() const { return Rect(0, 0, m_width, m_height); }
+
+    // Pixels per user unit used for the bitmaps the svg layer makes for this page (96 dpi * raster_scale()).
+    float raster_scale() const { return m_raster_scale; }
+    void set_raster_scale(float scale) { m_raster_scale = scale > 0.f ? scale : 1.f; }
+
+    // Everything drawn between begin_group() and end_group() is one transparency group, composited
+    // with `opacity` and `blend_mode` (Form XObject with a /Group). Groups nest.
+    void begin_group();
+    void end_group(BlendMode blend_mode, float opacity);
+
+    // A finished raster group (premultiplied ARGB32) placed at `dst` (user units).
+    void draw_raster_group(const Bitmap& image, const Rect& dst, BlendMode blend_mode, float opacity);
+
+    // Makes the current paint a tiled image: `tile` repeated, `transform` mapping tile pixels to user space.
+    void set_tiled_image(const Bitmap& tile, const Transform& transform, float opacity);
+
     void save() override;
     void restore() override;
 
@@ -46,7 +67,9 @@ private:
     pdf_canvas(float width, float height);
 
     struct paint {
-        enum class kind { solid, linear, radial } type = kind::solid;
+        enum class kind { solid, linear, radial, tiled } type = kind::solid;
+        int tile_object = 0;
+        int tile_w = 0, tile_h = 0;
         float r = 0, g = 0, b = 0, a = 1;
         float p[6] = {0, 0, 0, 0, 0, 0}; // linear: x1 y1 x2 y2; radial: cx cy r fx fy
         SpreadMethod spread = SpreadMethod::Pad;
@@ -66,15 +89,30 @@ private:
     void emit_path(const Path& path, const matrix_t* transform);
     void emit_rect_path(const Rect& rect, const matrix_t* transform);
     void emit_text_path(const std::u32string_view& text, const Font& font, const Point& origin, const matrix_t* transform);
-    std::string alpha_state(float alpha);
+    std::string alpha_state(float alpha, BlendMode blend_mode = BlendMode::Src_Over);
     int shading_pattern(const matrix_t& transform);
+    int tiling_pattern(const matrix_t& transform);
+    // Adds `image` as an Image XObject (Flate RGB, plus an SMask when it has alpha). Returns its object number.
+    int add_image(const Bitmap& image, int* width, int* height);
+    void place_image(int object, int width, int height, const Rect& dst, const Rect& src, const matrix_t* transform, float alpha, BlendMode blend_mode);
 
     float m_width, m_height;
     std::vector<object> m_objects; // object number = index + 1
     std::string m_content;
     std::vector<paint> m_paints;   // top = current paint; one entry per open save()
     int m_open_saves = 0;
-    std::map<std::string, std::string> m_ext_gstates; // key "0.5000" -> resource name
+    struct ext_gstate {
+        std::string name;
+        std::string alpha;
+        std::string blend;
+    };
+    std::map<std::string, ext_gstate> m_ext_gstates; // key: alpha + blend mode
+    float m_raster_scale = 1.f;
+    struct group_frame {
+        std::string outer_content; // what was being written before begin_group()
+        int open_saves;
+    };
+    std::vector<group_frame> m_groups;
     std::vector<std::pair<std::string, int>> m_patterns;  // resource name -> object
     std::vector<std::pair<std::string, int>> m_xobjects;  // resource name -> object
 };
