@@ -17,10 +17,10 @@
 // with it. Self-contained -- pulls in exactly the gfx:: engine pieces
 // it needs plus Font (for fill_text/stroke_text) -- so it's usable without
 // the svg/parsing layer, e.g. to draw directly onto a Bitmap.
-#include "color.h"
+#include "novasvg/gfx/color.h"
 #include "font.h"
-#include "bitmap.h"
-#include "render.h"
+#include "novasvg/gfx/bitmap.h"
+#include "novasvg/gfx/render.h"
 
 namespace novasvg {
 using namespace gfx; // render/ layer (novasvg::render), the former plutovg

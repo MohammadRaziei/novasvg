@@ -8,7 +8,7 @@
 #include "novasvg/gfx/render.h"  // base64_decode (data: URIs)
 
 #ifndef NOVASVG_DISABLE_EMBEDDED_FONT
-#include "novasvg/gfx/default_font.h"
+#include "gfx/default_font.h"
 #endif
 
 namespace novasvg {

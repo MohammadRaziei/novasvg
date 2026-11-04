@@ -19,7 +19,7 @@ rules both out.
    interface only. SVG filters stay raster-only (a PDF backend rasterizes them).
 3. No `detail/`. Public headers live in `include/novasvg/{gfx,svg}/`; private headers sit beside their `.cpp` in
    `src/gfx/` and `src/svg/`. Headers that must stay public only because the font stack is still inline
-   (`gfx/internal.h`, `gfx/utils.h`, `gfx/font_impl.h`) are marked temporary.
+   (`gfx/internal.h`, `gfx/utils.h`) were marked temporary and now live in `src/gfx/` (step 2).
 4. Naming follows ADR-0004. The namespace is `novasvg::gfx` for now; a rename to a standalone name is a one-line `sed`.
 
 ## Order

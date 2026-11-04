@@ -1,7 +1,7 @@
 #pragma once
 
 #include "novasvg/gfx/render.h"
-#include "novasvg/gfx/utils.h"
+#include "gfx/utils.h"
 
 namespace novasvg {
 namespace gfx {

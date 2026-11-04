@@ -15,8 +15,8 @@
 
 // Include the main library header
 #include "novasvg/novasvg.h"
-#include "novasvg/gfx/canvas.h" // Transform, Path, ...
-#include "novasvg/gfx/font.h"
+#include "gfx/canvas.h" // Transform, Path, ...
+#include "gfx/font.h"
 #include "svg/svgelement.h" // private: foreignObject text measurement
 #include "bitmap_interop.hpp"
 #include <filesystem>

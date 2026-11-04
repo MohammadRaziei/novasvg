@@ -20,8 +20,8 @@
 #include <fstream>
 #include <cmath>
 
-#include "novasvg/gfx/canvas.h"
-#include "novasvg/gfx/font.h"
+#include "gfx/canvas.h"
+#include "gfx/font.h"
 #include "svgelement.h"
 #include "svgparser.hpp"
 

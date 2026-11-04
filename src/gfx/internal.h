@@ -3,7 +3,7 @@
 #ifndef NOVASVG_PRIVATE_H
 #define NOVASVG_PRIVATE_H
 
-#include "render.h"
+#include "novasvg/gfx/render.h"
 
 namespace novasvg {
 namespace gfx {

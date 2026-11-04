@@ -31,7 +31,7 @@ add_test(NAME test_novasvg_cpp COMMAND $<TARGET_FILE:test_novasvg_cpp>)
 # The embedded fallback font only matters when the machine has no fonts, so this check is built with system
 # font loading compiled out and runs as its own executable (the main one deliberately sees system fonts).
 add_executable(test_novasvg_embedded_font embedded_font/check_embedded_font.cpp)
-target_include_directories(test_novasvg_embedded_font PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}")
+target_include_directories(test_novasvg_embedded_font PRIVATE "${NOVASVG_TEST_INCLUDE_DIR}" "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(test_novasvg_embedded_font PRIVATE novasvg::noflag)
 target_compile_definitions(test_novasvg_embedded_font PRIVATE
     NOVASVG_DISABLE_LOAD_SYSTEM_FONTS

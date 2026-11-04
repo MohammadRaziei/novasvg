@@ -1,5 +1,5 @@
-// Definitions declared in include/novasvg/gfx/canvas.h.
-#include "novasvg/gfx/canvas.h"
+// Definitions declared in src/gfx/canvas.h.
+#include "gfx/canvas.h"
 
 namespace novasvg {
 using namespace gfx;

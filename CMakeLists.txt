@@ -94,6 +94,8 @@ endif()
 target_include_directories(novasvg_core PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<INSTALL_INTERFACE:include>")
+# canvas.h, font.h, internal.h, utils.h, default_font.h live in src/gfx (private); sources include them as "gfx/x.h".
+target_include_directories(novasvg_core PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 # Everything that links novasvg links libstb too (dynamic).
 target_link_libraries(novasvg_core PUBLIC libstb::libstb)
 if(NOT NOVASVG_EMBED_DEFAULT_FONT)

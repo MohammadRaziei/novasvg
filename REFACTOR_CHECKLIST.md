@@ -354,3 +354,11 @@ Scripted (not by hand): every namespace-scope `NOVASVG_INLINE` definition (non-t
 - Still header-only, honestly: `gfx/font_impl.h` 6266 lines (stb_truetype, goes in D3 with libstb fonts), `svgelement.h` / `svgparser.hpp` in-class bodies and 13 `NOVASVG_INLINE` the tool skipped (templates, defaults, `static`), `canvas.h` 5 skipped, `color.h` (1036 lines of inline color math), `default_font.h` (embedded font bytes), `render.h` 2510 lines (declarations + docs, fine).
 - Not done yet: `NOVASVG_INLINE` macro removal, private gfx headers (`canvas.h`, `font.h`, `font_impl.h`, `internal.h`, `utils.h`) still in `include/`.
 - Gate (libstb a0726ba): C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
+
+
+## Step 2 (private gfx headers out of include/) -- done 2026-11-04, final gate pending
+
+- Moved `canvas.h`, `font.h`, `internal.h`, `utils.h`, `default_font.h` from `include/novasvg/gfx/` to `src/gfx/`; sources include them as `"gfx/x.h"` (`src/` is a private include dir of `novasvg_core`).
+- Public headers now: `novasvg.h`, `config.h`, `gfx/color.h`, `gfx/bitmap.h`, `gfx/render.h` (bitmap.h still needs render.h), `svg/svgparserutils.h`.
+- NOT done: the small public text-measuring API. It needs `Font`/`ForeignObjectFonts` to become public first (design decision), so the Python binding and `test_foreignobject_style.cpp` still include private headers through `src/`.
+- Not tested yet (bold mode): compile and link only.

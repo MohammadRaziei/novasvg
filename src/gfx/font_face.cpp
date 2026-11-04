@@ -4,7 +4,7 @@
 // libstb reads outlines, metrics, kerning (kern/GPOS) and GSUB shaping. It has no API for the `name`
 // table or `head.macStyle`, so the small system-font scanner below reads those two tables itself.
 #include "font_face.h"
-#include "novasvg/gfx/internal.h"
+#include "gfx/internal.h"
 
 #include <stb/font.hpp>
 

@@ -1,5 +1,5 @@
-// Definitions declared in include/novasvg/gfx/font.h.
-#include "novasvg/gfx/font.h"
+// Definitions declared in src/gfx/font.h.
+#include "gfx/font.h"
 #include "font_face.h"
 
 namespace novasvg {
