@@ -40,8 +40,8 @@
 // a build-system concern novasvg can't force on every consumer of a
 // header-only library, this codebase calls these instead of std::max/
 // std::min directly wherever it needs a two-argument max/min. Same
-// pattern the vendored FreeType rasterizer already uses for its own
-// internals (PVG_FT_MIN/PVG_FT_MAX in src/gfx/vendor/), just
+// pattern libstb uses for its own internals (STB_MIN/STB_MAX in
+// stb/export.hpp), just
 // under this project's own prefix for general-purpose call sites.
 
 /** Callback that frees a user-supplied memory buffer once novasvg no longer needs it. */

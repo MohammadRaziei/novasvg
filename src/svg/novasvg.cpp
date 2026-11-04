@@ -12,7 +12,7 @@
 //
 // The render/ layer's own extern "C" wrapper is gone too: it's pure,
 // header-only C++ (/ internal-linkage everywhere), nothing
-// in this project links against it from actual C code, and the vendored
+// in this project links against it from actual C code, and the
 // STB headers already manage their own extern "C" internally when
 // compiled as C++.
 

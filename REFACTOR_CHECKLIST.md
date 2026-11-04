@@ -370,3 +370,16 @@ Scripted (not by hand): every namespace-scope `NOVASVG_INLINE` definition (non-t
   pinning a commit (`NOVASVG_LIBSTB_GIT_TAG`) would avoid that.
 - libstb now has the rasterizer and stroker (`stb/raster.hpp`: `fill`, `stroke`, `rasterize_fill`, `rasterize_stroke`, `span_sink`), which is
   what Step 5 (remove `src/gfx/vendor/`) was waiting for.
+
+## Step 5a (rasterizer and stroker from libstb) -- done 2026-11-04, final gate pending
+
+- `rasterize()` in `src/gfx/rasterize.cpp` now converts the `path_t` to a `stb::outline` and calls `stb::rasterize_fill` / `stb::rasterize_stroke`
+  (`stb/raster.hpp`); the spans go into the same `span_buffer_t` as before. Nothing else in novasvg changed.
+- `src/gfx/vendor/` (FreeType port: `ft_raster.h`, `ft_stroker.h`, `ft_math.h`, `ft_types.h`, about 5,500 lines) and its `VENDOR.md` are deleted. The FreeType
+  license notice now comes with libstb (`NOTICE.md` there).
+- Things the final gate must confirm (golden tolerance 0):
+  - stroke width scale: novasvg used `hypot(sx, sy) / sqrt(2)`; libstb says "mean scale of the two axes".
+  - dashing: novasvg's own `path_clone_dashed` before; libstb's `dash.cpp` now. `path_clone_dashed` stays in the public C API, no longer used by `rasterize()`.
+  - points are mapped by libstb's `matrix::map` (compiled without FMA) instead of novasvg's `matrix_map_points`.
+  - no clip: libstb needs a clip rect, so +-1,000,000 is passed (it limits coordinates there anyway).
+- Step 5b (still open): replace novasvg's own `Path`, `Transform`, `Rect`, `Color`, `Bitmap` with `stb::` types. Bigger, touches the whole svg layer and the public API.

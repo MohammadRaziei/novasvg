@@ -1,8 +1,8 @@
 #include "rasterize.h"
 
-// FreeType rasterizer/stroker: private to this translation unit (see vendor/VENDOR.md).
-#include "vendor/ft_raster.h"
-#include "vendor/ft_stroker.h"
+// Anti-aliased fill and stroke come from libstb (stb/raster.hpp): a fixed-point port of the same FreeType
+// algorithms (through plutovg) that used to be vendored here in src/gfx/vendor.
+#include <stb/raster.hpp>
 
 namespace novasvg {
 namespace gfx {
@@ -167,251 +167,115 @@ void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, c
     }
 }
 
-#define ALIGN_SIZE(size) (((size) + 7ul) & ~7ul)
-#define FT_COORD(x) ft_coord_round((x) * 64)
-
 namespace {
 
-PVG_FT_Outline* ft_outline_create(int points, int contours)
+stb::outline to_stb_outline(const path_t* path)
 {
-    size_t points_size = ALIGN_SIZE((points + contours) * sizeof(PVG_FT_Vector));
-    size_t tags_size = ALIGN_SIZE((points + contours) * sizeof(char));
-    size_t contours_size = ALIGN_SIZE(contours * sizeof(int));
-    size_t contours_flag_size = ALIGN_SIZE(contours * sizeof(char));
-    PVG_FT_Outline* outline = static_cast<PVG_FT_Outline*>(malloc(points_size + tags_size + contours_size + contours_flag_size + sizeof(PVG_FT_Outline)));
-
-    PVG_FT_Byte* outline_data = (PVG_FT_Byte*)(outline + 1);
-    outline->points = (PVG_FT_Vector*)(outline_data);
-    outline->tags = (char*)(outline_data + points_size);
-    outline->contours = (int*)(outline_data + points_size + tags_size);
-    outline->contours_flag = (char*)(outline_data + points_size + tags_size + contours_size);
-    outline->n_points = 0;
-    outline->n_contours = 0;
-    outline->flags = 0x0;
-    return outline;
-}
-
-void ft_outline_destroy(PVG_FT_Outline* outline)
-{
-    free(outline);
-}
-
-PVG_FT_Pos ft_coord_round(float v)
-{
-    if(!(v > -1e9f && v < 1e9f))
-        return (PVG_FT_Pos)roundf(v);
-    const int t = int(v);
-    const float diff = v - float(t);
-    if(diff >= 0.5f)
-        return PVG_FT_Pos(t) + 1;
-    if(diff <= -0.5f)
-        return PVG_FT_Pos(t) - 1;
-    return PVG_FT_Pos(t);
-}
-
-void ft_outline_move_to(PVG_FT_Outline* ft, float x, float y)
-{
-    ft->points[ft->n_points].x = FT_COORD(x);
-    ft->points[ft->n_points].y = FT_COORD(y);
-    ft->tags[ft->n_points] = PVG_FT_CURVE_TAG_ON;
-    if(ft->n_points) {
-        ft->contours[ft->n_contours] = ft->n_points - 1;
-        ft->n_contours++;
-    }
-
-    ft->contours_flag[ft->n_contours] = 1;
-    ft->n_points++;
-}
-
-void ft_outline_line_to(PVG_FT_Outline* ft, float x, float y)
-{
-    ft->points[ft->n_points].x = FT_COORD(x);
-    ft->points[ft->n_points].y = FT_COORD(y);
-    ft->tags[ft->n_points] = PVG_FT_CURVE_TAG_ON;
-    ft->n_points++;
-}
-
-void ft_outline_cubic_to(PVG_FT_Outline* ft, float x1, float y1, float x2, float y2, float x3, float y3)
-{
-    ft->points[ft->n_points].x = FT_COORD(x1);
-    ft->points[ft->n_points].y = FT_COORD(y1);
-    ft->tags[ft->n_points] = PVG_FT_CURVE_TAG_CUBIC;
-    ft->n_points++;
-
-    ft->points[ft->n_points].x = FT_COORD(x2);
-    ft->points[ft->n_points].y = FT_COORD(y2);
-    ft->tags[ft->n_points] = PVG_FT_CURVE_TAG_CUBIC;
-    ft->n_points++;
-
-    ft->points[ft->n_points].x = FT_COORD(x3);
-    ft->points[ft->n_points].y = FT_COORD(y3);
-    ft->tags[ft->n_points] = PVG_FT_CURVE_TAG_ON;
-    ft->n_points++;
-}
-
-void ft_outline_close(PVG_FT_Outline* ft)
-{
-    ft->contours_flag[ft->n_contours] = 0;
-    int index = ft->n_contours ? ft->contours[ft->n_contours - 1] + 1 : 0;
-    if(index == ft->n_points)
-        return;
-    ft->points[ft->n_points].x = ft->points[index].x;
-    ft->points[ft->n_points].y = ft->points[index].y;
-    ft->tags[ft->n_points] = PVG_FT_CURVE_TAG_ON;
-    ft->n_points++;
-}
-
-void ft_outline_end(PVG_FT_Outline* ft)
-{
-    if(ft->n_points) {
-        ft->contours[ft->n_contours] = ft->n_points - 1;
-        ft->n_contours++;
-    }
-}
-
-PVG_FT_Outline* ft_outline_convert_stroke(const path_t* path, const matrix_t* matrix, const stroke_data_t* stroke_data);
-
-PVG_FT_Outline* ft_outline_convert(const path_t* path, const matrix_t* matrix, const stroke_data_t* stroke_data)
-{
-    if(stroke_data) {
-        return ft_outline_convert_stroke(path, matrix, stroke_data);
-    }
-
+    stb::outline outline;
     path_iterator_t it;
     path_iterator_init(&it, path);
 
     point_t points[3];
-    PVG_FT_Outline* outline = ft_outline_create(path->num_points, path->num_contours);
     while(path_iterator_has_next(&it)) {
         switch(path_iterator_next(&it, points)) {
         case NOVASVG_PATH_COMMAND_MOVE_TO:
-            matrix_map_points(matrix, points, points, 1);
-            ft_outline_move_to(outline, points[0].x, points[0].y);
+            outline.move_to(points[0].x, points[0].y);
             break;
         case NOVASVG_PATH_COMMAND_LINE_TO:
-            matrix_map_points(matrix, points, points, 1);
-            ft_outline_line_to(outline, points[0].x, points[0].y);
+            outline.line_to(points[0].x, points[0].y);
             break;
         case NOVASVG_PATH_COMMAND_CUBIC_TO:
-            matrix_map_points(matrix, points, points, 3);
-            ft_outline_cubic_to(outline, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
+            outline.cubic_to(points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
             break;
         case NOVASVG_PATH_COMMAND_CLOSE:
-            ft_outline_close(outline);
+            outline.close();
             break;
         }
     }
 
-    ft_outline_end(outline);
     return outline;
-}
-
-PVG_FT_Outline* ft_outline_convert_dash(const path_t* path, const matrix_t* matrix, const stroke_dash_t* stroke_dash)
-{
-    if(stroke_dash->array.size == 0)
-        return ft_outline_convert(path, matrix, NULL);
-    path_t* dashed = path_clone_dashed(path, stroke_dash->offset, stroke_dash->array.data, stroke_dash->array.size);
-    PVG_FT_Outline* outline = ft_outline_convert(dashed, matrix, NULL);
-    path_destroy(dashed);
-    return outline;
-}
-
-PVG_FT_Outline* ft_outline_convert_stroke(const path_t* path, const matrix_t* matrix, const stroke_data_t* stroke_data)
-{
-    double scale_x = sqrt(matrix->a * matrix->a + matrix->b * matrix->b);
-    double scale_y = sqrt(matrix->c * matrix->c + matrix->d * matrix->d);
-
-    double scale = hypot(scale_x, scale_y) / NOVASVG_SQRT2;
-    double width = stroke_data->style.width * scale;
-
-    PVG_FT_Fixed ftWidth = (PVG_FT_Fixed)(width * 0.5 * (1 << 6));
-    PVG_FT_Fixed ftMiterLimit = (PVG_FT_Fixed)(stroke_data->style.miter_limit * (1 << 16));
-
-    PVG_FT_Stroker_LineCap ftCap;
-    switch(stroke_data->style.cap) {
-    case NOVASVG_LINE_CAP_SQUARE:
-        ftCap = PVG_FT_STROKER_LINECAP_SQUARE;
-        break;
-    case NOVASVG_LINE_CAP_ROUND:
-        ftCap = PVG_FT_STROKER_LINECAP_ROUND;
-        break;
-    default:
-        ftCap = PVG_FT_STROKER_LINECAP_BUTT;
-        break;
-    }
-
-    PVG_FT_Stroker_LineJoin ftJoin;
-    switch(stroke_data->style.join) {
-    case NOVASVG_LINE_JOIN_BEVEL:
-        ftJoin = PVG_FT_STROKER_LINEJOIN_BEVEL;
-        break;
-    case NOVASVG_LINE_JOIN_ROUND:
-        ftJoin = PVG_FT_STROKER_LINEJOIN_ROUND;
-        break;
-    default:
-        ftJoin = PVG_FT_STROKER_LINEJOIN_MITER_FIXED;
-        break;
-    }
-
-    PVG_FT_Stroker stroker;
-    PVG_FT_Stroker_New(&stroker);
-    PVG_FT_Stroker_Set(stroker, ftWidth, ftCap, ftJoin, ftMiterLimit);
-
-    PVG_FT_Outline* outline = ft_outline_convert_dash(path, matrix, &stroke_data->dash);
-    PVG_FT_Stroker_ParseOutline(stroker, outline);
-
-    PVG_FT_UInt points;
-    PVG_FT_UInt contours;
-    PVG_FT_Stroker_GetCounts(stroker, &points, &contours);
-
-    PVG_FT_Outline* stroke_outline = ft_outline_create(points, contours);
-    PVG_FT_Stroker_Export(stroker, stroke_outline);
-
-    PVG_FT_Stroker_Done(stroker);
-    ft_outline_destroy(outline);
-    return stroke_outline;
-}
-
-void spans_generation_callback(int count, const PVG_FT_Span* spans, void* user)
-{
-    span_buffer_t* span_buffer = (span_buffer_t*)(user);
-    novasvg_array_append_data(span_buffer->spans, spans, count);
 }
 
 } // namespace
 
 void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data, fill_rule_t winding)
 {
-    PVG_FT_Outline* outline = ft_outline_convert(path, matrix, stroke_data);
-    if(stroke_data) {
-        outline->flags = PVG_FT_OUTLINE_NONE;
+    span_buffer_reset(span_buffer);
+
+    stb::matrix m;
+    m.a = matrix->a;
+    m.b = matrix->b;
+    m.c = matrix->c;
+    m.d = matrix->d;
+    m.e = matrix->e;
+    m.f = matrix->f;
+
+    stb::clip_rect clip;
+    if(clip_rect) {
+        clip.x = (int)clip_rect->x;
+        clip.y = (int)clip_rect->y;
+        clip.w = (int)(clip_rect->x + clip_rect->w) - clip.x;
+        clip.h = (int)(clip_rect->y + clip_rect->h) - clip.y;
     } else {
-        switch(winding) {
-        case NOVASVG_FILL_RULE_EVEN_ODD:
-            outline->flags = PVG_FT_OUTLINE_EVEN_ODD_FILL;
+        // No clip: libstb limits coordinates to +-1,000,000 anyway.
+        clip.x = -1000000;
+        clip.y = -1000000;
+        clip.w = 2000000;
+        clip.h = 2000000;
+    }
+
+    auto sink = [span_buffer](stb::span_view view) {
+        const int count = (int)view.size;
+        novasvg_array_ensure(span_buffer->spans, count);
+        span_t* out = span_buffer->spans.data + span_buffer->spans.size;
+        for(int i = 0; i < count; ++i) {
+            out[i].x = view.data[i].x;
+            out[i].y = view.data[i].y;
+            out[i].len = view.data[i].len;
+            out[i].coverage = view.data[i].coverage;
+        }
+
+        span_buffer->spans.size += count;
+    };
+
+    const stb::outline outline = to_stb_outline(path);
+    if(stroke_data) {
+        stb::stroke_style style;
+        style.width = stroke_data->style.width;
+        switch(stroke_data->style.cap) {
+        case NOVASVG_LINE_CAP_SQUARE:
+            style.cap = stb::line_cap::square;
+            break;
+        case NOVASVG_LINE_CAP_ROUND:
+            style.cap = stb::line_cap::round;
             break;
         default:
-            outline->flags = PVG_FT_OUTLINE_NONE;
+            style.cap = stb::line_cap::butt;
             break;
         }
-    }
 
-    PVG_FT_Raster_Params params;
-    params.flags = PVG_FT_RASTER_FLAG_DIRECT | PVG_FT_RASTER_FLAG_AA;
-    params.gray_spans = spans_generation_callback;
-    params.user = span_buffer;
-    params.source = outline;
-    if(clip_rect) {
-        params.flags |= PVG_FT_RASTER_FLAG_CLIP;
-        params.clip_box.xMin = (PVG_FT_Pos)clip_rect->x;
-        params.clip_box.yMin = (PVG_FT_Pos)clip_rect->y;
-        params.clip_box.xMax = (PVG_FT_Pos)(clip_rect->x + clip_rect->w);
-        params.clip_box.yMax = (PVG_FT_Pos)(clip_rect->y + clip_rect->h);
-    }
+        switch(stroke_data->style.join) {
+        case NOVASVG_LINE_JOIN_BEVEL:
+            style.join = stb::line_join::bevel;
+            break;
+        case NOVASVG_LINE_JOIN_ROUND:
+            style.join = stb::line_join::round;
+            break;
+        default:
+            style.join = stb::line_join::miter;
+            break;
+        }
 
-    span_buffer_reset(span_buffer);
-    PVG_FT_Raster_Render(&params);
-    ft_outline_destroy(outline);
+        style.miter_limit = stroke_data->style.miter_limit;
+        if(stroke_data->dash.array.size > 0) {
+            style.dashes.assign(stroke_data->dash.array.data, stroke_data->dash.array.data + stroke_data->dash.array.size);
+            style.dash_offset = stroke_data->dash.offset;
+        }
+
+        stb::rasterize_stroke(outline, style, m, clip, sink);
+    } else {
+        stb::rasterize_fill(outline, winding == NOVASVG_FILL_RULE_EVEN_ODD ? stb::fill_rule::even_odd : stb::fill_rule::non_zero, m, clip, sink);
+    }
 }
 
 } // namespace gfx
