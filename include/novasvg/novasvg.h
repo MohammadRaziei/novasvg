@@ -64,7 +64,6 @@ using matrix_t = matrix;
  *
  * @param closure A user-defined pointer to the resource or context to be freed.
  */
-typedef void (*novasvg_destroy_func_t)(void* closure);
 
 
 

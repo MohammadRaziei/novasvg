@@ -1,5 +1,5 @@
 #include "state.h"
-#include "novasvg/gfx/font_impl.h"
+#include "font_face.h"
 
 namespace novasvg {
 namespace gfx {

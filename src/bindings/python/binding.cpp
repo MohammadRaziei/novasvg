@@ -156,8 +156,8 @@ NB_MODULE(novasvg_py, m) {
           "Add a font face from a memory buffer (bytes) to the cache.");
 
     // --- Bind FontFace / Font (text measurement) ---
-    // Exposes novasvg's own font stack (a vendored stb_truetype under
-    // include/novasvg/gfx/font_impl.h) to Python, so callers that need
+    // Exposes novasvg's own font stack (built on libstb's stb::font,
+    // src/gfx/font_face.cpp) to Python, so callers that need
     // to measure text -- e.g. mermaidx computing label/box sizes before it
     // ever builds the svg -- can ask the exact same engine that will later
     // paint the glyphs, instead of hand-rolling a second TTF parser that

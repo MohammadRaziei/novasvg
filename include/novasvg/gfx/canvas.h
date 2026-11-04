@@ -576,525 +576,85 @@ NOVASVG_INLINE const Rect Rect::Infinite(-FLT_MAX / 2.f, -FLT_MAX / 2.f, FLT_MAX
 
 NOVASVG_INLINE const Transform Transform::Identity(1, 0, 0, 1, 0, 0);
 
-NOVASVG_INLINE Transform::Transform()
-{
-    matrix_init_identity(&m_matrix);
-}
 
-NOVASVG_INLINE Transform::Transform(float a, float b, float c, float d, float e, float f)
-{
-    matrix_init(&m_matrix, a, b, c, d, e, f);
-}
 
 // Transform::Transform(const Matrix&) is defined in novasvg.h, right after
 // Matrix itself -- Matrix belongs to the svg/document layer, not here, so
 // this file (which stays usable without that layer) only declares the
 // conversion, it doesn't define it.
 
-NOVASVG_INLINE Transform Transform::operator*(const Transform& transform) const
-{
-    matrix_t result;
-    matrix_multiply(&result, &transform.m_matrix, &m_matrix);
-    return result;
-}
-
-NOVASVG_INLINE Transform& Transform::operator*=(const Transform& transform)
-{
-    return (*this = *this * transform);
-}
-
-NOVASVG_INLINE Transform& Transform::multiply(const Transform& transform)
-{
-    return (*this *= transform);
-}
-
-NOVASVG_INLINE Transform& Transform::translate(float tx, float ty)
-{
-    return multiply(translated(tx, ty));
-}
-
-NOVASVG_INLINE Transform& Transform::scale(float sx, float sy)
-{
-    return multiply(scaled(sx, sy));
-}
-
-NOVASVG_INLINE Transform& Transform::rotate(float angle, float cx, float cy)
-{
-    return multiply(rotated(angle, cx, cy));
-}
-
-NOVASVG_INLINE Transform& Transform::shear(float shx, float shy)
-{
-    return multiply(sheared(shx, shy));
-}
-
-NOVASVG_INLINE Transform& Transform::post_multiply(const Transform& transform)
-{
-    return (*this = transform * *this);
-}
-
-NOVASVG_INLINE Transform& Transform::postTranslate(float tx, float ty)
-{
-    return post_multiply(translated(tx, ty));
-}
-
-NOVASVG_INLINE Transform& Transform::postScale(float sx, float sy)
-{
-    return post_multiply(scaled(sx, sy));
-}
-
-NOVASVG_INLINE Transform& Transform::postRotate(float angle, float cx, float cy)
-{
-    return post_multiply(rotated(angle, cx, cy));
-}
-
-NOVASVG_INLINE Transform& Transform::postShear(float shx, float shy)
-{
-    return post_multiply(sheared(shx, shy));
-}
-
-NOVASVG_INLINE Transform Transform::inverse() const
-{
-    matrix_t inverse;
-    matrix_invert(&m_matrix, &inverse);
-    return inverse;
-}
-
-NOVASVG_INLINE Transform& Transform::invert()
-{
-    matrix_invert(&m_matrix, &m_matrix);
-    return *this;
-}
-
-NOVASVG_INLINE void Transform::reset()
-{
-    matrix_init_identity(&m_matrix);
-}
-
-NOVASVG_INLINE Point Transform::mapPoint(float x, float y) const
-{
-    matrix_map(&m_matrix, x, y, &x, &y);
-    return Point(x, y);
-}
-
-NOVASVG_INLINE Point Transform::mapPoint(const Point& point) const
-{
-    return mapPoint(point.x, point.y);
-}
-
-NOVASVG_INLINE Rect Transform::map_rect(const Rect& rect) const
-{
-    if(!rect.isValid()) {
-        return Rect::Invalid;
-    }
-
-    rect_t result = {rect.x, rect.y, rect.w, rect.h};
-    matrix_map_rect(&m_matrix, &result, &result);
-    return result;
-}
-
-NOVASVG_INLINE float Transform::xScale() const
-{
-    return std::sqrt(m_matrix.a * m_matrix.a + m_matrix.b * m_matrix.b);
-}
-
-NOVASVG_INLINE float Transform::yScale() const
-{
-    return std::sqrt(m_matrix.c * m_matrix.c + m_matrix.d * m_matrix.d);
-}
-
-NOVASVG_INLINE bool Transform::parse(const char* data, size_t length)
-{
-    return matrix_parse(&m_matrix, data, length);
-}
-
-NOVASVG_INLINE Transform Transform::rotated(float angle, float cx, float cy)
-{
-    matrix_t matrix;
-    if(cx == 0.f && cy == 0.f) {
-        matrix_init_rotate(&matrix, NOVASVG_DEG2RAD(angle));
-    } else {
-        matrix_init_translate(&matrix, cx, cy);
-        matrix_rotate(&matrix, NOVASVG_DEG2RAD(angle));
-        matrix_translate(&matrix, -cx, -cy);
-    }
-
-    return matrix;
-}
-
-NOVASVG_INLINE Transform Transform::scaled(float sx, float sy)
-{
-    matrix_t matrix;
-    matrix_init_scale(&matrix, sx, sy);
-    return matrix;
-}
-
-NOVASVG_INLINE Transform Transform::sheared(float shx, float shy)
-{
-    matrix_t matrix;
-    matrix_init_shear(&matrix, NOVASVG_DEG2RAD(shx), NOVASVG_DEG2RAD(shy));
-    return matrix;
-}
-
-NOVASVG_INLINE Transform Transform::translated(float tx, float ty)
-{
-    matrix_t matrix;
-    matrix_init_translate(&matrix, tx, ty);
-    return matrix;
-}
-
-NOVASVG_INLINE Path::Path(const Path& path)
-    : m_data(path_reference(path.data()))
-{
-}
-
-NOVASVG_INLINE Path::Path(Path&& path)
-    : m_data(path.release())
-{
-}
-
-NOVASVG_INLINE Path::~Path()
-{
-    path_destroy(m_data);
-}
-
-NOVASVG_INLINE Path& Path::operator=(const Path& path)
-{
-    Path(path).swap(*this);
-    return *this;
-}
-
-NOVASVG_INLINE Path& Path::operator=(Path&& path)
-{
-    Path(std::move(path)).swap(*this);
-    return *this;
-}
-
-NOVASVG_INLINE void Path::moveTo(float x, float y)
-{
-    path_move_to(ensure(), x, y);
-}
-
-NOVASVG_INLINE void Path::lineTo(float x, float y)
-{
-    path_line_to(ensure(), x, y);
-}
-
-NOVASVG_INLINE void Path::quadTo(float x1, float y1, float x2, float y2)
-{
-    path_quad_to(ensure(), x1, y1, x2, y2);
-}
-
-NOVASVG_INLINE void Path::cubicTo(float x1, float y1, float x2, float y2, float x3, float y3)
-{
-    path_cubic_to(ensure(), x1, y1, x2, y2, x3, y3);
-}
-
-NOVASVG_INLINE void Path::arcTo(float rx, float ry, float xAxisRotation, bool largeArcFlag, bool sweepFlag, float x, float y)
-{
-    path_arc_to(ensure(), rx, ry, NOVASVG_DEG2RAD(xAxisRotation), largeArcFlag, sweepFlag, x, y);
-}
-
-NOVASVG_INLINE void Path::close()
-{
-    path_close(ensure());
-}
-
-NOVASVG_INLINE void Path::addEllipse(float cx, float cy, float rx, float ry)
-{
-    path_add_ellipse(ensure(), cx, cy, rx, ry);
-}
-
-NOVASVG_INLINE void Path::addRoundRect(float x, float y, float w, float h, float rx, float ry)
-{
-    path_add_round_rect(ensure(), x, y, w, h, rx, ry);
-}
-
-NOVASVG_INLINE void Path::addRect(float x, float y, float w, float h)
-{
-    path_add_rect(ensure(), x, y, w, h);
-}
-
-NOVASVG_INLINE void Path::addEllipse(const Point& center, const Size& radii)
-{
-    addEllipse(center.x, center.y, radii.w, radii.h);
-}
-
-NOVASVG_INLINE void Path::addRoundRect(const Rect& rect, const Size& radii)
-{
-    addRoundRect(rect.x, rect.y, rect.w, rect.h, radii.w, radii.h);
-}
-
-NOVASVG_INLINE void Path::addRect(const Rect& rect)
-{
-    addRect(rect.x, rect.y, rect.w, rect.h);
-}
-
-NOVASVG_INLINE void Path::reset()
-{
-    if(m_data == nullptr)
-        return;
-    if(isUnique()) {
-        path_reset(m_data);
-    } else {
-        path_destroy(m_data);
-        m_data = nullptr;
-    }
-}
-
-NOVASVG_INLINE Rect Path::boundingRect() const
-{
-    if(m_data == nullptr)
-        return Rect::Empty;
-    rect_t extents;
-    path_extents(m_data, &extents, false);
-    return extents;
-}
-
-NOVASVG_INLINE bool Path::empty() const
-{
-    if(m_data)
-        return path_get_elements(m_data, nullptr) == 0;
-    return true;
-}
-
-NOVASVG_INLINE bool Path::isUnique() const
-{
-    return path_get_reference_count(m_data) == 1;
-}
-
-NOVASVG_INLINE bool Path::parse(const char* data, size_t length)
-{
-    path_reset(ensure());
-    return path_parse(m_data, data, length);
-}
-
-NOVASVG_INLINE path_t* Path::ensure()
-{
-    if(is_null()) {
-        m_data = path_create();
-    } else if(!isUnique()) {
-        path_destroy(m_data);
-        m_data = path_clone(m_data);
-    }
-
-    return m_data;
-}
-
-NOVASVG_INLINE PathIterator::PathIterator(const Path& path)
-    : m_size(path_get_elements(path.data(), &m_elements))
-    , m_index(0)
-{
-}
-
-NOVASVG_INLINE PathCommand PathIterator::currentSegment(std::array<Point, 3>& points) const
-{
-    auto command = m_elements[m_index].header.command;
-    switch(command) {
-    case NOVASVG_PATH_COMMAND_MOVE_TO:
-        points[0] = m_elements[m_index + 1].point;
-        break;
-    case NOVASVG_PATH_COMMAND_LINE_TO:
-        points[0] = m_elements[m_index + 1].point;
-        break;
-    case NOVASVG_PATH_COMMAND_CUBIC_TO:
-        points[0] = m_elements[m_index + 1].point;
-        points[1] = m_elements[m_index + 2].point;
-        points[2] = m_elements[m_index + 3].point;
-        break;
-    case NOVASVG_PATH_COMMAND_CLOSE:
-        points[0] = m_elements[m_index + 1].point;
-        break;
-    }
-
-    return PathCommand(command);
-}
-
-NOVASVG_INLINE void PathIterator::next()
-{
-    m_index += m_elements[m_index].header.length;
-}
-
-
-NOVASVG_INLINE std::shared_ptr<raster_canvas> raster_canvas::create(const Bitmap& bitmap)
-{
-    return std::shared_ptr<raster_canvas>(new raster_canvas(bitmap));
-}
-
-NOVASVG_INLINE std::shared_ptr<raster_canvas> raster_canvas::create(float x, float y, float width, float height)
-{
-    constexpr int kMaxSize = 1 << 15;
-    if(width <= 0 || height <= 0 || width >= kMaxSize || height >= kMaxSize)
-        return std::shared_ptr<raster_canvas>(new raster_canvas(0, 0, 1, 1));
-    auto l = static_cast<int>(std::floor(x));
-    auto t = static_cast<int>(std::floor(y));
-    auto r = static_cast<int>(std::ceil(x + width));
-    auto b = static_cast<int>(std::ceil(y + height));
-    return std::shared_ptr<raster_canvas>(new raster_canvas(l, t, r - l, b - t));
-}
-
-NOVASVG_INLINE std::shared_ptr<raster_canvas> raster_canvas::create(const Rect& extents)
-{
-    return create(extents.x, extents.y, extents.w, extents.h);
-}
-
-NOVASVG_INLINE void raster_canvas::set_color(const Color& color)
-{
-    set_color(color.getRF(), color.getGF(), color.getBF(), color.getAF());
-}
-
-NOVASVG_INLINE void raster_canvas::set_color(float r, float g, float b, float a)
-{
-    canvas_set_rgba(m_canvas, r, g, b, a);
-}
-
-NOVASVG_INLINE void raster_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
-{
-    canvas_set_linear_gradient(m_canvas, x1, y1, x2, y2, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform.matrix());
-}
-
-NOVASVG_INLINE void raster_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
-{
-    canvas_set_radial_gradient(m_canvas, cx, cy, r, fx, fy, 0.f, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform.matrix());
-}
-
-NOVASVG_INLINE void raster_canvas::set_texture(const raster_canvas& source, TextureType type, float opacity, const Transform& transform)
-{
-    canvas_set_texture(m_canvas, source.surface(), static_cast<texture_type_t>(type), opacity, &transform.matrix());
-}
-
-NOVASVG_INLINE void raster_canvas::fill_path(const Path& path, FillRule fillRule, const Transform& transform)
-{
-    canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(fillRule));
-    canvas_set_operator(m_canvas, NOVASVG_OPERATOR_SRC_OVER);
-    canvas_fill_path(m_canvas, path.data());
-}
-
-NOVASVG_INLINE void raster_canvas::stroke_path(const Path& path, const StrokeData& strokeData, const Transform& transform)
-{
-    canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_set_line_width(m_canvas, strokeData.lineWidth());
-    canvas_set_miter_limit(m_canvas, strokeData.miterLimit());
-    canvas_set_line_cap(m_canvas, static_cast<line_cap_t>(strokeData.lineCap()));
-    canvas_set_line_join(m_canvas, static_cast<line_join_t>(strokeData.lineJoin()));
-    canvas_set_dash_offset(m_canvas, strokeData.dashOffset());
-    canvas_set_dash_array(m_canvas, strokeData.dashArray().data(), strokeData.dashArray().size());
-    canvas_set_operator(m_canvas, NOVASVG_OPERATOR_SRC_OVER);
-    canvas_stroke_path(m_canvas, path.data());
-}
-
-NOVASVG_INLINE void raster_canvas::fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform)
-{
-    canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_set_fill_rule(m_canvas, NOVASVG_FILL_RULE_NON_ZERO);
-    canvas_set_operator(m_canvas, NOVASVG_OPERATOR_SRC_OVER);
-    canvas_set_font(m_canvas, font.face().get(), font.size());
-    canvas_fill_text(m_canvas, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF32, origin.x, origin.y);
-}
-
-NOVASVG_INLINE void raster_canvas::stroke_text(const std::u32string_view& text, float strokeWidth, const Font& font, const Point& origin, const Transform& transform)
-{
-    canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_set_line_width(m_canvas, strokeWidth);
-    canvas_set_miter_limit(m_canvas, 4.f);
-    canvas_set_line_cap(m_canvas, NOVASVG_LINE_CAP_BUTT);
-    canvas_set_line_join(m_canvas, NOVASVG_LINE_JOIN_MITER);
-    canvas_set_dash_offset(m_canvas, 0.f);
-    canvas_set_dash_array(m_canvas, nullptr, 0);
-    canvas_set_operator(m_canvas, NOVASVG_OPERATOR_SRC_OVER);
-    canvas_set_font(m_canvas, font.face().get(), font.size());
-    canvas_stroke_text(m_canvas, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF32, origin.x, origin.y);
-}
-
-NOVASVG_INLINE void raster_canvas::clip_path(const Path& path, FillRule clipRule, const Transform& transform)
-{
-    canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(clipRule));
-    canvas_clip_path(m_canvas, path.data());
-}
-
-NOVASVG_INLINE void raster_canvas::clip_rect(const Rect& rect, FillRule clipRule, const Transform& transform)
-{
-    canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(clipRule));
-    canvas_clip_rect(m_canvas, rect.x, rect.y, rect.w, rect.h);
-}
-
-NOVASVG_INLINE void raster_canvas::draw_image(const Bitmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform)
-{
-    auto xScale = dstRect.w / srcRect.w;
-    auto yScale = dstRect.h / srcRect.h;
-    matrix_t matrix = { xScale, 0, 0, yScale, -srcRect.x * xScale, -srcRect.y * yScale };
-    canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_translate(m_canvas, dstRect.x, dstRect.y);
-    canvas_set_fill_rule(m_canvas, NOVASVG_FILL_RULE_NON_ZERO);
-    canvas_set_operator(m_canvas, NOVASVG_OPERATOR_SRC_OVER);
-    canvas_set_texture(m_canvas, image.surface(), NOVASVG_TEXTURE_TYPE_PLAIN, 1.f, &matrix);
-    canvas_fill_rect(m_canvas, 0, 0, dstRect.w, dstRect.h);
-}
-
-NOVASVG_INLINE void raster_canvas::blend_canvas(const raster_canvas& canvas, BlendMode blendMode, float opacity)
-{
-    matrix_t matrix = { 1, 0, 0, 1, static_cast<float>(canvas.x()), static_cast<float>(canvas.y()) };
-    canvas_set_matrix(m_canvas, &m_translation);
-    canvas_set_operator(m_canvas, static_cast<operator_t>(blendMode));
-    canvas_set_texture(m_canvas, canvas.surface(), NOVASVG_TEXTURE_TYPE_PLAIN, opacity, &matrix);
-    canvas_paint(m_canvas);
-}
-
-NOVASVG_INLINE void raster_canvas::save()
-{
-    canvas_save(m_canvas);
-}
-
-NOVASVG_INLINE void raster_canvas::restore()
-{
-    canvas_restore(m_canvas);
-}
-
-NOVASVG_INLINE int raster_canvas::width() const
-{
-    return surface_get_width(m_surface);
-}
-
-NOVASVG_INLINE int raster_canvas::height() const
-{
-    return surface_get_height(m_surface);
-}
-
-NOVASVG_INLINE void raster_canvas::convert_to_luminance_mask()
-{
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
-    for(int y = 0; y < height; y++) {
-        auto pixels = reinterpret_cast<uint32_t*>(data + stride * y);
-        for(int x = 0; x < width; x++) {
-            auto pixel = pixels[x];
-            auto a = (pixel >> 24) & 0xFF;
-            auto r = (pixel >> 16) & 0xFF;
-            auto g = (pixel >> 8) & 0xFF;
-            auto b = (pixel >> 0) & 0xFF;
-            if(a) {
-                r = (r * 255) / a;
-                g = (g * 255) / a;
-                b = (b * 255) / a;
-            }
-
-            auto l = (r * 0.2125 + g * 0.7154 + b * 0.0721);
-            pixels[x] = static_cast<uint32_t>(l * (a / 255.0)) << 24;
-        }
-    }
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ponytail: single-axis box blur pass, edge-extended, operating in place
 // on premultiplied ARGB. Blurring premultiplied channels directly (rather
@@ -1203,200 +763,17 @@ static int gaussianRadiusForSigma(float sigma)
     return STB_MAX(1, int(d / 2.f + 0.5f));
 }
 
-NOVASVG_INLINE void raster_canvas::box_blur(float stdDeviationX, float stdDeviationY)
-{
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
 
-    auto rx = gaussianRadiusForSigma(stdDeviationX);
-    auto ry = gaussianRadiusForSigma(stdDeviationY);
-    for(int pass = 0; pass < 3; ++pass) {
-        if(rx > 0) boxBlurPass(data, width, height, stride, rx, true);
-        if(ry > 0) boxBlurPass(data, width, height, stride, ry, false);
-    }
-}
 
-NOVASVG_INLINE void raster_canvas::fill_opaque_white()
-{
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
-    for(int y = 0; y < height; ++y) {
-        auto* pixels = reinterpret_cast<uint32_t*>(data + stride * y);
-        for(int x = 0; x < width; ++x)
-            pixels[x] = 0xFFFFFFFFu;
-    }
-}
 
-NOVASVG_INLINE void raster_canvas::tint_to_flood_color(const Color& floodColor, float floodOpacity)
-{
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
 
-    auto r = uint32_t(floodColor.getR());
-    auto g = uint32_t(floodColor.getG());
-    auto b = uint32_t(floodColor.getB());
-    for(int y = 0; y < height; ++y) {
-        auto* pixels = reinterpret_cast<uint32_t*>(data + stride * y);
-        for(int x = 0; x < width; ++x) {
-            auto srcAlpha = (pixels[x] >> 24) & 0xFF;
-            auto alpha = uint32_t(srcAlpha * floodOpacity);
-            // premultiplied: scale color channels by (alpha / 255)
-            pixels[x] = (alpha << 24) | (((r * alpha) / 255) << 16) | (((g * alpha) / 255) << 8) | ((b * alpha) / 255);
-        }
-    }
-}
 
-NOVASVG_INLINE void raster_canvas::shift(float dx, float dy)
-{
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
-    auto idx = int(dx);
-    auto idy = int(dy);
-    if(idx == 0 && idy == 0)
-        return;
 
-    auto* scratch = static_cast<unsigned char*>(malloc(size_t(stride) * size_t(height)));
-    if(!scratch)
-        return;
-    memset(scratch, 0, size_t(stride) * size_t(height));
-    for(int y = 0; y < height; ++y) {
-        auto sy = y - idy;
-        if(sy < 0 || sy >= height) continue;
-        auto* src = reinterpret_cast<uint32_t*>(data + sy * stride);
-        auto* dst = reinterpret_cast<uint32_t*>(scratch + y * stride);
-        for(int x = 0; x < width; ++x) {
-            auto sx = x - idx;
-            if(sx < 0 || sx >= width) continue;
-            dst[x] = src[sx];
-        }
-    }
-    memcpy(data, scratch, size_t(stride) * size_t(height));
-    free(scratch);
-}
 
-NOVASVG_INLINE void raster_canvas::composite_with(const raster_canvas& src, porter_duff mode)
-{
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
 
-    auto sWidth = surface_get_width(src.m_surface);
-    auto sHeight = surface_get_height(src.m_surface);
-    auto sStride = surface_get_stride(src.m_surface);
-    auto sData = surface_get_data(src.m_surface);
 
-    for(int y = 0; y < height && y < sHeight; ++y) {
-        auto* dst = reinterpret_cast<uint32_t*>(data + y * stride);
-        auto* srcRow = reinterpret_cast<uint32_t*>(sData + y * sStride);
-        for(int x = 0; x < width && x < sWidth; ++x) {
-            auto s = srcRow[x];
-            auto d = dst[x];
-            auto sA = (s >> 24) & 0xFF;
-            auto dA = (d >> 24) & 0xFF;
 
-            // Porter-Duff coefficients (premultiplied): result = s*Fs + d*Fd
-            int Fs, Fd;
-            switch(mode) {
-            case porter_duff::In:   Fs = dA;       Fd = 0;             break;
-            case porter_duff::Out:  Fs = 255 - dA; Fd = 0;             break;
-            case porter_duff::Atop: Fs = dA;       Fd = 255 - sA;      break;
-            case porter_duff::Xor:  Fs = 255 - dA; Fd = 255 - sA;      break;
-            case porter_duff::Over: default:       Fs = 255;          Fd = 255 - sA; break;
-            }
 
-            auto sr = (s >> 16) & 0xFF, sg = (s >> 8) & 0xFF, sb = s & 0xFF;
-            auto dr = (d >> 16) & 0xFF, dg = (d >> 8) & 0xFF, db = d & 0xFF;
-            auto outA = STB_MIN(255, int(sA * Fs + dA * Fd) / 255);
-            auto outR = STB_MIN(255, int(sr * Fs + dr * Fd) / 255);
-            auto outG = STB_MIN(255, int(sg * Fs + dg * Fd) / 255);
-            auto outB = STB_MIN(255, int(sb * Fs + db * Fd) / 255);
-            dst[x] = (uint32_t(outA) << 24) | (uint32_t(outR) << 16) | (uint32_t(outG) << 8) | uint32_t(outB);
-        }
-    }
-}
-
-NOVASVG_INLINE void raster_canvas::composite_over(const raster_canvas& src)
-{
-    composite_with(src, porter_duff::Over);
-}
-
-NOVASVG_INLINE void raster_canvas::composite_arithmetic(const raster_canvas& src, float k1, float k2, float k3, float k4)
-{
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
-
-    auto sWidth = surface_get_width(src.m_surface);
-    auto sHeight = surface_get_height(src.m_surface);
-    auto sStride = surface_get_stride(src.m_surface);
-    auto sData = surface_get_data(src.m_surface);
-
-    auto solve = [&](int i1, int i2) -> int {
-        auto f1 = float(i1) / 255.f;
-        auto f2 = float(i2) / 255.f;
-        auto result = k1 * f1 * f2 + k2 * f1 + k3 * f2 + k4;
-        return int(std::clamp(result, 0.f, 1.f) * 255.f + 0.5f);
-    };
-
-    for(int y = 0; y < height; ++y) {
-        auto* dst = reinterpret_cast<uint32_t*>(data + y * stride);
-        auto* srcRow = y < sHeight ? reinterpret_cast<uint32_t*>(sData + y * sStride) : nullptr;
-        for(int x = 0; x < width; ++x) {
-            auto s = (srcRow && x < sWidth) ? srcRow[x] : 0u;
-            auto d = dst[x];
-            auto outA = solve((s >> 24) & 0xFF, (d >> 24) & 0xFF);
-            auto outR = solve((s >> 16) & 0xFF, (d >> 16) & 0xFF);
-            auto outG = solve((s >> 8) & 0xFF, (d >> 8) & 0xFF);
-            auto outB = solve(s & 0xFF, d & 0xFF);
-            dst[x] = (uint32_t(outA) << 24) | (uint32_t(outR) << 16) | (uint32_t(outG) << 8) | uint32_t(outB);
-        }
-    }
-}
-
-NOVASVG_INLINE void raster_canvas::composite_drop_shadow_under(const raster_canvas& original, float dx, float dy)
-{
-    shift(dx, dy);
-    composite_over(original);
-}
-
-NOVASVG_INLINE void raster_canvas::copy_pixels_from(const raster_canvas& other)
-{
-    auto stride = surface_get_stride(m_surface);
-    auto height = surface_get_height(m_surface);
-    memcpy(surface_get_data(m_surface), surface_get_data(other.m_surface), size_t(stride) * size_t(height));
-}
-
-NOVASVG_INLINE raster_canvas::~raster_canvas()
-{
-    canvas_destroy(m_canvas);
-    surface_destroy(m_surface);
-}
-
-NOVASVG_INLINE raster_canvas::raster_canvas(const Bitmap& bitmap)
-    : m_surface(surface_reference(bitmap.surface()))
-    , m_canvas(canvas_create(m_surface))
-    , m_translation({1, 0, 0, 1, 0, 0})
-    , m_x(0), m_y(0)
-{
-}
-
-NOVASVG_INLINE raster_canvas::raster_canvas(int x, int y, int width, int height)
-    : m_surface(surface_create(width, height))
-    , m_canvas(canvas_create(m_surface))
-    , m_translation({1, 0, 0, 1, -static_cast<float>(x), -static_cast<float>(y)})
-    , m_x(x), m_y(y)
-{
-}
 
 } // namespace novasvg
 

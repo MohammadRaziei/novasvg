@@ -23,7 +23,6 @@ license (public domain / MIT), same Sean Barrett, unmodified otherwise:
 |---|---|---|
 | `stb_image_write.h` | [stb_image_write](https://github.com/nothings/stb) | `include/novasvg/novasvg.h`, next to `Bitmap` (the only thing in novasvg that writes images) |
 | `stb_image.h` | [stb_image](https://github.com/nothings/stb) | `include/novasvg/gfx/surface.h` (its only user) |
-| `stb_truetype.h` | [stb_truetype](https://github.com/nothings/stb) | `include/novasvg/gfx/font_impl.h` (its only user) |
 
 The FreeType-derived files above stay separate: four files with a real
 internal dependency chain (types -> math -> raster -> stroker) and a

@@ -43,3 +43,6 @@
 // pattern the vendored FreeType rasterizer already uses for its own
 // internals (PVG_FT_MIN/PVG_FT_MAX in src/gfx/vendor/), just
 // under this project's own prefix for general-purpose call sites.
+
+/** Callback that frees a user-supplied memory buffer once novasvg no longer needs it. */
+typedef void (*novasvg_destroy_func_t)(void* closure);

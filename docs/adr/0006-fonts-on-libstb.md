@@ -1,6 +1,7 @@
 # ADR-0006: Build fonts on libstb; add a glyph-outline API to libstb
 
-**Status:** Proposed (step 3). The API is not designed yet; this record fixes the direction and the open questions.
+**Status:** Accepted; implemented in step D3 (2026-11-04) for faces, metrics, outlines, kerning and ligatures. libstb now has the outline API
+(`font::outline`, `glyph_index`, `glyph_info`, `design_metrics`, `glyph_kerning`, `face_count`), so nothing had to be added there for this step.
 **Date:** 2026-11-01
 **Deciders:** Mohammad Raziei (maintainer)
 
@@ -86,4 +87,18 @@ Persian/Arabic text support gets simpler, not riskier; but that is unproven.
 2. [ ] Settle the shape of the outline API on the libstb side (returned value or visitor, units, caching).
 3. [ ] Rebuild `FontFace` on `stb::font` behind the existing tests; compare Persian, Arabic and Latin renders.
 4. [ ] Add text-heavy SVGs, including RTL and embedded fonts, to the golden set before changing anything.
-5. [ ] Delete the vendored stb_truetype and stb_rect_pack when the golden diff is clean.
+5. [x] Deleted the vendored stb_truetype (`gfx/font_impl.h`, 6266 lines); stb_rect_pack was never used by novasvg's own code.
+
+## Implementation notes (D3)
+
+- `src/gfx/font_face.cpp` holds `font_face_t` (wraps `stb::font`, caches per code point the glyph index, metrics, box and outline),
+  the face cache and the system-font scanner. Private declarations are in `src/gfx/font_face.h`.
+- Outlines: `font::outline` gives move/line/quad/cubic/close. Quads are raised to cubics exactly as before; `close` is skipped, as stb_truetype never
+  emitted it, so stroked text stays the same.
+- Ligatures (ff, fi, fl, ffi, ffl): a sequence is taken when `font::shape_glyphs` turns it into the one glyph that U+FB00..FB04 maps to, the same
+  condition the old GSUB probe checked.
+- libstb has no `name`-table or `head.macStyle` access, so the system-font scanner parses those two tables itself (about 60 lines).
+- `font_face_enumerate_codepoints` asks `has_glyph` for every scalar value instead of walking cmap formats 4/12: simpler, covers every cmap format,
+  and now skips glyph 0 for format 12 too.
+- `units_per_em` is exact now (was `1 / scale` in float).
+- Shaping/RTL stays in novasvg's own code for now; adopting `stb::shape_for_display` is a later step.

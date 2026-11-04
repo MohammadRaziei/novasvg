@@ -7,7 +7,6 @@
 
 #include "../svg/svgparserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no svg-tree dependency, consistent with this header's own self-contained goal
 #include "render.h"  // path_move_to/line_to/cubic_to, used to extract glyph outlines
-#include "font_impl.h"
 
 #include <string>
 #include <string_view>
@@ -55,27 +54,20 @@ public:
     // Kerning adjustment between two consecutive codepoints, in raw font
     // design units (unscaled) -- the same "kern"/GPOS lookup
     // Font::measureText() itself applies between every glyph pair (see
-    // font_face_text_extents() in gfx/font_impl.h), exposed per-pair
+    // font_face_text_extents() in src/gfx/font_face.cpp), exposed per-pair
     // so a caller that (unlike Font::measureText()) can't call back into
     // novasvg per string -- e.g. mermaidx's V8 engine, which sums a
     // shipped per-codepoint advance table in JS instead -- can still fold
     // kerning into that sum for whichever pairs it queries up front.
-    // Deliberately NOT a bulk enumeration like codepoints(): unlike the
-    // simple, single-format cmap table codepoints() walks, kerning may
-    // live in either a legacy "kern" table or an OpenType GPOS Pair
-    // Adjustment Positioning lookup (format 1, a per-pair list, or format
-    // 2, a glyph-class matrix) -- stb_truetype's own bulk accessors
-    // (stbtt_GetKerningTable()) only cover the "kern" table (see that
-    // function's own comment), not GPOS, so a from-scratch GPOS enumerator
-    // would be a second, substantially larger parser to maintain
-    // alongside stb_truetype's -- while this per-pair query reuses
-    // stb_truetype's own GPOS-aware lookup path exactly as-is.
+    // Deliberately NOT a bulk enumeration like codepoints(): kerning may live
+    // in either a legacy "kern" table or an OpenType GPOS pair-adjustment
+    // lookup, which libstb (stb::font::glyph_kerning) resolves per pair.
     float kernAdvanceUnits(char32_t first, char32_t second) const;
 
     // The advance width used for any codepoint outside the font's cmap
     // (glyph id 0, the ".notdef" glyph) -- what advanceWidthUnits() itself
-    // already falls back to for such a codepoint (stbtt_FindGlyphIndex()
-    // returns glyph 0 when nothing matches), exposed under its own name
+    // already falls back to for such a codepoint (the glyph index is 0
+    // when the cmap has nothing for it), exposed under its own name
     // purely so callers building a fallback value don't have to know that.
     float notdefAdvanceWidthUnits() const { return advanceWidthUnits(0); }
 
@@ -208,310 +200,34 @@ bool addFontFaceFromData(const char* family, bool bold, bool italic, const void*
 
 namespace novasvg {
 
-NOVASVG_INLINE FontFace::FontFace(font_face_t* face)
-    : m_face(font_face_reference(face))
-{
-}
 
-NOVASVG_INLINE FontFace::FontFace(const void* data, size_t length, destroy_func_t destroy_func, void* closure)
-    : m_face(font_face_load_from_data(data, length, 0, destroy_func, closure))
-{
-}
 
-NOVASVG_INLINE FontFace::FontFace(const char* filename)
-    : m_face(font_face_load_from_file(filename, 0))
-{
-}
 
-NOVASVG_INLINE FontFace::FontFace(const FontFace& face)
-    : m_face(font_face_reference(face.get()))
-{
-}
 
-NOVASVG_INLINE FontFace::FontFace(FontFace&& face)
-    : m_face(face.release())
-{
-}
 
-NOVASVG_INLINE FontFace::~FontFace()
-{
-    font_face_destroy(m_face);
-}
 
-NOVASVG_INLINE FontFace& FontFace::operator=(const FontFace& face)
-{
-    FontFace(face).swap(*this);
-    return *this;
-}
 
-NOVASVG_INLINE FontFace& FontFace::operator=(FontFace&& face)
-{
-    FontFace(std::move(face)).swap(*this);
-    return *this;
-}
 
-NOVASVG_INLINE void FontFace::swap(FontFace& face)
-{
-    std::swap(m_face, face.m_face);
-}
 
-NOVASVG_INLINE font_face_t* FontFace::release()
-{
-    return std::exchange(m_face, nullptr);
-}
 
-NOVASVG_INLINE float FontFace::unitsPerEm() const
-{
-    if(is_null())
-        return 0.f;
-    return font_face_get_units_per_em(m_face);
-}
 
-NOVASVG_INLINE float FontFace::ascentUnits() const
-{
-    if(is_null())
-        return 0.f;
-    float ascent = 0.f;
-    font_face_get_metrics(m_face, unitsPerEm(), &ascent, nullptr, nullptr, nullptr);
-    return ascent;
-}
 
-NOVASVG_INLINE float FontFace::descentUnits() const
-{
-    if(is_null())
-        return 0.f;
-    float descent = 0.f;
-    font_face_get_metrics(m_face, unitsPerEm(), nullptr, &descent, nullptr, nullptr);
-    return descent;
-}
 
-NOVASVG_INLINE float FontFace::advanceWidthUnits(char32_t codepoint) const
-{
-    if(is_null())
-        return 0.f;
-    // font_face_get_glyph_metrics() always returns advance_width * scale
-    // (see gfx/font_impl.h) -- passing unitsPerEm() as the "size"
-    // makes scale == 1, i.e. the raw, size-independent font-unit value,
-    // with no separate unscaled code path needed on the render side.
-    float advance = 0.f;
-    font_face_get_glyph_metrics(m_face, unitsPerEm(), codepoint, &advance, nullptr, nullptr);
-    return advance;
-}
 
-NOVASVG_INLINE float FontFace::kernAdvanceUnits(char32_t first, char32_t second) const
-{
-    if(is_null())
-        return 0.f;
-    // Same unitsPerEm()-as-size trick as advanceWidthUnits(): makes
-    // font_face_get_kern_advance()'s internal scale multiplication a
-    // no-op, yielding the raw, size-independent value.
-    return font_face_get_kern_advance(m_face, unitsPerEm(), first, second);
-}
 
-NOVASVG_INLINE std::vector<char32_t> FontFace::codepoints() const
-{
-    std::vector<char32_t> result;
-    if(is_null())
-        return result;
-    font_face_enumerate_codepoints(m_face, [](uint32_t codepoint, void* closure) {
-        static_cast<std::vector<char32_t>*>(closure)->push_back(static_cast<char32_t>(codepoint));
-    }, &result);
-    return result;
-}
 
-NOVASVG_INLINE bool FontFaceCache::addFontFace(const std::string& family, bool bold, bool italic, const FontFace& face)
-{
-    if(!face.is_null())
-        font_face_cache_add(m_cache, family.data(), bold, italic, face.get());
-    return !face.is_null();
-}
 
-NOVASVG_INLINE FontFace FontFaceCache::getFontFaceLocal(const std::string& family, bool bold, bool italic) const
-{
-    return FontFace(font_face_cache_get(m_cache, family.data(), bold, italic));
-}
 
-NOVASVG_INLINE FontFace FontFaceCache::getFontFace(const std::string& family, bool bold, bool italic) const
-{
-    if(auto face = getFontFaceLocal(family, bold, italic); !face.is_null()) {
-        return face;
-    }
 
-    static const struct {
-        const char* generic;
-        const char* fallback;
-    } generic_fallbacks[] = {
-#if defined(__linux__)
-        {"sans-serif", "DejaVu Sans"},
-        {"serif", "DejaVu Serif"},
-        {"monospace", "DejaVu Sans Mono"},
-#else
-        {"sans-serif", "Arial"},
-        {"serif", "Times New Roman"},
-        {"monospace", "Courier New"},
-#endif
-        {"cursive", "Comic Sans MS"},
-        {"fantasy", "Impact"}
-    };
 
-    for(auto value : generic_fallbacks) {
-        if(value.generic == family || family.empty()) {
-            if(auto face = FontFace(font_face_cache_get(m_cache, value.fallback, bold, italic)); !face.is_null())
-                return face;
-            // Not even the platform's stand-in is installed: use the embedded font
-            // so text is still drawn (and drawn the same way) on a machine without fonts.
-            return embeddedFallbackFont(bold, italic);
-        }
-    }
 
-    return FontFace();
-}
+FontFaceCache* fontFaceCache();
 
-NOVASVG_INLINE FontFace FontFaceCache::getFontFaceForFamilyStack(const std::string& familyStack, bool bold, bool italic) const
-{
-    // Metric-compatible stand-ins only: a substitute must lay text out the
-    // same way as the font it replaces, so a name with no such stand-in
-    // (verdana, trebuchet ms, ...) is skipped and the stack moves on. Each
-    // key is tried under its own spelling first, so a differently-cased
-    // request (`helvetica`, `ARIAL`) still finds an installed original.
-    static const char* const sans[] = {"Arial", "Liberation Sans", "Arimo", "Nimbus Sans", "Nimbus Sans L", "FreeSans", nullptr};
-    static const char* const serif[] = {"Times New Roman", "Liberation Serif", "Tinos", "Nimbus Roman", "Nimbus Roman No9 L", "FreeSerif", nullptr};
-    static const char* const mono[] = {"Courier New", "Liberation Mono", "Cousine", "Nimbus Mono PS", "Nimbus Mono", "FreeMono", nullptr};
-    static const char* const calibri[] = {"Carlito", nullptr};
-    static const char* const cambria[] = {"Caladea", nullptr};
-    static const char* const georgia[] = {"Gelasio", nullptr};
-    static const struct {
-        const char* family; // real spelling; matched case-insensitively
-        const char* const* substitutes;
-    } aliases[] = {
-        {"Arial", sans}, {"Helvetica", sans}, {"Helvetica Neue", sans},
-        {"Times New Roman", serif}, {"Times", serif},
-        {"Courier New", mono}, {"Courier", mono},
-        {"Calibri", calibri}, {"Cambria", cambria}, {"Georgia", georgia},
-    };
 
-    std::string_view input(familyStack);
-    while(!input.empty()) {
-        auto family = input.substr(0, input.find(','));
-        input.remove_prefix(family.length());
-        if(!input.empty() && input.front() == ',')
-            input.remove_prefix(1);
-        stripLeadingAndTrailingSpaces(family);
-        if(!family.empty() && (family.front() == '\'' || family.front() == '"')) {
-            auto quote = family.front();
-            family.remove_prefix(1);
-            if(!family.empty() && family.back() == quote)
-                family.remove_suffix(1);
-            stripLeadingAndTrailingSpaces(family);
-        }
-        if(family.empty())
-            continue;
 
-        std::string name(family);
-        if(auto face = getFontFaceLocal(name, bold, italic); !face.is_null())
-            return face;
 
-        std::string lower(name);
-        for(auto& ch : lower)
-            ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+bool addFontFaceFromFile(const char* family, bool bold, bool italic, const char* filename);
 
-        for(const auto& alias : aliases) {
-            std::string key(alias.family);
-            for(auto& ch : key)
-                ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
-            if(lower != key)
-                continue;
-            if(auto face = getFontFaceLocal(alias.family, bold, italic); !face.is_null())
-                return face;
-            for(auto substitute = alias.substitutes; *substitute; ++substitute) {
-                if(auto face = getFontFaceLocal(*substitute, bold, italic); !face.is_null())
-                    return face;
-            }
-        }
-
-        // Generic keywords ("sans-serif", ...). Anything else is not a
-        // generic name, so this stays empty for it and the walk goes on.
-        if(auto face = getFontFace(lower, bold, italic); !face.is_null())
-            return face;
-    }
-
-    return FontFace();
-}
-
-NOVASVG_INLINE FontFaceCache::FontFaceCache()
-    : m_cache(font_face_cache_create())
-{
-#ifndef NOVASVG_DISABLE_LOAD_SYSTEM_FONTS
-    font_face_cache_load_sys(m_cache);
-#endif
-}
-
-NOVASVG_INLINE FontFaceCache* fontFaceCache()
-{
-    static FontFaceCache cache;
-    return &cache;
-}
-
-NOVASVG_INLINE Font::Font(const FontFace& face, float size)
-    : m_face(face), m_size(size)
-{
-    if(m_size > 0.f && !m_face.is_null()) {
-        font_face_get_metrics(m_face.get(), m_size, &m_ascent, &m_descent, &m_lineGap, nullptr);
-    }
-}
-
-NOVASVG_INLINE float Font::xHeight() const
-{
-    rect_t extents = {0};
-    if(m_size > 0.f && !m_face.is_null())
-        font_face_get_glyph_metrics(m_face.get(), m_size, 'x', nullptr, nullptr, &extents);
-    return extents.h;
-}
-
-NOVASVG_INLINE float Font::measureText(const std::u32string_view& text) const
-{
-    if(m_size > 0.f && !m_face.is_null())
-        return font_face_text_extents(m_face.get(), m_size, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF32, nullptr);
-    return 0;
-}
-NOVASVG_INLINE std::vector<Font::GlyphBox> Font::glyphBoxes(const std::u32string_view& text) const
-{
-    std::vector<GlyphBox> boxes;
-    if(m_size <= 0.f || m_face.is_null())
-        return boxes;
-
-    font_face_t* face = m_face.get();
-    text_iterator_t it;
-    text_iterator_init(&it, text.data(), static_cast<int>(text.length()), NOVASVG_TEXT_ENCODING_UTF32);
-    float pen = 0.f;
-    codepoint_t previous = 0;
-    bool hasPrevious = false;
-    while(text_iterator_has_next(&it)) {
-        codepoint_t codepoint = text_iterator_next(&it);
-        codepoint = font_face_apply_ligature(face, &it, codepoint);
-        if(hasPrevious)
-            pen += font_face_get_kern_advance(face, m_size, previous, codepoint);
-        previous = codepoint;
-        hasPrevious = true;
-
-        float advance = 0.f;
-        rect_t extents = {0};
-        font_face_get_glyph_metrics(face, m_size, codepoint, &advance, nullptr, &extents);
-        if(extents.w > 0.f || extents.h > 0.f)
-            boxes.push_back({pen, extents.x, extents.x + extents.w, extents.y, extents.y + extents.h});
-        pen += advance;
-    }
-    return boxes;
-}
-
-NOVASVG_INLINE bool addFontFaceFromFile(const char* family, bool bold, bool italic, const char* filename)
-{
-    return fontFaceCache()->addFontFace(family, bold, italic, FontFace(filename));
-}
-
-NOVASVG_INLINE bool addFontFaceFromData(const char* family, bool bold, bool italic, const void* data, size_t length, destroy_func_t destroy_func, void* closure)
-{
-    return fontFaceCache()->addFontFace(family, bold, italic, FontFace(data, length, destroy_func, closure));
-}
+bool addFontFaceFromData(const char* family, bool bold, bool italic, const void* data, size_t length, destroy_func_t destroy_func, void* closure);
 
 } // namespace novasvg

@@ -337,10 +337,6 @@ static bool matchSelector(const Selector& selector, const svg_element* el)
     return true;
 }
 
-NOVASVG_INLINE bool RuleData::match(const svg_element* el) const
-{
-    return matchSelector(m_selector, el);
-}
 
 inline bool readCSSIdentifier(std::string_view& input, std::string& output)
 {
@@ -754,37 +750,7 @@ static FontFace fontFaceFromZlibBase64(std::string_view payload)
     return FontFace(owned->data(), owned->size(), [](void* closure) { delete static_cast<std::vector<uint8_t>*>(closure); }, owned);
 }
 
-NOVASVG_INLINE FontFace embeddedFallbackFont(bool bold, bool italic)
-{
-#ifdef NOVASVG_DISABLE_EMBEDDED_FONT
-    (void)bold;
-    (void)italic;
-    return FontFace();
-#else
-    // Each face is built on first use only: a machine with fonts never pays for the decode, and a
-    // program that never asks for bold never decodes the bold face.
-    auto build = [](const char* const* chunks) {
-        std::string payload;
-        for(auto chunk = chunks; *chunk; ++chunk)
-            payload += *chunk;
-        return fontFaceFromZlibBase64(payload);
-    };
-    if(bold && italic) {
-        static const FontFace face = build(detail::kEmbeddedFontBoldItalicZlibBase64);
-        return face;
-    }
-    if(bold) {
-        static const FontFace face = build(detail::kEmbeddedFontBoldZlibBase64);
-        return face;
-    }
-    if(italic) {
-        static const FontFace face = build(detail::kEmbeddedFontItalicZlibBase64);
-        return face;
-    }
-    static const FontFace face = build(detail::kEmbeddedFontZlibBase64);
-    return face;
-#endif
-}
+FontFace embeddedFallbackFont(bool bold, bool italic);
 
 // Loads an `@font-face` rule's embedded font (a `src: url(data:...)`
 // entry) and registers it, matching what the CSS itself declares:

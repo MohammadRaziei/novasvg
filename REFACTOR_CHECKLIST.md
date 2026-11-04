@@ -205,16 +205,16 @@ Target is `libstb::libstb` (renamed from `libstb::core` in libstb 0.9).
       `sample01` (14 SVGs -> PNG, 0 failed) and `sample02` run
 - [ ] `Bitmap` still `novasvg::Bitmap` (marked internal); moving it to `detail` waits for step 4 (public/internal split)
 
-### Step 3: fonts, remove stb_truetype (see ADR-0006, proposed)
+### Step 3: fonts, remove stb_truetype (ADR-0006; D3 done 2026-11-04, final gate pending)
 novasvg calls 13 stb_truetype functions. `stb::font` renders text to bitmaps, but SVG needs **vector glyph
 outlines** (`stbtt_GetGlyphShape`), so libstb must grow an API first.
 - [ ] Re-read libstb's `font.hpp` and write the libstb issue: glyph index, glyph outline (move/line/quad/cubic),
       per-glyph metrics and box, font bounding box, face count in a collection, kerning (kern and GPOS)
 - [ ] Add that API in libstb (its own repository, tests and zip)
-- [ ] Rebuild `FontFace` on `stb::font`
+- [x] Rebuild `FontFace` on `stb::font` (`src/gfx/font_face.cpp`)
 - [ ] Persian/Arabic shaping (bidi, joining, GSUB) through `stb::shape_*`
 - [ ] Extend the golden set first with RTL text and embedded-font SVGs
-- [ ] Remove stb_truetype and stb_rect_pack (about 5,000 lines) from `render/font.h`
+- [x] Remove stb_truetype (`gfx/font_impl.h`, 6266 lines)
 - [ ] Tests and golden; watch: RTL text, kerning, embedded fonts, WOFF, `.ttc`
 
 ### Step 4: from header-only to compiled (ADR-0001)
@@ -343,4 +343,14 @@ Build note: the Python build (`/tmp/pybuild`) fetches its own libstb; after a li
 - Consumers of `novasvg.h` no longer parse the SVG layer. `gfx/canvas.h`, `gfx/font.h` (+ `font_impl.h` = stb_truetype, 6266 lines), `internal.h`, `utils.h`, `default_font.h` are STILL public and header-only (tests and the Python binding use `Transform` / `Font` from them): this is the next thing to move.
 - Debt: the Python binding and `test_foreignobject_style.cpp` include the private `svg/svgelement.h` (CMake adds `src/` to their include path). Needed: a public text-measure API (`Font`, `utf8ToU32`, `measure_foreign_object`).
 - Remaining header-only code, honestly: `svgelement.h` ~7.7k lines (236 `NOVASVG_INLINE`), `font_impl.h` 6.3k, `canvas.h` 1.4k, `svgparser.hpp` 1.8k, `color.h`, `bitmap.h`, `font.h`. `NOVASVG_INLINE` itself still exists. Next: D2 = move bodies of `svgelement.h` / `svgparser.hpp` / `canvas.h` into `.cpp` files (split by element family), D3 = fonts onto libstb and delete `font_impl.h`.
+- Gate (libstb a0726ba): C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
+
+### Step D2: bodies moved out of headers (2026-11-03)
+Scripted (not by hand): every namespace-scope `NOVASVG_INLINE` definition (non-template, no default args, not `static`) moved into a `.cpp`; members vanish from the header (declared in-class already), free functions keep a declaration.
+- `svgelement.h` 7682 -> 3764 lines + `src/svg/svgelement.cpp` (189 members, 40 free functions); `svgparser.hpp` -> `svgparser.cpp`.
+- Public: `gfx/canvas.h` 1403 -> 780 + `src/gfx/raster_canvas.cpp`; `gfx/bitmap.h` + `src/gfx/bitmap.cpp`; `gfx/font.h` + `src/gfx/font.cpp`.
+- `novasvg_destroy_func_t` moved to `config.h` (font.h needs it).
+- The tool misclassified free functions whose return type is qualified (`stb::image f()`); fixed by hand for `bitmap_to_rgba_image` / `bitmap_release_to_image`. Anyone re-running `/tmp/outline.py`-style tooling must classify by the last token before `(`.
+- Still header-only, honestly: `gfx/font_impl.h` 6266 lines (stb_truetype, goes in D3 with libstb fonts), `svgelement.h` / `svgparser.hpp` in-class bodies and 13 `NOVASVG_INLINE` the tool skipped (templates, defaults, `static`), `canvas.h` 5 skipped, `color.h` (1036 lines of inline color math), `default_font.h` (embedded font bytes), `render.h` 2510 lines (declarations + docs, fine).
+- Not done yet: `NOVASVG_INLINE` macro removal, private gfx headers (`canvas.h`, `font.h`, `font_impl.h`, `internal.h`, `utils.h`) still in `include/`.
 - Gate (libstb a0726ba): C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
