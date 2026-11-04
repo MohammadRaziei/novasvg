@@ -14,7 +14,7 @@ rules both out.
 1. Three layers: **libstb** (`image`, `color`, `font`, `path`, `matrix`, later the rasterizer) -> **`novasvg::gfx`**
    (public drawing layer) -> **svg** (DOM, parser, CSS, layout, filters).
 2. `gfx` exposes an abstract `canvas` (save/restore, transform, clip, fill, stroke, draw_image, draw_glyphs,
-   begin/end layer with opacity and blend mode) over `stb::path`, a `paint` (solid, gradient, pattern) and a
+   begin/end layer with opacity and blend mode) over `stb::outline`, a `paint` (solid, gradient, pattern) and a
    `stroke_style`. Backends: `raster_canvas` (stb::image) now, `pdf_canvas` later. SVG rendering targets the
    interface only. SVG filters stay raster-only (a PDF backend rasterizes them).
 3. No `detail/`. Public headers live in `include/novasvg/{gfx,svg}/`; private headers sit beside their `.cpp` in

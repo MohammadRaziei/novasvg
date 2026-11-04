@@ -182,7 +182,7 @@ struct glyph_entry {
     float advance_width = 0;
     float left_side_bearing = 0;
     float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
-    std::vector<stb::path_command> outline;
+    std::vector<stb::outline_command> outline;
 };
 
 } // namespace
@@ -400,23 +400,23 @@ float font_face_traverse_glyph_path(font_face_t* face, float size, float x, floa
     point_t points[3];
     point_t current_point = {0, 0};
     glyph_entry* glyph = font_face_get_glyph(face, codepoint);
-    for(const stb::path_command& cmd : glyph->outline) {
+    for(const stb::outline_command& cmd : glyph->outline) {
         switch(cmd.op) {
-        case stb::path_op::move_to:
+        case stb::outline_op::move_to:
             points[0].x = cmd.p[0].x;
             points[0].y = cmd.p[0].y;
             current_point = points[0];
             matrix_map_points(&matrix, points, points, 1);
             traverse_func(closure, NOVASVG_PATH_COMMAND_MOVE_TO, points, 1);
             break;
-        case stb::path_op::line_to:
+        case stb::outline_op::line_to:
             points[0].x = cmd.p[0].x;
             points[0].y = cmd.p[0].y;
             current_point = points[0];
             matrix_map_points(&matrix, points, points, 1);
             traverse_func(closure, NOVASVG_PATH_COMMAND_LINE_TO, points, 1);
             break;
-        case stb::path_op::quad_to: // TrueType: raised to a cubic, as the renderer only knows cubics
+        case stb::outline_op::quad_to: // TrueType: raised to a cubic, as the renderer only knows cubics
             points[0].x = 2.f / 3.f * cmd.p[0].x + 1.f / 3.f * current_point.x;
             points[0].y = 2.f / 3.f * cmd.p[0].y + 1.f / 3.f * current_point.y;
             points[1].x = 2.f / 3.f * cmd.p[0].x + 1.f / 3.f * cmd.p[1].x;
@@ -427,7 +427,7 @@ float font_face_traverse_glyph_path(font_face_t* face, float size, float x, floa
             matrix_map_points(&matrix, points, points, 3);
             traverse_func(closure, NOVASVG_PATH_COMMAND_CUBIC_TO, points, 3);
             break;
-        case stb::path_op::cubic_to: // CFF
+        case stb::outline_op::cubic_to: // CFF
             points[0].x = cmd.p[0].x;
             points[0].y = cmd.p[0].y;
             points[1].x = cmd.p[1].x;
@@ -438,7 +438,7 @@ float font_face_traverse_glyph_path(font_face_t* face, float size, float x, floa
             matrix_map_points(&matrix, points, points, 3);
             traverse_func(closure, NOVASVG_PATH_COMMAND_CUBIC_TO, points, 3);
             break;
-        case stb::path_op::close:
+        case stb::outline_op::close:
             // Contours were never closed explicitly here (stb_truetype gave none): the fill closes
             // them anyway, and this keeps stroked text identical.
             break;

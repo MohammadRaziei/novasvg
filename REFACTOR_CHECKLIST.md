@@ -362,3 +362,11 @@ Scripted (not by hand): every namespace-scope `NOVASVG_INLINE` definition (non-t
 - Public headers now: `novasvg.h`, `config.h`, `gfx/color.h`, `gfx/bitmap.h`, `gfx/render.h` (bitmap.h still needs render.h), `svg/svgparserutils.h`.
 - NOT done: the small public text-measuring API. It needs `Font`/`ForeignObjectFonts` to become public first (design decision), so the Python binding and `test_foreignobject_style.cpp` still include private headers through `src/`.
 - Not tested yet (bold mode): compile and link only.
+
+## libstb sync (2026-11-04)
+
+- libstb is now `b5bfe90`. `stb/path` was renamed `stb/outline` there (`stb::path_command` -> `stb::outline_command`, `path_op` -> `outline_op`);
+  `src/gfx/font_face.cpp` follows. The libstb tag is still `master`, so any rename upstream breaks the build until it is followed here:
+  pinning a commit (`NOVASVG_LIBSTB_GIT_TAG`) would avoid that.
+- libstb now has the rasterizer and stroker (`stb/raster.hpp`: `fill`, `stroke`, `rasterize_fill`, `rasterize_stroke`, `span_sink`), which is
+  what Step 5 (remove `src/gfx/vendor/`) was waiting for.
