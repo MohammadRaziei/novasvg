@@ -3,7 +3,7 @@
 #include <array>
 #include <string>
 
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 
 // CSS custom properties (`--x: value`) and `var(--x, fallback)`.
 //

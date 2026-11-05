@@ -15,7 +15,7 @@ HIDE_UNDOC_CLASSES     = NO
 
 INPUT                  = @PROJECT_SOURCE_DIR@/docs/cpp/mainpage.md \
                          @PROJECT_SOURCE_DIR@/docs/cpp/about.md \
-                         @PROJECT_SOURCE_DIR@/include/novasvg
+                         @PROJECT_SOURCE_DIR@/include/nova
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.h *.hpp *.hxx
 RECURSIVE              = YES

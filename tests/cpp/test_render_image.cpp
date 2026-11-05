@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 #include <stb/image.hpp>
 
 // render() hands back stb::image (straight RGBA) and can draw onto an existing one (a transparent layer that
@@ -37,7 +37,7 @@ TEST_CASE("renderToImage with a background colour, and an empty image when there
 {
     auto doc = nova::svg::document::load_data(svg("<rect width='10' height='10' fill='red'/>"));
     REQUIRE(doc != nullptr);
-    const stb::image image = doc->render_to_image(40, 40, nova::vg::Color(255, 255, 255, 255));
+    const stb::image image = doc->render_to_image(40, 40, stb::color(255, 255, 255, 255));
     const std::uint8_t* corner = image.data() + 39 * image.stride() + 39 * 4;
     CHECK(corner[0] == 255);
     CHECK(corner[1] == 255);

@@ -6,7 +6,7 @@
 #include <cstring>
 #include <fstream>
 
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 
 namespace {
 std::filesystem::path project_root()
@@ -63,31 +63,31 @@ TEST_CASE("Bitmap advanced operations") {
 }
 
 TEST_CASE("Matrix advanced operations") {
-    // Test shear operations (shear values are in radians, so use small values)
-    auto sheared = nova::vg::Matrix::sheared(0.1f, 0.05f);
-    // Don't check exact values as shear uses tangent of angle
-    
-    // Test rotate with center
-    auto rotated = nova::vg::Matrix::rotated(45.0f, 10.0f, 20.0f);
-    
-    // Test matrix multiplication
-    nova::vg::Matrix m1 = nova::vg::Matrix::translated(10.0f, 20.0f);
-    nova::vg::Matrix m2 = nova::vg::Matrix::scaled(2.0f, 3.0f);
-    auto m3 = m1 * m2;
-    
-    // Test multiply method
-    nova::vg::Matrix m4;
-    m4.multiply(m1);
+    // Shear and rotation (radians) just have to produce something that is not the identity.
+    auto sheared = stb::matrix::shearing(0.1f, 0.05f);
+    CHECK_FALSE(sheared.is_identity());
+    auto rotated = stb::matrix::rotation(0.785398f);
+    CHECK_FALSE(rotated.is_identity());
+
+    // then(): the left matrix is applied first, so (0,0) -> (10,20) -> (20,60).
+    stb::matrix m1 = stb::matrix::translation(10.0f, 20.0f);
+    stb::matrix m2 = stb::matrix::scaling(2.0f, 3.0f);
+    auto m3 = m1.then(m2);
+    CHECK(m3.e == doctest::Approx(20.0f));
+    CHECK(m3.f == doctest::Approx(60.0f));
+
+    // Identity.then(m1) is m1
+    auto m4 = stb::matrix().then(m1);
     CHECK(m4.e == doctest::Approx(10.0f));
     CHECK(m4.f == doctest::Approx(20.0f));
-    
-    // Test shear method (just test it doesn't crash)
-    nova::vg::Matrix m5;
+
+    stb::matrix m5;
     m5.shear(0.1f, 0.05f);
-    
-    // Test rotate method with center
-    nova::vg::Matrix m6;
-    m6.rotate(30.0f, 5.0f, 5.0f);
+    CHECK_FALSE(m5.is_identity());
+
+    stb::matrix m6;
+    m6.rotate(0.5f);
+    CHECK_FALSE(m6.is_identity());
 }
 
 TEST_CASE("Box operations") {
@@ -99,7 +99,7 @@ TEST_CASE("Box operations") {
     CHECK(box.h == doctest::Approx(40.0f));
     
     // Test transform method (in-place)
-    nova::vg::Matrix m = nova::vg::Matrix::translated(5.0f, 10.0f);
+    stb::matrix m = stb::matrix::translation(5.0f, 10.0f);
     box.transform(m);
     CHECK(box.x == doctest::Approx(15.0f));
     CHECK(box.y == doctest::Approx(30.0f));
@@ -146,14 +146,14 @@ TEST_CASE("Document render with matrix") {
     nova::vg::Bitmap bitmap(100, 100);
     
     // Test render with identity matrix
-    dom->render(bitmap, nova::vg::Matrix());
+    dom->render(bitmap, stb::matrix());
     
     // Test render with translation matrix
-    auto matrix = nova::vg::Matrix::translated(10.0f, 20.0f);
+    auto matrix = stb::matrix::translation(10.0f, 20.0f);
     dom->render(bitmap, matrix);
     
     // Test render with scaling matrix
-    auto matrix2 = nova::vg::Matrix::scaled(0.5f, 0.5f);
+    auto matrix2 = stb::matrix::scaling(0.5f, 0.5f);
     dom->render(bitmap, matrix2);
 }
 
@@ -173,10 +173,10 @@ TEST_CASE("Element render with matrix") {
         nova::vg::Bitmap bitmap(50, 50);
         
         // Test render with identity matrix
-        rectElement.render(bitmap, nova::vg::Matrix());
+        rectElement.render(bitmap, stb::matrix());
         
         // Test render with translation matrix
-        auto matrix = nova::vg::Matrix::translated(5.0f, 5.0f);
+        auto matrix = stb::matrix::translation(5.0f, 5.0f);
         rectElement.render(bitmap, matrix);
     }
 }

@@ -20,10 +20,10 @@ pip install .
 
 ```python
 import novasvg
-from novasvg import Color
+from novasvg import stb::color
 
 # One call: SVG file, string, bytes or file object -> PNG
-novasvg.svg2png("artwork.svg", "artwork.png", width=800, background_color=Color.white())
+novasvg.svg2png("artwork.svg", "artwork.png", width=800, background_color=stb::color.white())
 
 # Or keep the parsed document and render it as many times as you like
 doc = novasvg.Document.load_from_file("artwork.svg")
@@ -46,7 +46,7 @@ doc.width, doc.height                  # floats
 doc.bounding_box()                     # Box
 
 bitmap = doc.render_to_bitmap(width=400, height=300)
-bitmap = doc.render_to_bitmap(400, 300, Color.white())    # with a background
+bitmap = doc.render_to_bitmap(400, 300, stb::color.white())    # with a background
 bitmap = doc.render_to_bitmap(400, 300, 0xFFFFFFFF)       # packed 0xRRGGBBAA also works
 
 root     = doc.document_element()
@@ -59,7 +59,7 @@ doc.apply_stylesheet("circle { fill: purple; }")
 
 ```python
 bitmap = novasvg.Bitmap(800, 600)
-bitmap.clear(Color.white())
+bitmap.clear(stb::color.white())
 bitmap.width, bitmap.height, bitmap.stride
 
 # Encode in memory
@@ -138,19 +138,19 @@ rect.render_to_bitmap(width=200, height=200)       # render just this element
 rect.render(bitmap, matrix)                        # or onto an existing bitmap
 ```
 
-### `Matrix`, `Box`, `Color`
+### `Matrix`, `Box`, `stb::color`
 
 ```python
-from novasvg import Matrix, Color
+from novasvg import Matrix, stb::color
 
 m = Matrix.translated(100, 50).multiply(Matrix.scaled(2.0, 2.0))
 r = Matrix.rotated(45, 100, 100)          # angle, cx, cy
 m.inverse()
 
-Color(255, 0, 0, 255)
-Color.from_name("orange")
-Color.from_hash("#336699")
-Color.white(), Color.transparent()
+stb::color(255, 0, 0, 255)
+stb::color.from_name("orange")
+stb::color.from_hash("#336699")
+stb::color.white(), stb::color.transparent()
 ```
 
 ### Fonts

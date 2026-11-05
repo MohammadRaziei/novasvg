@@ -6,7 +6,7 @@
 #include <cstring>
 #include <fstream>
 
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 #include <vg/canvas.h>
 #include <vg/font.h>
 
@@ -57,7 +57,7 @@ TEST_CASE("Load SVG from string data") {
 
 TEST_CASE("Matrix operations") {
     // Default constructor creates identity matrix
-    nova::vg::Matrix m1;
+    stb::matrix m1;
     CHECK(m1.a == doctest::Approx(1.0f));
     CHECK(m1.b == doctest::Approx(0.0f));
     CHECK(m1.c == doctest::Approx(0.0f));
@@ -66,7 +66,7 @@ TEST_CASE("Matrix operations") {
     CHECK(m1.f == doctest::Approx(0.0f));
     
     // Custom constructor
-    nova::vg::Matrix m2(2.0f, 0.5f, 0.5f, 2.0f, 10.0f, 20.0f);
+    stb::matrix m2{2.0f, 0.5f, 0.5f, 2.0f, 10.0f, 20.0f};
     CHECK(m2.a == doctest::Approx(2.0f));
     CHECK(m2.b == doctest::Approx(0.5f));
     CHECK(m2.c == doctest::Approx(0.5f));
@@ -75,27 +75,26 @@ TEST_CASE("Matrix operations") {
     CHECK(m2.f == doctest::Approx(20.0f));
     
     // Translation
-    auto translated = nova::vg::Matrix::translated(5.0f, 10.0f);
+    auto translated = stb::matrix::translation(5.0f, 10.0f);
     CHECK(translated.e == doctest::Approx(5.0f));
     CHECK(translated.f == doctest::Approx(10.0f));
     
     // Scaling
-    auto scaled = nova::vg::Matrix::scaled(2.0f, 3.0f);
+    auto scaled = stb::matrix::scaling(2.0f, 3.0f);
     CHECK(scaled.a == doctest::Approx(2.0f));
     CHECK(scaled.d == doctest::Approx(3.0f));
     
-    // Matrix multiplication
-    nova::vg::Matrix m3;
-    m3.translate(5.0f, 10.0f);
-    m3.scale(2.0f, 2.0f);
+    // then(): translate first, scale second, so (0,0) -> (5,10) -> (10,20)
+    auto m3 = stb::matrix::translation(5.0f, 10.0f).then(stb::matrix::scaling(2.0f, 2.0f));
     
-    CHECK(m3.e == doctest::Approx(5.0f));
-    CHECK(m3.f == doctest::Approx(10.0f));
+    CHECK(m3.e == doctest::Approx(10.0f));
+    CHECK(m3.f == doctest::Approx(20.0f));
     CHECK(m3.a == doctest::Approx(2.0f));
     CHECK(m3.d == doctest::Approx(2.0f));
     
-    // Test reset
-    m3.reset();
+    // Reset to identity
+    m3 = stb::matrix{};
+    CHECK(m3.is_identity());
     CHECK(m3.a == doctest::Approx(1.0f));
     CHECK(m3.d == doctest::Approx(1.0f));
     CHECK(m3.e == doctest::Approx(0.0f));
@@ -118,9 +117,8 @@ TEST_CASE("Box operations") {
     CHECK(b2.h == doctest::Approx(40.0f));
     
     // Transform box with matrix
-    nova::vg::Matrix m;
-    m.translate(5.0f, 10.0f);
-    m.scale(2.0f, 3.0f);
+    // scale first, then translate: x = 10*2+5 = 25, y = 20*3+10 = 70
+    auto m = stb::matrix::scaling(2.0f, 3.0f).then(stb::matrix::translation(5.0f, 10.0f));
     
     auto b3 = b2.transformed(m);
     // After translation and scale: x=10*2+5=25, y=20*3+10=70, w=30*2=60, h=40*3=120
@@ -143,7 +141,7 @@ TEST_CASE("Bitmap operations") {
     REQUIRE(data != nullptr);
     
     // Test clear
-    bitmap.clear(nova::vg::Color::fromValue(0xFF0000FF)); // Red color
+    bitmap.clear(stb::color::from_value(0xFF0000FF)); // Red color
     
     // Test copy constructor
     nova::vg::Bitmap bitmap2 = bitmap;
@@ -291,7 +289,7 @@ TEST_CASE("Complex SVG rendering") {
     CHECK(bitmap2.height() == 200);
     
     // Test with background color
-    auto bitmap3 = dom->render_to_bitmap(100, 100, nova::vg::Color::fromValue(0xFFFFFFFF));
+    auto bitmap3 = dom->render_to_bitmap(100, 100, stb::color::from_value(0xFFFFFFFF));
     CHECK_FALSE(bitmap3.is_null());
 }
 
@@ -383,25 +381,25 @@ TEST_CASE("Bitmap edge cases") {
 }
 
 TEST_CASE("Matrix inverse and advanced operations") {
-    nova::vg::Matrix m;
-    m.translate(10.0f, 20.0f);
-    m.scale(2.0f, 3.0f);
-    m.rotate(45.0f);
+    auto m = stb::matrix::translation(10.0f, 20.0f)
+                 .then(stb::matrix::scaling(2.0f, 3.0f))
+                 .then(stb::matrix::rotation(0.785398f));
     
-    // Test inverse
+    // inverse() is optional: empty for a singular matrix
     auto inverse = m.inverse();
+    REQUIRE(inverse.has_value());
     
-    // m * inverse should be identity (approximately)
-    auto product = m * inverse;
+    // m then inverse should be identity (approximately)
+    auto product = m.then(*inverse);
     CHECK(product.a == doctest::Approx(1.0f).epsilon(0.001f));
     CHECK(product.d == doctest::Approx(1.0f).epsilon(0.001f));
     CHECK(product.e == doctest::Approx(0.0f).epsilon(0.001f));
     CHECK(product.f == doctest::Approx(0.0f).epsilon(0.001f));
     
-    // Test invert() method (in-place)
-    nova::vg::Matrix m2 = m;
-    m2.invert();
-    auto product2 = m * m2;
+    // The inverse of the inverse is the original
+    auto back = inverse->inverse();
+    REQUIRE(back.has_value());
+    auto product2 = back->then(*inverse);
     CHECK(product2.a == doctest::Approx(1.0f).epsilon(0.001f));
     CHECK(product2.d == doctest::Approx(1.0f).epsilon(0.001f));
 }

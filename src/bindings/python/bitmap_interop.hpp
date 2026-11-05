@@ -28,7 +28,7 @@
 #include <string>
 #include <tuple>
 
-#include "novasvg/novasvg.h"
+#include "nova/svg/svg.h"
 
 namespace nb = nanobind;
 

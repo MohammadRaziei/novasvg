@@ -1,5 +1,5 @@
 // Definitions declared in src/sources/vg/font.h.
-#include "vg/font.h"
+#include "font.h"
 #include "font_face.h"
 
 namespace nova::vg {

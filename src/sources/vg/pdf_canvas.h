@@ -8,7 +8,7 @@
 // blend mode). Raster inside the vector page: what PDF cannot express (masks, filters, clip masks) is rendered by
 // the svg layer to a bitmap at raster_scale() and placed with draw_raster_group(); pattern tiles come as bitmaps too
 // (set_tiled_image()).
-#include "vg/canvas.h"
+#include "canvas.h"
 
 #include <map>
 #include <string>
@@ -20,18 +20,18 @@ public:
     // A page of width x height CSS px.
     static std::shared_ptr<pdf_canvas> create(float width, float height);
 
-    void set_color(const Color& color) override;
+    void set_color(const stb::color& color) override;
     void set_color(float r, float g, float b, float a) override;
     void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform) override;
     void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform) override;
 
-    void fill_path(const Path& path, FillRule fill_rule, const Transform& transform) override;
-    void stroke_path(const Path& path, const StrokeData& stroke_data, const Transform& transform) override;
+    void fill_path(const stb::outline& path, FillRule fill_rule, const Transform& transform) override;
+    void stroke_path(const stb::outline& path, const StrokeData& stroke_data, const Transform& transform) override;
 
     void fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform) override;
     void stroke_text(const std::u32string_view& text, float stroke_width, const Font& font, const Point& origin, const Transform& transform) override;
 
-    void clip_path(const Path& path, FillRule clip_rule, const Transform& transform) override;
+    void clip_path(const stb::outline& path, FillRule clip_rule, const Transform& transform) override;
     void clip_rect(const Rect& rect, FillRule clip_rule, const Transform& transform) override;
 
     void draw_image(const Bitmap& image, const Rect& dst_rect, const Rect& src_rect, const Transform& transform) override;
@@ -86,7 +86,7 @@ private:
     int add_object(std::string dict);
     int add_stream(std::string dict, const std::string& bytes, bool compress);
     void begin_paint(bool stroke, const matrix_t& transform);
-    void emit_path(const Path& path, const matrix_t* transform);
+    void emit_path(const stb::outline& path, const matrix_t* transform);
     void emit_rect_path(const Rect& rect, const matrix_t* transform);
     void emit_text_path(const std::u32string_view& text, const Font& font, const Point& origin, const matrix_t* transform);
     std::string alpha_state(float alpha, BlendMode blend_mode = BlendMode::Src_Over);

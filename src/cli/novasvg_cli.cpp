@@ -10,7 +10,7 @@
  * - Batch processing
  */
 
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 #include "CLI11.hpp"
 #include <stb/logging.hpp>
 #include <iostream>
@@ -142,9 +142,9 @@ int cmd_convert(const std::string& input,
     // Render. An empty bg_color_str means -b/--background-color wasn't
     // given (see its default in the CLI11 option below) -- that's this
     // command's own "use transparent" convention, not something
-    // nova::vg::Color should have an opinion about, so it's resolved
-    // here rather than by asking Color to treat "" as a color.
-    auto bg_color = bg_color_str.empty() ? nova::vg::Color::Transparent : nova::vg::Color(bg_color_str);
+    // stb::color should have an opinion about, so it's resolved
+    // here rather than by asking stb::color to treat "" as a color.
+    auto bg_color = bg_color_str.empty() ? stb::color::transparent() : stb::color(bg_color_str);
     auto image = doc->render_to_image(width, height, bg_color);
     if (image.empty()) {
         cli_log().error("Failed to render SVG");

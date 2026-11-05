@@ -16,5 +16,5 @@ FetchContent_MakeAvailable(novasvg)
 target_link_libraries(my_app PRIVATE novasvg::novasvg)</code></pre>
             </div>
             <div class="install-note">
-                Requires CMake 3.19+ and a C++17-compatible compiler. Link against <code>novasvg::novasvg</code> and include <code>&lt;novasvg/novasvg.h&gt;</code>. The library is header-only, so there is nothing to compile separately. You can also copy <code>include/novasvg/</code> into your project, or use the single-header <code>novasvg.h</code> from the latest release.
+                Requires CMake 3.19+ and a C++17-compatible compiler. Link against <code>novasvg::novasvg</code> and include <code>&lt;nova/svg/svg.h&gt;</code>. The library is header-only, so there is nothing to compile separately. You can also copy <code>include/novasvg/</code> into your project, or use the single-header <code>novasvg.h</code> from the latest release.
             </div>

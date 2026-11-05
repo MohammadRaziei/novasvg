@@ -3,7 +3,7 @@
 #ifndef NOVA_PRIVATE_H
 #define NOVA_PRIVATE_H
 
-#include "novasvg/gfx/render.h"
+#include "nova/vg/render.h"
 
 namespace nova {
 namespace vg {

@@ -2,7 +2,7 @@
 
 // Bitmap (INTERNAL; the public pixel type is stb::image): a premultiplied-ARGB32 pixel buffer -- novasvg's
 // drawable surface, texture source, and render target all in one. Self-contained:
-// needs only Color and the low-level vg::surface_t it wraps, nothing
+// needs only stb::color and the low-level vg::surface_t it wraps, nothing
 // from the svg/raster_canvas/Font layers, so it can be used entirely on its own
 // (e.g. to build up an image and write it out) without pulling in the
 // rest of novasvg.
@@ -122,7 +122,7 @@ public:
      * @brief Clears the bitmap with the specified color.
      * @param value The color to clear with.
      */
-    void clear(const Color& value);
+    void clear(const stb::color& value);
 
     /**
      * @brief Converts the bitmap pixel data from ARGB32 Premultiplied to RGBA Plain format in place.

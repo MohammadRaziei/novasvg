@@ -12,15 +12,17 @@
 #include <array>
 #include <string>
 
+#include <stb/outline.hpp>  // stb::matrix
+
 // raster_canvas: novasvg's 2D drawing surface (paths, fills, strokes, gradients,
 // text, blending), plus the Path/Rect/Transform/Point primitives that go
 // with it. Self-contained -- pulls in exactly the vg:: engine pieces
 // it needs plus Font (for fill_text/stroke_text) -- so it's usable without
 // the svg/parsing layer, e.g. to draw directly onto a Bitmap.
-#include "novasvg/gfx/color.h"
+#include "nova/vg/color.h"
 #include "font.h"
-#include "novasvg/gfx/bitmap.h"
-#include "novasvg/gfx/render.h"
+#include "nova/vg/bitmap.h"
+#include "nova/vg/render.h"
 
 namespace nova::vg {
 
@@ -47,7 +49,7 @@ enum class SpreadMethod : uint8_t {
     Repeat = NOVA_SPREAD_METHOD_REPEAT
 };
 
-// `Color` now lives in color.h (a single merged class covering both
+// `stb::color` now lives in color.h (a single merged class covering both
 // this engine's needs and the richer string-parsing/blending API) --
 // no separate definition here anymore.
 
@@ -244,12 +246,11 @@ constexpr Rect& Rect::unite(const Rect& o)
     return *this;
 }
 
-class Matrix;
 
 class Transform {
 public:
     Transform();
-    Transform(const Matrix& matrix);
+    Transform(const stb::matrix& matrix);
     Transform(float a, float b, float c, float d, float e, float f);
     Transform(const matrix_t& matrix) : m_matrix(matrix) {}
 
@@ -296,80 +297,39 @@ private:
     matrix_t m_matrix;
 };
 
-enum class PathCommand {
-    MoveTo = NOVA_PATH_COMMAND_MOVE_TO,
-    LineTo = NOVA_PATH_COMMAND_LINE_TO,
-    CubicTo = NOVA_PATH_COMMAND_CUBIC_TO,
-    Close = NOVA_PATH_COMMAND_CLOSE
-};
+// Conversions between the engine's Transform / the C API's matrix_t and the public stb::matrix.
+inline stb::matrix to_matrix(const matrix_t& m) { return stb::matrix{m.a, m.b, m.c, m.d, m.e, m.f}; }
+inline stb::matrix to_matrix(const Transform& t) { return to_matrix(t.matrix()); }
 
-class Path {
+// A path is an stb::outline. The engine needs a few things on top of it (src/sources/vg/outline_util.cpp):
+//   arc_to      the SVG elliptical arc, as cubics, from the outline's current point
+//   parse_path  SVG path data ("M 0 0 L ..."), replaces the content; partial data stays on error, as in SVG
+//   bounding_rect  the box of all points of the outline (what the svg layer calls the fill box)
+//   to_path_t   the C API's path_t (the rasterizer's input); the caller owns the result
+void arc_to(stb::outline& path, float rx, float ry, float x_axis_rotation_deg, bool large_arc, bool sweep, float x, float y);
+bool parse_path(stb::outline& path, const char* data, size_t length);
+Rect bounding_rect(const stb::outline& path);
+path_t* to_path_t(const stb::outline& path);
+stb::outline from_path_t(const path_t* path);
+
+enum class segment_kind { move_to, line_to, cubic_to, close };
+
+// Walks an outline as move / line / cubic / close. A quadratic curve is raised to a cubic; `close` carries the
+// start point of its contour in points[0] (the C API's path_t did the same).
+class outline_walker {
 public:
-    Path() = default;
-    Path(const Path& path);
-    Path(Path&& path);
-    ~Path();
-
-    Path& operator=(const Path& path);
-    Path& operator=(Path&& path);
-
-    void swap(Path& path);
-
-    void moveTo(float x, float y);
-    void lineTo(float x, float y);
-    void quadTo(float x1, float y1, float x2, float y2);
-    void cubicTo(float x1, float y1, float x2, float y2, float x3, float y3);
-    void arcTo(float rx, float ry, float xAxisRotation, bool largeArcFlag, bool sweepFlag, float x, float y);
-    void close();
-
-    void addEllipse(float cx, float cy, float rx, float ry);
-    void addRoundRect(float x, float y, float w, float h, float rx, float ry);
-    void addRect(float x, float y, float w, float h);
-
-    void addEllipse(const Point& center, const Size& radii);
-    void addRoundRect(const Rect& rect, const Size& radii);
-    void addRect(const Rect& rect);
-
-    void reset();
-
-    Rect boundingRect() const;
-    bool empty() const;
-    bool isUnique() const;
-    bool is_null() const { return m_data == nullptr; }
-    path_t* data() const { return m_data; }
-
-    bool parse(const char* data, size_t length);
-
+    explicit outline_walker(const stb::outline& path);
+    segment_kind current_segment(std::array<Point, 3>& points) const;
+    bool done() const { return m_index >= m_segments.size(); }
+    void next() { ++m_index; }
 private:
-    path_t* release();
-    path_t* ensure();
-    path_t* m_data = nullptr;
+    struct segment {
+        segment_kind command;
+        Point points[3];
+    };
+    std::vector<segment> m_segments;
+    size_t m_index = 0;
 };
-
-inline void Path::swap(Path& path)
-{
-    std::swap(m_data, path.m_data);
-}
-
-inline path_t* Path::release()
-{
-    return std::exchange(m_data, nullptr);
-}
-
-class PathIterator {
-public:
-    PathIterator(const Path& path);
-
-    PathCommand currentSegment(std::array<Point, 3>& points) const;
-    bool isDone() const { return m_index >= m_size; }
-    void next();
-
-private:
-    const path_element_t* m_elements;
-    const int m_size;
-    int m_index;
-};
-
 } // namespace nova::vg
 
 namespace nova::vg {
@@ -440,18 +400,18 @@ class canvas {
 public:
     virtual ~canvas() = default;
 
-    virtual void set_color(const Color& color) = 0;
+    virtual void set_color(const stb::color& color) = 0;
     virtual void set_color(float r, float g, float b, float a) = 0;
     virtual void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform) = 0;
     virtual void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform) = 0;
 
-    virtual void fill_path(const Path& path, FillRule fill_rule, const Transform& transform) = 0;
-    virtual void stroke_path(const Path& path, const StrokeData& stroke_data, const Transform& transform) = 0;
+    virtual void fill_path(const stb::outline& path, FillRule fill_rule, const Transform& transform) = 0;
+    virtual void stroke_path(const stb::outline& path, const StrokeData& stroke_data, const Transform& transform) = 0;
 
     virtual void fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform) = 0;
     virtual void stroke_text(const std::u32string_view& text, float stroke_width, const Font& font, const Point& origin, const Transform& transform) = 0;
 
-    virtual void clip_path(const Path& path, FillRule clip_rule, const Transform& transform) = 0;
+    virtual void clip_path(const stb::outline& path, FillRule clip_rule, const Transform& transform) = 0;
     virtual void clip_rect(const Rect& rect, FillRule clip_rule, const Transform& transform) = 0;
 
     virtual void draw_image(const Bitmap& image, const Rect& dst_rect, const Rect& src_rect, const Transform& transform) = 0;
@@ -466,19 +426,19 @@ public:
     static std::shared_ptr<raster_canvas> create(float x, float y, float width, float height);
     static std::shared_ptr<raster_canvas> create(const Rect& extents);
 
-    void set_color(const Color& color) override;
+    void set_color(const stb::color& color) override;
     void set_color(float r, float g, float b, float a) override;
     void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform) override;
     void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform) override;
     void set_texture(const raster_canvas& source, TextureType type, float opacity, const Transform& transform);
 
-    void fill_path(const Path& path, FillRule fillRule, const Transform& transform) override;
-    void stroke_path(const Path& path, const StrokeData& strokeData, const Transform& transform) override;
+    void fill_path(const stb::outline& path, FillRule fillRule, const Transform& transform) override;
+    void stroke_path(const stb::outline& path, const StrokeData& strokeData, const Transform& transform) override;
 
     void fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform) override;
     void stroke_text(const std::u32string_view& text, float strokeWidth, const Font& font, const Point& origin, const Transform& transform) override;
 
-    void clip_path(const Path& path, FillRule clipRule, const Transform& transform) override;
+    void clip_path(const stb::outline& path, FillRule clipRule, const Transform& transform) override;
     void clip_rect(const Rect& rect, FillRule clipRule, const Transform& transform) override;
 
     void draw_image(const Bitmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform) override;
@@ -503,7 +463,7 @@ public:
 
     // Recolors every pixel to floodColor while preserving its alpha
     // (scaled by floodOpacity), for feDropShadow/feFlood.
-    void tint_to_flood_color(const Color& floodColor, float floodOpacity);
+    void tint_to_flood_color(const stb::color& floodColor, float floodOpacity);
 
     // Fills every pixel fully opaque white; paired with tint_to_flood_color()
     // this gives feFlood's "solid flood-color rectangle" result.
@@ -560,7 +520,7 @@ private:
 // declarations and definitions in separate files).
 // ---------------------------------------------------------------
 
-// Color::Black/White/Transparent are defined once, in color.h.
+// stb::color::black()/White/Transparent are defined once, in color.h.
 
 NOVA_INLINE const Rect Rect::Empty(0, 0, 0, 0);
 NOVA_INLINE const Rect Rect::Invalid(0, 0, -1, -1);
@@ -575,8 +535,7 @@ NOVA_INLINE const Transform Transform::Identity(1, 0, 0, 1, 0, 0);
 
 
 
-// Transform::Transform(const Matrix&) is defined in novasvg.h, right after
-// Matrix itself -- Matrix belongs to the svg/document layer, not here, so
+// Transform::Transform(const stb::matrix&) is defined in geometry.cpp, so
 // this file (which stays usable without that layer) only declares the
 // conversion, it doesn't define it.
 

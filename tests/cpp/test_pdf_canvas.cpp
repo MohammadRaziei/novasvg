@@ -18,24 +18,24 @@ TEST_CASE("pdf_canvas: a page with shapes, a gradient, a clip and text")
     auto pdf = pdf_canvas::create(200, 120);
 
     pdf->set_color(0.9f, 0.2f, 0.1f, 1.f);
-    Path rect;
-    rect.addRect(10, 10, 80, 50);
+    stb::outline rect;
+    rect.add_rect(10, 10, 80, 50);
     pdf->fill_path(rect, FillRule::NonZero, Transform());
 
     StrokeData stroke(4.f);
     stroke.setLineJoin(LineJoin::Round);
     stroke.setDashArray({6.f, 3.f});
     pdf->set_color(0.f, 0.f, 0.6f, 0.5f);
-    Path circle;
-    circle.addEllipse(140, 40, 40, 30);
+    stb::outline circle;
+    circle.add_ellipse(140, 40, 40, 30);
     pdf->stroke_path(circle, stroke, Transform());
 
     GradientStops stops = {{0.f, {1.f, 1.f, 0.f, 1.f}}, {0.5f, {0.f, 0.7f, 0.2f, 1.f}}, {1.f, {0.f, 0.2f, 0.9f, 1.f}}};
     pdf->save();
     pdf->clip_rect(Rect(10, 70, 180, 40), FillRule::NonZero, Transform());
     pdf->set_linear_gradient(10, 0, 190, 0, SpreadMethod::Pad, stops, Transform());
-    Path wide;
-    wide.addRect(0, 60, 200, 60);
+    stb::outline wide;
+    wide.add_rect(0, 60, 200, 60);
     pdf->fill_path(wide, FillRule::NonZero, Transform());
     pdf->restore();
 

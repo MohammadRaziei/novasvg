@@ -1,5 +1,5 @@
 #include "doctest.h"
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 #include <vg/canvas.h>
 #include <vg/font.h>
 #include "svg/svgelement.h" // private header: this test exercises the HTML scanner directly

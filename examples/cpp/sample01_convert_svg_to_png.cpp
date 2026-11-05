@@ -3,7 +3,7 @@
 #include <string>
 #include <algorithm>
 
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 
 namespace {
     std::filesystem::path project_root() {

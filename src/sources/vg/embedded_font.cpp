@@ -1,12 +1,12 @@
 // The embedded fallback font (a zlib+base64 payload in default_font.h), declared in src/sources/vg/font.h.
-#include "vg/font.h"
+#include "font.h"
 
 #include <stb/zlib.hpp>
 
-#include "novasvg/gfx/render.h"  // base64_decode
+#include "nova/vg/render.h"  // base64_decode
 
 #ifndef NOVA_DISABLE_EMBEDDED_FONT
-#include "vg/default_font.h"
+#include "default_font.h"
 #endif
 
 #include <cstdlib>

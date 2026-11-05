@@ -5,7 +5,7 @@
 
 #include <stb/zlib.hpp>
 
-#include "novasvg/gfx/render.h"  // base64_decode (data: URIs)
+#include "nova/vg/render.h"  // base64_decode (data: URIs)
 
 namespace nova::svg {
 
@@ -1369,8 +1369,8 @@ static void resolveForeignObjectStyle(svg_foreign_object_element* foreignObject,
         }
     }
 
-    std::vector<std::optional<Color>> colorOf(nodes.size());
-    std::optional<Color> textColor, textColorOfLastNode, background;
+    std::vector<std::optional<stb::color>> colorOf(nodes.size());
+    std::optional<stb::color> textColor, textColorOfLastNode, background;
     bool anyText = false;
     for(size_t i = 0; i < nodes.size(); ++i) {
         CascadedValue color, box;
@@ -1387,7 +1387,7 @@ static void resolveForeignObjectStyle(svg_foreign_object_element* foreignObject,
 
         offerInlineStyle(nodes[i].style, color, box);
 
-        std::optional<Color> declared;
+        std::optional<stb::color> declared;
         if(color.specificity >= 0)
             declared = parseCssColor(color.value);
         colorOf[i] = declared ? declared : (nodes[i].parent >= 0 ? colorOf[nodes[i].parent] : std::nullopt);
@@ -1398,7 +1398,7 @@ static void resolveForeignObjectStyle(svg_foreign_object_element* foreignObject,
         }
 
         if(box.specificity >= 0) {
-            if(auto fill = parseCssColor(box.value); fill && fill->isVisible())
+            if(auto fill = parseCssColor(box.value); fill && is_visible(*fill))
                 background = fill;
         }
     }

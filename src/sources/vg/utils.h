@@ -12,7 +12,7 @@
 #include <math.h>
 #include <algorithm>
 
-#include "novasvg/config.h"
+#include "nova/config.h"
 
 namespace nova {
 namespace vg {

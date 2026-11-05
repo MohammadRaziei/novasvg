@@ -1,5 +1,5 @@
 #include "doctest.h"
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 
 #include <stb/logging.hpp>
 

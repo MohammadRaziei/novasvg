@@ -44,6 +44,11 @@ add_executable(test_novasvg_libstb libstb_link/check_libstb_link.cpp)
 target_link_libraries(test_novasvg_libstb PRIVATE novasvg::noflag ${CMAKE_DL_LIBS})
 add_test(NAME test_novasvg_libstb COMMAND $<TARGET_FILE:test_novasvg_libstb>)
 
+# ADR-0009: nova::vg does not know SVG. The build already keeps src/sources off its include path; this checks the
+# sources and the public vg headers for any mention of the svg layer.
+add_test(NAME nova_vg_layering
+    COMMAND ${CMAKE_COMMAND} -DNOVA_ROOT=${PROJECT_SOURCE_DIR} -P ${PROJECT_SOURCE_DIR}/cmake/CheckVgLayering.cmake)
+
 add_custom_target(novasvg_test_cpp
     COMMAND ${CMAKE_COMMAND} -E echo "-- Running c++ tests..."
     COMMAND $<TARGET_FILE:test_novasvg_cpp>

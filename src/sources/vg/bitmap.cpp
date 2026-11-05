@@ -1,5 +1,5 @@
-// Definitions declared in include/novasvg/gfx/bitmap.h.
-#include "novasvg/gfx/bitmap.h"
+// Definitions declared in include/nova/vg/bitmap.h.
+#include "nova/vg/bitmap.h"
 
 namespace nova::vg {
 
@@ -67,7 +67,7 @@ int Bitmap::stride() const
     return 0;
 }
 
-void Bitmap::clear(const Color& value)
+void Bitmap::clear(const stb::color& value)
 {
     if(m_surface == nullptr)
         return;

@@ -9,7 +9,7 @@ PROJECT_ROOT = DOCS_DIR.parent.parent.parent
 IMAGES_DIR   = PROJECT_ROOT / 'docs' / 'images'
 
 # ── Version ───────────────────────────────────────────────────────────────────
-NOVA_H = PROJECT_ROOT / 'include' / 'novasvg' / 'novasvg.h'
+NOVA_H = PROJECT_ROOT / 'include' / 'nova' / 'svg' / 'svg.h'
 version = '0.0.0'
 
 if NOVA_H.exists():

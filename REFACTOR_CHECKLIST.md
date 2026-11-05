@@ -251,7 +251,7 @@ outlines** (`stbtt_GetGlyphShape`), so libstb must grow an API first.
 
 ### Step 5: remove duplicates
 Today each concept is defined in several layers (public, `detail/canvas.h`, `gfx/`).
-- [ ] `Color` becomes `stb::color` (it was derived from this code)
+- [ ] `stb::color` becomes `stb::color` (it was derived from this code)
 - [ ] One `matrix` instead of `Matrix` / `Transform` / `matrix`
 - [ ] One `rect` / `point` / `size` / `box`
 - [ ] One `path`
@@ -318,7 +318,7 @@ Open: per-module headers still carry `static inline` helpers (paint.h hex/hsl pa
 
 ### Step 6 continued: DOM types (2026-11-03)
 `Node` `TextNode` `Element` `Document` -> snake_case; every `SVG*` identifier -> `svg_*`; `isEmpty` -> `empty()` (critical review of ADR-0004: its `is_` rule for booleans contradicts the STL / libstb `empty()` it claims to follow). Colliding variables renamed (`element`->`el`, `node`->`nd`, `document`->`dom`). `Box` / `Matrix` wait for step 5. Gate: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
-Still camelCase in the svg layer: non-`SVG*` internal types and members (e.g. `Length`, `Paint`, `Color`, `Bitmap`, `Canvas`, `Font*`), to be done per module.
+Still camelCase in the svg layer: non-`SVG*` internal types and members (e.g. `Length`, `Paint`, `stb::color`, `Bitmap`, `Canvas`, `Font*`), to be done per module.
 
 ### Step C: abstract `canvas` + `raster_canvas` (2026-11-03, ADR-0008)
 `include/novasvg/gfx/canvas.h`: new abstract `nova::vg::canvas` (set_color, set_linear/radial_gradient, fill_path, stroke_path, fill_text, stroke_text, clip_path, clip_rect, draw_image, save, restore); `Canvas` is now `raster_canvas final : canvas` with snake_case methods (`Canvas::canvas()` -> `handle()`). `svg_render_state::operator->/*` return `canvas`; `raster()` returns the `raster_canvas`. C struct `gfx::canvas` renamed `canvas_context` (`canvas_t` unchanged) to free the name.
@@ -327,7 +327,7 @@ Still camelCase in the svg layer: non-`SVG*` internal types and members (e.g. `L
 2. Pattern fill: `set_texture(raster_canvas)` (needs a recorded/offscreen picture as paint source).
 3. Masks and clip masks: render into a canvas, `convert_to_luminance_mask`, `blend_canvas(Dst_In)` (needs a mask/soft-mask layer API).
 4. Filters: whole `svg_filter_context` works on `raster_canvas` pixels (raster-only by nature; a PDF backend rasterizes filtered groups).
-Also open: the interface classes live in `novasvg`, the C API in `nova::vg` (namespace consolidation), and `Path/Transform/Rect/Color/Font` are still local types (step 5 swaps in `stb::`).
+Also open: the interface classes live in `novasvg`, the C API in `nova::vg` (namespace consolidation), and `Path/Transform/Rect/stb::color/Font` are still local types (step 5 swaps in `stb::`).
 Gate: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
 
 ### libstb version note (2026-11-03)
@@ -382,7 +382,7 @@ Scripted (not by hand): every namespace-scope `NOVA_INLINE` definition (non-temp
   - dashing: novasvg's own `path_clone_dashed` before; libstb's `dash.cpp` now. `path_clone_dashed` stays in the public C API, no longer used by `rasterize()`.
   - points are mapped by libstb's `matrix::map` (compiled without FMA) instead of novasvg's `matrix_map_points`.
   - no clip: libstb needs a clip rect, so +-1,000,000 is passed (it limits coordinates there anyway).
-- Step 5b (still open): replace novasvg's own `Path`, `Transform`, `Rect`, `Color`, `Bitmap` with `stb::` types. Bigger, touches the whole svg layer and the public API.
+- Step 5b (still open): replace novasvg's own `Path`, `Transform`, `Rect`, `stb::color`, `Bitmap` with `stb::` types. Bigger, touches the whole svg layer and the public API.
 
 ## Step C2/F part 1 (pdf_canvas) -- 2026-11-04
 
@@ -401,7 +401,7 @@ Scripted (not by hand): every namespace-scope `NOVA_INLINE` definition (non-temp
        67 images at tolerance 0. Expected suspects, if golden moves: stroke width scale, dashing, `matrix::map` without FMA (all step 5a);
        outline parity, `close` skipped, ligatures through `shape_glyphs`, GPOS kerning, `units_per_em` (D3); `beginGroup/endGroup` and the
        pattern fill (PDF work). Revert one piece at a time to find the cause. Record the libstb hash.
-2. [ ] Step 5b: `Path`, `Transform`/`Matrix`, `Rect`/`Box`, `Color`, `Bitmap` -> `stb::` types.
+2. [ ] Step 5b: `Path`, `Transform`/`Matrix`, `Rect`/`Box`, `stb::color`, `Bitmap` -> `stb::` types.
 3. [ ] Split `svgelement.{h,cpp}` (about 4,200 lines) by element family; drop `NOVA_INLINE` (13 skipped); public text-measure API
        (`Font`/`ForeignObjectFonts` public first).
 4. [ ] ADR-0009 step: namespaces + directories + `snake_case` in one script; CMake target `nova::vg`.
@@ -419,11 +419,11 @@ Scripted (not by hand): every namespace-scope `NOVA_INLINE` definition (non-temp
 - CLI: `--log-level` and `--log-file`; its "Error:" lines go through logger `novasvg.cli` (format `LEVEL: message`).
 - Not done: the Python binding should hand `novasvg` records to Python's `logging` with `callback_handler` (Python is OFF);
   a public way to name the loggers is not documented yet; `assert(false)` sites are unchanged.
-- Gate after this change (libstb 279716c): C++ 84 cases / 583 assertions, font 71, link OK, golden 67 images 0 differ at tolerance 0.
+- Gate after this change (libstb 67c90ec): C++ 84 cases / 583 assertions, font 71, link OK, golden 67 images 0 differ at tolerance 0.
 
 ## Namespaces nova::svg / nova::vg and NOVA_ macros (session 3)
 
-- `novasvg` and `novasvg::gfx` are now `nova::vg` (canvas, backends, path, Rect/Box/Matrix/Transform, Color, Bitmap, fonts, C API,
+- `novasvg` and `novasvg::gfx` are now `nova::vg` (canvas, backends, path, Rect/Box/Matrix/Transform, stb::color, Bitmap, fonts, C API,
   `color_literals`, parser utils) and `nova::svg` (document, element, node, `version()`, DOM and CSS code). `nova::svg` has
   `using namespace vg;`. The CMake target and the project name stay `novasvg` (`novasvg::novasvg`).
 - Every `NOVASVG_*` identifier (macros, C enum constants, CMake options, env vars such as `NOVA_PDF_DIR`) is `NOVA_*`.
@@ -440,3 +440,17 @@ Scripted (not by hand): every namespace-scope `NOVA_INLINE` definition (non-temp
   `src/bindings/python/` unchanged. Private includes are `"vg/x.h"`; the include dir of `novasvg_core`, the tests and the Python
   binding is `src/sources`. Public headers are still `include/novasvg/{gfx,...}` (they become `include/nova/{svg,vg}/` later).
 - Old paths remain only in ADRs, CHANGELOG and older checklist entries (history).
+
+## Step 5b so far: Color and Matrix are stb types (session 3)
+
+- `nova::vg::Color` is gone: `stb::color` everywhere (`stb::color_literals`, `stb::invalid_color_error`, `stb::color_blend`).
+  The engine-only extras are free functions in `include/novasvg/gfx/color.h`: `red_f/green_f/blue_f/alpha_f`, `is_opaque`,
+  `is_visible`, `opaque`, `with_alpha`. `to_string()` prints `color(r=..)` (was `Color(r=..)`). Snake_case: `from_name`, `from_hash`,
+  `from_value`, `from_string`, `r()/g()/b()/a()`, `set_r()`... Static constants `Color::Black/White/Transparent` are `stb::color::black()` etc.
+- `nova::vg::Matrix` is gone: `stb::matrix` (aggregate `{a,b,c,d,e,f}`). `Transform` (the engine's own class) stays; `to_matrix(Transform|matrix_t)`
+  in `src/sources/vg/canvas.h` and `Transform(const stb::matrix&)` convert. API differences to remember: the composition order is
+  `a.then(b)` = a first (the old `m.translate(); m.scale()` applied scale first), `rotation()` takes radians (the old `rotated()` took
+  degrees and a centre), `inverse()` returns `std::optional`, no `reset()`/`multiply()`/`invert()`.
+- Still to do in 5b: `Path` -> `stb::outline` and `Bitmap` -> `stb::image` (Bitmap has 200+ uses; `document::render(stb::image&, ...)` already exists).
+- Python binding: Color and Matrix sections edited by hand, NOT built.
+- Gate: C++ 84 cases / 592 assertions, font 71, link OK, golden 67 images 0 differ at tolerance 0.

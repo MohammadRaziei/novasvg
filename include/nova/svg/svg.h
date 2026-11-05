@@ -33,7 +33,7 @@
 #include <cctype>
 #include <vector>
 
-#include "config.h"
+#include "../config.h"
 
 #define NOVA_VERSION_MAJOR 0
 #define NOVA_VERSION_MINOR 11
@@ -46,16 +46,8 @@
 #define NOVA_VERSION_STRINGIZE(major, minor, patch) NOVA_VERSION_XSTRINGIZE(major, minor, patch)
 #define NOVA_VERSION_STRING NOVA_VERSION_STRINGIZE(NOVA_VERSION_MAJOR, NOVA_VERSION_MINOR, NOVA_VERSION_PATCH)
 
-#include "gfx/color.h"
+#include "../vg/color.h"
 
-namespace nova {
-namespace vg {
-struct surface;
-struct matrix;
-using surface_t = surface;
-using matrix_t = matrix;
-} // namespace vg
-} // namespace nova
 
 /**
  * @brief Callback for cleaning up resources.
@@ -92,203 +84,7 @@ std::string version_string();
 
 } // namespace nova::svg
 
-#include "gfx/bitmap.h"
-
-namespace nova::vg {
-
-class Rect;
-class Matrix;
-
-/**
- * @brief Represents a 2D axis-aligned bounding box.
- */
-class NOVA_API Box {
-public:
-    /**
-     * @brief Constructs a box with zero dimensions.
-     */
-    Box() = default;
-
-    /**
-     * @brief Constructs a box with the specified position and size.
-     * @param x The x-coordinate of the box's origin.
-     * @param y The y-coordinate of the box's origin.
-     * @param w The width of the box.
-     * @param h The height of the box.
-     */
-    Box(float x, float y, float w, float h);
-
-    /**
-     * @internal
-     */
-    Box(const Rect& rect);
-
-    /**
-     * @brief Transforms the box using the specified matrix.
-     * @param matrix The transformation matrix.
-     * @return A reference to this box, modified by the transformation.
-     */
-    Box& transform(const Matrix& matrix);
-
-    /**
-     * @brief Returns a new box transformed by the specified matrix.
-     * @param matrix The transformation matrix.
-     * @return A new box, transformed by the matrix.
-     */
-    Box transformed(const Matrix& matrix) const;
-
-    float x{0}; ///< The x-coordinate of the box's origin.
-    float y{0}; ///< The y-coordinate of the box's origin.
-    float w{0}; ///< The width of the box.
-    float h{0}; ///< The height of the box.
-};
-
-class Transform;
-
-/**
- * @brief Represents a 2D transformation matrix.
- */
-class NOVA_API Matrix {
-public:
-    /**
-     * @brief Initializes the matrix to the identity matrix.
-     */
-    Matrix() = default;
-
-    /**
-     * @brief Constructs a matrix with the specified values.
-     * @param a The horizontal scaling factor.
-     * @param b The vertical shearing factor.
-     * @param c The horizontal shearing factor.
-     * @param d The vertical scaling factor.
-     * @param e The horizontal translation offset.
-     * @param f The vertical translation offset.
-     */
-    Matrix(float a, float b, float c, float d, float e, float f);
-
-    /**
-     * @internal
-     */
-    Matrix(const matrix_t& matrix);
-
-    /**
-     * @internal
-     */
-    Matrix(const Transform& transform);
-
-    /**
-     * @brief Multiplies this matrix with another matrix.
-     * @param matrix The matrix to multiply with.
-     * @return A new matrix that is the result of the multiplication.
-     */
-    Matrix operator*(const Matrix& matrix) const;
-
-    /**
-     * @brief Multiplies this matrix with another matrix in place.
-     * @param matrix The matrix to multiply with.
-     * @return A reference to this matrix after multiplication.
-     */
-    Matrix& operator*=(const Matrix& matrix);
-
-    /**
-     * @brief Multiplies this matrix with another matrix.
-     * @param matrix The matrix to multiply with.
-     * @return A reference to this matrix after multiplication.
-     */
-    Matrix& multiply(const Matrix& matrix);
-
-    /**
-     * @brief Translates this matrix by the specified offsets.
-     * @param tx The horizontal translation offset.
-     * @param ty The vertical translation offset.
-     * @return A reference to this matrix after translation.
-     */
-    Matrix& translate(float tx, float ty);
-
-    /**
-     * @brief Scales this matrix by the specified factors.
-     * @param sx The horizontal scaling factor.
-     * @param sy The vertical scaling factor.
-     * @return A reference to this matrix after scaling.
-     */
-    Matrix& scale(float sx, float sy);
-
-    /**
-     * @brief Rotates this matrix by the specified angle around a point.
-     * @param angle The rotation angle in degrees.
-     * @param cx The x-coordinate of the center of rotation.
-     * @param cy The y-coordinate of the center of rotation.
-     * @return A reference to this matrix after rotation.
-     */
-    Matrix& rotate(float angle, float cx = 0.f, float cy = 0.f);
-
-    /**
-     * @brief Shears this matrix by the specified factors.
-     * @param shx The horizontal shearing factor.
-     * @param shy The vertical shearing factor.
-     * @return A reference to this matrix after shearing.
-     */
-    Matrix& shear(float shx, float shy);
-
-    /**
-     * @brief Inverts this matrix.
-     * @return A reference to this matrix after inversion.
-     */
-    Matrix& invert();
-
-    /**
-     * @brief Returns the inverse of this matrix.
-     * @return A new matrix that is the inverse of this matrix.
-     */
-    Matrix inverse() const;
-
-    /**
-     * @brief Resets this matrix to the identity matrix.
-     */
-    void reset();
-
-    /**
-     * @brief Creates a translation matrix with the specified offsets.
-     * @param tx The horizontal translation offset.
-     * @param ty The vertical translation offset.
-     * @return A new translation matrix.
-     */
-    static Matrix translated(float tx, float ty);
-
-    /**
-     * @brief Creates a scaling matrix with the specified factors.
-     * @param sx The horizontal scaling factor.
-     * @param sy The vertical scaling factor.
-     * @return A new scaling matrix.
-     */
-    static Matrix scaled(float sx, float sy);
-
-    /**
-     * @brief Creates a rotation matrix with the specified angle around a point.
-     * @param angle The rotation angle in degrees.
-     * @param cx The x-coordinate of the center of rotation.
-     * @param cy The y-coordinate of the center of rotation.
-     * @return A new rotation matrix.
-     */
-    static Matrix rotated(float angle, float cx = 0.f, float cy = 0.f);
-
-    /**
-     * @brief Creates a shearing matrix with the specified factors.
-     * @param shx The horizontal shearing factor.
-     * @param shy The vertical shearing factor.
-     * @return A new shearing matrix.
-     */
-    static Matrix sheared(float shx, float shy);
-
-    float a{1}; ///< The horizontal scaling factor.
-    float b{0}; ///< The vertical shearing factor.
-    float c{0}; ///< The horizontal shearing factor.
-    float d{1}; ///< The vertical scaling factor.
-    float e{0}; ///< The horizontal translation offset.
-    float f{0}; ///< The vertical translation offset.
-};
-
-} // namespace nova::vg
+#include "../vg/geometry.h"
 
 namespace nova::svg {
 using namespace vg;
@@ -435,7 +231,7 @@ public:
      * @param image The image to render onto (changed in place).
      * @param matrix The root transformation matrix.
      */
-    void render(stb::image& image, const Matrix& matrix = Matrix()) const;
+    void render(stb::image& image, const stb::matrix& matrix = stb::matrix()) const;
 
     /**
      * @brief Renders the el to a new straight-alpha RGBA image with specified dimensions.
@@ -444,30 +240,30 @@ public:
      * @param backgroundColor The background color to render onto.
      * @return The rendered image, or an empty image if the el has nothing to draw or memory ran out.
      */
-    stb::image render_to_image(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
+    stb::image render_to_image(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
 
     /**
      * @internal Premultiplied-ARGB32 rendering target (Bitmap is not part of the public API; use the
      * stb::image overloads above).
      */
-    void render(Bitmap& bitmap, const Matrix& matrix = Matrix()) const;
+    void render(Bitmap& bitmap, const stb::matrix& matrix = stb::matrix()) const;
 
     /**
      * @internal See render(Bitmap&).
      */
-    Bitmap render_to_bitmap(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
+    Bitmap render_to_bitmap(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
 
     /**
      * @brief Retrieves the local transformation matrix of the el.
      * @return The matrix that applies only to the el, relative to its parent.
      */
-    Matrix local_matrix() const;
+    stb::matrix local_matrix() const;
 
     /**
      * @brief Retrieves the global transformation matrix of the el.
      * @return The matrix combining the el's local and all parent transformations.
      */
-    Matrix global_matrix() const;
+    stb::matrix global_matrix() const;
 
     /**
      * @brief Retrieves the local bounding box of the el.
@@ -587,7 +383,7 @@ public:
      * @param image The image to render onto (changed in place).
      * @param matrix The root transformation matrix.
      */
-    void render(stb::image& image, const Matrix& matrix = Matrix()) const;
+    void render(stb::image& image, const stb::matrix& matrix = stb::matrix()) const;
 
     /**
      * @brief Renders the dom to a new straight-alpha RGBA image with specified dimensions.
@@ -596,18 +392,18 @@ public:
      * @param backgroundColor The background color to render onto.
      * @return The rendered image, or an empty image if the dom has nothing to draw or memory ran out.
      */
-    stb::image render_to_image(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
+    stb::image render_to_image(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
 
     /**
      * @internal Premultiplied-ARGB32 rendering target (Bitmap is not part of the public API; use the
      * stb::image overloads above).
      */
-    void render(Bitmap& bitmap, const Matrix& matrix = Matrix()) const;
+    void render(Bitmap& bitmap, const stb::matrix& matrix = stb::matrix()) const;
 
     /**
      * @internal See render(Bitmap&).
      */
-    Bitmap render_to_bitmap(int width = -1, int height = -1, const Color& backgroundColor = Color(0, 0, 0, 0)) const;
+    Bitmap render_to_bitmap(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
 
     /**
      * @brief How render_to_pdf() writes the page.

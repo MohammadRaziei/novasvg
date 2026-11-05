@@ -27,7 +27,7 @@ See \ref about for the full origin story.
 ## Quick Start
 
 ```cpp
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 
 int main() {
     // Load SVG from file
@@ -55,7 +55,7 @@ int main() {
 - **`Matrix`**: 2D transformation matrix
 - **`Box`**: Bounding box representation
 - **`Element`**: SVG element manipulation
-- **`Color`**: Color representation and parsing
+- **`stb::color`**: stb::color representation and parsing
 
 ### Key Functions
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vg/internal.h"
-#include "vg/utils.h"
+#include "internal.h"
+#include "utils.h"
 
 namespace nova {
 namespace vg {

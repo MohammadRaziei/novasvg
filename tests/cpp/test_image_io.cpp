@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 #include <stb/image.hpp>
 
 // Bitmap is internal and stores premultiplied ARGB32; the public pixel type is stb::image (straight RGBA).

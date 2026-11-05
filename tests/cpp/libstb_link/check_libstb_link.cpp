@@ -43,7 +43,7 @@ static const char* object_of(const void* address) {
 int main() {
     using namespace stb;
 
-    // colour: stb::color descends from nova::vg::Color, so the two must agree.
+    // colour: stb::color descends from stb::color, so the two must agree.
     CHECK(color("red").value() == 0xFF0000FFu);
     CHECK(color("#00ff0080").a() == 0x80);
 

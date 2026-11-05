@@ -15,4 +15,10 @@ find_dependency(libstb)
 
 include("${CMAKE_CURRENT_LIST_DIR}/novasvgTargets.cmake")
 
+# The vector-graphics layer alone: target_link_libraries(plot PRIVATE nova::vg)
+if(TARGET novasvg::vg AND NOT TARGET nova::vg)
+    set_property(TARGET novasvg::vg PROPERTY IMPORTED_GLOBAL TRUE)
+    add_library(nova::vg ALIAS novasvg::vg)
+endif()
+
 check_required_components(novasvg)

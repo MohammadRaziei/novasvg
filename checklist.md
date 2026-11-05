@@ -451,7 +451,7 @@
 
 ### قدم بعدی، به ترتیب
 - [ ] **گیت کامل** (از اول نشست ۳ هیچ‌وقت زده نشده، فقط کامپایل و smoke تست PDF): تست‌های C++، تست فونت، لینک libstb، و golden روی ۶۷ تصویر با tolerance صفر
-- [ ] Step 5b: نوع‌های `Path/Transform/Rect/Color/Bitmap` خودمان را با نوع‌های `stb::` عوض کنیم
+- [ ] Step 5b: نوع‌های `Path/Transform/Rect/stb::color/Bitmap` خودمان را با نوع‌های `stb::` عوض کنیم
 - [ ] شکستن `svgelement.{h,cpp}` (حدود ۴۲۰۰ خط)، حذف `NOVA_INLINE`، API عمومی اندازه‌گیری متن
 - [ ] یک مرحله‌ی اسکریپتی: namespace (`nova::svg` / `nova::vg`) + جابه‌جایی پوشه‌ها + rename به `snake_case` (`FillRule::NonZero` → `fill_rule::non_zero` و غیره) + target جدای CMake برای `nova::vg`
 - [ ] لایه‌ها (`begin_layer`، pattern، mask) به‌صورت virtual در `canvas`؛ بهبودهای PDF (mask برداری، gradient با reflect/repeat، alpha هر stop، embed فونت، چندصفحه)

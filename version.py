@@ -23,7 +23,7 @@ import argparse
 import subprocess
 from pathlib import Path
 
-HEADER_PATH = "include/novasvg/novasvg.h"
+HEADER_PATH = "include/nova/svg/svg.h"
 PREFIX = "NOVA_"
 HEADER_ABS_PATH = Path(__file__).parent / HEADER_PATH
 VERSION_PATTERN = f"#define {PREFIX}VERSION_(MAJOR|MINOR|PATCH) (\\d+)"

@@ -1,5 +1,5 @@
-#include "vg/pdf_canvas.h"
-#include "vg/font_face.h"
+#include "pdf_canvas.h"
+#include "font_face.h"
 #include <stb/logging.hpp>
 
 #include <stb/zlib.hpp>
@@ -127,9 +127,9 @@ std::string pdf_canvas::alpha_state(float alpha, BlendMode blend_mode)
     return name;
 }
 
-void pdf_canvas::set_color(const Color& color)
+void pdf_canvas::set_color(const stb::color& color)
 {
-    set_color(color.getRF(), color.getGF(), color.getBF(), color.getAF());
+    set_color(red_f(color), green_f(color), blue_f(color), alpha_f(color));
 }
 
 void pdf_canvas::set_color(float r, float g, float b, float a)
@@ -271,27 +271,27 @@ void pdf_canvas::begin_paint(bool stroke, const matrix_t& transform)
     m_content += m_patterns.back().first + (stroke ? " SCN\n" : " scn\n");
 }
 
-void pdf_canvas::emit_path(const Path& path, const matrix_t* transform)
+void pdf_canvas::emit_path(const stb::outline& path, const matrix_t* transform)
 {
-    if(path.is_null())
+    if(path.empty())
         return;
     auto pt = [&](const Point& p) {
         Point q = transform ? apply(*transform, p.x, p.y) : p;
         return num(q.x) + " " + num(q.y);
     };
     std::array<Point, 3> pts;
-    for(PathIterator it(path); !it.isDone(); it.next()) {
-        switch(it.currentSegment(pts)) {
-        case PathCommand::MoveTo:
+    for(outline_walker it(path); !it.done(); it.next()) {
+        switch(it.current_segment(pts)) {
+        case segment_kind::move_to:
             m_content += pt(pts[0]) + " m\n";
             break;
-        case PathCommand::LineTo:
+        case segment_kind::line_to:
             m_content += pt(pts[0]) + " l\n";
             break;
-        case PathCommand::CubicTo:
+        case segment_kind::cubic_to:
             m_content += pt(pts[0]) + " " + pt(pts[1]) + " " + pt(pts[2]) + " c\n";
             break;
-        case PathCommand::Close:
+        case segment_kind::close:
             m_content += "h\n";
             break;
         }
@@ -300,8 +300,8 @@ void pdf_canvas::emit_path(const Path& path, const matrix_t* transform)
 
 void pdf_canvas::emit_rect_path(const Rect& rect, const matrix_t* transform)
 {
-    Path path;
-    path.addRect(rect.x, rect.y, rect.w, rect.h);
+    stb::outline path;
+    path.add_rect(rect.x, rect.y, rect.w, rect.h);
     emit_path(path, transform);
 }
 
@@ -355,7 +355,7 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const Font& fon
     }
 }
 
-void pdf_canvas::fill_path(const Path& path, FillRule fill_rule, const Transform& transform)
+void pdf_canvas::fill_path(const stb::outline& path, FillRule fill_rule, const Transform& transform)
 {
     m_content += "q\n";
     begin_paint(false, transform.matrix());
@@ -364,7 +364,7 @@ void pdf_canvas::fill_path(const Path& path, FillRule fill_rule, const Transform
     m_content += "Q\n";
 }
 
-void pdf_canvas::stroke_path(const Path& path, const StrokeData& sd, const Transform& transform)
+void pdf_canvas::stroke_path(const stb::outline& path, const StrokeData& sd, const Transform& transform)
 {
     m_content += "q\n";
     begin_paint(true, transform.matrix());
@@ -402,7 +402,7 @@ void pdf_canvas::stroke_text(const std::u32string_view& text, float stroke_width
     m_content += "S\nQ\n";
 }
 
-void pdf_canvas::clip_path(const Path& path, FillRule clip_rule, const Transform& transform)
+void pdf_canvas::clip_path(const stb::outline& path, FillRule clip_rule, const Transform& transform)
 {
     emit_path(path, &transform.matrix());
     m_content += clip_rule == FillRule::EvenOdd ? "W* n\n" : "W n\n";

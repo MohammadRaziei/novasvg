@@ -37,7 +37,7 @@
 ### C++
 
 ```cpp
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 #include <iostream>
 
 int main() {
@@ -45,7 +45,7 @@ int main() {
     if (!doc) return 1;
 
     // 640 px wide, height follows the aspect ratio, white background
-    auto bitmap = doc->renderToBitmap(640, -1, nova::vg::Color::white());
+    auto bitmap = doc->renderToBitmap(640, -1, stb::color::white());
     bitmap.writeToPng("artwork.png");        // also writeToJpg / writeToBmp / writeToTga
 
     // Query it like a DOM
@@ -93,7 +93,7 @@ More in [README_PYTHON.md](README_PYTHON.md).
 
 **Single header.** Download [`novasvg.h`](https://github.com/MohammadRaziei/novasvg/releases/download/__beta__/novasvg.h) and include it. Every function is `inline`, so it is safe to include from any number of translation units.
 
-**Copy the headers.** Put `include/novasvg/` in your project and `#include <novasvg/novasvg.h>`.
+**Copy the headers.** Put `include/nova/` in your project and `#include <nova/svg/svg.h>`.
 
 **CMake `FetchContent`.**
 
@@ -213,7 +213,7 @@ Full reference: [mohammadraziei.github.io/novasvg](https://mohammadraziei.github
 ## Repository layout
 
 ```
-include/novasvg/    the library (novasvg.h + detail/)
+include/nova/       the public headers (nova/vg, nova/svg)
 src/                command-line tool and Python bindings
 examples/cpp/       small runnable samples
 tests/              C++ (doctest) and Python (pytest) tests

@@ -15,7 +15,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(DynamicVersion)
 
 extract_version_string(
-    HEADER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h"
+    HEADER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/nova/svg/svg.h"
     VERSION_PREFIX "NOVA_"
     OUTPUT_VAR PROJECT_VERSION
 )
@@ -77,30 +77,39 @@ if(NOT _novasvg_libstb_type STREQUAL "SHARED_LIBRARY")
     message(FATAL_ERROR "novasvg requires libstb as a shared library, got: ${_novasvg_libstb_type}")
 endif()
 
-# ---- the compiled core -------------------------------------------------------------------------
-# Step 4 of the refactor (ADR-0001) moves implementation out of the headers into src/, one module at a
-# time. What has been moved is compiled once, here; what has not is still header-only and is compiled
-# into whatever includes it. Each module directory under src/ is globbed.
-file(GLOB NOVA_CORE_SOURCES CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/vg/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/*.cpp")
-add_library(novasvg_core STATIC ${NOVA_CORE_SOURCES})
-set_target_properties(novasvg_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_compile_definitions(novasvg_core PRIVATE NOVA_BUILDING_LIBRARY)
-get_target_property(_novasvg_core_type novasvg_core TYPE)
-if(_novasvg_core_type STREQUAL "STATIC_LIBRARY")
-    target_compile_definitions(novasvg_core PUBLIC NOVA_STATIC_DEFINE)   # NOVA_API empty for consumers
+# ---- the compiled libraries --------------------------------------------------------------------
+# Two libraries (ADR-0009):
+#   nova_vg      (alias nova::vg)   the vector-graphics layer: canvas, raster and PDF backends, fonts, path/outline helpers.
+#                                    It does not know SVG. Its private headers are found next to its sources (\"canvas.h\"),
+#                                    and src/sources is NOT on its include path, so it cannot reach the svg headers; the
+#                                    test `nova_vg_layering` also checks the public headers and the sources for svg includes.
+#   novasvg_core                     the SVG layer (nova::svg): document, DOM, CSS, renderer. Links nova_vg.
+file(GLOB NOVA_VG_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/vg/*.cpp")
+add_library(nova_vg STATIC ${NOVA_VG_SOURCES})
+add_library(nova::vg ALIAS nova_vg)
+set_target_properties(nova_vg PROPERTIES POSITION_INDEPENDENT_CODE ON EXPORT_NAME vg)
+target_compile_definitions(nova_vg PRIVATE NOVA_BUILDING_LIBRARY)
+get_target_property(_nova_vg_type nova_vg TYPE)
+if(_nova_vg_type STREQUAL "STATIC_LIBRARY")
+    target_compile_definitions(nova_vg PUBLIC NOVA_STATIC_DEFINE)   # NOVA_API empty for consumers
 endif()
-target_include_directories(novasvg_core PUBLIC
+target_include_directories(nova_vg PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<INSTALL_INTERFACE:include>")
-# canvas.h, font.h, internal.h, utils.h, default_font.h live in src/sources/vg (private); sources include them as "vg/x.h".
-target_include_directories(novasvg_core PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/sources")
 # Everything that links novasvg links libstb too (dynamic).
-target_link_libraries(novasvg_core PUBLIC libstb::libstb)
+target_link_libraries(nova_vg PUBLIC libstb::libstb)
 if(NOT NOVA_EMBED_DEFAULT_FONT)
-    target_compile_definitions(novasvg_core PUBLIC NOVA_DISABLE_EMBEDDED_FONT)
+    target_compile_definitions(nova_vg PUBLIC NOVA_DISABLE_EMBEDDED_FONT)
 endif()
+novasvg_optimize(nova_vg)
+
+file(GLOB NOVA_SVG_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/*.cpp")
+add_library(novasvg_core STATIC ${NOVA_SVG_SOURCES})
+set_target_properties(novasvg_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_definitions(novasvg_core PRIVATE NOVA_BUILDING_LIBRARY)
+# The svg sources reach the vg private headers (canvas.h, font.h, ...) as "vg/x.h".
+target_include_directories(novasvg_core PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/sources")
+target_link_libraries(novasvg_core PUBLIC nova_vg)
 novasvg_optimize(novasvg_core)
 
 # Two consumer-facing targets (kept while the library is still partly header-only):
@@ -194,7 +203,7 @@ if(NOVA_INSTALL)
     set(NOVA_INSTALL_CMAKEDIR "${CMAKE_INSTALL_DATADIR}/cmake/novasvg" CACHE STRING
         "Where novasvgConfig.cmake is installed (relative to the install prefix)")
 
-    install(TARGETS novasvg_core novasvg_noflag novasvg EXPORT novasvgTargets
+    install(TARGETS nova_vg novasvg_core novasvg_noflag novasvg EXPORT novasvgTargets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
     install(EXPORT novasvgTargets
         FILE novasvgTargets.cmake

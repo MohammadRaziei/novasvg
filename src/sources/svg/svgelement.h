@@ -12,10 +12,10 @@
 #include <cctype>
 #include <set>
 #include <cassert>
-#include "novasvg/novasvg.h"
+#include "nova/svg/svg.h"
 #include "vg/canvas.h"
 #include "vg/font.h"
-#include "novasvg/gfx/parserutils.h"
+#include "nova/vg/parserutils.h"
 
 // ---------------------------------------------------------------
 // svg_element and its family (svg_paint_element, svg_geometry_element,
@@ -178,18 +178,18 @@ private:
 class Paint {
 public:
     Paint() = default;
-    explicit Paint(const Color& color) : m_color(color) {}
-    Paint(const std::string& id, const Color& color)
+    explicit Paint(const stb::color& color) : m_color(color) {}
+    Paint(const std::string& id, const stb::color& color)
         : m_id(id), m_color(color)
     {}
 
-    const Color& color() const { return m_color; }
+    const stb::color& color() const { return m_color; }
     const std::string& id() const { return m_id; }
-    bool isNone() const { return m_id.empty() && !m_color.isVisible(); }
+    bool isNone() const { return m_id.empty() && !is_visible(m_color); }
 
 private:
     std::string m_id;
-    Color m_color = Color::Transparent;
+    stb::color m_color = stb::color::transparent();
 };
 
 enum class Display : uint8_t {
@@ -526,11 +526,11 @@ public:
         : svg_property(id)
     {}
 
-    const Path& value() const { return m_value; }
+    const stb::outline& value() const { return m_value; }
     bool parse(std::string_view input) final;
 
 private:
-    Path m_value;
+    stb::outline m_value;
 };
 
 class svg_point final : public svg_property {
@@ -1009,21 +1009,21 @@ private:
 class svg_paint_server {
 public:
     svg_paint_server() = default;
-    svg_paint_server(const svg_paint_element* el, const Color& color, float opacity)
+    svg_paint_server(const svg_paint_element* el, const stb::color& color, float opacity)
         : m_element(el), m_color(color), m_opacity(opacity)
     {}
 
-    bool isRenderable() const { return m_opacity > 0.f && (m_element || m_color.getA() > 0); }
+    bool isRenderable() const { return m_opacity > 0.f && (m_element || m_color.a() > 0); }
 
     const svg_paint_element* el() const { return m_element; }
-    const Color& color() const { return  m_color; }
+    const stb::color& color() const { return  m_color; }
     float opacity() const { return m_opacity; }
 
     bool applyPaint(svg_render_state& state) const;
 
 private:
     const svg_paint_element* m_element = nullptr;
-    Color m_color = Color::Transparent;
+    stb::color m_color = stb::color::transparent();
     float m_opacity = 0.f;
 };
 
@@ -1229,9 +1229,9 @@ public:
      * stylesheet is applied (see resolveForeignObjectStyle()). Unset = nothing in the CSS asked for one
      * (text is then black, and no box is painted).
      */
-    const std::optional<Color>& htmlTextColor() const { return m_htmlTextColor; }
-    const std::optional<Color>& htmlBackgroundColor() const { return m_htmlBackgroundColor; }
-    void setHtmlStyle(std::optional<Color> text, std::optional<Color> background)
+    const std::optional<stb::color>& htmlTextColor() const { return m_htmlTextColor; }
+    const std::optional<stb::color>& htmlBackgroundColor() const { return m_htmlBackgroundColor; }
+    void setHtmlStyle(std::optional<stb::color> text, std::optional<stb::color> background)
     {
         m_htmlTextColor = text;
         m_htmlBackgroundColor = background;
@@ -1253,8 +1253,8 @@ private:
     svg_paint_server m_fill;
     std::string m_rawContent;
     ForeignObjectRenderer* m_renderer = nullptr;
-    std::optional<Color> m_htmlTextColor;
-    std::optional<Color> m_htmlBackgroundColor;
+    std::optional<stb::color> m_htmlTextColor;
+    std::optional<stb::color> m_htmlBackgroundColor;
 };
 
 class svg_symbol_element final : public svg_graphics_element, public svg_fit_to_view_box {
@@ -1417,7 +1417,7 @@ public:
             return m_sourceGraphic;
         if(in == "SourceAlpha") {
             auto alpha = cloneCanvas(*m_sourceGraphic);
-            alpha->tint_to_flood_color(Color(0, 0, 0), 1.f);
+            alpha->tint_to_flood_color(stb::color(0, 0, 0), 1.f);
             return alpha;
         }
         auto it = m_namedResults.find(std::string(in));
@@ -1478,7 +1478,7 @@ public:
     std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
     {
         auto floodColorAttr = attribute(PropertyID::Flood_Color);
-        Color floodColor = floodColorAttr.empty() ? Color(0, 0, 0) : Color(floodColorAttr);
+        stb::color floodColor = floodColorAttr.empty() ? stb::color(0, 0, 0) : stb::color(floodColorAttr);
         auto floodOpacity = parseFirstFloat(attribute(PropertyID::Flood_Opacity), 1.f);
 
         auto output = context.newCanvas();
@@ -1546,7 +1546,7 @@ public:
         auto dx = parseFirstFloat(attribute(PropertyID::Dx), 2.f) * context.scale();
         auto dy = parseFirstFloat(attribute(PropertyID::Dy), 2.f) * context.scale();
         auto floodColorAttr = attribute(PropertyID::Flood_Color);
-        Color floodColor = floodColorAttr.empty() ? Color(0, 0, 0) : Color(floodColorAttr);
+        stb::color floodColor = floodColorAttr.empty() ? stb::color(0, 0, 0) : stb::color(floodColorAttr);
         auto floodOpacity = parseFirstFloat(attribute(PropertyID::Flood_Opacity), 1.f);
 
         auto input = context.resolveInput(attribute(PropertyID::In));
@@ -1668,7 +1668,7 @@ public:
 
 private:
     svg_number_percentage m_offset;
-    Color m_stop_color = Color::Black;
+    stb::color m_stop_color = stb::color::black();
     float m_stop_opacity = 1.f;
 };
 
@@ -1960,20 +1960,20 @@ public:
     Rect strokeBoundingBox() const override;
     void layoutElement(const svg_layout_state& state) override;
 
-    bool isRenderable() const { return !m_path.is_null() && !isDisplayNone() && !isVisibilityHidden(); }
+    bool isRenderable() const { return !m_path.empty() && !isDisplayNone() && !isVisibilityHidden(); }
 
     FillRule fill_rule() const { return m_fill_rule; }
     FillRule clip_rule() const { return m_clip_rule; }
 
-    virtual Rect updateShape(Path& path) = 0;
+    virtual Rect updateShape(stb::outline& path) = 0;
 
     void updateMarkerPositions(svg_marker_position_list& positions, const svg_layout_state& state);
     void render(svg_render_state& state) const override;
 
-    const Path& path() const { return m_path; }
+    const stb::outline& path() const { return m_path; }
 
 private:
-    Path m_path;
+    stb::outline m_path;
     Rect m_fillBoundingBox;
     StrokeData m_strokeData;
 
@@ -1989,7 +1989,7 @@ class svg_line_element final : public svg_geometry_element {
 public:
     svg_line_element(document* dom);
 
-    Rect updateShape(Path& path) final;
+    Rect updateShape(stb::outline& path) final;
 
 private:
     svg_length m_x1;
@@ -2002,7 +2002,7 @@ class svg_rect_element final : public svg_geometry_element {
 public:
     svg_rect_element(document* dom);
 
-    Rect updateShape(Path& path) final;
+    Rect updateShape(stb::outline& path) final;
 
 private:
     svg_length m_x;
@@ -2017,7 +2017,7 @@ class svg_ellipse_element final : public svg_geometry_element {
 public:
     svg_ellipse_element(document* dom);
 
-    Rect updateShape(Path& path) final;
+    Rect updateShape(stb::outline& path) final;
 
 private:
     svg_length m_cx;
@@ -2030,7 +2030,7 @@ class svg_circle_element final : public svg_geometry_element {
 public:
     svg_circle_element(document* dom);
 
-    Rect updateShape(Path& path) final;
+    Rect updateShape(stb::outline& path) final;
 
 private:
     svg_length m_cx;
@@ -2042,7 +2042,7 @@ class svg_poly_element final : public svg_geometry_element {
 public:
     svg_poly_element(document* dom, ElementID id);
 
-    Rect updateShape(Path& path) final;
+    Rect updateShape(stb::outline& path) final;
 
 private:
     svg_point_list m_points;
@@ -2052,7 +2052,7 @@ class svg_path_element final : public svg_geometry_element {
 public:
     svg_path_element(document* dom);
 
-    Rect updateShape(Path& path) final;
+    Rect updateShape(stb::outline& path) final;
 
 private:
     svg_path m_d;
@@ -2216,8 +2216,8 @@ public:
     const Paint& fill() const { return m_fill; }
     const Paint& stroke() const { return m_stroke; }
 
-    const Color& color() const { return m_color; }
-    const Color& stop_color() const { return m_stop_color; }
+    const stb::color& color() const { return m_color; }
+    const stb::color& stop_color() const { return m_stop_color; }
 
     float opacity() const { return m_opacity; }
     MixBlendMode mix_blend_mode() const { return m_mix_blend_mode; }
@@ -2273,11 +2273,11 @@ private:
     const svg_layout_state* m_parent = nullptr;
     const svg_element* m_element = nullptr;
 
-    Paint m_fill{Color::Black};
-    Paint m_stroke{Color::Transparent};
+    Paint m_fill{stb::color::black()};
+    Paint m_stroke{stb::color::transparent()};
 
-    Color m_color = Color::Black;
-    Color m_stop_color = Color::Black;
+    stb::color m_color = stb::color::black();
+    stb::color m_stop_color = stb::color::black();
 
     float m_opacity = 1.f;
     MixBlendMode m_mix_blend_mode = MixBlendMode::Normal; // like opacity: not inherited
@@ -2514,14 +2514,14 @@ void handleTextChunk(svg_text_fragment_iterator begin, svg_text_fragment_iterato
 using namespace vg; // the drawing layer (nova::vg), the former plutovg
 
 
-Color parseColor(std::string_view input, const svg_layout_state* state, const Color& defaultValue);
+stb::color parseColor(std::string_view input, const svg_layout_state* state, const stb::color& defaultValue);
 
-Color parseColorOrNone(std::string_view input, const svg_layout_state* state, const Color& defaultValue);
+stb::color parseColorOrNone(std::string_view input, const svg_layout_state* state, const stb::color& defaultValue);
 
 bool parseUrlValue(std::string_view& input, std::string& value);
 
 
-Paint parsePaint(std::string_view input, const svg_layout_state* state, const Color& defaultValue);
+Paint parsePaint(std::string_view input, const svg_layout_state* state, const stb::color& defaultValue);
 
 float parseNumberOrPercentage(std::string_view input, bool allowPercentage, float defaultValue);
 
@@ -2916,15 +2916,15 @@ inline std::optional<std::string_view> findRawDeclarationValue(std::string_view 
     return std::nullopt;
 }
 
-// A CSS colour value (`#f9f`, `rgb(..)`, `hsl(..)`, `rgba(..)`, a name) -> Color; nullopt if it isn't one.
-inline std::optional<Color> parseCssColor(std::string_view value)
+// A CSS colour value (`#f9f`, `rgb(..)`, `hsl(..)`, `rgba(..)`, a name) -> stb::color; nullopt if it isn't one.
+inline std::optional<stb::color> parseCssColor(std::string_view value)
 {
     color_t color;
     int length = color_parse(&color, value.data(), (int)value.length());
     if(length == 0)
         return std::nullopt;
     auto argb = color_to_argb32(&color);
-    return Color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff);
+    return stb::color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff);
 }
 
 // A parsed numeric CSS value: `raw` is the number itself, `isPixels`

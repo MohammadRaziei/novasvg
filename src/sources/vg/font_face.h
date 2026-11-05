@@ -1,9 +1,9 @@
 #pragma once
 
 // Private to src/sources/vg: the font-face functions that are not part of the public C API in
-// include/novasvg/gfx/render.h. Implemented in font_face.cpp on top of stb::font (libstb).
+// include/nova/vg/render.h. Implemented in font_face.cpp on top of stb::font (libstb).
 
-#include "novasvg/gfx/render.h"
+#include "nova/vg/render.h"
 
 #include <stdint.h>
 

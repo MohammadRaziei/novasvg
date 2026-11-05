@@ -373,7 +373,7 @@ bool svg_number_list::parse(std::string_view input)
 
 bool svg_path::parse(std::string_view input)
 {
-    return m_value.parse(input.data(), input.length());
+    return parse_path(m_value, input.data(), input.length());
 }
 
 bool svg_point::parse(std::string_view input)
@@ -871,9 +871,9 @@ void svg_stop_element::layoutElement(const svg_layout_state& state)
 
 GradientStop svg_stop_element::gradientStop(float opacity) const
 {
-    Color stopColor = m_stop_color.colorWithAlpha(m_stop_opacity * opacity);
+    stb::color stopColor = with_alpha(m_stop_color, m_stop_opacity * opacity);
     GradientStop gradientStop = {
-        m_offset.value(), { stopColor.getRF(), stopColor.getGF(), stopColor.getBF(), stopColor.getAF() }
+        m_offset.value(), { red_f(stopColor), green_f(stopColor), blue_f(stopColor), alpha_f(stopColor) }
     };
 
     return gradientStop;
@@ -1254,7 +1254,7 @@ void svg_geometry_element::layoutElement(const svg_layout_state& state)
     m_strokeData = getStrokeData(state);
     svg_graphics_element::layoutElement(state);
 
-    m_path.reset();
+    m_path.clear();
     m_markerPositions.clear();
     m_fillBoundingBox = updateShape(m_path);
     updateMarkerPositions(m_markerPositions, state);
@@ -1278,26 +1278,26 @@ void svg_geometry_element::updateMarkerPositions(svg_marker_position_list& posit
 
     int index = 0;
     std::array<Point, 3> points;
-    PathIterator it(m_path);
-    while(!it.isDone()) {
-        switch(it.currentSegment(points)) {
-        case PathCommand::MoveTo:
+    outline_walker it(m_path);
+    while(!it.done()) {
+        switch(it.current_segment(points)) {
+        case segment_kind::move_to:
             startPoint = points[0];
             inslopePoints[0] = origin;
             inslopePoints[1] = points[0];
             origin = points[0];
             break;
-        case PathCommand::LineTo:
+        case segment_kind::line_to:
             inslopePoints[0] = origin;
             inslopePoints[1] = points[0];
             origin = points[0];
             break;
-        case PathCommand::CubicTo:
+        case segment_kind::cubic_to:
             inslopePoints[0] = points[1];
             inslopePoints[1] = points[2];
             origin = points[2];
             break;
-        case PathCommand::Close:
+        case segment_kind::close:
             inslopePoints[0] = origin;
             inslopePoints[1] = points[0];
             origin = startPoint;
@@ -1307,8 +1307,8 @@ void svg_geometry_element::updateMarkerPositions(svg_marker_position_list& posit
 
         it.next();
 
-        if(!it.isDone() && (markerStart || markerMid)) {
-            it.currentSegment(points);
+        if(!it.done() && (markerStart || markerMid)) {
+            it.current_segment(points);
             outslopePoints[0] = origin;
             outslopePoints[1] = points[0];
             if(index == 0 && markerStart) {
@@ -1332,7 +1332,7 @@ void svg_geometry_element::updateMarkerPositions(svg_marker_position_list& posit
             }
         }
 
-        if(markerEnd && it.isDone()) {
+        if(markerEnd && it.done()) {
             auto slope = inslopePoints[1] - inslopePoints[0];
             auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVA_PI;
             positions.emplace_back(markerEnd, origin, angle);
@@ -1350,7 +1350,7 @@ void svg_geometry_element::render(svg_render_state& state) const
     svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     if(newState.mode() == svg_render_mode::Clipping) {
-        newState->set_color(Color::White);
+        newState->set_color(stb::color::white());
         newState->fill_path(m_path, m_clip_rule, newState.currentTransform());
     } else {
         if(m_fill.applyPaint(newState))
@@ -1380,7 +1380,7 @@ svg_line_element::svg_line_element(document* dom)
     addProperty(m_y2);
 }
 
-Rect svg_line_element::updateShape(Path& path)
+Rect svg_line_element::updateShape(stb::outline& path)
 {
     LengthContext lengthContext(this);
     auto x1 = lengthContext.valueForLength(m_x1);
@@ -1388,8 +1388,8 @@ Rect svg_line_element::updateShape(Path& path)
     auto x2 = lengthContext.valueForLength(m_x2);
     auto y2 = lengthContext.valueForLength(m_y2);
 
-    path.moveTo(x1, y1);
-    path.lineTo(x2, y2);
+    path.move_to(x1, y1);
+    path.line_to(x2, y2);
     return Rect(x1, y1, x2 - x1, y2 - y1);
 }
 
@@ -1410,7 +1410,7 @@ svg_rect_element::svg_rect_element(document* dom)
     addProperty(m_ry);
 }
 
-Rect svg_rect_element::updateShape(Path& path)
+Rect svg_rect_element::updateShape(stb::outline& path)
 {
     LengthContext lengthContext(this);
     auto width = lengthContext.valueForLength(m_width);
@@ -1431,7 +1431,7 @@ Rect svg_rect_element::updateShape(Path& path)
     rx = STB_MIN(rx, width / 2.f);
     ry = STB_MIN(ry, height / 2.f);
 
-    path.addRoundRect(x, y, width, height, rx, ry);
+    path.add_rounded_rect(x, y, width, height, rx, ry);
     return Rect(x, y, width, height);
 }
 
@@ -1448,7 +1448,7 @@ svg_ellipse_element::svg_ellipse_element(document* dom)
     addProperty(m_ry);
 }
 
-Rect svg_ellipse_element::updateShape(Path& path)
+Rect svg_ellipse_element::updateShape(stb::outline& path)
 {
     LengthContext lengthContext(this);
     auto rx = lengthContext.valueForLength(m_rx);
@@ -1459,7 +1459,7 @@ Rect svg_ellipse_element::updateShape(Path& path)
 
     auto cx = lengthContext.valueForLength(m_cx);
     auto cy = lengthContext.valueForLength(m_cy);
-    path.addEllipse(cx, cy, rx, ry);
+    path.add_ellipse(cx, cy, rx, ry);
     return Rect(cx - rx, cy - ry, rx + rx, ry + ry);
 }
 
@@ -1474,7 +1474,7 @@ svg_circle_element::svg_circle_element(document* dom)
     addProperty(m_r);
 }
 
-Rect svg_circle_element::updateShape(Path& path)
+Rect svg_circle_element::updateShape(stb::outline& path)
 {
     LengthContext lengthContext(this);
     auto r = lengthContext.valueForLength(m_r);
@@ -1484,7 +1484,7 @@ Rect svg_circle_element::updateShape(Path& path)
 
     auto cx = lengthContext.valueForLength(m_cx);
     auto cy = lengthContext.valueForLength(m_cy);
-    path.addEllipse(cx, cy, r, r);
+    path.add_ellipse(cx, cy, r, r);
     return Rect(cx - r, cy - r, r + r, r + r);
 }
 
@@ -1495,21 +1495,21 @@ svg_poly_element::svg_poly_element(document* dom, ElementID id)
     addProperty(m_points);
 }
 
-Rect svg_poly_element::updateShape(Path& path)
+Rect svg_poly_element::updateShape(stb::outline& path)
 {
     const auto& points = m_points.values();
     if(points.empty()) {
         return Rect::Empty;
     }
 
-    path.moveTo(points[0].x, points[0].y);
+    path.move_to(points[0].x, points[0].y);
     for(size_t i = 1; i < points.size(); i++) {
-        path.lineTo(points[i].x, points[i].y);
+        path.line_to(points[i].x, points[i].y);
     }
 
     if(id() == ElementID::Polygon)
         path.close();
-    return path.boundingRect();
+    return bounding_rect(path);
 }
 
 svg_path_element::svg_path_element(document* dom)
@@ -1519,10 +1519,10 @@ svg_path_element::svg_path_element(document* dom)
     addProperty(m_d);
 }
 
-Rect svg_path_element::updateShape(Path& path)
+Rect svg_path_element::updateShape(stb::outline& path)
 {
     path = m_d.value();
-    return path.boundingRect();
+    return bounding_rect(path);
 }
 
 AlignmentBaseline resolveDominantBaseline(const svg_text_positioning_element* el)
@@ -2034,7 +2034,7 @@ void svg_text_element::render(svg_render_state& state) const
     svg_render_state newState(this, state, local_transform());
     newState.beginGroup(blendInfo);
     if(newState.mode() == svg_render_mode::Clipping) {
-        newState->set_color(Color::White);
+        newState->set_color(stb::color::white());
     }
 
     std::u32string_view wholeText(m_text);
@@ -2081,7 +2081,7 @@ Rect svg_text_element::bounding_box(bool includeStroke) const
     return bounding_box;
 }
 
-std::optional<Color> parseColorValue(std::string_view& input, const svg_layout_state* state)
+std::optional<stb::color> parseColorValue(std::string_view& input, const svg_layout_state* state)
 {
     if(skipString(input, "currentColor")) {
         return state->color();
@@ -2093,13 +2093,13 @@ std::optional<Color> parseColorValue(std::string_view& input, const svg_layout_s
         return std::nullopt;
     input.remove_prefix(length);
     // color_to_argb32() packs as 0xAARRGGBB (alpha high byte) -- a
-    // different layout than Color::value()'s 0xRRGGBBAA, so this goes
+    // different layout than stb::color::value()'s 0xRRGGBBAA, so this goes
     // through components, never through the raw packed value.
     auto argb = color_to_argb32(&color);
-    return Color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff);
+    return stb::color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff);
 }
 
-Color parseColor(std::string_view input, const svg_layout_state* state, const Color& defaultValue)
+stb::color parseColor(std::string_view input, const svg_layout_state* state, const stb::color& defaultValue)
 {
     auto color = parseColorValue(input, state);
     if(!color || !input.empty())
@@ -2107,10 +2107,10 @@ Color parseColor(std::string_view input, const svg_layout_state* state, const Co
     return color.value();
 }
 
-Color parseColorOrNone(std::string_view input, const svg_layout_state* state, const Color& defaultValue)
+stb::color parseColorOrNone(std::string_view input, const svg_layout_state* state, const stb::color& defaultValue)
 {
     if(input.compare("none") == 0)
-        return Color::Transparent;
+        return stb::color::transparent();
     return parseColor(input, state, defaultValue);
 }
 
@@ -2163,14 +2163,14 @@ std::string parseUrl(std::string_view input)
     return value;
 }
 
-Paint parsePaint(std::string_view input, const svg_layout_state* state, const Color& defaultValue)
+Paint parsePaint(std::string_view input, const svg_layout_state* state, const stb::color& defaultValue)
 {
     std::string id;
     if(!parseUrlValue(input, id))
         return Paint(parseColorOrNone(input, state, defaultValue));
     if(skipOptionalSpaces(input))
         return Paint(id, parseColorOrNone(input, state, defaultValue));
-    return Paint(id, Color::Transparent);
+    return Paint(id, stb::color::transparent());
 }
 
 float parseNumberOrPercentage(std::string_view input, bool allowPercentage, float defaultValue)
@@ -2533,16 +2533,16 @@ svg_layout_state::svg_layout_state(const svg_layout_state& parent, const svg_ele
             continue;
         switch(attribute.id()) {
         case PropertyID::Fill:
-            m_fill = parsePaint(input, this, Color::Black);
+            m_fill = parsePaint(input, this, stb::color::black());
             break;
         case PropertyID::Stroke:
-            m_stroke = parsePaint(input, this, Color::Transparent);
+            m_stroke = parsePaint(input, this, stb::color::transparent());
             break;
         case PropertyID::Color:
-            m_color = parseColor(input, this, Color::Black);
+            m_color = parseColor(input, this, stb::color::black());
             break;
         case PropertyID::Stop_Color:
-            m_stop_color = parseColor(input, this, Color::Black);
+            m_stop_color = parseColor(input, this, stb::color::black());
             break;
         case PropertyID::Opacity:
             m_opacity = parseNumberOrPercentage(input, true, 1.f);
@@ -3358,7 +3358,7 @@ bool svg_paint_server::applyPaint(svg_render_state& state) const
     if(!isRenderable())
         return false;
     if(m_element) return m_element->applyPaint(state, m_opacity);
-    state->set_color(m_color.colorWithAlpha(m_opacity));
+    state->set_color(with_alpha(m_color, m_opacity));
     return true;
 }
 
@@ -3800,12 +3800,12 @@ void ForeignObjectSimple::render(const svg_foreign_object_element* el, svg_rende
 
     if(auto backgroundColor = el->htmlBackgroundColor()) {
         state->set_color(*backgroundColor);
-        Path backgroundPath;
-        backgroundPath.addRect(box);
+        stb::outline backgroundPath;
+        backgroundPath.add_rect(box.x, box.y, box.w, box.h);
         state->fill_path(backgroundPath, FillRule::NonZero, state.currentTransform());
     }
 
-    state->set_color(el->htmlTextColor().value_or(Color(0, 0, 0)));
+    state->set_color(el->htmlTextColor().value_or(stb::color(0, 0, 0)));
 
     for(size_t i = 0; i < lines.size(); ++i) {
         const auto& line = lines[i];

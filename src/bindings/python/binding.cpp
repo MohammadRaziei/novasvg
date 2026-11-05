@@ -14,7 +14,7 @@
 #include <vector>
 
 // Include the main library header
-#include "novasvg/novasvg.h"
+#include "nova/svg/svg.h"
 #include "vg/canvas.h" // Transform, Path, ...
 #include "vg/font.h"
 #include "svg/svgelement.h" // private: foreignObject text measurement
@@ -119,8 +119,8 @@ bool parse_format(std::string text, image_format& out)
 NB_MODULE(novasvg_py, m) {
     m.doc() = "Python bindings for NovaSVG using nanobind";
 
-    // Color parse errors: novasvg.InvalidColorError, a ValueError subclass.
-    nb::exception<nova::vg::InvalidColorError>(m, "InvalidColorError", PyExc_ValueError);
+    // stb::color parse errors: novasvg.stb::invalid_color_error, a ValueError subclass.
+    nb::exception<stb::invalid_color_error>(m, "InvalidColorError", PyExc_ValueError);
 
     // --- Bind Static Utility Functions ---
     m.def("version_string", &nova::svg::version_string, "Get the library version as a string (e.g., '0.1.0').");
@@ -301,66 +301,67 @@ NB_MODULE(novasvg_py, m) {
        "Returns {'height': float, 'width': float, 'line_count': int, 'line_height': float}; "
        "'width' is the widest resulting line.");
 
-    // --- Bind Color Class ---
-    nb::class_<nova::vg::Color>(m, "Color")
+    // --- Bind stb::color Class ---
+    nb::class_<stb::color>(m, "Color")
         .def(nb::init<uint8_t, uint8_t, uint8_t, uint8_t>(),
              "r"_a = 0, "g"_a = 0, "b"_a = 0, "a"_a = 255,
              "Construct a color from red, green, blue, alpha components (0-255 each).")
         .def(nb::init<const std::string&>(), "value"_a,
              "Construct a color from a CSS color name or hexadecimal string.")
-        .def_static("from_value", &nova::vg::Color::fromValue, "value"_a,
+        .def_static("from_value", &stb::color::from_value, "value"_a,
                     "Construct a color from a packed 0xRRGGBBAA integer.")
-        .def_static("from_hash", &nova::vg::Color::fromHash, "value"_a)
-        .def_static("from_name", &nova::vg::Color::fromName, "value"_a)
-        .def("value", &nova::vg::Color::value,
+        .def_static("from_hash", &stb::color::from_hash, "value"_a)
+        .def_static("from_name", &stb::color::from_name, "value"_a)
+        .def("value", &stb::color::value,
              "Get the color packed as a 0xRRGGBBAA integer.")
-        .def("to_int", &nova::vg::Color::value)
+        .def("to_int", &stb::color::value)
         .def_static("rgba", [](uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-            return nova::vg::Color(r, g, b, a);
+            return stb::color(r, g, b, a);
         }, "r"_a, "g"_a, "b"_a, "a"_a = 255)
-        .def_static("black", [] { return nova::vg::Color::fromName("black"); })
-        .def_static("white", [] { return nova::vg::Color::fromName("white"); })
-        .def_static("red", [] { return nova::vg::Color::fromName("red"); })
-        .def_static("green", [] { return nova::vg::Color::fromName("green"); })
-        .def_static("blue", [] { return nova::vg::Color::fromName("blue"); })
-        .def_static("yellow", [] { return nova::vg::Color::fromName("yellow"); })
-        .def_static("cyan", [] { return nova::vg::Color::fromName("cyan"); })
-        .def_static("magenta", [] { return nova::vg::Color::fromName("magenta"); })
-        .def_static("orange", [] { return nova::vg::Color::fromName("orange"); })
-        .def_static("transparent", [] { return nova::vg::Color(0, 0, 0, 0); })
-        .def_prop_rw("r", &nova::vg::Color::getR, &nova::vg::Color::setR)
-        .def_prop_rw("g", &nova::vg::Color::getG, &nova::vg::Color::setG)
-        .def_prop_rw("b", &nova::vg::Color::getB, &nova::vg::Color::setB)
-        .def_prop_rw("a", &nova::vg::Color::getA, &nova::vg::Color::setA)
-        .def("__str__", [](const nova::vg::Color& color) {
+        .def_static("black", [] { return stb::color::from_name("black"); })
+        .def_static("white", [] { return stb::color::from_name("white"); })
+        .def_static("red", [] { return stb::color::from_name("red"); })
+        .def_static("green", [] { return stb::color::from_name("green"); })
+        .def_static("blue", [] { return stb::color::from_name("blue"); })
+        .def_static("yellow", [] { return stb::color::from_name("yellow"); })
+        .def_static("cyan", [] { return stb::color::from_name("cyan"); })
+        .def_static("magenta", [] { return stb::color::from_name("magenta"); })
+        .def_static("orange", [] { return stb::color::from_name("orange"); })
+        .def_static("transparent", [] { return stb::color(0, 0, 0, 0); })
+        .def_prop_rw("r", &stb::color::r, &stb::color::set_r)
+        .def_prop_rw("g", &stb::color::g, &stb::color::set_g)
+        .def_prop_rw("b", &stb::color::b, &stb::color::set_b)
+        .def_prop_rw("a", &stb::color::a, &stb::color::set_a)
+        .def("__str__", [](const stb::color& color) {
             return static_cast<std::string>(color);
         })
-        .def("__eq__", [](const nova::vg::Color& lhs, const nova::vg::Color& rhs) {
+        .def("__eq__", [](const stb::color& lhs, const stb::color& rhs) {
             return lhs == rhs;
         });
 
     // --- Bind Matrix Class ---
-    nb::class_<nova::vg::Matrix>(m, "Matrix")
-        .def(nb::init<>(), "Construct an identity matrix.")
-        .def(nb::init<float, float, float, float, float, float>(), 
-             "a"_a, "b"_a, "c"_a, "d"_a, "e"_a, "f"_a,
-             "Construct a matrix with specific components.")
-        .def_rw("a", &nova::vg::Matrix::a, "Horizontal scaling factor.")
-        .def_rw("b", &nova::vg::Matrix::b, "Vertical shearing factor.")
-        .def_rw("c", &nova::vg::Matrix::c, "Horizontal shearing factor.")
-        .def_rw("d", &nova::vg::Matrix::d, "Vertical scaling factor.")
-        .def_rw("e", &nova::vg::Matrix::e, "Horizontal translation offset.")
-        .def_rw("f", &nova::vg::Matrix::f, "Vertical translation offset.")
-        .def("multiply", &nova::vg::Matrix::operator*, nb::is_operator(), "Multiply this matrix by another.")
-        .def("translate", &nova::vg::Matrix::translate, "tx"_a, "ty"_a, "Translate the matrix.")
-        .def("scale", &nova::vg::Matrix::scale, "sx"_a, "sy"_a, "Scale the matrix.")
-        .def("rotate", &nova::vg::Matrix::rotate, "angle"_a, "cx"_a = 0.f, "cy"_a = 0.f, "Rotate the matrix around a point.")
-        .def("invert", &nova::vg::Matrix::invert, "Invert this matrix in place.")
-        .def("inverse", &nova::vg::Matrix::inverse, "Return a new inverted matrix.")
-        .def("reset", &nova::vg::Matrix::reset, "Reset the matrix to identity.")
-        .def_static("translated", &nova::vg::Matrix::translated, "tx"_a, "ty"_a, "Create a translation matrix.")
-        .def_static("scaled", &nova::vg::Matrix::scaled, "sx"_a, "sy"_a, "Create a scaling matrix.")
-        .def_static("rotated", &nova::vg::Matrix::rotated, "angle"_a, "cx"_a = 0.f, "cy"_a = 0.f, "Create a rotation matrix.");
+    nb::class_<stb::matrix>(m, "Matrix")
+        .def(nb::init<>())
+        .def("__init__", [](stb::matrix* self, float a, float b, float c, float d, float e, float f) {
+            new (self) stb::matrix{a, b, c, d, e, f};
+        }, "a"_a, "b"_a, "c"_a, "d"_a, "e"_a, "f"_a)
+        .def_rw("a", &stb::matrix::a, "Horizontal scaling factor.")
+        .def_rw("b", &stb::matrix::b, "Vertical shearing factor.")
+        .def_rw("c", &stb::matrix::c, "Horizontal shearing factor.")
+        .def_rw("d", &stb::matrix::d, "Vertical scaling factor.")
+        .def_rw("e", &stb::matrix::e, "Horizontal translation offset.")
+        .def_rw("f", &stb::matrix::f, "Vertical translation offset.")
+        .def("then", &stb::matrix::then, "next"_a, "This matrix applied first, then `next`.")
+        .def("translate", &stb::matrix::translate, "tx"_a, "ty"_a, nb::rv_policy::reference_internal, "Translate (applied first).")
+        .def("scale", nb::overload_cast<float, float>(&stb::matrix::scale), "sx"_a, "sy"_a, nb::rv_policy::reference_internal, "Scale (applied first).")
+        .def("rotate", &stb::matrix::rotate, "radians"_a, nb::rv_policy::reference_internal, "Rotate by an angle in radians (applied first).")
+        .def("shear", &stb::matrix::shear, "shx"_a, "shy"_a, nb::rv_policy::reference_internal, "Shear (applied first).")
+        .def("inverse", &stb::matrix::inverse, "The inverse matrix, or None when it is singular.")
+        .def("is_identity", &stb::matrix::is_identity)
+        .def_static("translation", &stb::matrix::translation, "tx"_a, "ty"_a, "Create a translation matrix.")
+        .def_static("scaling", nb::overload_cast<float, float>(&stb::matrix::scaling), "sx"_a, "sy"_a, "Create a scaling matrix.")
+        .def_static("rotation", &stb::matrix::rotation, "radians"_a, "Create a rotation matrix.")
+        .def_static("shearing", &stb::matrix::shearing, "shx"_a, "shy"_a, "Create a shear matrix.");
 
     // --- Bind Box Class ---
     nb::class_<nova::vg::Box>(m, "Box")
@@ -384,9 +385,9 @@ NB_MODULE(novasvg_py, m) {
         .def_prop_ro("height", &nova::vg::Bitmap::height, "Get the height of the bitmap.")
         .def_prop_ro("stride", &nova::vg::Bitmap::stride, "Get the stride (bytes per row) of the bitmap.")
         .def("is_null", &nova::vg::Bitmap::is_null, "Check if the bitmap is null.")
-        .def("clear", &nova::vg::Bitmap::clear, "value"_a, "Clear the bitmap with a Color.")
+        .def("clear", &nova::vg::Bitmap::clear, "value"_a, "Clear the bitmap with a stb::color.")
         .def("clear", [](nova::vg::Bitmap& bitmap, uint32_t value) {
-            bitmap.clear(nova::vg::Color::fromValue(value));
+            bitmap.clear(stb::color::from_value(value));
         }, "value"_a, "Clear the bitmap with a packed 0xRRGGBBAA value.")
         .def("convert_to_rgba", &nova::vg::Bitmap::convertToRGBA, "Convert pixel data in place from ARGB32 Premultiplied to RGBA Plain. Only needed to hand the raw "
              "buffer to something else (e.g. numpy consumers wanting straight RGBA); NOT before "
@@ -469,13 +470,13 @@ NB_MODULE(novasvg_py, m) {
         .def("has_attribute", &nova::svg::element::has_attribute, "name"_a, "Check if an attribute exists.")
         .def("get_attribute", &nova::svg::element::attribute, "name"_a, nb::rv_policy::reference, "Get an attribute value.")
         .def("set_attribute", &nova::svg::element::set_attribute, "name"_a, "value"_a, "Set an attribute value.")
-        .def("render", static_cast<void (nova::svg::element::*)(nova::vg::Bitmap&, const nova::vg::Matrix&) const>(&nova::svg::element::render), "bitmap"_a, "matrix"_a = nova::vg::Matrix(), "Render the element onto a bitmap.")
+        .def("render", static_cast<void (nova::svg::element::*)(nova::vg::Bitmap&, const stb::matrix&) const>(&nova::svg::element::render), "bitmap"_a, "matrix"_a = stb::matrix(), "Render the element onto a bitmap.")
         .def("render_to_bitmap", &nova::svg::element::render_to_bitmap, 
-             "width"_a = -1, "height"_a = -1, "backgroundColor"_a = nova::vg::Color(),
+             "width"_a = -1, "height"_a = -1, "backgroundColor"_a = stb::color(),
              "Render the element to a new Bitmap.")
         .def("render_to_bitmap", [](const nova::svg::element& el, int width, int height,
                                     uint32_t background_color) {
-            return el.render_to_bitmap(width, height, nova::vg::Color::fromValue(background_color));
+            return el.render_to_bitmap(width, height, stb::color::from_value(background_color));
         }, "width"_a = -1, "height"_a = -1, "backgroundColor"_a = 0u,
            "Render the element using a packed 0xRRGGBBAA background color.")
         .def("get_local_matrix", &nova::svg::element::local_matrix, "Get the local transformation matrix.")
@@ -503,13 +504,13 @@ NB_MODULE(novasvg_py, m) {
         .def("bounding_box", &nova::svg::document::bounding_box, "Get the bounding box of the document content.")
         .def("update_layout", &nova::svg::document::update_layout, "Update the layout of the document if needed.")
         .def("force_layout", &nova::svg::document::force_layout, "Force an immediate layout update.")
-        .def("render", static_cast<void (nova::svg::document::*)(nova::vg::Bitmap&, const nova::vg::Matrix&) const>(&nova::svg::document::render), "bitmap"_a, "matrix"_a = nova::vg::Matrix(), "Render the document onto a bitmap.")
+        .def("render", static_cast<void (nova::svg::document::*)(nova::vg::Bitmap&, const stb::matrix&) const>(&nova::svg::document::render), "bitmap"_a, "matrix"_a = stb::matrix(), "Render the document onto a bitmap.")
         .def("render_to_bitmap", &nova::svg::document::render_to_bitmap, 
-             "width"_a = -1, "height"_a = -1, "backgroundColor"_a = nova::vg::Color(),
+             "width"_a = -1, "height"_a = -1, "backgroundColor"_a = stb::color(),
              "Render the document to a new Bitmap.")
         .def("render_to_bitmap", [](const nova::svg::document& dom, int width, int height,
                                     uint32_t background_color) {
-            return dom.render_to_bitmap(width, height, nova::vg::Color::fromValue(background_color));
+            return dom.render_to_bitmap(width, height, stb::color::from_value(background_color));
         }, "width"_a = -1, "height"_a = -1, "backgroundColor"_a = 0u,
            "Render the document using a packed 0xRRGGBBAA background color.")
         .def("element_from_point", &nova::svg::document::element_from_point, "x"_a, "y"_a, "Get the topmost element at a specific point.")

@@ -1,5 +1,5 @@
 // Definitions declared in src/sources/vg/canvas.h.
-#include "vg/canvas.h"
+#include "canvas.h"
 
 namespace nova::vg {
 
@@ -165,177 +165,16 @@ Transform Transform::translated(float tx, float ty)
     return matrix;
 }
 
-Path::Path(const Path& path)
-    : m_data(path_reference(path.data()))
-{
-}
-
-Path::Path(Path&& path)
-    : m_data(path.release())
-{
-}
-
-Path::~Path()
-{
-    path_destroy(m_data);
-}
-
-Path& Path::operator=(const Path& path)
-{
-    Path(path).swap(*this);
-    return *this;
-}
-
-Path& Path::operator=(Path&& path)
-{
-    Path(std::move(path)).swap(*this);
-    return *this;
-}
-
-void Path::moveTo(float x, float y)
-{
-    path_move_to(ensure(), x, y);
-}
-
-void Path::lineTo(float x, float y)
-{
-    path_line_to(ensure(), x, y);
-}
-
-void Path::quadTo(float x1, float y1, float x2, float y2)
-{
-    path_quad_to(ensure(), x1, y1, x2, y2);
-}
-
-void Path::cubicTo(float x1, float y1, float x2, float y2, float x3, float y3)
-{
-    path_cubic_to(ensure(), x1, y1, x2, y2, x3, y3);
-}
-
-void Path::arcTo(float rx, float ry, float xAxisRotation, bool largeArcFlag, bool sweepFlag, float x, float y)
-{
-    path_arc_to(ensure(), rx, ry, NOVA_DEG2RAD(xAxisRotation), largeArcFlag, sweepFlag, x, y);
-}
-
-void Path::close()
-{
-    path_close(ensure());
-}
-
-void Path::addEllipse(float cx, float cy, float rx, float ry)
-{
-    path_add_ellipse(ensure(), cx, cy, rx, ry);
-}
-
-void Path::addRoundRect(float x, float y, float w, float h, float rx, float ry)
-{
-    path_add_round_rect(ensure(), x, y, w, h, rx, ry);
-}
-
-void Path::addRect(float x, float y, float w, float h)
-{
-    path_add_rect(ensure(), x, y, w, h);
-}
-
-void Path::addEllipse(const Point& center, const Size& radii)
-{
-    addEllipse(center.x, center.y, radii.w, radii.h);
-}
-
-void Path::addRoundRect(const Rect& rect, const Size& radii)
-{
-    addRoundRect(rect.x, rect.y, rect.w, rect.h, radii.w, radii.h);
-}
-
-void Path::addRect(const Rect& rect)
-{
-    addRect(rect.x, rect.y, rect.w, rect.h);
-}
-
-void Path::reset()
-{
-    if(m_data == nullptr)
-        return;
-    if(isUnique()) {
-        path_reset(m_data);
-    } else {
-        path_destroy(m_data);
-        m_data = nullptr;
-    }
-}
-
-Rect Path::boundingRect() const
-{
-    if(m_data == nullptr)
-        return Rect::Empty;
-    rect_t extents;
-    path_extents(m_data, &extents, false);
-    return extents;
-}
-
-bool Path::empty() const
-{
-    if(m_data)
-        return path_get_elements(m_data, nullptr) == 0;
-    return true;
-}
-
-bool Path::isUnique() const
-{
-    return path_get_reference_count(m_data) == 1;
-}
-
-bool Path::parse(const char* data, size_t length)
-{
-    path_reset(ensure());
-    return path_parse(m_data, data, length);
-}
-
-path_t* Path::ensure()
-{
-    if(is_null()) {
-        m_data = path_create();
-    } else if(!isUnique()) {
-        path_destroy(m_data);
-        m_data = path_clone(m_data);
-    }
-
-    return m_data;
-}
-
-PathIterator::PathIterator(const Path& path)
-    : m_size(path_get_elements(path.data(), &m_elements))
-    , m_index(0)
-{
-}
-
-PathCommand PathIterator::currentSegment(std::array<Point, 3>& points) const
-{
-    auto command = m_elements[m_index].header.command;
-    switch(command) {
-    case NOVA_PATH_COMMAND_MOVE_TO:
-        points[0] = m_elements[m_index + 1].point;
-        break;
-    case NOVA_PATH_COMMAND_LINE_TO:
-        points[0] = m_elements[m_index + 1].point;
-        break;
-    case NOVA_PATH_COMMAND_CUBIC_TO:
-        points[0] = m_elements[m_index + 1].point;
-        points[1] = m_elements[m_index + 2].point;
-        points[2] = m_elements[m_index + 3].point;
-        break;
-    case NOVA_PATH_COMMAND_CLOSE:
-        points[0] = m_elements[m_index + 1].point;
-        break;
-    }
-
-    return PathCommand(command);
-}
-
-void PathIterator::next()
-{
-    m_index += m_elements[m_index].header.length;
-}
+namespace {
+struct path_guard {
+    explicit path_guard(path_t* p) : m_path(p) {}
+    ~path_guard() { path_destroy(m_path); }
+    path_guard(const path_guard&) = delete;
+    path_guard& operator=(const path_guard&) = delete;
+    path_t* get() const { return m_path; }
+    path_t* m_path;
+};
+} // namespace
 
 std::shared_ptr<raster_canvas> raster_canvas::create(const Bitmap& bitmap)
 {
@@ -359,9 +198,9 @@ std::shared_ptr<raster_canvas> raster_canvas::create(const Rect& extents)
     return create(extents.x, extents.y, extents.w, extents.h);
 }
 
-void raster_canvas::set_color(const Color& color)
+void raster_canvas::set_color(const stb::color& color)
 {
-    set_color(color.getRF(), color.getGF(), color.getBF(), color.getAF());
+    set_color(red_f(color), green_f(color), blue_f(color), alpha_f(color));
 }
 
 void raster_canvas::set_color(float r, float g, float b, float a)
@@ -384,16 +223,17 @@ void raster_canvas::set_texture(const raster_canvas& source, TextureType type, f
     canvas_set_texture(m_canvas, source.surface(), static_cast<texture_type_t>(type), opacity, &transform.matrix());
 }
 
-void raster_canvas::fill_path(const Path& path, FillRule fillRule, const Transform& transform)
+void raster_canvas::fill_path(const stb::outline& path, FillRule fillRule, const Transform& transform)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
     canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(fillRule));
     canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
-    canvas_fill_path(m_canvas, path.data());
+    path_guard guard(to_path_t(path));
+    canvas_fill_path(m_canvas, guard.get());
 }
 
-void raster_canvas::stroke_path(const Path& path, const StrokeData& strokeData, const Transform& transform)
+void raster_canvas::stroke_path(const stb::outline& path, const StrokeData& strokeData, const Transform& transform)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
@@ -404,7 +244,8 @@ void raster_canvas::stroke_path(const Path& path, const StrokeData& strokeData, 
     canvas_set_dash_offset(m_canvas, strokeData.dashOffset());
     canvas_set_dash_array(m_canvas, strokeData.dashArray().data(), strokeData.dashArray().size());
     canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
-    canvas_stroke_path(m_canvas, path.data());
+    path_guard guard(to_path_t(path));
+    canvas_stroke_path(m_canvas, guard.get());
 }
 
 void raster_canvas::fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform)
@@ -432,12 +273,13 @@ void raster_canvas::stroke_text(const std::u32string_view& text, float strokeWid
     canvas_stroke_text(m_canvas, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF32, origin.x, origin.y);
 }
 
-void raster_canvas::clip_path(const Path& path, FillRule clipRule, const Transform& transform)
+void raster_canvas::clip_path(const stb::outline& path, FillRule clipRule, const Transform& transform)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
     canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(clipRule));
-    canvas_clip_path(m_canvas, path.data());
+    path_guard guard(to_path_t(path));
+    canvas_clip_path(m_canvas, guard.get());
 }
 
 void raster_canvas::clip_rect(const Rect& rect, FillRule clipRule, const Transform& transform)
@@ -545,16 +387,16 @@ void raster_canvas::fill_opaque_white()
     }
 }
 
-void raster_canvas::tint_to_flood_color(const Color& floodColor, float floodOpacity)
+void raster_canvas::tint_to_flood_color(const stb::color& floodColor, float floodOpacity)
 {
     auto width = surface_get_width(m_surface);
     auto height = surface_get_height(m_surface);
     auto stride = surface_get_stride(m_surface);
     auto data = surface_get_data(m_surface);
 
-    auto r = uint32_t(floodColor.getR());
-    auto g = uint32_t(floodColor.getG());
-    auto b = uint32_t(floodColor.getB());
+    auto r = uint32_t(floodColor.r());
+    auto g = uint32_t(floodColor.g());
+    auto b = uint32_t(floodColor.b());
     for(int y = 0; y < height; ++y) {
         auto* pixels = reinterpret_cast<uint32_t*>(data + stride * y);
         for(int x = 0; x < width; ++x) {

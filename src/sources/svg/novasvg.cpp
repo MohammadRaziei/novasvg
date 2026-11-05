@@ -1,5 +1,5 @@
-// Implementation of the public API declared in include/novasvg/novasvg.h.
-#include "novasvg/novasvg.h"
+// Implementation of the public API declared in include/nova/svg/svg.h.
+#include "nova/svg/svg.h"
 
 // Always included -- see the note above. Defining
 // NOVA_IMPLEMENTATION is no longer required and has no effect; it is
@@ -139,7 +139,7 @@ void element::set_attribute(const std::string& name, const std::string& value)
     }
 }
 
-void element::render(Bitmap& bitmap, const Matrix& matrix) const
+void element::render(Bitmap& bitmap, const stb::matrix& matrix) const
 {
     if(m_node == nullptr || bitmap.is_null())
         return;
@@ -148,7 +148,7 @@ void element::render(Bitmap& bitmap, const Matrix& matrix) const
     el(true)->render(state);
 }
 
-Bitmap element::render_to_bitmap(int width, int height, const Color& backgroundColor) const
+Bitmap element::render_to_bitmap(int width, int height, const stb::color& backgroundColor) const
 {
     if(m_node == nullptr)
         return Bitmap();
@@ -167,14 +167,14 @@ Bitmap element::render_to_bitmap(int width, int height, const Color& backgroundC
     auto xScale = width / elementBounds.w;
     auto yScale = height / elementBounds.h;
 
-    Matrix matrix(xScale, 0, 0, yScale, -elementBounds.x * xScale, -elementBounds.y * yScale);
+    stb::matrix matrix{xScale, 0, 0, yScale, -elementBounds.x * xScale, -elementBounds.y * yScale};
     Bitmap bitmap(width, height);
     if(backgroundColor.value()) bitmap.clear(backgroundColor);
     render(bitmap, matrix);
     return bitmap;
 }
 
-void element::render(stb::image& image, const Matrix& matrix) const
+void element::render(stb::image& image, const stb::matrix& matrix) const
 {
     if(m_node == nullptr || image.empty())
         return;
@@ -187,26 +187,26 @@ void element::render(stb::image& image, const Matrix& matrix) const
         image.blend(over);
 }
 
-stb::image element::render_to_image(int width, int height, const Color& backgroundColor) const
+stb::image element::render_to_image(int width, int height, const stb::color& backgroundColor) const
 {
     return bitmap_release_to_image(render_to_bitmap(width, height, backgroundColor));
 }
 
-Matrix element::local_matrix() const
+stb::matrix element::local_matrix() const
 {
     if(m_node)
-        return el(true)->local_transform();
-    return Matrix();
+        return to_matrix(el(true)->local_transform());
+    return stb::matrix();
 }
 
-Matrix element::global_matrix() const
+stb::matrix element::global_matrix() const
 {
     if(m_node == nullptr)
-        return Matrix();
+        return stb::matrix();
     auto transform = el(true)->local_transform();
     for(auto parent = el()->parent_element(); parent; parent = parent->parent_element())
         transform.post_multiply(parent->local_transform());
-    return transform;
+    return to_matrix(transform);
 }
 
 Box element::local_bounding_box() const
@@ -304,7 +304,7 @@ void document::force_layout()
     m_rootElement->force_layout();
 }
 
-void document::render(Bitmap& bitmap, const Matrix& matrix) const
+void document::render(Bitmap& bitmap, const stb::matrix& matrix) const
 {
     if(bitmap.is_null())
         return;
@@ -346,7 +346,7 @@ void document::render(Bitmap& bitmap, const Matrix& matrix) const
             // ponytail: a *semi*-transparent root color still replaces the argument instead of compositing
             // over it; upgrade path is to fill a rect through the canvas instead of clear().
             if((argb >> 24) & 0xff)
-                bitmap.clear(Color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff));
+                bitmap.clear(stb::color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff));
         }
     }
 
@@ -355,7 +355,7 @@ void document::render(Bitmap& bitmap, const Matrix& matrix) const
     root_element(true)->render(state);
 }
 
-Bitmap document::render_to_bitmap(int width, int height, const Color& backgroundColor) const
+Bitmap document::render_to_bitmap(int width, int height, const stb::color& backgroundColor) const
 {
     auto intrinsic_width = root_element(true)->intrinsic_width();
     auto intrinsic_height = root_element()->intrinsic_height();
@@ -373,7 +373,7 @@ Bitmap document::render_to_bitmap(int width, int height, const Color& background
     auto xScale = width / intrinsic_width;
     auto yScale = height / intrinsic_height;
 
-    Matrix matrix(xScale, 0, 0, yScale, 0, 0);
+    stb::matrix matrix{xScale, 0, 0, yScale, 0, 0};
     Bitmap bitmap(width, height);
     if(backgroundColor.value()) bitmap.clear(backgroundColor);
     render(bitmap, matrix);
@@ -411,8 +411,8 @@ std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
         if(color_parse(&color, bg.data(), static_cast<int>(bg.length())) > 0) {
             auto argb = color_to_argb32(&color);
             if((argb >> 24) & 0xff) {
-                Path page;
-                page.addRect(0, 0, width, height);
+                stb::outline page;
+                page.add_rect(0, 0, width, height);
                 pdf->set_color(((argb >> 16) & 0xff) / 255.f, ((argb >> 8) & 0xff) / 255.f, (argb & 0xff) / 255.f, ((argb >> 24) & 0xff) / 255.f);
                 pdf->fill_path(page, FillRule::NonZero, Transform());
             }
@@ -436,7 +436,7 @@ bool document::save_pdf(const std::string& filename, pdf_mode mode, float dpi) c
     return static_cast<bool>(out);
 }
 
-void document::render(stb::image& image, const Matrix& matrix) const
+void document::render(stb::image& image, const stb::matrix& matrix) const
 {
     if(image.empty())
         return;
@@ -449,7 +449,7 @@ void document::render(stb::image& image, const Matrix& matrix) const
         image.blend(over);
 }
 
-stb::image document::render_to_image(int width, int height, const Color& backgroundColor) const
+stb::image document::render_to_image(int width, int height, const stb::color& backgroundColor) const
 {
     return bitmap_release_to_image(render_to_bitmap(width, height, backgroundColor));
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vg/internal.h"
-#include "vg/utils.h"
+#include "internal.h"
+#include "utils.h"
 
 // Image decoding is libstb's (stb::image); this layer only rasterizes and turns decoded pixels into a
 // premultiplied surface. Writing images is Bitmap's job (it asks libstb too).
