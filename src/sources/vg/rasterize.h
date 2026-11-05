@@ -1,7 +1,9 @@
 #pragma once
 
-#include "novasvg/gfx/render.h"
-#include "gfx/utils.h"
+#include "vg/internal.h"
+#include "vg/utils.h"
+
+#include <limits.h>
 
 namespace nova {
 namespace vg {

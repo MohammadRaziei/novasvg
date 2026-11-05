@@ -1,4 +1,4 @@
-#include "gfx/utils.h"
+#include "vg/utils.h"
 
 namespace nova {
 namespace vg {

@@ -1,7 +1,7 @@
 #include "rasterize.h"
 
 // Anti-aliased fill and stroke come from libstb (stb/raster.hpp): a fixed-point port of the same FreeType
-// algorithms (through plutovg) that used to be vendored here in src/gfx/vendor.
+// algorithms (through plutovg) that used to be vendored here in src/sources/vg/vendor.
 #include <stb/raster.hpp>
 
 namespace nova {

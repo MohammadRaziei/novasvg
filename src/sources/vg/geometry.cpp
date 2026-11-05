@@ -1,9 +1,9 @@
 // Definitions of Box, Matrix, Transform and the Rect/Box conversions declared in include/novasvg/novasvg.h.
 #include "novasvg/novasvg.h"
 
-#include "gfx/canvas.h"
-#include "gfx/internal.h"
-#include "gfx/utils.h"
+#include "vg/canvas.h"
+#include "vg/internal.h"
+#include "vg/utils.h"
 
 #include <cmath>
 

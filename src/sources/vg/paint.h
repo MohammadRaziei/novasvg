@@ -1,7 +1,7 @@
 #pragma once
 
-#include "gfx/internal.h"
-#include "gfx/utils.h"
+#include "vg/internal.h"
+#include "vg/utils.h"
 
 #include <ctype.h>
 

@@ -20,9 +20,9 @@
 #include <fstream>
 #include <cmath>
 
-#include "gfx/canvas.h"
-#include "gfx/font.h"
-#include "gfx/pdf_canvas.h"
+#include "vg/canvas.h"
+#include "vg/font.h"
+#include "vg/pdf_canvas.h"
 #include <stb/logging.hpp>
 #include "svgelement.h"
 #include "svgparser.hpp"

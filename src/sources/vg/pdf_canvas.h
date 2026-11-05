@@ -8,7 +8,7 @@
 // blend mode). Raster inside the vector page: what PDF cannot express (masks, filters, clip masks) is rendered by
 // the svg layer to a bitmap at raster_scale() and placed with draw_raster_group(); pattern tiles come as bitmaps too
 // (set_tiled_image()).
-#include "gfx/canvas.h"
+#include "vg/canvas.h"
 
 #include <map>
 #include <string>

@@ -53,7 +53,7 @@ public:
     // Kerning adjustment between two consecutive codepoints, in raw font
     // design units (unscaled) -- the same "kern"/GPOS lookup
     // Font::measureText() itself applies between every glyph pair (see
-    // font_face_text_extents() in src/gfx/font_face.cpp), exposed per-pair
+    // font_face_text_extents() in src/sources/vg/font_face.cpp), exposed per-pair
     // so a caller that (unlike Font::measureText()) can't call back into
     // novasvg per string -- e.g. mermaidx's V8 engine, which sums a
     // shipped per-codepoint advance table in JS instead -- can still fold

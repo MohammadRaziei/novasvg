@@ -13,8 +13,8 @@
 #include <set>
 #include <cassert>
 #include "novasvg/novasvg.h"
-#include "gfx/canvas.h"
-#include "gfx/font.h"
+#include "vg/canvas.h"
+#include "vg/font.h"
 #include "novasvg/gfx/parserutils.h"
 
 // ---------------------------------------------------------------

@@ -133,7 +133,7 @@
 ## کارهای این نشست — CLI
 
 - [x] **اسم باینری از `novasvg-cli` به `novasvg` عوض شد** — هم توی `CMakeLists.txt`
-      (`OUTPUT_NAME`) هم توی خودِ `src/novasvg_cli.cpp` (`app.name()`, تیتر، همه‌ی
+      (`OUTPUT_NAME`) هم توی خودِ `src/cli/novasvg_cli.cpp` (`app.name()`, تیتر، همه‌ی
       متن‌های help/footer). جالبه که `README_CLI.md` از قبل با فرض اسم `novasvg` نوشته
       شده بود — یعنی این تغییر باگ ناهماهنگیِ قدیمی بین کد و مستندات رو هم حل کرد.
 - [x] **`convert` دیگه لازم نیست نوشته بشه** — اگه اولین آرگومان یه subcommand شناخته‌شده
@@ -440,12 +440,12 @@
 ## نشست ۵ نوامبر ۲۰۲۶ — وضعیت ریفکتور (برای چت بعدی)
 
 > جزئیات کامل: `refactor/handoff.md` (انگلیسی) و `REFACTOR_CHECKLIST.md`، بخش «Next, in this order». این بخش فقط خلاصه‌ی فارسی است.
-> بخش‌های بالاتر این فایل بیشترش مربوط به قبل از ریفکتور است و عمداً دست نخورد (مثلاً `detail/svgelement.h` الان `src/svg/svgelement.h` است).
+> بخش‌های بالاتر این فایل بیشترش مربوط به قبل از ریفکتور است و عمداً دست نخورد (مثلاً `detail/svgelement.h` الان `src/sources/svg/svgelement.h` است).
 
 ### انجام‌شده
-- [x] فونت‌ها روی `stb::font` (فایل ۶۲۶۶ خطیِ `font_impl.h` حذف شد؛ جایش `src/gfx/font_face.cpp`)
-- [x] هدرهای خصوصی gfx از `include/` رفتند به `src/gfx/`
-- [x] rasterizer و stroker از libstb؛ پوشه‌ی `src/gfx/vendor/` (پورت FreeType) حذف شد
+- [x] فونت‌ها روی `stb::font` (فایل ۶۲۶۶ خطیِ `font_impl.h` حذف شد؛ جایش `src/sources/vg/font_face.cpp`)
+- [x] هدرهای خصوصی gfx از `include/` رفتند به `src/sources/vg/`
+- [x] rasterizer و stroker از libstb؛ پوشه‌ی `src/sources/vg/vendor/` (پورت FreeType) حذف شد
 - [x] `pdf_canvas` و `document::render_to_pdf` / `save_pdf` با دو حالت `pdf_mode::vector` و `pdf_mode::raster`
 - [x] تصمیم نام‌گذاری: `nova::svg` و `nova::vg` (ADR-0009)
 

@@ -1,5 +1,5 @@
-#include "gfx/pdf_canvas.h"
-#include "gfx/font_face.h"
+#include "vg/pdf_canvas.h"
+#include "vg/font_face.h"
 #include <stb/logging.hpp>
 
 #include <stb/zlib.hpp>

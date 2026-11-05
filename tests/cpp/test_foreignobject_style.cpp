@@ -1,7 +1,7 @@
 #include "doctest.h"
 #include <novasvg/novasvg.h>
-#include <gfx/canvas.h>
-#include <gfx/font.h>
+#include <vg/canvas.h>
+#include <vg/font.h>
 #include "svg/svgelement.h" // private header: this test exercises the HTML scanner directly
 
 // Bold / italic runs inside <foreignObject>: the HTML scanner (no fonts needed).

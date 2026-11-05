@@ -1,5 +1,5 @@
-// Definitions declared in src/gfx/canvas.h.
-#include "gfx/canvas.h"
+// Definitions declared in src/sources/vg/canvas.h.
+#include "vg/canvas.h"
 
 namespace nova::vg {
 

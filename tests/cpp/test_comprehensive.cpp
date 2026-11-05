@@ -7,8 +7,8 @@
 #include <fstream>
 
 #include <novasvg/novasvg.h>
-#include <gfx/canvas.h>
-#include <gfx/font.h>
+#include <vg/canvas.h>
+#include <vg/font.h>
 
 namespace {
 std::filesystem::path project_root()

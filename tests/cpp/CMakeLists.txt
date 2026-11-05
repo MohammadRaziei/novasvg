@@ -21,7 +21,7 @@ if(NOVA_DIST_DIR)
     add_dependencies(test_novasvg_cpp novasvg_dist_header)
 endif()
 
-target_include_directories(test_novasvg_cpp PRIVATE "${NOVA_TEST_INCLUDE_DIR}" "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(test_novasvg_cpp PRIVATE "${NOVA_TEST_INCLUDE_DIR}" "${PROJECT_SOURCE_DIR}/src/sources")
 # These two take their headers from NOVA_TEST_INCLUDE_DIR (which can be the dist header), so they link
 # libstb directly instead of going through the novasvg target.
 target_link_libraries(test_novasvg_cpp PRIVATE novasvg::noflag)
@@ -31,7 +31,7 @@ add_test(NAME test_novasvg_cpp COMMAND $<TARGET_FILE:test_novasvg_cpp>)
 # The embedded fallback font only matters when the machine has no fonts, so this check is built with system
 # font loading compiled out and runs as its own executable (the main one deliberately sees system fonts).
 add_executable(test_novasvg_embedded_font embedded_font/check_embedded_font.cpp)
-target_include_directories(test_novasvg_embedded_font PRIVATE "${NOVA_TEST_INCLUDE_DIR}" "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(test_novasvg_embedded_font PRIVATE "${NOVA_TEST_INCLUDE_DIR}" "${PROJECT_SOURCE_DIR}/src/sources")
 target_link_libraries(test_novasvg_embedded_font PRIVATE novasvg::noflag)
 target_compile_definitions(test_novasvg_embedded_font PRIVATE
     NOVA_DISABLE_LOAD_SYSTEM_FONTS

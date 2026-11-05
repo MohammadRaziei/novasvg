@@ -15,8 +15,8 @@
 
 // Include the main library header
 #include "novasvg/novasvg.h"
-#include "gfx/canvas.h" // Transform, Path, ...
-#include "gfx/font.h"
+#include "vg/canvas.h" // Transform, Path, ...
+#include "vg/font.h"
 #include "svg/svgelement.h" // private: foreignObject text measurement
 #include "bitmap_interop.hpp"
 #include <filesystem>
@@ -157,7 +157,7 @@ NB_MODULE(novasvg_py, m) {
 
     // --- Bind FontFace / Font (text measurement) ---
     // Exposes novasvg's own font stack (built on libstb's stb::font,
-    // src/gfx/font_face.cpp) to Python, so callers that need
+    // src/sources/vg/font_face.cpp) to Python, so callers that need
     // to measure text -- e.g. mermaidx computing label/box sizes before it
     // ever builds the svg -- can ask the exact same engine that will later
     // paint the glyphs, instead of hand-rolling a second TTF parser that

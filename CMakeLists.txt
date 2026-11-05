@@ -82,8 +82,8 @@ endif()
 # time. What has been moved is compiled once, here; what has not is still header-only and is compiled
 # into whatever includes it. Each module directory under src/ is globbed.
 file(GLOB NOVA_CORE_SOURCES CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gfx/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/svg/*.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/vg/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/*.cpp")
 add_library(novasvg_core STATIC ${NOVA_CORE_SOURCES})
 set_target_properties(novasvg_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(novasvg_core PRIVATE NOVA_BUILDING_LIBRARY)
@@ -94,8 +94,8 @@ endif()
 target_include_directories(novasvg_core PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<INSTALL_INTERFACE:include>")
-# canvas.h, font.h, internal.h, utils.h, default_font.h live in src/gfx (private); sources include them as "gfx/x.h".
-target_include_directories(novasvg_core PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+# canvas.h, font.h, internal.h, utils.h, default_font.h live in src/sources/vg (private); sources include them as "vg/x.h".
+target_include_directories(novasvg_core PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/sources")
 # Everything that links novasvg links libstb too (dynamic).
 target_link_libraries(novasvg_core PUBLIC libstb::libstb)
 if(NOT NOVA_EMBED_DEFAULT_FONT)
@@ -118,7 +118,7 @@ target_link_libraries(novasvg INTERFACE novasvg_noflag)
 novasvg_optimize(novasvg)   # flags travel to every consumer of novasvg::novasvg
 
 # Add CLI executable
-add_executable(novasvg_cli src/novasvg_cli.cpp)
+add_executable(novasvg_cli src/cli/novasvg_cli.cpp)
 target_link_libraries(novasvg_cli PRIVATE novasvg::novasvg)
 set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg)
 # The installed CLI finds the libstb it was installed with (bin/ and lib/ are siblings); the build tree

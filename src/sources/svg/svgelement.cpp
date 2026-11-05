@@ -1,5 +1,5 @@
 // Definitions of the SVG element classes declared in svgelement.h.
-#include "gfx/pdf_canvas.h"
+#include "vg/pdf_canvas.h"
 #include "svgelement.h"
 
 namespace nova::svg {

@@ -1,6 +1,6 @@
 #include "doctest.h"
-#include <gfx/pdf_canvas.h>
-#include <gfx/font.h>
+#include <vg/pdf_canvas.h>
+#include <vg/font.h>
 
 #include <cstdlib>
 #include <string>
