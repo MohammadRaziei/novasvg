@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.11.5] - 2026-11-05
+
 ### Fixed
 
 - **CSS attribute selectors on attributes novasvg has no property for.** `[data-k]`, `[data-k="1"]`,

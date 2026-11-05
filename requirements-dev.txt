@@ -11,7 +11,7 @@ pytest
 pytest-cov
 fonttools
 pillow
-libstb>=0.7.0
+libstb>=0.7.0,<0.9
 numpy
 
 # documentation dependencies (doxygen/graphviz themselves are installed via
