@@ -5,7 +5,7 @@
 // can be used entirely on its own (e.g. to measure how wide some text
 // would come out in a given font) without pulling in the rest of novasvg.
 
-#include "novasvg/svg/svgparserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no svg-tree dependency, consistent with this header's own self-contained goal
+#include "novasvg/gfx/parserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no svg-tree dependency, consistent with this header's own self-contained goal
 #include "novasvg/gfx/render.h"  // path_move_to/line_to/cubic_to, used to extract glyph outlines
 
 #include <string>
@@ -15,8 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace novasvg {
-using namespace gfx;
+namespace nova::vg {
 
 class FontFace {
 public:
@@ -87,7 +86,7 @@ private:
 
 // The last-resort fonts: Latin subsets of DejaVu Sans (regular, bold, oblique and bold oblique)
 // compiled into the library (see default_font.h); the face matching `bold` / `italic` is returned.
-// A null face when built with NOVASVG_DISABLE_EMBEDDED_FONT.
+// A null face when built with NOVA_DISABLE_EMBEDDED_FONT.
 // Defined in svgparser.hpp, next to the base64 decoding it shares with @font-face.
 FontFace embeddedFallbackFont(bool bold = false, bool italic = false);
 
@@ -196,9 +195,9 @@ bool addFontFaceFromFile(const char* family, bool bold, bool italic, const char*
 */
 bool addFontFaceFromData(const char* family, bool bold, bool italic, const void* data, size_t length, novasvg_destroy_func_t destroy_func, void* closure);
 
-} // namespace novasvg
+} // namespace nova::vg
 
-namespace novasvg {
+namespace nova::vg {
 
 
 
@@ -230,4 +229,4 @@ bool addFontFaceFromFile(const char* family, bool bold, bool italic, const char*
 
 bool addFontFaceFromData(const char* family, bool bold, bool italic, const void* data, size_t length, destroy_func_t destroy_func, void* closure);
 
-} // namespace novasvg
+} // namespace nova::vg

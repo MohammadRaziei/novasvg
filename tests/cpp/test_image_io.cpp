@@ -40,9 +40,9 @@ rgba pixel_at(const stb::image& image, int x, int y)
 }
 
 // 8 x 4: pixel 0 opaque red, pixel 1 half-transparent blue, pixel 2 fully transparent, the rest opaque red.
-novasvg::Bitmap make_pattern()
+nova::vg::Bitmap make_pattern()
 {
-    novasvg::Bitmap bitmap(8, 4);
+    nova::vg::Bitmap bitmap(8, 4);
     auto* words = reinterpret_cast<std::uint32_t*>(bitmap.data());
     for(int i = 0; i < 8 * 4; ++i)
         words[i] = kOpaqueRed;
@@ -51,9 +51,9 @@ novasvg::Bitmap make_pattern()
     return bitmap;
 }
 
-novasvg::Bitmap make_solid_red(int size)
+nova::vg::Bitmap make_solid_red(int size)
 {
-    novasvg::Bitmap bitmap(size, size);
+    nova::vg::Bitmap bitmap(size, size);
     auto* words = reinterpret_cast<std::uint32_t*>(bitmap.data());
     for(int i = 0; i < size * size; ++i)
         words[i] = kOpaqueRed;
@@ -64,7 +64,7 @@ novasvg::Bitmap make_solid_red(int size)
 
 TEST_CASE("image io: PNG and TGA are lossless and carry straight alpha")
 {
-    const stb::image source = novasvg::bitmap_release_to_image(make_pattern());
+    const stb::image source = nova::vg::bitmap_release_to_image(make_pattern());
     REQUIRE(!source.empty());
     for(const bool png : {true, false}) {
         CAPTURE(png ? "png" : "tga");
@@ -88,7 +88,7 @@ TEST_CASE("image io: PNG and TGA are lossless and carry straight alpha")
 
 TEST_CASE("image io: BMP and JPEG decode back to the right size and colour")
 {
-    const stb::image source = novasvg::bitmap_release_to_image(make_solid_red(32));
+    const stb::image source = nova::vg::bitmap_release_to_image(make_solid_red(32));
 
     const stb::image from_bmp = decode(source.to_bmp());
     REQUIRE(from_bmp.width() == 32);
@@ -107,7 +107,7 @@ TEST_CASE("image io: BMP and JPEG decode back to the right size and colour")
 
 TEST_CASE("image io: writing to a file gives the same pixels as encoding to bytes")
 {
-    const stb::image source = novasvg::bitmap_release_to_image(make_pattern());
+    const stb::image source = nova::vg::bitmap_release_to_image(make_pattern());
     const std::filesystem::path path = std::filesystem::temp_directory_path() / "novasvg_image_io_test.png";
 
     const std::vector<std::uint8_t> bytes = source.to_png();
@@ -135,7 +135,7 @@ TEST_CASE("image io: a bitmap over caller memory with a padded stride converts c
         for(int x = 0; x < width; ++x)
             row[x] = 0xFF000000u | (static_cast<std::uint32_t>(x * 40) << 16) | (static_cast<std::uint32_t>(y * 80) << 8) | 0x33u;
     }
-    novasvg::Bitmap bitmap(memory.data(), width, height, stride);
+    nova::vg::Bitmap bitmap(memory.data(), width, height, stride);
     REQUIRE(!bitmap.is_null());
 
     auto check = [&](const stb::image& image) {
@@ -150,26 +150,26 @@ TEST_CASE("image io: a bitmap over caller memory with a padded stride converts c
             }
         }
     };
-    check(novasvg::bitmap_to_rgba_image(bitmap));                       // copy, leaves the bitmap alone
-    check(decode(novasvg::bitmap_to_rgba_image(bitmap).to_png()));
-    check(novasvg::bitmap_release_to_image(std::move(bitmap)));         // padded rows cannot be wrapped: copies
+    check(nova::vg::bitmap_to_rgba_image(bitmap));                       // copy, leaves the bitmap alone
+    check(decode(nova::vg::bitmap_to_rgba_image(bitmap).to_png()));
+    check(nova::vg::bitmap_release_to_image(std::move(bitmap)));         // padded rows cannot be wrapped: copies
 }
 
 TEST_CASE("image io: a null bitmap gives an empty image, and encoding an empty image throws")
 {
-    CHECK(novasvg::bitmap_to_rgba_image(novasvg::Bitmap()).empty());
-    CHECK(novasvg::bitmap_release_to_image(novasvg::Bitmap()).empty());
+    CHECK(nova::vg::bitmap_to_rgba_image(nova::vg::Bitmap()).empty());
+    CHECK(nova::vg::bitmap_release_to_image(nova::vg::Bitmap()).empty());
     const stb::image empty;
     CHECK_THROWS(empty.to_png());
-    const stb::image image = novasvg::bitmap_release_to_image(make_solid_red(4));
+    const stb::image image = nova::vg::bitmap_release_to_image(make_solid_red(4));
     CHECK_THROWS(image.write_png("/this/directory/does/not/exist/out.png"));
 }
 
 TEST_CASE("image io: the hand-off to stb::image does not copy a tightly packed bitmap")
 {
-    novasvg::Bitmap bitmap = make_solid_red(16);
+    nova::vg::Bitmap bitmap = make_solid_red(16);
     const std::uint8_t* before = bitmap.data();
-    const stb::image image = novasvg::bitmap_release_to_image(std::move(bitmap));
+    const stb::image image = nova::vg::bitmap_release_to_image(std::move(bitmap));
     REQUIRE(!image.empty());
     CHECK(image.data() == before);  // same memory: converted in place and wrapped
     const rgba p = pixel_at(image, 3, 3);

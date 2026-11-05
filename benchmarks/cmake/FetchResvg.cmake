@@ -5,13 +5,13 @@
 # Pinned to v0.45.1: it's the newest tag whose c-api crate declares
 # rust-version <= what a stock `apt install cargo rustc` gives you (1.67.1
 # vs. HEAD's 1.85.0 requirement at the time this was written). Bump
-# NOVASVG_BENCH_RESVG_GIT_TAG once a newer toolchain is available.
+# NOVA_BENCH_RESVG_GIT_TAG once a newer toolchain is available.
 
 include(FetchContent)
 
-set(NOVASVG_BENCH_RESVG_GIT_URL "https://github.com/linebender/resvg.git" CACHE STRING
+set(NOVA_BENCH_RESVG_GIT_URL "https://github.com/linebender/resvg.git" CACHE STRING
     "resvg source repo the native bench is built from")
-set(NOVASVG_BENCH_RESVG_GIT_TAG "v0.45.1" CACHE STRING
+set(NOVA_BENCH_RESVG_GIT_TAG "v0.45.1" CACHE STRING
     "resvg git ref (branch/tag/commit) -- must have crates/c-api rust-version <= your cargo/rustc")
 
 find_program(CARGO_EXECUTABLE cargo)
@@ -23,8 +23,8 @@ endif()
 
 FetchContent_Declare(
     resvg_src
-    GIT_REPOSITORY "${NOVASVG_BENCH_RESVG_GIT_URL}"
-    GIT_TAG "${NOVASVG_BENCH_RESVG_GIT_TAG}"
+    GIT_REPOSITORY "${NOVA_BENCH_RESVG_GIT_URL}"
+    GIT_TAG "${NOVA_BENCH_RESVG_GIT_TAG}"
     GIT_SHALLOW TRUE
 )
 FetchContent_Populate(resvg_src)

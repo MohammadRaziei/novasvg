@@ -38,7 +38,7 @@ TEST_CASE("Bitmap advanced operations") {
     const int stride = width * 4;
     std::vector<uint8_t> data(width * height * 4, 0xFF); // White ARGB
     
-    novasvg::Bitmap bitmap(data.data(), width, height, stride);
+    nova::vg::Bitmap bitmap(data.data(), width, height, stride);
     CHECK_FALSE(bitmap.is_null());
     CHECK(bitmap.width() == width);
     CHECK(bitmap.height() == height);
@@ -49,14 +49,14 @@ TEST_CASE("Bitmap advanced operations") {
     
     // The straight-alpha image made from a bitmap encodes without trouble
     {
-        novasvg::Bitmap copy(data.data(), width, height, stride);
-        auto image = novasvg::bitmap_to_rgba_image(copy);
+        nova::vg::Bitmap copy(data.data(), width, height, stride);
+        auto image = nova::vg::bitmap_to_rgba_image(copy);
         CHECK_FALSE(image.empty());
         CHECK_FALSE(image.to_png().empty());
     }
 
     // Test move assignment operator
-    novasvg::Bitmap bitmap2;
+    nova::vg::Bitmap bitmap2;
     bitmap2 = std::move(bitmap);
     CHECK_FALSE(bitmap2.is_null());
     CHECK(bitmap.is_null()); // Should be null after move
@@ -64,42 +64,42 @@ TEST_CASE("Bitmap advanced operations") {
 
 TEST_CASE("Matrix advanced operations") {
     // Test shear operations (shear values are in radians, so use small values)
-    auto sheared = novasvg::Matrix::sheared(0.1f, 0.05f);
+    auto sheared = nova::vg::Matrix::sheared(0.1f, 0.05f);
     // Don't check exact values as shear uses tangent of angle
     
     // Test rotate with center
-    auto rotated = novasvg::Matrix::rotated(45.0f, 10.0f, 20.0f);
+    auto rotated = nova::vg::Matrix::rotated(45.0f, 10.0f, 20.0f);
     
     // Test matrix multiplication
-    novasvg::Matrix m1 = novasvg::Matrix::translated(10.0f, 20.0f);
-    novasvg::Matrix m2 = novasvg::Matrix::scaled(2.0f, 3.0f);
+    nova::vg::Matrix m1 = nova::vg::Matrix::translated(10.0f, 20.0f);
+    nova::vg::Matrix m2 = nova::vg::Matrix::scaled(2.0f, 3.0f);
     auto m3 = m1 * m2;
     
     // Test multiply method
-    novasvg::Matrix m4;
+    nova::vg::Matrix m4;
     m4.multiply(m1);
     CHECK(m4.e == doctest::Approx(10.0f));
     CHECK(m4.f == doctest::Approx(20.0f));
     
     // Test shear method (just test it doesn't crash)
-    novasvg::Matrix m5;
+    nova::vg::Matrix m5;
     m5.shear(0.1f, 0.05f);
     
     // Test rotate method with center
-    novasvg::Matrix m6;
+    nova::vg::Matrix m6;
     m6.rotate(30.0f, 5.0f, 5.0f);
 }
 
 TEST_CASE("Box operations") {
     // Test Box constructor with parameters
-    novasvg::Box box(10.0f, 20.0f, 30.0f, 40.0f);
+    nova::vg::Box box(10.0f, 20.0f, 30.0f, 40.0f);
     CHECK(box.x == doctest::Approx(10.0f));
     CHECK(box.y == doctest::Approx(20.0f));
     CHECK(box.w == doctest::Approx(30.0f));
     CHECK(box.h == doctest::Approx(40.0f));
     
     // Test transform method (in-place)
-    novasvg::Matrix m = novasvg::Matrix::translated(5.0f, 10.0f);
+    nova::vg::Matrix m = nova::vg::Matrix::translated(5.0f, 10.0f);
     box.transform(m);
     CHECK(box.x == doctest::Approx(15.0f));
     CHECK(box.y == doctest::Approx(30.0f));
@@ -111,7 +111,7 @@ TEST_CASE("TextNode operations") {
         <text id="text1" x="10" y="20">Hello World</text>
     </svg>)";
     
-    auto dom = novasvg::document::load_data(svg_data);
+    auto dom = nova::svg::document::load_data(svg_data);
     REQUIRE(dom != nullptr);
     
     // Get text el
@@ -139,27 +139,27 @@ TEST_CASE("TextNode operations") {
 
 TEST_CASE("Document render with matrix") {
     auto svg_file = data_path("rect.svg");
-    auto dom = novasvg::document::load_file(svg_file.string());
+    auto dom = nova::svg::document::load_file(svg_file.string());
     REQUIRE(dom != nullptr);
     
     // Create bitmap
-    novasvg::Bitmap bitmap(100, 100);
+    nova::vg::Bitmap bitmap(100, 100);
     
     // Test render with identity matrix
-    dom->render(bitmap, novasvg::Matrix());
+    dom->render(bitmap, nova::vg::Matrix());
     
     // Test render with translation matrix
-    auto matrix = novasvg::Matrix::translated(10.0f, 20.0f);
+    auto matrix = nova::vg::Matrix::translated(10.0f, 20.0f);
     dom->render(bitmap, matrix);
     
     // Test render with scaling matrix
-    auto matrix2 = novasvg::Matrix::scaled(0.5f, 0.5f);
+    auto matrix2 = nova::vg::Matrix::scaled(0.5f, 0.5f);
     dom->render(bitmap, matrix2);
 }
 
 TEST_CASE("Element render with matrix") {
     auto svg_file = data_path("rect.svg");
-    auto dom = novasvg::document::load_file(svg_file.string());
+    auto dom = nova::svg::document::load_file(svg_file.string());
     REQUIRE(dom != nullptr);
     
     auto docElement = dom->document_element();
@@ -170,13 +170,13 @@ TEST_CASE("Element render with matrix") {
         CHECK_FALSE(rectElement.is_null());
         
         // Create bitmap
-        novasvg::Bitmap bitmap(50, 50);
+        nova::vg::Bitmap bitmap(50, 50);
         
         // Test render with identity matrix
-        rectElement.render(bitmap, novasvg::Matrix());
+        rectElement.render(bitmap, nova::vg::Matrix());
         
         // Test render with translation matrix
-        auto matrix = novasvg::Matrix::translated(5.0f, 5.0f);
+        auto matrix = nova::vg::Matrix::translated(5.0f, 5.0f);
         rectElement.render(bitmap, matrix);
     }
 }
@@ -184,7 +184,7 @@ TEST_CASE("Element render with matrix") {
 TEST_CASE("Document methods with edge cases") {
     // Test with empty svg
     std::string empty_svg = R"(<svg xmlns="http://www.w3.org/2000/svg"></svg>)";
-    auto dom = novasvg::document::load_data(empty_svg);
+    auto dom = nova::svg::document::load_data(empty_svg);
     REQUIRE(dom != nullptr);
     
     // Test width/height with empty svg
@@ -216,7 +216,7 @@ TEST_CASE("Query selector edge cases") {
         </g>
     </svg>)";
     
-    auto dom = novasvg::document::load_data(svg_data);
+    auto dom = nova::svg::document::load_data(svg_data);
     REQUIRE(dom != nullptr);
     
     // Test query_selector_all with class selector (if supported)
@@ -236,7 +236,7 @@ TEST_CASE("Apply stylesheet edge cases") {
         <rect id="rect1" x="10" y="10" width="80" height="80"/>
     </svg>)";
     
-    auto dom = novasvg::document::load_data(svg_data);
+    auto dom = nova::svg::document::load_data(svg_data);
     REQUIRE(dom != nullptr);
     
     // Apply empty stylesheet
@@ -251,7 +251,7 @@ TEST_CASE("Apply stylesheet edge cases") {
 
 TEST_CASE("Node equality operators") {
     auto svg_file = data_path("rect.svg");
-    auto dom = novasvg::document::load_file(svg_file.string());
+    auto dom = nova::svg::document::load_file(svg_file.string());
     REQUIRE(dom != nullptr);
     
     auto docElement = dom->document_element();
@@ -266,7 +266,7 @@ TEST_CASE("Node equality operators") {
         CHECK_FALSE(node1 != node2);
         
         // Test with null nd
-        novasvg::node nullNode;
+        nova::svg::node nullNode;
         CHECK_FALSE(node1 == nullNode);
         CHECK(node1 != nullNode);
         

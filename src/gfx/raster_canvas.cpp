@@ -1,8 +1,7 @@
 // Definitions declared in src/gfx/canvas.h.
 #include "gfx/canvas.h"
 
-namespace novasvg {
-using namespace gfx;
+namespace nova::vg {
 
 Transform::Transform()
 {
@@ -135,10 +134,10 @@ Transform Transform::rotated(float angle, float cx, float cy)
 {
     matrix_t matrix;
     if(cx == 0.f && cy == 0.f) {
-        matrix_init_rotate(&matrix, NOVASVG_DEG2RAD(angle));
+        matrix_init_rotate(&matrix, NOVA_DEG2RAD(angle));
     } else {
         matrix_init_translate(&matrix, cx, cy);
-        matrix_rotate(&matrix, NOVASVG_DEG2RAD(angle));
+        matrix_rotate(&matrix, NOVA_DEG2RAD(angle));
         matrix_translate(&matrix, -cx, -cy);
     }
 
@@ -155,7 +154,7 @@ Transform Transform::scaled(float sx, float sy)
 Transform Transform::sheared(float shx, float shy)
 {
     matrix_t matrix;
-    matrix_init_shear(&matrix, NOVASVG_DEG2RAD(shx), NOVASVG_DEG2RAD(shy));
+    matrix_init_shear(&matrix, NOVA_DEG2RAD(shx), NOVA_DEG2RAD(shy));
     return matrix;
 }
 
@@ -215,7 +214,7 @@ void Path::cubicTo(float x1, float y1, float x2, float y2, float x3, float y3)
 
 void Path::arcTo(float rx, float ry, float xAxisRotation, bool largeArcFlag, bool sweepFlag, float x, float y)
 {
-    path_arc_to(ensure(), rx, ry, NOVASVG_DEG2RAD(xAxisRotation), largeArcFlag, sweepFlag, x, y);
+    path_arc_to(ensure(), rx, ry, NOVA_DEG2RAD(xAxisRotation), largeArcFlag, sweepFlag, x, y);
 }
 
 void Path::close()
@@ -314,18 +313,18 @@ PathCommand PathIterator::currentSegment(std::array<Point, 3>& points) const
 {
     auto command = m_elements[m_index].header.command;
     switch(command) {
-    case NOVASVG_PATH_COMMAND_MOVE_TO:
+    case NOVA_PATH_COMMAND_MOVE_TO:
         points[0] = m_elements[m_index + 1].point;
         break;
-    case NOVASVG_PATH_COMMAND_LINE_TO:
+    case NOVA_PATH_COMMAND_LINE_TO:
         points[0] = m_elements[m_index + 1].point;
         break;
-    case NOVASVG_PATH_COMMAND_CUBIC_TO:
+    case NOVA_PATH_COMMAND_CUBIC_TO:
         points[0] = m_elements[m_index + 1].point;
         points[1] = m_elements[m_index + 2].point;
         points[2] = m_elements[m_index + 3].point;
         break;
-    case NOVASVG_PATH_COMMAND_CLOSE:
+    case NOVA_PATH_COMMAND_CLOSE:
         points[0] = m_elements[m_index + 1].point;
         break;
     }
@@ -390,7 +389,7 @@ void raster_canvas::fill_path(const Path& path, FillRule fillRule, const Transfo
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
     canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(fillRule));
-    canvas_set_operator(m_canvas, NOVASVG_OPERATOR_SRC_OVER);
+    canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
     canvas_fill_path(m_canvas, path.data());
 }
 
@@ -404,7 +403,7 @@ void raster_canvas::stroke_path(const Path& path, const StrokeData& strokeData, 
     canvas_set_line_join(m_canvas, static_cast<line_join_t>(strokeData.lineJoin()));
     canvas_set_dash_offset(m_canvas, strokeData.dashOffset());
     canvas_set_dash_array(m_canvas, strokeData.dashArray().data(), strokeData.dashArray().size());
-    canvas_set_operator(m_canvas, NOVASVG_OPERATOR_SRC_OVER);
+    canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
     canvas_stroke_path(m_canvas, path.data());
 }
 
@@ -412,10 +411,10 @@ void raster_canvas::fill_text(const std::u32string_view& text, const Font& font,
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
-    canvas_set_fill_rule(m_canvas, NOVASVG_FILL_RULE_NON_ZERO);
-    canvas_set_operator(m_canvas, NOVASVG_OPERATOR_SRC_OVER);
+    canvas_set_fill_rule(m_canvas, NOVA_FILL_RULE_NON_ZERO);
+    canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
     canvas_set_font(m_canvas, font.face().get(), font.size());
-    canvas_fill_text(m_canvas, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF32, origin.x, origin.y);
+    canvas_fill_text(m_canvas, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF32, origin.x, origin.y);
 }
 
 void raster_canvas::stroke_text(const std::u32string_view& text, float strokeWidth, const Font& font, const Point& origin, const Transform& transform)
@@ -424,13 +423,13 @@ void raster_canvas::stroke_text(const std::u32string_view& text, float strokeWid
     canvas_transform(m_canvas, &transform.matrix());
     canvas_set_line_width(m_canvas, strokeWidth);
     canvas_set_miter_limit(m_canvas, 4.f);
-    canvas_set_line_cap(m_canvas, NOVASVG_LINE_CAP_BUTT);
-    canvas_set_line_join(m_canvas, NOVASVG_LINE_JOIN_MITER);
+    canvas_set_line_cap(m_canvas, NOVA_LINE_CAP_BUTT);
+    canvas_set_line_join(m_canvas, NOVA_LINE_JOIN_MITER);
     canvas_set_dash_offset(m_canvas, 0.f);
     canvas_set_dash_array(m_canvas, nullptr, 0);
-    canvas_set_operator(m_canvas, NOVASVG_OPERATOR_SRC_OVER);
+    canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
     canvas_set_font(m_canvas, font.face().get(), font.size());
-    canvas_stroke_text(m_canvas, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF32, origin.x, origin.y);
+    canvas_stroke_text(m_canvas, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF32, origin.x, origin.y);
 }
 
 void raster_canvas::clip_path(const Path& path, FillRule clipRule, const Transform& transform)
@@ -457,9 +456,9 @@ void raster_canvas::draw_image(const Bitmap& image, const Rect& dstRect, const R
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
     canvas_translate(m_canvas, dstRect.x, dstRect.y);
-    canvas_set_fill_rule(m_canvas, NOVASVG_FILL_RULE_NON_ZERO);
-    canvas_set_operator(m_canvas, NOVASVG_OPERATOR_SRC_OVER);
-    canvas_set_texture(m_canvas, image.surface(), NOVASVG_TEXTURE_TYPE_PLAIN, 1.f, &matrix);
+    canvas_set_fill_rule(m_canvas, NOVA_FILL_RULE_NON_ZERO);
+    canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
+    canvas_set_texture(m_canvas, image.surface(), NOVA_TEXTURE_TYPE_PLAIN, 1.f, &matrix);
     canvas_fill_rect(m_canvas, 0, 0, dstRect.w, dstRect.h);
 }
 
@@ -468,7 +467,7 @@ void raster_canvas::blend_canvas(const raster_canvas& canvas, BlendMode blendMod
     matrix_t matrix = { 1, 0, 0, 1, static_cast<float>(canvas.x()), static_cast<float>(canvas.y()) };
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_set_operator(m_canvas, static_cast<operator_t>(blendMode));
-    canvas_set_texture(m_canvas, canvas.surface(), NOVASVG_TEXTURE_TYPE_PLAIN, opacity, &matrix);
+    canvas_set_texture(m_canvas, canvas.surface(), NOVA_TEXTURE_TYPE_PLAIN, opacity, &matrix);
     canvas_paint(m_canvas);
 }
 
@@ -713,4 +712,4 @@ raster_canvas::raster_canvas(int x, int y, int width, int height)
 {
 }
 
-} // namespace novasvg
+} // namespace nova::vg

@@ -7,11 +7,7 @@
 
 #include "novasvg/gfx/render.h"  // base64_decode (data: URIs)
 
-#ifndef NOVASVG_DISABLE_EMBEDDED_FONT
-#include "gfx/default_font.h"
-#endif
-
-namespace novasvg {
+namespace nova::svg {
 
 struct SimpleSelector;
 
@@ -117,17 +113,17 @@ inline bool operator<(const RuleData& a, const RuleData& b) { return a.isLessTha
 
 using RuleDataList = std::vector<RuleData>;
 
-NOVASVG_INLINE constexpr bool equals(std::string_view value, std::string_view subvalue)
+NOVA_INLINE constexpr bool equals(std::string_view value, std::string_view subvalue)
 {
     return value.compare(subvalue) == 0;
 }
 
-NOVASVG_INLINE constexpr bool contains(std::string_view value, std::string_view subvalue)
+NOVA_INLINE constexpr bool contains(std::string_view value, std::string_view subvalue)
 {
     return value.find(subvalue) != std::string_view::npos;
 }
 
-NOVASVG_INLINE constexpr bool includes(std::string_view value, std::string_view subvalue)
+NOVA_INLINE constexpr bool includes(std::string_view value, std::string_view subvalue)
 {
     if(subvalue.empty() || subvalue.length() > value.length())
         return false;
@@ -145,21 +141,21 @@ NOVASVG_INLINE constexpr bool includes(std::string_view value, std::string_view 
     return false;
 }
 
-NOVASVG_INLINE constexpr bool startswith(std::string_view value, std::string_view subvalue)
+NOVA_INLINE constexpr bool startswith(std::string_view value, std::string_view subvalue)
 {
     if(subvalue.empty() || subvalue.length() > value.length())
         return false;
     return subvalue == value.substr(0, subvalue.size());
 }
 
-NOVASVG_INLINE constexpr bool endswith(std::string_view value, std::string_view subvalue)
+NOVA_INLINE constexpr bool endswith(std::string_view value, std::string_view subvalue)
 {
     if(subvalue.empty() || subvalue.length() > value.length())
         return false;
     return subvalue == value.substr(value.size() - subvalue.size(), subvalue.size());
 }
 
-NOVASVG_INLINE constexpr bool dashequals(std::string_view value, std::string_view subvalue)
+NOVA_INLINE constexpr bool dashequals(std::string_view value, std::string_view subvalue)
 {
     if(startswith(value, subvalue))
         return (value.length() == subvalue.length() || value.at(subvalue.length()) == '-');
@@ -728,29 +724,6 @@ static FontFace fontFaceFromBase64(std::string_view payload)
         return FontFace();
     return FontFace(decoded, decodedLength, [](void* closure) { free(closure); }, decoded);
 }
-
-// fontFaceFromBase64() for a payload that was zlib-compressed before it was base64-encoded. The inflater is
-// libstb's (stb::zlib_decompress), which reports bad input by exception: that becomes an empty FontFace.
-static FontFace fontFaceFromZlibBase64(std::string_view payload)
-{
-    size_t compressedLength = 0;
-    auto* compressed = base64_decode(payload.data(), int(payload.size()), &compressedLength);
-    if(compressed == nullptr)
-        return FontFace();
-    std::vector<uint8_t> inflated;
-    try {
-        inflated = stb::zlib_decompress(compressed, compressedLength);
-    } catch(const std::exception&) {
-        inflated.clear();
-    }
-    free(compressed);
-    if(inflated.empty())
-        return FontFace();
-    auto* owned = new std::vector<uint8_t>(std::move(inflated));
-    return FontFace(owned->data(), owned->size(), [](void* closure) { delete static_cast<std::vector<uint8_t>*>(closure); }, owned);
-}
-
-FontFace embeddedFallbackFont(bool bold, bool italic);
 
 // Loads an `@font-face` rule's embedded font (a `src: url(data:...)`
 // entry) and registers it, matching what the CSS itself declares:
@@ -1519,4 +1492,4 @@ private:
 
 
 
-} // namespace novasvg
+} // namespace nova::svg

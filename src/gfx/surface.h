@@ -19,8 +19,8 @@
 #include <cstring>
 #include <exception>
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 static surface_t* surface_create_uninitialized(int width, int height)
 {
@@ -82,5 +82,5 @@ static const uint8_t base64_table[128] = {
 // data URIs (svgparser.hpp) can share one implementation. Returns NULL
 // on any malformed input (bad character, wrong padding, ...).
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

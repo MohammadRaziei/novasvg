@@ -4,17 +4,17 @@
 
 include(FetchContent)
 
-set(NOVASVG_BENCH_LUNASVG_GIT_URL "https://github.com/sammycage/lunasvg.git" CACHE STRING
+set(NOVA_BENCH_LUNASVG_GIT_URL "https://github.com/sammycage/lunasvg.git" CACHE STRING
     "lunasvg source repo the native bench links against")
-set(NOVASVG_BENCH_LUNASVG_GIT_TAG "master" CACHE STRING
+set(NOVA_BENCH_LUNASVG_GIT_TAG "master" CACHE STRING
     "lunasvg git ref (branch/tag/commit)")
 
 set(LUNASVG_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
     lunasvg_src
-    GIT_REPOSITORY "${NOVASVG_BENCH_LUNASVG_GIT_URL}"
-    GIT_TAG "${NOVASVG_BENCH_LUNASVG_GIT_TAG}"
+    GIT_REPOSITORY "${NOVA_BENCH_LUNASVG_GIT_URL}"
+    GIT_TAG "${NOVA_BENCH_LUNASVG_GIT_TAG}"
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(lunasvg_src)

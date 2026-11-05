@@ -1,6 +1,6 @@
 # ADR-0004: stl-like `snake_case` naming; namespace `novasvg`
 
-**Status:** Accepted. Implementation is step 6 and has not started; the alias `nova` is still open.
+**Status:** Accepted for the naming rules (implementation is step 6, not started). The namespace decision (point 2) is superseded by [ADR-0009](0009-namespaces-nova-svg-and-nova-vg.md): `nova::svg` and `nova::vg`.
 **Date:** 2026-11-01
 **Deciders:** Mohammad Raziei (maintainer)
 

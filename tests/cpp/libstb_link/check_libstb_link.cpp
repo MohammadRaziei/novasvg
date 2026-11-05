@@ -18,7 +18,7 @@
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <dlfcn.h>
-#define NOVASVG_CAN_DLADDR 1
+#define NOVA_CAN_DLADDR 1
 #endif
 
 static int failures = 0;
@@ -30,7 +30,7 @@ static int failures = 0;
         }                                                                                  \
     } while (0)
 
-#ifdef NOVASVG_CAN_DLADDR
+#ifdef NOVA_CAN_DLADDR
 static void local_marker() {}
 
 // The object file that contains `address`, as the dynamic loader sees it.
@@ -43,7 +43,7 @@ static const char* object_of(const void* address) {
 int main() {
     using namespace stb;
 
-    // colour: stb::color descends from novasvg::Color, so the two must agree.
+    // colour: stb::color descends from nova::vg::Color, so the two must agree.
     CHECK(color("red").value() == 0xFF0000FFu);
     CHECK(color("#00ff0080").a() == 0x80);
 
@@ -62,7 +62,7 @@ int main() {
     CHECK(back.width() == 2 && back.height() == 2 && back.channels() == 4);
     CHECK(std::memcmp(back.data(), px.data(), px.size()) == 0);
 
-#ifdef NOVASVG_CAN_DLADDR
+#ifdef NOVA_CAN_DLADDR
     // libstb must live in its own shared object, not in this executable.
     using compress_fn = std::vector<std::uint8_t> (*)(const void*, std::size_t, int);
     const char* lib = object_of(reinterpret_cast<const void*>(static_cast<compress_fn>(&zlib_compress)));

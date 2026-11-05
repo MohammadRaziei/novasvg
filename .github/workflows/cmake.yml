@@ -33,10 +33,10 @@ jobs:
         build-dir: build
         options: |
           CMAKE_BUILD_TYPE=Release
-          NOVASVG_BUILD_EXAMPLES=ON
-          NOVASVG_BUILD_PYTHON=ON
-          NOVASVG_BUILD_TESTS=ON
-          NOVASVG_BUILD_DOCS=OFF
+          NOVA_BUILD_EXAMPLES=ON
+          NOVA_BUILD_PYTHON=ON
+          NOVA_BUILD_TESTS=ON
+          NOVA_BUILD_DOCS=OFF
 
     - name: Build
       run: cmake --build build -j4 --config Release
@@ -78,10 +78,10 @@ jobs:
       run: |
         cmake -B build \
           -DCMAKE_BUILD_TYPE=Release \
-          -DNOVASVG_BUILD_EXAMPLES=OFF \
-          -DNOVASVG_BUILD_PYTHON=ON \
-          -DNOVASVG_BUILD_TESTS=OFF \
-          -DNOVASVG_BUILD_DOCS=ON
+          -DNOVA_BUILD_EXAMPLES=OFF \
+          -DNOVA_BUILD_PYTHON=ON \
+          -DNOVA_BUILD_TESTS=OFF \
+          -DNOVA_BUILD_DOCS=ON
 
     - name: Build documentation
       run: cmake --build build --target novasvg_docs
@@ -124,10 +124,10 @@ jobs:
     - name: Configure CMake with coverage
       run: |
         cmake -B build \
-          -DNOVASVG_BUILD_EXAMPLES=OFF \
-          -DNOVASVG_BUILD_PYTHON=ON \
-          -DNOVASVG_BUILD_TESTS=ON \
-          -DNOVASVG_BUILD_DOCS=OFF
+          -DNOVA_BUILD_EXAMPLES=OFF \
+          -DNOVA_BUILD_PYTHON=ON \
+          -DNOVA_BUILD_TESTS=ON \
+          -DNOVA_BUILD_DOCS=OFF
 
     - name: Generate coverage report
       run: cmake --build build --target novasvg_coverage
@@ -165,11 +165,11 @@ jobs:
       run: |
         cmake -B build \
           -DCMAKE_BUILD_TYPE=Release \
-          -DNOVASVG_BUILD_EXAMPLES=OFF \
-          -DNOVASVG_BUILD_PYTHON=OFF \
-          -DNOVASVG_BUILD_TESTS=OFF \
-          -DNOVASVG_BUILD_DOCS=OFF \
-          -DNOVASVG_DIST_DIR=build/dist
+          -DNOVA_BUILD_EXAMPLES=OFF \
+          -DNOVA_BUILD_PYTHON=OFF \
+          -DNOVA_BUILD_TESTS=OFF \
+          -DNOVA_BUILD_DOCS=OFF \
+          -DNOVA_DIST_DIR=build/dist
 
     - name: Build single-header
       run: cmake --build build --target novasvg_dist_header

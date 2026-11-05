@@ -4,8 +4,8 @@
 # sample data is shared with the parent).
 #
 # Which novasvg gets built:
-#   default                   : NOVASVG_BENCH_GIT_URL @ NOVASVG_BENCH_GIT_TAG
-#   to benchmark a local tree : -DFETCHCONTENT_SOURCE_DIR_NOVASVG_SRC=/path/to/novasvg
+#   default                   : NOVA_BENCH_GIT_URL @ NOVA_BENCH_GIT_TAG
+#   to benchmark a local tree : -DFETCHCONTENT_SOURCE_DIR_NOVA_SRC=/path/to/novasvg
 #                               (standard FetchContent override; also what to use
 #                               to measure uncommitted changes)
 #
@@ -16,20 +16,20 @@
 include(FetchContent)
 
 # Keep the build minimal: just the header-only lib + novasvg_cli.
-set(NOVASVG_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(NOVASVG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(NOVASVG_BUILD_PYTHON OFF CACHE BOOL "" FORCE)
-set(NOVASVG_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(NOVA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(NOVA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(NOVA_BUILD_PYTHON OFF CACHE BOOL "" FORCE)
+set(NOVA_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 
-set(NOVASVG_BENCH_GIT_URL "https://github.com/MohammadRaziei/novasvg.git" CACHE STRING
+set(NOVA_BENCH_GIT_URL "https://github.com/MohammadRaziei/novasvg.git" CACHE STRING
     "novasvg source repo to build and benchmark")
-set(NOVASVG_BENCH_GIT_TAG "master" CACHE STRING
+set(NOVA_BENCH_GIT_TAG "master" CACHE STRING
     "novasvg git ref (branch/tag/commit) to build and benchmark")
 
 FetchContent_Declare(
     novasvg_src
-    GIT_REPOSITORY "${NOVASVG_BENCH_GIT_URL}"
-    GIT_TAG "${NOVASVG_BENCH_GIT_TAG}"
+    GIT_REPOSITORY "${NOVA_BENCH_GIT_URL}"
+    GIT_TAG "${NOVA_BENCH_GIT_TAG}"
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(novasvg_src)

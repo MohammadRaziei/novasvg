@@ -23,8 +23,8 @@
 */
 
 
-#ifndef NOVASVG_H
-#define NOVASVG_H
+#ifndef NOVA_H
+#define NOVA_H
 #pragma once
 
 #include <cstdint>
@@ -35,27 +35,27 @@
 
 #include "config.h"
 
-#define NOVASVG_VERSION_MAJOR 0
-#define NOVASVG_VERSION_MINOR 11
-#define NOVASVG_VERSION_PATCH 4
+#define NOVA_VERSION_MAJOR 0
+#define NOVA_VERSION_MINOR 11
+#define NOVA_VERSION_PATCH 4
 
-#define NOVASVG_VERSION_ENCODE(major, minor, patch) (((major) * 10000) + ((minor) * 100) + ((patch) * 1))
-#define NOVASVG_VERSION NOVASVG_VERSION_ENCODE(NOVASVG_VERSION_MAJOR, NOVASVG_VERSION_MINOR, NOVASVG_VERSION_PATCH)
+#define NOVA_VERSION_ENCODE(major, minor, patch) (((major) * 10000) + ((minor) * 100) + ((patch) * 1))
+#define NOVA_VERSION NOVA_VERSION_ENCODE(NOVA_VERSION_MAJOR, NOVA_VERSION_MINOR, NOVA_VERSION_PATCH)
 
-#define NOVASVG_VERSION_XSTRINGIZE(major, minor, patch) #major"."#minor"."#patch
-#define NOVASVG_VERSION_STRINGIZE(major, minor, patch) NOVASVG_VERSION_XSTRINGIZE(major, minor, patch)
-#define NOVASVG_VERSION_STRING NOVASVG_VERSION_STRINGIZE(NOVASVG_VERSION_MAJOR, NOVASVG_VERSION_MINOR, NOVASVG_VERSION_PATCH)
+#define NOVA_VERSION_XSTRINGIZE(major, minor, patch) #major"."#minor"."#patch
+#define NOVA_VERSION_STRINGIZE(major, minor, patch) NOVA_VERSION_XSTRINGIZE(major, minor, patch)
+#define NOVA_VERSION_STRING NOVA_VERSION_STRINGIZE(NOVA_VERSION_MAJOR, NOVA_VERSION_MINOR, NOVA_VERSION_PATCH)
 
 #include "gfx/color.h"
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 struct surface;
 struct matrix;
 using surface_t = surface;
 using matrix_t = matrix;
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova
 
 /**
  * @brief Callback for cleaning up resources.
@@ -67,8 +67,8 @@ using matrix_t = matrix;
 
 
 
-namespace novasvg {
-using namespace gfx;
+namespace nova::svg {
+using namespace vg;
 
 /**
  * @brief Returns the version of the novasvg library encoded in a single integer.
@@ -90,12 +90,11 @@ int version();
  */
 std::string version_string();
 
-} // namespace novasvg
+} // namespace nova::svg
 
 #include "gfx/bitmap.h"
 
-namespace novasvg {
-using namespace gfx;
+namespace nova::vg {
 
 class Rect;
 class Matrix;
@@ -103,7 +102,7 @@ class Matrix;
 /**
  * @brief Represents a 2D axis-aligned bounding box.
  */
-class NOVASVG_API Box {
+class NOVA_API Box {
 public:
     /**
      * @brief Constructs a box with zero dimensions.
@@ -149,7 +148,7 @@ class Transform;
 /**
  * @brief Represents a 2D transformation matrix.
  */
-class NOVASVG_API Matrix {
+class NOVA_API Matrix {
 public:
     /**
      * @brief Initializes the matrix to the identity matrix.
@@ -289,6 +288,11 @@ public:
     float f{0}; ///< The vertical translation offset.
 };
 
+} // namespace nova::vg
+
+namespace nova::svg {
+using namespace vg;
+
 class svg_node;
 class svg_text_node;
 class svg_element;
@@ -296,7 +300,7 @@ class svg_element;
 class element;
 class text_node;
 
-class NOVASVG_API node {
+class NOVA_API node {
 public:
     /**
      * @brief Constructs a null nd.
@@ -368,7 +372,7 @@ protected:
 
 using NodeList = std::vector<node>;
 
-class NOVASVG_API text_node : public node {
+class NOVA_API text_node : public node {
 public:
     /**
      * @brief Constructs a null text nd.
@@ -393,7 +397,7 @@ private:
     friend class node;
 };
 
-class NOVASVG_API element : public node {
+class NOVA_API element : public node {
 public:
     /**
      * @brief Constructs a null el.
@@ -500,7 +504,7 @@ using ElementList = std::vector<element>;
 
 class svg_root_element;
 
-class NOVASVG_API document {
+class NOVA_API document {
 public:
     /**
      * @brief Load an svg dom from a file.
@@ -665,6 +669,6 @@ private:
     friend class svg_node;
 };
 
-} // namespace novasvg
+} // namespace nova::svg
 
-#endif // NOVASVG_H
+#endif // NOVA_H

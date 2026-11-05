@@ -2,8 +2,7 @@
 #include "gfx/font.h"
 #include "font_face.h"
 
-namespace novasvg {
-using namespace gfx;
+namespace nova::vg {
 
 FontFace::FontFace(font_face_t* face)
     : m_face(font_face_reference(face))
@@ -238,7 +237,7 @@ FontFace FontFaceCache::getFontFaceForFamilyStack(const std::string& familyStack
 FontFaceCache::FontFaceCache()
     : m_cache(font_face_cache_create())
 {
-#ifndef NOVASVG_DISABLE_LOAD_SYSTEM_FONTS
+#ifndef NOVA_DISABLE_LOAD_SYSTEM_FONTS
     font_face_cache_load_sys(m_cache);
 #endif
 }
@@ -268,7 +267,7 @@ float Font::xHeight() const
 float Font::measureText(const std::u32string_view& text) const
 {
     if(m_size > 0.f && !m_face.is_null())
-        return font_face_text_extents(m_face.get(), m_size, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF32, nullptr);
+        return font_face_text_extents(m_face.get(), m_size, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF32, nullptr);
     return 0;
 }
 
@@ -280,7 +279,7 @@ std::vector<Font::GlyphBox> Font::glyphBoxes(const std::u32string_view& text) co
 
     font_face_t* face = m_face.get();
     text_iterator_t it;
-    text_iterator_init(&it, text.data(), static_cast<int>(text.length()), NOVASVG_TEXT_ENCODING_UTF32);
+    text_iterator_init(&it, text.data(), static_cast<int>(text.length()), NOVA_TEXT_ENCODING_UTF32);
     float pen = 0.f;
     codepoint_t previous = 0;
     bool hasPrevious = false;
@@ -312,4 +311,4 @@ bool addFontFaceFromData(const char* family, bool bold, bool italic, const void*
     return fontFaceCache()->addFontFace(family, bold, italic, FontFace(data, length, destroy_func, closure));
 }
 
-} // namespace novasvg
+} // namespace nova::vg

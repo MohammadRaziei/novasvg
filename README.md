@@ -41,11 +41,11 @@
 #include <iostream>
 
 int main() {
-    auto doc = novasvg::Document::loadFromFile("artwork.svg");
+    auto doc = nova::svg::Document::loadFromFile("artwork.svg");
     if (!doc) return 1;
 
     // 640 px wide, height follows the aspect ratio, white background
-    auto bitmap = doc->renderToBitmap(640, -1, novasvg::Color::white());
+    auto bitmap = doc->renderToBitmap(640, -1, nova::vg::Color::white());
     bitmap.writeToPng("artwork.png");        // also writeToJpg / writeToBmp / writeToTga
 
     // Query it like a DOM
@@ -163,10 +163,10 @@ Not implemented yet: per-primitive filter regions, `feColorMatrix` / `feTurbulen
 Font lookup works like a browser, with no OS font library involved. A `font-family` stack is walked name by name: an installed or registered font first, then a metric-compatible stand-in (`arial` → Liberation Sans / Arimo, `times new roman` → Liberation Serif / Tinos, `calibri` → Carlito, ...), then the generic keywords. A ~40 KB Latin subset of DejaVu Sans is compiled in as the last resort, so text renders even on a machine with no fonts installed. For the best fidelity, install a metric-compatible family such as `fonts-liberation`.
 
 ```cpp
-novasvg::addFontFaceFromFile("Inter", /*bold=*/false, /*italic=*/false, "Inter-Regular.ttf");
+nova::vg::addFontFaceFromFile("Inter", /*bold=*/false, /*italic=*/false, "Inter-Regular.ttf");
 ```
 
-Disable the embedded font with `-DNOVASVG_EMBED_DEFAULT_FONT=OFF` or by defining `NOVASVG_DISABLE_EMBEDDED_FONT`.
+Disable the embedded font with `-DNOVA_EMBED_DEFAULT_FONT=OFF` or by defining `NOVA_DISABLE_EMBEDDED_FONT`.
 
 ## API overview
 
@@ -177,7 +177,7 @@ Disable the embedded font with `-DNOVASVG_EMBED_DEFAULT_FONT=OFF` or by defining
 | `Bitmap` | `writeToPng()` / `writeToJpg()` / `writeToBmp()` / `writeToTga()` · `data()` (ARGB32 premultiplied) · `width()` / `height()` / `stride()` · `convertToRGBA()` |
 | `Matrix` | `translate()` · `scale()` · `rotate()` · `shear()` · `inverse()` · `operator*` |
 
-Full reference: [mohammadraziei.github.io/novasvg](https://mohammadraziei.github.io/novasvg), or build it locally with `-DNOVASVG_BUILD_DOCS=ON`.
+Full reference: [mohammadraziei.github.io/novasvg](https://mohammadraziei.github.io/novasvg), or build it locally with `-DNOVA_BUILD_DOCS=ON`.
 
 ## Command-line reference
 
@@ -202,13 +202,13 @@ Full reference: [mohammadraziei.github.io/novasvg](https://mohammadraziei.github
 
 | Option | Description | Default |
 |---|---|---|
-| `NOVASVG_BUILD_EXAMPLES` | Build the C++ examples | `ON` when top-level |
-| `NOVASVG_BUILD_TESTS` | Build the unit tests | `ON` when top-level |
-| `NOVASVG_BUILD_PYTHON` | Build the Python bindings | `ON` when top-level |
-| `NOVASVG_BUILD_DOCS` | Build the docs with Doxygen | `OFF` |
-| `NOVASVG_INSTALL` | Install the CMake package (`novasvg::novasvg`, `novasvg::noflag`) | `ON` when top-level |
-| `NOVASVG_DIST_DIR` | Generate the single-header distribution into this directory | unset |
-| `NOVASVG_EMBED_DEFAULT_FONT` | Compile in the fallback font | `ON` |
+| `NOVA_BUILD_EXAMPLES` | Build the C++ examples | `ON` when top-level |
+| `NOVA_BUILD_TESTS` | Build the unit tests | `ON` when top-level |
+| `NOVA_BUILD_PYTHON` | Build the Python bindings | `ON` when top-level |
+| `NOVA_BUILD_DOCS` | Build the docs with Doxygen | `OFF` |
+| `NOVA_INSTALL` | Install the CMake package (`novasvg::novasvg`, `novasvg::noflag`) | `ON` when top-level |
+| `NOVA_DIST_DIR` | Generate the single-header distribution into this directory | unset |
+| `NOVA_EMBED_DEFAULT_FONT` | Compile in the fallback font | `ON` |
 
 ## Repository layout
 
@@ -227,7 +227,7 @@ docs/               documentation site sources
 Issues and pull requests are welcome. Please fork, work on a feature branch, add a test when you change behaviour, and open a PR.
 
 ```bash
-cmake -B build -DNOVASVG_BUILD_TESTS=ON && cmake --build build -j
+cmake -B build -DNOVA_BUILD_TESTS=ON && cmake --build build -j
 ctest --test-dir build
 ```
 

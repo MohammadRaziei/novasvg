@@ -4,8 +4,8 @@
 // algorithms (through plutovg) that used to be vendored here in src/gfx/vendor.
 #include <stb/raster.hpp>
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 static void span_buffer_update_extents(span_buffer_t* span_buffer);
 
@@ -178,16 +178,16 @@ stb::outline to_stb_outline(const path_t* path)
     point_t points[3];
     while(path_iterator_has_next(&it)) {
         switch(path_iterator_next(&it, points)) {
-        case NOVASVG_PATH_COMMAND_MOVE_TO:
+        case NOVA_PATH_COMMAND_MOVE_TO:
             outline.move_to(points[0].x, points[0].y);
             break;
-        case NOVASVG_PATH_COMMAND_LINE_TO:
+        case NOVA_PATH_COMMAND_LINE_TO:
             outline.line_to(points[0].x, points[0].y);
             break;
-        case NOVASVG_PATH_COMMAND_CUBIC_TO:
+        case NOVA_PATH_COMMAND_CUBIC_TO:
             outline.cubic_to(points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
             break;
-        case NOVASVG_PATH_COMMAND_CLOSE:
+        case NOVA_PATH_COMMAND_CLOSE:
             outline.close();
             break;
         }
@@ -243,10 +243,10 @@ void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* m
         stb::stroke_style style;
         style.width = stroke_data->style.width;
         switch(stroke_data->style.cap) {
-        case NOVASVG_LINE_CAP_SQUARE:
+        case NOVA_LINE_CAP_SQUARE:
             style.cap = stb::line_cap::square;
             break;
-        case NOVASVG_LINE_CAP_ROUND:
+        case NOVA_LINE_CAP_ROUND:
             style.cap = stb::line_cap::round;
             break;
         default:
@@ -255,10 +255,10 @@ void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* m
         }
 
         switch(stroke_data->style.join) {
-        case NOVASVG_LINE_JOIN_BEVEL:
+        case NOVA_LINE_JOIN_BEVEL:
             style.join = stb::line_join::bevel;
             break;
-        case NOVASVG_LINE_JOIN_ROUND:
+        case NOVA_LINE_JOIN_ROUND:
             style.join = stb::line_join::round;
             break;
         default:
@@ -274,9 +274,9 @@ void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* m
 
         stb::rasterize_stroke(outline, style, m, clip, sink);
     } else {
-        stb::rasterize_fill(outline, winding == NOVASVG_FILL_RULE_EVEN_ODD ? stb::fill_rule::even_odd : stb::fill_rule::non_zero, m, clip, sink);
+        stb::rasterize_fill(outline, winding == NOVA_FILL_RULE_EVEN_ODD ? stb::fill_rule::even_odd : stb::fill_rule::non_zero, m, clip, sink);
     }
 }
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

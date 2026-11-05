@@ -21,7 +21,7 @@ Steps stay small so that a failure has one suspect. See [ADR-0007](docs/adr/0007
 ```sh
 # Build (on a one-core machine each translation unit takes minutes; ninja resumes where it stopped)
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-      -DNOVASVG_BUILD_PYTHON=OFF -DNOVASVG_BUILD_TESTS=ON -DNOVASVG_BUILD_EXAMPLES=OFF
+      -DNOVA_BUILD_PYTHON=OFF -DNOVA_BUILD_TESTS=ON -DNOVA_BUILD_EXAMPLES=OFF
 cmake --build build
 
 # Tests
@@ -45,8 +45,8 @@ git). If they are lost, regenerate them from the baseline commit:
 
 ```sh
 git stash -u && git checkout 85ebfc7          # or use a separate worktree
-cmake -S . -B /tmp/b0 -G Ninja -DCMAKE_BUILD_TYPE=Release -DNOVASVG_BUILD_PYTHON=OFF \
-      -DNOVASVG_BUILD_TESTS=OFF -DNOVASVG_BUILD_EXAMPLES=OFF && cmake --build /tmp/b0
+cmake -S . -B /tmp/b0 -G Ninja -DCMAKE_BUILD_TYPE=Release -DNOVA_BUILD_PYTHON=OFF \
+      -DNOVA_BUILD_TESTS=OFF -DNOVA_BUILD_EXAMPLES=OFF && cmake --build /tmp/b0
 python3 refactor/golden.py render /tmp/b0/novasvg refactor/golden-baseline
 ```
 
@@ -98,7 +98,7 @@ Open questions:
 | Private data members | trailing `_` | `node_` |
 | Enums | `enum class`, `snake_case` values | `text_align::center` |
 | Exceptions | `*_error`, derived from `std::` types | `invalid_color_error` |
-| Macros | `NOVASVG_*` | `NOVASVG_API` |
+| Macros | `NOVA_*` | `NOVA_API` |
 | Namespaces | lowercase | `novasvg`, `novasvg::detail` |
 
 The exact old-to-new name table for the public API is written separately in step 6 and approved before use; the
@@ -125,8 +125,8 @@ Official tests (`tests/`) only describe the behaviour of the library as it is me
 
 ### Step 1: CMake plumbing for libstb ✅
 No change to code or names.
-- [x] libstb via `FetchContent` (repository and pin are overridable: `NOVASVG_LIBSTB_GIT_REPOSITORY` /
-      `NOVASVG_LIBSTB_GIT_TAG`; local checkout: `-DFETCHCONTENT_SOURCE_DIR_LIBSTB=/path/to/libstb`;
+- [x] libstb via `FetchContent` (repository and pin are overridable: `NOVA_LIBSTB_GIT_REPOSITORY` /
+      `NOVA_LIBSTB_GIT_TAG`; local checkout: `-DFETCHCONTENT_SOURCE_DIR_LIBSTB=/path/to/libstb`;
       offline: `-DFETCHCONTENT_FULLY_DISCONNECTED=ON`)
 - [x] `novasvg_noflag` links `libstb::core` (`novasvg::novasvg` inherits it)
 - [x] Shared linking is enforced (`STB_BUILD_SHARED=ON` forced, target type checked)
@@ -203,7 +203,7 @@ Target is `libstb::libstb` (renamed from `libstb::core` in libstb 0.9).
 - [x] Gate (this machine, Release, 1 core, libstb master `3a6269f`): `test_novasvg_cpp` 79 cases / 552 assertions;
       `test_novasvg_embedded_font` 5 / 71; libstb link check OK; Python 433 tests; golden 67 images, 0 differ, tol 0;
       `sample01` (14 SVGs -> PNG, 0 failed) and `sample02` run
-- [ ] `Bitmap` still `novasvg::Bitmap` (marked internal); moving it to `detail` waits for step 4 (public/internal split)
+- [ ] `Bitmap` still `nova::vg::Bitmap` (marked internal); moving it to `detail` waits for step 4 (public/internal split)
 
 ### Step 3: fonts, remove stb_truetype (ADR-0006; D3 done 2026-11-04, final gate pending)
 novasvg calls 13 stb_truetype functions. `stb::font` renders text to bitmaps, but SVG needs **vector glyph
@@ -222,9 +222,9 @@ outlines** (`stbtt_GetGlyphShape`), so libstb must grow an API first.
 - [ ] Move `detail/` into `src/`, one module per small change
 - [ ] Split `svgelement.h` (about 7,600 lines, about 90 types): DOM, properties, filters, gradients, text, foreignObject
 - [ ] Make the CSS/HTML engine (`Rule`, `SimpleSelector`, `RuleIndex`, `HtmlNode`, `StyleNode`) its own module
-- [ ] `NOVASVG_API` and symbol visibility
+- [ ] `NOVA_API` and symbol visibility
 - [ ] CMake targets: `novasvg::novasvg` becomes the real library; decide what `noflag` means
-- [ ] Decide the fate of the dist single header and `NOVASVG_TEST_INCLUDE_DIR`
+- [ ] Decide the fate of the dist single header and `NOVA_TEST_INCLUDE_DIR`
 - [ ] Measure build time before and after and record it here
   - Before (header-only, Release, 1 core, GCC; from `build/.ninja_log`): every translation unit that includes
     `novasvg.h` costs 14-55 s (CLI 23 s, `sample02` 14 s, the doctest files 23-48 s, `check_embedded_font` 55 s);
@@ -237,13 +237,13 @@ outlines** (`stbtt_GetGlyphShape`), so libstb must grow an API first.
 - [x] Moved to `src/gfx/*.cpp`: matrix, utils, path, paint, rasterize, surface, blend, canvas (265 symbols in
       `libnovasvg_core.a`) with `refactor/split_header.py` (temporary tool)
 - [x] Gate: 79 tests, font test 5 / 71, libstb link check, golden 67 images 0 differ (tol 0)
-- Lesson: no function may be left `NOVASVG_INLINE` in a header once `render.h` declares it `NOVASVG_API`
+- Lesson: no function may be left `NOVA_INLINE` in a header once `render.h` declares it `NOVA_API`
   (undefined reference in TUs that only see the declaration); everything moved, inlining relies on LTO
 - Build time so far: barely better (test_basics 43 -> 32 s, check_embedded_font 55 -> ~42 s, CLI 23 -> 27 s; rough,
   from `.ninja_log`), because `svgelement.h`, `font.h` and the rest of `detail/` are still header-only
 - [x] One definition of the export macros: `detail/config.h` (the duplicate block in `render/render.h` removed).
-      `NOVASVG_API` has the same scheme as libstb's `STB_API` (`NOVASVG_BUILDING_LIBRARY` / `NOVASVG_STATIC_DEFINE`,
-      set by CMake on `novasvg_core`); `NOVASVG_MAX/MIN` stay as they are (maintainer's decision)
+      `NOVA_API` has the same scheme as libstb's `STB_API` (`NOVA_BUILDING_LIBRARY` / `NOVA_STATIC_DEFINE`,
+      set by CMake on `novasvg_core`); `NOVA_MAX/MIN` stay as they are (maintainer's decision)
 - [ ] Benchmark the hot rasterize/blend path (now cross-TU, inlined only by LTO)
 - [ ] vendor `ft_raster` / `ft_stroker` / `ft_math` (different pattern, by hand)
 - [x] Removed duplicate declarations (`render.h` vs per-module headers): 192 duplicates dropped from matrix/path/paint/canvas/surface/blend/rasterize `.h`; 13 internal-only functions (`parse_matrix_parameters`, `path_add_command`, `split_bezier`, the path traverse/parse helpers, `state_*`, `span_buffer_update_extents`) moved into their `.cpp` as `static`; `detail/canvas.h`, `bitmap.h`, `font.h` now include only `render/render.h`; `svgparser.hpp` includes `render/surface.h` explicitly for `base64_decode`
@@ -260,10 +260,10 @@ Today each concept is defined in several layers (public, `detail/canvas.h`, `gfx
 - [x] `render/vendor/ft_*` (FreeType/plutovg code) moved to `src/gfx/vendor/`, included only from `src/gfx/rasterize.cpp`; FT helpers (`ft_outline_*`, `spans_generation_callback`) are file-local; `rasterize.h` shrank to `span_buffer_*` + `rasterize()`
 
 ### Step 6: stl-like naming (ADR-0004)
-- [ ] Write the old-to-new name table for the public API and get it approved
+- [ ] Write the old-to-new name table for the public API and get it approved (`FillRule::NonZero` -> `fill_rule::non_zero`, `getRF`, `addRect`, `lineWidth`... are still the old names; new code of 2026-11-04 (`pdf_canvas`, its tests) uses them too)
 - [ ] Rename by script, one module per commit
 - [ ] Update the CLI, tests, examples, docs and the Python bindings (which may stay Pythonic)
-- [ ] Decide on the `nova` alias
+- [x] Namespace decided: `nova::svg` and `nova::vg` ([ADR-0009](docs/adr/0009-namespaces-nova-svg-and-nova-vg.md)); do it in the same scripted step as the rename
 
 ### Step 6.5: design / OOP review
 - [ ] Class hierarchy (`SVGElement` and subclasses) and the role of the public handles (`element`, `node`)
@@ -321,19 +321,19 @@ Open: per-module headers still carry `static inline` helpers (paint.h hex/hsl pa
 Still camelCase in the svg layer: non-`SVG*` internal types and members (e.g. `Length`, `Paint`, `Color`, `Bitmap`, `Canvas`, `Font*`), to be done per module.
 
 ### Step C: abstract `canvas` + `raster_canvas` (2026-11-03, ADR-0008)
-`include/novasvg/gfx/canvas.h`: new abstract `novasvg::canvas` (set_color, set_linear/radial_gradient, fill_path, stroke_path, fill_text, stroke_text, clip_path, clip_rect, draw_image, save, restore); `Canvas` is now `raster_canvas final : canvas` with snake_case methods (`Canvas::canvas()` -> `handle()`). `svg_render_state::operator->/*` return `canvas`; `raster()` returns the `raster_canvas`. C struct `gfx::canvas` renamed `canvas_context` (`canvas_t` unchanged) to free the name.
+`include/novasvg/gfx/canvas.h`: new abstract `nova::vg::canvas` (set_color, set_linear/radial_gradient, fill_path, stroke_path, fill_text, stroke_text, clip_path, clip_rect, draw_image, save, restore); `Canvas` is now `raster_canvas final : canvas` with snake_case methods (`Canvas::canvas()` -> `handle()`). `svg_render_state::operator->/*` return `canvas`; `raster()` returns the `raster_canvas`. C struct `gfx::canvas` renamed `canvas_context` (`canvas_t` unchanged) to free the name.
 **Remaining raster-only leaks in the SVG renderer (the exact C2 list):**
 1. Groups/layers: `svg_render_state::beginGroup/endGroup` create a `raster_canvas` and `blend_canvas` it (needs `begin_layer(bounds, opacity, blend_mode)` / `end_layer()`).
 2. Pattern fill: `set_texture(raster_canvas)` (needs a recorded/offscreen picture as paint source).
 3. Masks and clip masks: render into a canvas, `convert_to_luminance_mask`, `blend_canvas(Dst_In)` (needs a mask/soft-mask layer API).
 4. Filters: whole `svg_filter_context` works on `raster_canvas` pixels (raster-only by nature; a PDF backend rasterizes filtered groups).
-Also open: the interface classes live in `novasvg`, the C API in `novasvg::gfx` (namespace consolidation), and `Path/Transform/Rect/Color/Font` are still local types (step 5 swaps in `stb::`).
+Also open: the interface classes live in `novasvg`, the C API in `nova::vg` (namespace consolidation), and `Path/Transform/Rect/Color/Font` are still local types (step 5 swaps in `stb::`).
 Gate: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
 
 ### libstb version note (2026-11-03)
-`NOVASVG_LIBSTB_GIT_TAG` floats on `master` (by design for now). The `e655ce9` recorded above was only true up to the step-A configure; a later reconfigure silently moved the build to `955870f` (`stb::path`, `stb::matrix`, glyph `outline`), and now `a0726ba` (MSVC fix, `STB_MIN`/`STB_MAX`). Gate on `a0726ba`: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ. Python not rerun for this bump (C++ side only changed). libstb still has no rasterizer / stroker (`stb/raster.hpp`), so `src/gfx/vendor/` stays.
+`NOVA_LIBSTB_GIT_TAG` floats on `master` (by design for now). The `e655ce9` recorded above was only true up to the step-A configure; a later reconfigure silently moved the build to `955870f` (`stb::path`, `stb::matrix`, glyph `outline`), and now `a0726ba` (MSVC fix, `STB_MIN`/`STB_MAX`). Gate on `a0726ba`: C++ 79 / 552, font 71, link OK, golden 67 / 0 differ. Python not rerun for this bump (C++ side only changed). libstb still has no rasterizer / stroker (`stb/raster.hpp`), so `src/gfx/vendor/` stays.
 
-### NOVASVG_MIN/MAX -> STB_MIN/STB_MAX (2026-11-03)
+### NOVA_MIN/MAX -> STB_MIN/STB_MAX (2026-11-03)
 Macros removed from `config.h` and `gfx/color.h`; all uses switched to libstb's `STB_MIN/STB_MAX` (`<stb/export.hpp>`, included by `config.h` and `color.h`). Note the tie semantics differ (STB follows `std::min/max`: returns the first argument on equality; the old macros returned the second), which only matters for `+0/-0` and NaN. Golden 67 images / 0 differ says it does not matter in any rendered case. Gate on libstb `a0726ba`: C++ 79 / 552, font 71, link OK, golden 0 differ, Python 433.
 Build note: the Python build (`/tmp/pybuild`) fetches its own libstb; after a libstb bump it needs `cmake /tmp/pybuild` once.
 
@@ -342,17 +342,17 @@ Build note: the Python build (`/tmp/pybuild`) fetches its own libstb; after a li
 - `svgelement.h` and `svgparser.hpp` moved to `src/svg/` (private). Definitions of public-class members that lived in them (3, e.g. `document::query_selector_all`) moved to `novasvg.cpp`; everything else in them stays `inline` for now.
 - Consumers of `novasvg.h` no longer parse the SVG layer. `gfx/canvas.h`, `gfx/font.h` (+ `font_impl.h` = stb_truetype, 6266 lines), `internal.h`, `utils.h`, `default_font.h` are STILL public and header-only (tests and the Python binding use `Transform` / `Font` from them): this is the next thing to move.
 - Debt: the Python binding and `test_foreignobject_style.cpp` include the private `svg/svgelement.h` (CMake adds `src/` to their include path). Needed: a public text-measure API (`Font`, `utf8ToU32`, `measure_foreign_object`).
-- Remaining header-only code, honestly: `svgelement.h` ~7.7k lines (236 `NOVASVG_INLINE`), `font_impl.h` 6.3k, `canvas.h` 1.4k, `svgparser.hpp` 1.8k, `color.h`, `bitmap.h`, `font.h`. `NOVASVG_INLINE` itself still exists. Next: D2 = move bodies of `svgelement.h` / `svgparser.hpp` / `canvas.h` into `.cpp` files (split by element family), D3 = fonts onto libstb and delete `font_impl.h`.
+- Remaining header-only code, honestly: `svgelement.h` ~7.7k lines (236 `NOVA_INLINE`), `font_impl.h` 6.3k, `canvas.h` 1.4k, `svgparser.hpp` 1.8k, `color.h`, `bitmap.h`, `font.h`. `NOVA_INLINE` itself still exists. Next: D2 = move bodies of `svgelement.h` / `svgparser.hpp` / `canvas.h` into `.cpp` files (split by element family), D3 = fonts onto libstb and delete `font_impl.h`.
 - Gate (libstb a0726ba): C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
 
 ### Step D2: bodies moved out of headers (2026-11-03)
-Scripted (not by hand): every namespace-scope `NOVASVG_INLINE` definition (non-template, no default args, not `static`) moved into a `.cpp`; members vanish from the header (declared in-class already), free functions keep a declaration.
+Scripted (not by hand): every namespace-scope `NOVA_INLINE` definition (non-template, no default args, not `static`) moved into a `.cpp`; members vanish from the header (declared in-class already), free functions keep a declaration.
 - `svgelement.h` 7682 -> 3764 lines + `src/svg/svgelement.cpp` (189 members, 40 free functions); `svgparser.hpp` -> `svgparser.cpp`.
 - Public: `gfx/canvas.h` 1403 -> 780 + `src/gfx/raster_canvas.cpp`; `gfx/bitmap.h` + `src/gfx/bitmap.cpp`; `gfx/font.h` + `src/gfx/font.cpp`.
 - `novasvg_destroy_func_t` moved to `config.h` (font.h needs it).
 - The tool misclassified free functions whose return type is qualified (`stb::image f()`); fixed by hand for `bitmap_to_rgba_image` / `bitmap_release_to_image`. Anyone re-running `/tmp/outline.py`-style tooling must classify by the last token before `(`.
-- Still header-only, honestly: `gfx/font_impl.h` 6266 lines (stb_truetype, goes in D3 with libstb fonts), `svgelement.h` / `svgparser.hpp` in-class bodies and 13 `NOVASVG_INLINE` the tool skipped (templates, defaults, `static`), `canvas.h` 5 skipped, `color.h` (1036 lines of inline color math), `default_font.h` (embedded font bytes), `render.h` 2510 lines (declarations + docs, fine).
-- Not done yet: `NOVASVG_INLINE` macro removal, private gfx headers (`canvas.h`, `font.h`, `font_impl.h`, `internal.h`, `utils.h`) still in `include/`.
+- Still header-only, honestly: `gfx/font_impl.h` 6266 lines (stb_truetype, goes in D3 with libstb fonts), `svgelement.h` / `svgparser.hpp` in-class bodies and 13 `NOVA_INLINE` the tool skipped (templates, defaults, `static`), `canvas.h` 5 skipped, `color.h` (1036 lines of inline color math), `default_font.h` (embedded font bytes), `render.h` 2510 lines (declarations + docs, fine).
+- Not done yet: `NOVA_INLINE` macro removal, private gfx headers (`canvas.h`, `font.h`, `font_impl.h`, `internal.h`, `utils.h`) still in `include/`.
 - Gate (libstb a0726ba): C++ 79 / 552, font 71, link OK, golden 67 / 0 differ, Python 433.
 
 
@@ -367,7 +367,7 @@ Scripted (not by hand): every namespace-scope `NOVASVG_INLINE` definition (non-t
 
 - libstb is now `b5bfe90`. `stb/path` was renamed `stb/outline` there (`stb::path_command` -> `stb::outline_command`, `path_op` -> `outline_op`);
   `src/gfx/font_face.cpp` follows. The libstb tag is still `master`, so any rename upstream breaks the build until it is followed here:
-  pinning a commit (`NOVASVG_LIBSTB_GIT_TAG`) would avoid that.
+  pinning a commit (`NOVA_LIBSTB_GIT_TAG`) would avoid that.
 - libstb now has the rasterizer and stroker (`stb/raster.hpp`: `fill`, `stroke`, `rasterize_fill`, `rasterize_stroke`, `span_sink`), which is
   what Step 5 (remove `src/gfx/vendor/`) was waiting for.
 
@@ -387,10 +387,49 @@ Scripted (not by hand): every namespace-scope `NOVASVG_INLINE` definition (non-t
 ## Step C2/F part 1 (pdf_canvas) -- 2026-11-04
 
 - [x] `pdf_canvas` (`src/gfx/pdf_canvas.{h,cpp}`) for the `canvas` interface as it is: paints, gradients, fill/stroke, clip, images, text as outlines.
-- [x] `tests/cpp/test_pdf_canvas.cpp` (structure checks; `NOVASVG_PDF_OUT=x.pdf` writes the page). Smoke-checked once: `qpdf --check` clean, `pdftoppm` renders it right.
+- [x] `tests/cpp/test_pdf_canvas.cpp` (structure checks; `NOVA_PDF_OUT=x.pdf` writes the page). Smoke-checked once: `qpdf --check` clean, `pdftoppm` renders it right.
 - [~] Layers: done for `pdf_canvas` (`begin_group/end_group`, `draw_raster_group`) but NOT as virtuals of `canvas` (see ADR-0008, part 2); promote them when a third backend needs it.
 - [x] Pattern: tile bitmap as PDF tiling pattern. Mask, clip mask, filter: rasterized group placed as an image (a vector `SMask` luminosity mask is an upgrade).
 - [x] `svg_render_state` runs on any `canvas` (`raster()` is null on a PDF page); beginGroup/endGroup and the pattern fill know `pdf_canvas`.
 - [x] Public entry point: `document::render_to_pdf` / `save_pdf` with `pdf_mode::vector | raster` and `dpi`; `tests/cpp/test_pdf_render.cpp`.
 - [ ] Still open: gradient reflect/repeat and per-stop alpha in PDF, vector `SMask` for masks, element-level `render_to_pdf`, font embedding (selectable text), multi-page, PDF metadata (title), CLI flag, Python binding (off for now).
 - Gate note: `svg_render_state::beginGroup/endGroup` and the pattern code were edited; the pixel path is meant to be identical, the final golden gate must confirm.
+
+## Next, in this order (written 2026-11-05)
+
+1. [ ] **Full gate first** (nothing but compile + link and the PDF smoke tests has run since D3): C++ cases, font test, libstb link check, golden
+       67 images at tolerance 0. Expected suspects, if golden moves: stroke width scale, dashing, `matrix::map` without FMA (all step 5a);
+       outline parity, `close` skipped, ligatures through `shape_glyphs`, GPOS kerning, `units_per_em` (D3); `beginGroup/endGroup` and the
+       pattern fill (PDF work). Revert one piece at a time to find the cause. Record the libstb hash.
+2. [ ] Step 5b: `Path`, `Transform`/`Matrix`, `Rect`/`Box`, `Color`, `Bitmap` -> `stb::` types.
+3. [ ] Split `svgelement.{h,cpp}` (about 4,200 lines) by element family; drop `NOVA_INLINE` (13 skipped); public text-measure API
+       (`Font`/`ForeignObjectFonts` public first).
+4. [ ] ADR-0009 step: namespaces + directories + `snake_case` in one script; CMake target `nova::vg`.
+5. [ ] Promote layers/pattern/mask to virtuals of `canvas`; PDF: vector `SMask` for masks, gradient reflect/repeat, per-stop alpha, font embedding,
+       multi-page, metadata; element-level `render_to_pdf`; CLI `-o x.pdf|png|jpg`.
+6. [ ] Python binding back on (switched off for now by the maintainer): update for `render_to_pdf`, fonts, private includes; rerun the 433 tests.
+7. [ ] Step 7 (README, Doxygen, CI, wheels, install tree) and delete the temporary `refactor/` material and the hook in `tests/cpp/CMakeLists.txt`.
+
+## Logging on stb::logging (session 3, after the full gate)
+
+- no wrapper header: each .cpp gets its logger with `stb::logging::get_logger` (names `novasvg`, `novasvg.svg`, `novasvg.font`, `novasvg.pdf`. The library attaches no handler;
+  without one, stb::logging's last resort prints warnings and worse to stderr.
+- Logged: cannot open / cannot parse a document (error), font load failures (warning), PDF without size (error),
+  PDF gradient reflect/repeat and per-stop alpha written differently (warning, once per process), render settings (debug).
+- CLI: `--log-level` and `--log-file`; its "Error:" lines go through logger `novasvg.cli` (format `LEVEL: message`).
+- Not done: the Python binding should hand `novasvg` records to Python's `logging` with `callback_handler` (Python is OFF);
+  a public way to name the loggers is not documented yet; `assert(false)` sites are unchanged.
+- Gate after this change (libstb 279716c): C++ 84 cases / 583 assertions, font 71, link OK, golden 67 images 0 differ at tolerance 0.
+
+## Namespaces nova::svg / nova::vg and NOVA_ macros (session 3)
+
+- `novasvg` and `novasvg::gfx` are now `nova::vg` (canvas, backends, path, Rect/Box/Matrix/Transform, Color, Bitmap, fonts, C API,
+  `color_literals`, parser utils) and `nova::svg` (document, element, node, `version()`, DOM and CSS code). `nova::svg` has
+  `using namespace vg;`. The CMake target and the project name stay `novasvg` (`novasvg::novasvg`).
+- Every `NOVASVG_*` identifier (macros, C enum constants, CMake options, env vars such as `NOVA_PDF_DIR`) is `NOVA_*`.
+  Build with `-DNOVA_BUILD_PYTHON=OFF` now.
+- Dependency direction fixed so `vg` no longer needs `svg`: Box/Matrix/Transform definitions moved to `src/gfx/geometry.cpp`,
+  `embeddedFallbackFont` to `src/gfx/embedded_font.cpp`, `svgparserutils.h` to `include/novasvg/gfx/parserutils.h`.
+- NOT done (still ADR-0009): `include/nova/{svg,vg}/` and `src/vg/`, target `nova::vg`, `snake_case`, a build check that `vg` cannot
+  include `svg`. `svgelement.h` still holds some code that is really vg (check when it is split). Python binding, README/docs
+  snippets and CI yml were changed by the same script but are NOT built or checked. ADRs and CHANGELOG keep the old names (history).

@@ -243,7 +243,7 @@ def test_chromium_launches_playwrights_own_build_unless_told_otherwise():
 def test_chromium_executable_and_flags_can_be_pinned_from_the_environment():
     import ground_truth
 
-    env = {"NOVASVG_BENCH_CHROMIUM": "/opt/chrome/chrome", "NOVASVG_BENCH_CHROMIUM_ARGS": "--no-sandbox  --disable-gpu"}
+    env = {"NOVA_BENCH_CHROMIUM": "/opt/chrome/chrome", "NOVA_BENCH_CHROMIUM_ARGS": "--no-sandbox  --disable-gpu"}
     assert ground_truth.chromium_launch_options(env) == {
         "executable_path": "/opt/chrome/chrome",
         "args": ["--no-sandbox", "--disable-gpu"],
@@ -253,5 +253,5 @@ def test_chromium_executable_and_flags_can_be_pinned_from_the_environment():
 def test_chromium_args_alone_do_not_invent_an_executable():
     import ground_truth
 
-    assert ground_truth.chromium_launch_options({"NOVASVG_BENCH_CHROMIUM_ARGS": "--no-sandbox"}) == {"args": ["--no-sandbox"]}
-    assert ground_truth.chromium_launch_options({"NOVASVG_BENCH_CHROMIUM": ""}) == {}
+    assert ground_truth.chromium_launch_options({"NOVA_BENCH_CHROMIUM_ARGS": "--no-sandbox"}) == {"args": ["--no-sandbox"]}
+    assert ground_truth.chromium_launch_options({"NOVA_BENCH_CHROMIUM": ""}) == {}

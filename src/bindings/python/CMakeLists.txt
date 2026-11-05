@@ -20,13 +20,13 @@ if(DEFINED SKBUILD)
     # Python >=3.12 gets one abi3 wheel via nanobind's STABLE_ABI (Limited API);
     # below that, STABLE_ABI isn't available so each version still builds its own wheel.
     if(Python_VERSION VERSION_GREATER_EQUAL "3.12")
-        set(NOVASVG_NANOBIND_ABI_OPTION STABLE_ABI)
+        set(NOVA_NANOBIND_ABI_OPTION STABLE_ABI)
     else()
-        set(NOVASVG_NANOBIND_ABI_OPTION "")
+        set(NOVA_NANOBIND_ABI_OPTION "")
     endif()
 
     nanobind_add_module(novasvg_py
-        ${NOVASVG_NANOBIND_ABI_OPTION}
+        ${NOVA_NANOBIND_ABI_OPTION}
         ${BINDING_SOURCE_FILE}
     )
 
@@ -115,33 +115,33 @@ endif()
 # CMAKE_BUILD_TYPE the user asked for; fall back to Release so multi-config
 # generators don't silently produce a Debug .pyd against a release Python.
 if(CMAKE_BUILD_TYPE)
-    set(NOVASVG_PYTHON_CONFIG ${CMAKE_BUILD_TYPE})
+    set(NOVA_PYTHON_CONFIG ${CMAKE_BUILD_TYPE})
 else()
-    set(NOVASVG_PYTHON_CONFIG Release)
+    set(NOVA_PYTHON_CONFIG Release)
 endif()
 
-set(NOVASVG_PYTHON_INSTALL_DIR ${CMAKE_BINARY_DIR}/python/install)
+set(NOVA_PYTHON_INSTALL_DIR ${CMAKE_BINARY_DIR}/python/install)
 ExternalProject_Add(novasvg_build_python
     SOURCE_DIR ${CMAKE_SOURCE_DIR}
     BINARY_DIR ${CMAKE_BINARY_DIR}/python/build
-    INSTALL_DIR ${NOVASVG_PYTHON_INSTALL_DIR}
+    INSTALL_DIR ${NOVA_PYTHON_INSTALL_DIR}
     
     # Pass configuration arguments to CMake
     CMAKE_ARGS  
         --no-warn-unused-cli
-        -DNOVASVG_BUILD_PYTHON="ON"
+        -DNOVA_BUILD_PYTHON="ON"
         -DSKBUILD=2
         -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/python/install
         -Dnanobind_DIR=${NANOBIND_CMAKE_DIR}
-        -DCMAKE_BUILD_TYPE=${NOVASVG_PYTHON_CONFIG}
+        -DCMAKE_BUILD_TYPE=${NOVA_PYTHON_CONFIG}
         -DPython_EXECUTABLE=${Python_EXECUTABLE}
 
     # Multi-config generators (Visual Studio, Xcode) ignore CMAKE_BUILD_TYPE:
     # tell the nested build/install which configuration to use explicitly.
-    BUILD_COMMAND ${CMAKE_COMMAND} --build . --config ${NOVASVG_PYTHON_CONFIG} --parallel 8
+    BUILD_COMMAND ${CMAKE_COMMAND} --build . --config ${NOVA_PYTHON_CONFIG} --parallel 8
     
     # Ensure the build step runs the install command
-    INSTALL_COMMAND ${CMAKE_COMMAND} --build . --target install --config ${NOVASVG_PYTHON_CONFIG} --parallel 8
+    INSTALL_COMMAND ${CMAKE_COMMAND} --build . --target install --config ${NOVA_PYTHON_CONFIG} --parallel 8
     
     # Build this target always, useful for testing workflows
     BUILD_ALWAYS 1

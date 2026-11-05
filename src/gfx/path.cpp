@@ -1,7 +1,7 @@
 #include "path.h"
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 static path_element_t* path_add_command(path_t* path, path_command_t command, int npoints);
 static void split_bezier(const bezier_t* b, bezier_t* first, bezier_t* second);
@@ -27,12 +27,12 @@ path_command_t path_iterator_next(path_iterator_t* it, point_t points[3])
 {
     const path_element_t* elements = it->elements + it->index;
     switch(elements[0].header.command) {
-    case NOVASVG_PATH_COMMAND_MOVE_TO:
-    case NOVASVG_PATH_COMMAND_LINE_TO:
-    case NOVASVG_PATH_COMMAND_CLOSE:
+    case NOVA_PATH_COMMAND_MOVE_TO:
+    case NOVA_PATH_COMMAND_LINE_TO:
+    case NOVA_PATH_COMMAND_CLOSE:
         points[0] = elements[1].point;
         break;
-    case NOVASVG_PATH_COMMAND_CUBIC_TO:
+    case NOVA_PATH_COMMAND_CUBIC_TO:
         points[0] = elements[1].point;
         points[1] = elements[2].point;
         points[2] = elements[3].point;
@@ -50,7 +50,7 @@ path_t* path_create(void)
     path->num_points = 0;
     path->num_contours = 0;
     path->num_curves = 0;
-    path->start_point = NOVASVG_EMPTY_POINT;
+    path->start_point = NOVA_EMPTY_POINT;
     novasvg_array_init(path->elements);
     return path;
 }
@@ -95,9 +95,9 @@ static path_element_t* path_add_command(path_t* path, path_command_t command, in
 
 void path_move_to(path_t* path, float x, float y)
 {
-    path_element_t* elements = path_add_command(path, NOVASVG_PATH_COMMAND_MOVE_TO, 1);
-    elements[0].point = NOVASVG_MAKE_POINT(x, y);
-    path->start_point = NOVASVG_MAKE_POINT(x, y);
+    path_element_t* elements = path_add_command(path, NOVA_PATH_COMMAND_MOVE_TO, 1);
+    elements[0].point = NOVA_MAKE_POINT(x, y);
+    path->start_point = NOVA_MAKE_POINT(x, y);
     path->num_contours += 1;
 }
 
@@ -105,8 +105,8 @@ void path_line_to(path_t* path, float x, float y)
 {
     if(path->elements.size == 0)
         path_move_to(path, 0, 0);
-    path_element_t* elements = path_add_command(path, NOVASVG_PATH_COMMAND_LINE_TO, 1);
-    elements[0].point = NOVASVG_MAKE_POINT(x, y);
+    path_element_t* elements = path_add_command(path, NOVA_PATH_COMMAND_LINE_TO, 1);
+    elements[0].point = NOVA_MAKE_POINT(x, y);
 }
 
 void path_quad_to(path_t* path, float x1, float y1, float x2, float y2)
@@ -124,10 +124,10 @@ void path_cubic_to(path_t* path, float x1, float y1, float x2, float y2, float x
 {
     if(path->elements.size == 0)
         path_move_to(path, 0, 0);
-    path_element_t* elements = path_add_command(path, NOVASVG_PATH_COMMAND_CUBIC_TO, 3);
-    elements[0].point = NOVASVG_MAKE_POINT(x1, y1);
-    elements[1].point = NOVASVG_MAKE_POINT(x2, y2);
-    elements[2].point = NOVASVG_MAKE_POINT(x3, y3);
+    path_element_t* elements = path_add_command(path, NOVA_PATH_COMMAND_CUBIC_TO, 3);
+    elements[0].point = NOVA_MAKE_POINT(x1, y1);
+    elements[1].point = NOVA_MAKE_POINT(x2, y2);
+    elements[2].point = NOVA_MAKE_POINT(x3, y3);
     path->num_curves += 1;
 }
 
@@ -186,12 +186,12 @@ void path_arc_to(path_t* path, float rx, float ry, float angle, bool large_arc_f
     float th2 = atan2f(y2 - cy1, x2 - cx1);
     float th_arc = th2 - th1;
     if(th_arc < 0.f && sweep_flag)
-        th_arc += NOVASVG_TWO_PI;
+        th_arc += NOVA_TWO_PI;
     else if(th_arc > 0.f && !sweep_flag)
-        th_arc -= NOVASVG_TWO_PI;
+        th_arc -= NOVA_TWO_PI;
     matrix_init_rotate(&matrix, angle);
     matrix_scale(&matrix, rx, ry);
-    int segments = (int)(ceilf(fabsf(th_arc / (NOVASVG_HALF_PI + 0.001f))));
+    int segments = (int)(ceilf(fabsf(th_arc / (NOVA_HALF_PI + 0.001f))));
     for(int i = 0; i < segments; i++) {
         float th_start = th1 + i * th_arc / segments;
         float th_end = th1 + (i + 1) * th_arc / segments;
@@ -221,7 +221,7 @@ void path_close(path_t* path)
 {
     if(path->elements.size == 0)
         return;
-    path_element_t* elements = path_add_command(path, NOVASVG_PATH_COMMAND_CLOSE, 1);
+    path_element_t* elements = path_add_command(path, NOVA_PATH_COMMAND_CLOSE, 1);
     elements[0].point = path->start_point;
 }
 
@@ -246,7 +246,7 @@ void path_reserve(path_t* path, int count)
 void path_reset(path_t* path)
 {
     novasvg_array_clear(path->elements);
-    path->start_point = NOVASVG_EMPTY_POINT;
+    path->start_point = NOVA_EMPTY_POINT;
     path->num_points = 0;
     path->num_contours = 0;
     path->num_curves = 0;
@@ -275,8 +275,8 @@ void path_add_round_rect(path_t* path, float x, float y, float w, float h, float
     float right = x + w;
     float bottom = y + h;
 
-    float cpx = rx * NOVASVG_KAPPA;
-    float cpy = ry * NOVASVG_KAPPA;
+    float cpx = rx * NOVA_KAPPA;
+    float cpy = ry * NOVA_KAPPA;
 
     path_reserve(path, 6 * 2 + 4 * 4);
     path_move_to(path, x, y+ry);
@@ -298,8 +298,8 @@ void path_add_ellipse(path_t* path, float cx, float cy, float rx, float ry)
     float right = cx + rx;
     float bottom = cy + ry;
 
-    float cpx = rx * NOVASVG_KAPPA;
-    float cpy = ry * NOVASVG_KAPPA;
+    float cpx = rx * NOVA_KAPPA;
+    float cpy = ry * NOVA_KAPPA;
 
     path_reserve(path, 2 * 2 + 4 * 4);
     path_move_to(path, cx, top);
@@ -318,13 +318,13 @@ void path_add_circle(path_t* path, float cx, float cy, float r)
 void path_add_arc(path_t* path, float cx, float cy, float r, float a0, float a1, bool ccw)
 {
     float da = a1 - a0;
-    if(fabsf(da) > NOVASVG_TWO_PI) {
-        da = NOVASVG_TWO_PI;
+    if(fabsf(da) > NOVA_TWO_PI) {
+        da = NOVA_TWO_PI;
     } else if(da != 0.f && ccw != (da < 0.f)) {
-        da += NOVASVG_TWO_PI * (ccw ? -1 : 1);
+        da += NOVA_TWO_PI * (ccw ? -1 : 1);
     }
 
-    int seg_n = (int)(ceilf(fabsf(da) / NOVASVG_HALF_PI));
+    int seg_n = (int)(ceilf(fabsf(da) / NOVA_HALF_PI));
     if(seg_n == 0)
         return;
     float a = a0;
@@ -332,7 +332,7 @@ void path_add_arc(path_t* path, float cx, float cy, float r, float a0, float a1,
     float ay = cy + sinf(a) * r;
 
     float seg_a = da / seg_n;
-    float d = (seg_a / NOVASVG_HALF_PI) * NOVASVG_KAPPA * r;
+    float d = (seg_a / NOVA_HALF_PI) * NOVA_KAPPA * r;
     float dx = -sinf(a) * d;
     float dy = cosf(a) * d;
 
@@ -366,12 +366,12 @@ void path_transform(path_t* path, const matrix_t* matrix)
     path_element_t* elements = path->elements.data;
     for(int i = 0; i < path->elements.size; i += elements[i].header.length) {
         switch(elements[i].header.command) {
-        case NOVASVG_PATH_COMMAND_MOVE_TO:
-        case NOVASVG_PATH_COMMAND_LINE_TO:
-        case NOVASVG_PATH_COMMAND_CLOSE:
+        case NOVA_PATH_COMMAND_MOVE_TO:
+        case NOVA_PATH_COMMAND_LINE_TO:
+        case NOVA_PATH_COMMAND_CLOSE:
             matrix_map_point(matrix, &elements[i + 1].point, &elements[i + 1].point);
             break;
-        case NOVASVG_PATH_COMMAND_CUBIC_TO:
+        case NOVA_PATH_COMMAND_CUBIC_TO:
             matrix_map_point(matrix, &elements[i + 1].point, &elements[i + 1].point);
             matrix_map_point(matrix, &elements[i + 2].point, &elements[i + 2].point);
             matrix_map_point(matrix, &elements[i + 3].point, &elements[i + 3].point);
@@ -398,19 +398,19 @@ void path_add_path(path_t* path, const path_t* source, const matrix_t* matrix)
     novasvg_array_ensure(path->elements, source->elements.size);
     while(path_iterator_has_next(&it)) {
         switch(path_iterator_next(&it, points)) {
-        case NOVASVG_PATH_COMMAND_MOVE_TO:
+        case NOVA_PATH_COMMAND_MOVE_TO:
             matrix_map_points(matrix, points, points, 1);
             path_move_to(path, points[0].x, points[0].y);
             break;
-        case NOVASVG_PATH_COMMAND_LINE_TO:
+        case NOVA_PATH_COMMAND_LINE_TO:
             matrix_map_points(matrix, points, points, 1);
             path_line_to(path, points[0].x, points[0].y);
             break;
-        case NOVASVG_PATH_COMMAND_CUBIC_TO:
+        case NOVA_PATH_COMMAND_CUBIC_TO:
             matrix_map_points(matrix, points, points, 3);
             path_cubic_to(path, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
             break;
-        case NOVASVG_PATH_COMMAND_CLOSE:
+        case NOVA_PATH_COMMAND_CLOSE:
             path_close(path);
             break;
         }
@@ -425,17 +425,17 @@ void path_traverse(const path_t* path, path_traverse_func_t traverse_func, void*
     point_t points[3];
     while(path_iterator_has_next(&it)) {
         switch(path_iterator_next(&it, points)) {
-        case NOVASVG_PATH_COMMAND_MOVE_TO:
-            traverse_func(closure, NOVASVG_PATH_COMMAND_MOVE_TO, points, 1);
+        case NOVA_PATH_COMMAND_MOVE_TO:
+            traverse_func(closure, NOVA_PATH_COMMAND_MOVE_TO, points, 1);
             break;
-        case NOVASVG_PATH_COMMAND_LINE_TO:
-            traverse_func(closure, NOVASVG_PATH_COMMAND_LINE_TO, points, 1);
+        case NOVA_PATH_COMMAND_LINE_TO:
+            traverse_func(closure, NOVA_PATH_COMMAND_LINE_TO, points, 1);
             break;
-        case NOVASVG_PATH_COMMAND_CUBIC_TO:
-            traverse_func(closure, NOVASVG_PATH_COMMAND_CUBIC_TO, points, 3);
+        case NOVA_PATH_COMMAND_CUBIC_TO:
+            traverse_func(closure, NOVA_PATH_COMMAND_CUBIC_TO, points, 3);
             break;
-        case NOVASVG_PATH_COMMAND_CLOSE:
-            traverse_func(closure, NOVASVG_PATH_COMMAND_CLOSE, points, 1);
+        case NOVA_PATH_COMMAND_CLOSE:
+            traverse_func(closure, NOVA_PATH_COMMAND_CLOSE, points, 1);
             break;
         }
     }
@@ -480,13 +480,13 @@ void path_traverse_flatten(const path_t* path, path_traverse_func_t traverse_fun
     while(path_iterator_has_next(&it)) {
         path_command_t command = path_iterator_next(&it, points);
         switch(command) {
-        case NOVASVG_PATH_COMMAND_MOVE_TO:
-        case NOVASVG_PATH_COMMAND_LINE_TO:
-        case NOVASVG_PATH_COMMAND_CLOSE:
+        case NOVA_PATH_COMMAND_MOVE_TO:
+        case NOVA_PATH_COMMAND_LINE_TO:
+        case NOVA_PATH_COMMAND_CLOSE:
             traverse_func(closure, command, points, 1);
             current_point = points[0];
             break;
-        case NOVASVG_PATH_COMMAND_CUBIC_TO:
+        case NOVA_PATH_COMMAND_CUBIC_TO:
             beziers[0].x1 = current_point.x;
             beziers[0].y1 = current_point.y;
             beziers[0].x2 = points[0].x;
@@ -510,7 +510,7 @@ void path_traverse_flatten(const path_t* path, path_traverse_func_t traverse_fun
 
                 if(d < threshold*l || b == beziers + 31) {
                     point_t p = { b->x4, b->y4 };
-                    traverse_func(closure, NOVASVG_PATH_COMMAND_LINE_TO, &p, 1);
+                    traverse_func(closure, NOVA_PATH_COMMAND_LINE_TO, &p, 1);
                     --b;
                 } else {
                     split_bezier(b, b + 1, b);
@@ -527,9 +527,9 @@ void path_traverse_flatten(const path_t* path, path_traverse_func_t traverse_fun
 static void dash_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
 {
     dasher_t* dasher = (dasher_t*)(closure);
-    if(command == NOVASVG_PATH_COMMAND_MOVE_TO) {
+    if(command == NOVA_PATH_COMMAND_MOVE_TO) {
         if(dasher->start_toggle)
-            dasher->traverse_func(dasher->closure, NOVASVG_PATH_COMMAND_MOVE_TO, points, npoints);
+            dasher->traverse_func(dasher->closure, NOVA_PATH_COMMAND_MOVE_TO, points, npoints);
         dasher->current_point = points[0];
         dasher->phase = dasher->start_phase;
         dasher->index = dasher->start_index;
@@ -537,7 +537,7 @@ static void dash_traverse_func(void* closure, path_command_t command, const poin
         return;
     }
 
-    assert(command == NOVASVG_PATH_COMMAND_LINE_TO || command == NOVASVG_PATH_COMMAND_CLOSE);
+    assert(command == NOVA_PATH_COMMAND_LINE_TO || command == NOVA_PATH_COMMAND_CLOSE);
     point_t p0 = dasher->current_point;
     point_t p1 = points[0];
     float dx = p1.x - p0.x;
@@ -549,9 +549,9 @@ static void dash_traverse_func(void* closure, path_command_t command, const poin
         float a = dist1 / dist0;
         point_t p = { p0.x + a * dx, p0.y + a * dy };
         if(dasher->toggle) {
-            dasher->traverse_func(dasher->closure, NOVASVG_PATH_COMMAND_LINE_TO, &p, 1);
+            dasher->traverse_func(dasher->closure, NOVA_PATH_COMMAND_LINE_TO, &p, 1);
         } else {
-            dasher->traverse_func(dasher->closure, NOVASVG_PATH_COMMAND_MOVE_TO, &p, 1);
+            dasher->traverse_func(dasher->closure, NOVA_PATH_COMMAND_MOVE_TO, &p, 1);
         }
 
         dasher->phase = 0.f;
@@ -560,7 +560,7 @@ static void dash_traverse_func(void* closure, path_command_t command, const poin
     }
 
     if(dasher->toggle) {
-        dasher->traverse_func(dasher->closure, NOVASVG_PATH_COMMAND_LINE_TO, &p1, 1);
+        dasher->traverse_func(dasher->closure, NOVA_PATH_COMMAND_LINE_TO, &p1, 1);
     }
 
     dasher->phase += dist0 - dist1;
@@ -596,7 +596,7 @@ void path_traverse_dashed(const path_t* path, float offset, const float* dashes,
     dasher.phase = dasher.start_phase;
     dasher.index = dasher.start_index;
     dasher.toggle = dasher.start_toggle;
-    dasher.current_point = NOVASVG_EMPTY_POINT;
+    dasher.current_point = NOVA_EMPTY_POINT;
     dasher.traverse_func = traverse_func;
     dasher.closure = closure;
     path_traverse_flatten(path, dash_traverse_func, &dasher);
@@ -617,16 +617,16 @@ static void clone_traverse_func(void* closure, path_command_t command, const poi
 {
     path_t* path = (path_t*)(closure);
     switch(command) {
-    case NOVASVG_PATH_COMMAND_MOVE_TO:
+    case NOVA_PATH_COMMAND_MOVE_TO:
         path_move_to(path, points[0].x, points[0].y);
         break;
-    case NOVASVG_PATH_COMMAND_LINE_TO:
+    case NOVA_PATH_COMMAND_LINE_TO:
         path_line_to(path, points[0].x, points[0].y);
         break;
-    case NOVASVG_PATH_COMMAND_CUBIC_TO:
+    case NOVA_PATH_COMMAND_CUBIC_TO:
         path_cubic_to(path, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
         break;
-    case NOVASVG_PATH_COMMAND_CLOSE:
+    case NOVA_PATH_COMMAND_CLOSE:
         path_close(path);
         break;
     }
@@ -652,7 +652,7 @@ static void extents_traverse_func(void* closure, path_command_t command, const p
 {
     extents_calculator_t* calculator = (extents_calculator_t*)(closure);
     if(calculator->is_first_point) {
-        assert(command == NOVASVG_PATH_COMMAND_MOVE_TO);
+        assert(command == NOVA_PATH_COMMAND_MOVE_TO);
         calculator->is_first_point = false;
         calculator->current_point = points[0];
         calculator->x1 = points[0].x;
@@ -668,7 +668,7 @@ static void extents_traverse_func(void* closure, path_command_t command, const p
         calculator->y1 = STB_MIN(calculator->y1, points[i].y);
         calculator->x2 = STB_MAX(calculator->x2, points[i].x);
         calculator->y2 = STB_MAX(calculator->y2, points[i].y);
-        if(command != NOVASVG_PATH_COMMAND_MOVE_TO)
+        if(command != NOVA_PATH_COMMAND_MOVE_TO)
             calculator->length += hypotf(points[i].x - calculator->current_point.x, points[i].y - calculator->current_point.y);
         calculator->current_point = points[i];
     }
@@ -742,7 +742,7 @@ bool path_parse(path_t* path, const char* data, int length)
     char last_command = 0;
     skip_ws(&it, end);
     while(it < end) {
-        if(NOVASVG_IS_ALPHA(*it)) {
+        if(NOVA_IS_ALPHA(*it)) {
             command = *it++;
             skip_ws(&it, end);
         }
@@ -879,7 +879,7 @@ bool path_parse(path_t* path, const char* data, int length)
                 values[4] += current_y;
             }
 
-            path_arc_to(path, values[0], values[1], NOVASVG_DEG2RAD(values[2]), flags[0], flags[1], values[3], values[4]);
+            path_arc_to(path, values[0], values[1], NOVA_DEG2RAD(values[2]), flags[0], flags[1], values[3], values[4]);
             current_x = values[3];
             current_y = values[4];
         } else if(command == 'Z' || command == 'z') {
@@ -898,5 +898,5 @@ bool path_parse(path_t* path, const char* data, int length)
     return true;
 }
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

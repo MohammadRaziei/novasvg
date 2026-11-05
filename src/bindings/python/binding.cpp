@@ -51,11 +51,11 @@ int clamp_quality(int quality)
 
 // A null bitmap is the caller's mistake (ValueError); an encoder that fails or produces nothing is a
 // RuntimeError, never a silent empty `bytes` (an empty result would look like a valid, empty image).
-nb::bytes encode_to_bytes(const novasvg::Bitmap& bitmap, image_format format, int quality = 80)
+nb::bytes encode_to_bytes(const nova::vg::Bitmap& bitmap, image_format format, int quality = 80)
 {
     if(bitmap.is_null())
         throw std::invalid_argument(std::string("cannot encode a null Bitmap as ") + format_name(format));
-    const stb::image image = novasvg::bitmap_to_rgba_image(bitmap);
+    const stb::image image = nova::vg::bitmap_to_rgba_image(bitmap);
     std::vector<std::uint8_t> bytes;
     try {
         switch(format) {
@@ -73,12 +73,12 @@ nb::bytes encode_to_bytes(const novasvg::Bitmap& bitmap, image_format format, in
 }
 
 // File variants report success as a bool, like they always did.
-bool write_to_file(const novasvg::Bitmap& bitmap, const std::string& filename, image_format format, int quality = 80)
+bool write_to_file(const nova::vg::Bitmap& bitmap, const std::string& filename, image_format format, int quality = 80)
 {
     if(bitmap.is_null())
         return false;
     try {
-        const stb::image image = novasvg::bitmap_to_rgba_image(bitmap);
+        const stb::image image = nova::vg::bitmap_to_rgba_image(bitmap);
         switch(format) {
         case image_format::png: image.write_png(filename); break;
         case image_format::bmp: image.write_bmp(filename); break;
@@ -120,11 +120,11 @@ NB_MODULE(novasvg_py, m) {
     m.doc() = "Python bindings for NovaSVG using nanobind";
 
     // Color parse errors: novasvg.InvalidColorError, a ValueError subclass.
-    nb::exception<novasvg::InvalidColorError>(m, "InvalidColorError", PyExc_ValueError);
+    nb::exception<nova::vg::InvalidColorError>(m, "InvalidColorError", PyExc_ValueError);
 
     // --- Bind Static Utility Functions ---
-    m.def("version_string", &novasvg::version_string, "Get the library version as a string (e.g., '0.1.0').");
-    m.def("add_font_face_from_file", &novasvg::addFontFaceFromFile, 
+    m.def("version_string", &nova::svg::version_string, "Get the library version as a string (e.g., '0.1.0').");
+    m.def("add_font_face_from_file", &nova::vg::addFontFaceFromFile, 
           "family"_a, "bold"_a, "italic"_a, "filename"_a,
           "Add a font face from a file to the cache.");
     
@@ -149,7 +149,7 @@ NB_MODULE(novasvg_py, m) {
                if(copy == nullptr)
                    return false;
                std::memcpy(copy, data.data(), data.size());
-               return novasvg::addFontFaceFromData(family, bold, italic, copy, data.size(),
+               return nova::vg::addFontFaceFromData(family, bold, italic, copy, data.size(),
                                                      [](void* p) { std::free(p); }, copy);
           },
           "family"_a, "bold"_a, "italic"_a, "data"_a,
@@ -162,42 +162,42 @@ NB_MODULE(novasvg_py, m) {
     // ever builds the svg -- can ask the exact same engine that will later
     // paint the glyphs, instead of hand-rolling a second TTF parser that
     // has to be kept in sync with it by hand.
-    nb::class_<novasvg::FontFace>(m, "FontFace")
+    nb::class_<nova::vg::FontFace>(m, "FontFace")
         .def(nb::init<>(), "Construct a null font face.")
         .def(nb::init<const char*>(), "filename"_a, "Load a font face directly from a font file (no cache involved).")
-        .def("__init__", [](novasvg::FontFace* self, nb::bytes data) {
+        .def("__init__", [](nova::vg::FontFace* self, nb::bytes data) {
             auto* copy = std::malloc(data.size());
             if(copy == nullptr) {
-                new (self) novasvg::FontFace();
+                new (self) nova::vg::FontFace();
                 return;
             }
             std::memcpy(copy, data.data(), data.size());
-            new (self) novasvg::FontFace(copy, data.size(), [](void* p) { std::free(p); }, copy);
+            new (self) nova::vg::FontFace(copy, data.size(), [](void* p) { std::free(p); }, copy);
         }, "data"_a, "Load a font face directly from a memory buffer (bytes), no cache involved.")
-        .def("is_null", &novasvg::FontFace::is_null, "Check if the font face is null/invalid.")
-        .def("__bool__", [](const novasvg::FontFace& face) { return !face.is_null(); })
-        .def_prop_ro("units_per_em", &novasvg::FontFace::unitsPerEm,
+        .def("is_null", &nova::vg::FontFace::is_null, "Check if the font face is null/invalid.")
+        .def("__bool__", [](const nova::vg::FontFace& face) { return !face.is_null(); })
+        .def_prop_ro("units_per_em", &nova::vg::FontFace::unitsPerEm,
              "Raw font design-unit space this face's own tables are defined in "
              "(e.g. head.unitsPerEm). Pair with advance_width_units()/ascent_units()/"
              "descent_units() to build a complete, size-independent advance table -- "
              "e.g. to hand text-measurement data to a JS engine that can't call back "
              "into Python per string (mermaidx's v8_engine does exactly this).")
-        .def_prop_ro("ascent_units", &novasvg::FontFace::ascentUnits, "Ascent in raw font design units (unscaled).")
-        .def_prop_ro("descent_units", &novasvg::FontFace::descentUnits, "Descent in raw font design units (unscaled).")
-        .def("advance_width_units", [](const novasvg::FontFace& face, uint32_t codepoint) {
+        .def_prop_ro("ascent_units", &nova::vg::FontFace::ascentUnits, "Ascent in raw font design units (unscaled).")
+        .def_prop_ro("descent_units", &nova::vg::FontFace::descentUnits, "Descent in raw font design units (unscaled).")
+        .def("advance_width_units", [](const nova::vg::FontFace& face, uint32_t codepoint) {
             return face.advanceWidthUnits(static_cast<char32_t>(codepoint));
         }, "codepoint"_a, "Advance width of a single Unicode codepoint, in raw font design units (unscaled).")
-        .def("kern_advance_units", [](const novasvg::FontFace& face, uint32_t first, uint32_t second) {
+        .def("kern_advance_units", [](const nova::vg::FontFace& face, uint32_t first, uint32_t second) {
             return face.kernAdvanceUnits(static_cast<char32_t>(first), static_cast<char32_t>(second));
         }, "first"_a, "second"_a,
            "Kerning adjustment between two consecutive codepoints, in raw font design units "
            "(unscaled) -- see FontFace::kernAdvanceUnits() in font.h for why this is a per-pair "
            "query rather than a bulk table like codepoints().")
-        .def_prop_ro("notdef_advance_width_units", &novasvg::FontFace::notdefAdvanceWidthUnits,
+        .def_prop_ro("notdef_advance_width_units", &nova::vg::FontFace::notdefAdvanceWidthUnits,
              "The advance width used for any codepoint outside this font's cmap "
              "(glyph id 0, the \".notdef\" glyph) -- what advance_width_units() itself "
              "already falls back to for such a codepoint.")
-        .def("codepoints", [](const novasvg::FontFace& face) {
+        .def("codepoints", [](const nova::vg::FontFace& face) {
             auto cps = face.codepoints();
             std::vector<uint32_t> out;
             out.reserve(cps.size());
@@ -208,13 +208,13 @@ NB_MODULE(novasvg_py, m) {
            "for exactly which cmap formats are covered -- virtually every real-world font).");
 
     m.def("get_font_face", [](const std::string& family, bool bold, bool italic) {
-        return novasvg::fontFaceCache()->getFontFace(family, bold, italic);
+        return nova::vg::fontFaceCache()->getFontFace(family, bold, italic);
     }, "family"_a, "bold"_a = false, "italic"_a = false,
        "Look up a font face previously registered via add_font_face_from_file/_data "
        "(falling back to novasvg's built-in generic-family table, e.g. \"sans-serif\").");
 
     m.def("get_font_face_for_family_stack", [](const std::string& family_stack, bool bold, bool italic) {
-        return novasvg::fontFaceCache()->getFontFaceForFamilyStack(family_stack, bold, italic);
+        return nova::vg::fontFaceCache()->getFontFaceForFamilyStack(family_stack, bold, italic);
     }, "family_stack"_a, "bold"_a = false, "italic"_a = false,
        "Resolve a CSS-style comma-separated font-family stack (e.g. "
        "'\"trebuchet ms\", verdana, arial, sans-serif') name by name: a face registered or "
@@ -222,61 +222,61 @@ NB_MODULE(novasvg_py, m) {
        "built-in table (case-insensitive, e.g. 'arial' -> Liberation Sans), then generic "
        "keywords. Names nothing matches are skipped; returns a null face if none resolve.");
 
-    nb::class_<novasvg::Font>(m, "Font")
+    nb::class_<nova::vg::Font>(m, "Font")
         .def(nb::init<>(), "Construct a null font.")
-        .def(nb::init<const novasvg::FontFace&, float>(), "face"_a, "size"_a,
+        .def(nb::init<const nova::vg::FontFace&, float>(), "face"_a, "size"_a,
              "Construct a font from a face at a given pixel size.")
-        .def_prop_ro("ascent", &novasvg::Font::ascent, "Ascent in pixels, at this font's size.")
-        .def_prop_ro("descent", &novasvg::Font::descent, "Descent in pixels (typically negative), at this font's size.")
-        .def_prop_ro("height", &novasvg::Font::height, "ascent - descent.")
-        .def_prop_ro("line_gap", &novasvg::Font::lineGap, "Recommended extra spacing between lines, in pixels.")
-        .def_prop_ro("x_height", &novasvg::Font::xHeight, "Height of a lowercase 'x' glyph, in pixels.")
-        .def_prop_ro("size", &novasvg::Font::size, "The pixel size this font was constructed with.")
-        .def_prop_ro("face", &novasvg::Font::face, nb::rv_policy::reference_internal, "The underlying FontFace.")
-        .def("is_null", &novasvg::Font::is_null, "Check if the font is null/invalid.")
-        .def("__bool__", [](const novasvg::Font& font) { return !font.is_null(); })
-        .def("measure_text", [](const novasvg::Font& font, const std::string& text) {
+        .def_prop_ro("ascent", &nova::vg::Font::ascent, "Ascent in pixels, at this font's size.")
+        .def_prop_ro("descent", &nova::vg::Font::descent, "Descent in pixels (typically negative), at this font's size.")
+        .def_prop_ro("height", &nova::vg::Font::height, "ascent - descent.")
+        .def_prop_ro("line_gap", &nova::vg::Font::lineGap, "Recommended extra spacing between lines, in pixels.")
+        .def_prop_ro("x_height", &nova::vg::Font::xHeight, "Height of a lowercase 'x' glyph, in pixels.")
+        .def_prop_ro("size", &nova::vg::Font::size, "The pixel size this font was constructed with.")
+        .def_prop_ro("face", &nova::vg::Font::face, nb::rv_policy::reference_internal, "The underlying FontFace.")
+        .def("is_null", &nova::vg::Font::is_null, "Check if the font is null/invalid.")
+        .def("__bool__", [](const nova::vg::Font& font) { return !font.is_null(); })
+        .def("measure_text", [](const nova::vg::Font& font, const std::string& text) {
             // Python str arrives as UTF-8 (nanobind's std::string conversion);
             // Font::measureText wants UTF-32, same as novasvg's own svg text
             // layout path (see svg_text_fragments_builder), so route through the
             // identical utf8ToU32() conversion for byte-for-byte consistency
             // with what novasvg will actually paint.
-            auto u32text = novasvg::utf8ToU32(text);
+            auto u32text = nova::vg::utf8ToU32(text);
             return font.measureText(u32text);
         }, "text"_a, "Measure the advance width of a UTF-8 string, in pixels, at this font's size.");
 
     // nb::class_<Font> chain above ends with measure_text; attach glyph_boxes to it.
     m.attr("Font").attr("glyph_boxes") = nb::cpp_function(
-        [](const novasvg::Font& font, const std::string& text) {
+        [](const nova::vg::Font& font, const std::string& text) {
             nb::list out;
-            for(const auto& box : font.glyphBoxes(novasvg::utf8ToU32(text)))
+            for(const auto& box : font.glyphBoxes(nova::vg::utf8ToU32(text)))
                 out.append(nb::make_tuple(box.pen, box.inkLeft, box.inkRight, box.inkTop, box.inkBottom));
             return out;
         }, nb::is_method(), "text"_a,
         "Per-glyph (pen_x, ink_left, ink_right, ink_top, ink_bottom) in pixels (top/bottom relative to the baseline, y down) for every glyph that has an outline "
         "(spaces are skipped), using the same ligature + kerning walk as measure_text().");
 
-    m.def("measure_foreign_object", [](const std::string& html, const novasvg::Font& font, std::optional<float> max_width,
+    m.def("measure_foreign_object", [](const std::string& html, const nova::vg::Font& font, std::optional<float> max_width,
                                        std::optional<std::string> family, bool bold, bool italic) {
-        novasvg::ForeignObjectMetrics metrics;
+        nova::svg::ForeignObjectMetrics metrics;
         if(!family) {
-            metrics = novasvg::measureForeignObjectContent(html, font, max_width.value_or(-1.f));
+            metrics = nova::svg::measureForeignObjectContent(html, font, max_width.value_or(-1.f));
         } else {
             // The same faces ForeignObjectSimple::render() paints with (svg_foreign_object_element::fontsFor()):
             // `font` is the base style, every other bold/italic variant comes from the family.
-            const unsigned char base = (unsigned char)((bold ? novasvg::ForeignObjectFonts::Bold : 0)
-                                                       | (italic ? novasvg::ForeignObjectFonts::Italic : 0));
-            novasvg::ForeignObjectFonts fonts;
+            const unsigned char base = (unsigned char)((bold ? nova::svg::ForeignObjectFonts::Bold : 0)
+                                                       | (italic ? nova::svg::ForeignObjectFonts::Italic : 0));
+            nova::svg::ForeignObjectFonts fonts;
             for(unsigned style = 0; style < 4; ++style) {
                 if(style == base) {
                     fonts.face[style] = font;
                     continue;
                 }
-                auto variant = novasvg::makeFont(*family, font.size(), (style & novasvg::ForeignObjectFonts::Bold) != 0,
-                                                 (style & novasvg::ForeignObjectFonts::Italic) != 0);
+                auto variant = nova::svg::makeFont(*family, font.size(), (style & nova::svg::ForeignObjectFonts::Bold) != 0,
+                                                 (style & nova::svg::ForeignObjectFonts::Italic) != 0);
                 fonts.face[style] = variant.is_null() ? font : variant;
             }
-            metrics = novasvg::measureForeignObjectContent(html, fonts, max_width.value_or(-1.f), base);
+            metrics = nova::svg::measureForeignObjectContent(html, fonts, max_width.value_or(-1.f), base);
         }
         nb::dict result;
         result["height"] = metrics.height;
@@ -302,93 +302,93 @@ NB_MODULE(novasvg_py, m) {
        "'width' is the widest resulting line.");
 
     // --- Bind Color Class ---
-    nb::class_<novasvg::Color>(m, "Color")
+    nb::class_<nova::vg::Color>(m, "Color")
         .def(nb::init<uint8_t, uint8_t, uint8_t, uint8_t>(),
              "r"_a = 0, "g"_a = 0, "b"_a = 0, "a"_a = 255,
              "Construct a color from red, green, blue, alpha components (0-255 each).")
         .def(nb::init<const std::string&>(), "value"_a,
              "Construct a color from a CSS color name or hexadecimal string.")
-        .def_static("from_value", &novasvg::Color::fromValue, "value"_a,
+        .def_static("from_value", &nova::vg::Color::fromValue, "value"_a,
                     "Construct a color from a packed 0xRRGGBBAA integer.")
-        .def_static("from_hash", &novasvg::Color::fromHash, "value"_a)
-        .def_static("from_name", &novasvg::Color::fromName, "value"_a)
-        .def("value", &novasvg::Color::value,
+        .def_static("from_hash", &nova::vg::Color::fromHash, "value"_a)
+        .def_static("from_name", &nova::vg::Color::fromName, "value"_a)
+        .def("value", &nova::vg::Color::value,
              "Get the color packed as a 0xRRGGBBAA integer.")
-        .def("to_int", &novasvg::Color::value)
+        .def("to_int", &nova::vg::Color::value)
         .def_static("rgba", [](uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-            return novasvg::Color(r, g, b, a);
+            return nova::vg::Color(r, g, b, a);
         }, "r"_a, "g"_a, "b"_a, "a"_a = 255)
-        .def_static("black", [] { return novasvg::Color::fromName("black"); })
-        .def_static("white", [] { return novasvg::Color::fromName("white"); })
-        .def_static("red", [] { return novasvg::Color::fromName("red"); })
-        .def_static("green", [] { return novasvg::Color::fromName("green"); })
-        .def_static("blue", [] { return novasvg::Color::fromName("blue"); })
-        .def_static("yellow", [] { return novasvg::Color::fromName("yellow"); })
-        .def_static("cyan", [] { return novasvg::Color::fromName("cyan"); })
-        .def_static("magenta", [] { return novasvg::Color::fromName("magenta"); })
-        .def_static("orange", [] { return novasvg::Color::fromName("orange"); })
-        .def_static("transparent", [] { return novasvg::Color(0, 0, 0, 0); })
-        .def_prop_rw("r", &novasvg::Color::getR, &novasvg::Color::setR)
-        .def_prop_rw("g", &novasvg::Color::getG, &novasvg::Color::setG)
-        .def_prop_rw("b", &novasvg::Color::getB, &novasvg::Color::setB)
-        .def_prop_rw("a", &novasvg::Color::getA, &novasvg::Color::setA)
-        .def("__str__", [](const novasvg::Color& color) {
+        .def_static("black", [] { return nova::vg::Color::fromName("black"); })
+        .def_static("white", [] { return nova::vg::Color::fromName("white"); })
+        .def_static("red", [] { return nova::vg::Color::fromName("red"); })
+        .def_static("green", [] { return nova::vg::Color::fromName("green"); })
+        .def_static("blue", [] { return nova::vg::Color::fromName("blue"); })
+        .def_static("yellow", [] { return nova::vg::Color::fromName("yellow"); })
+        .def_static("cyan", [] { return nova::vg::Color::fromName("cyan"); })
+        .def_static("magenta", [] { return nova::vg::Color::fromName("magenta"); })
+        .def_static("orange", [] { return nova::vg::Color::fromName("orange"); })
+        .def_static("transparent", [] { return nova::vg::Color(0, 0, 0, 0); })
+        .def_prop_rw("r", &nova::vg::Color::getR, &nova::vg::Color::setR)
+        .def_prop_rw("g", &nova::vg::Color::getG, &nova::vg::Color::setG)
+        .def_prop_rw("b", &nova::vg::Color::getB, &nova::vg::Color::setB)
+        .def_prop_rw("a", &nova::vg::Color::getA, &nova::vg::Color::setA)
+        .def("__str__", [](const nova::vg::Color& color) {
             return static_cast<std::string>(color);
         })
-        .def("__eq__", [](const novasvg::Color& lhs, const novasvg::Color& rhs) {
+        .def("__eq__", [](const nova::vg::Color& lhs, const nova::vg::Color& rhs) {
             return lhs == rhs;
         });
 
     // --- Bind Matrix Class ---
-    nb::class_<novasvg::Matrix>(m, "Matrix")
+    nb::class_<nova::vg::Matrix>(m, "Matrix")
         .def(nb::init<>(), "Construct an identity matrix.")
         .def(nb::init<float, float, float, float, float, float>(), 
              "a"_a, "b"_a, "c"_a, "d"_a, "e"_a, "f"_a,
              "Construct a matrix with specific components.")
-        .def_rw("a", &novasvg::Matrix::a, "Horizontal scaling factor.")
-        .def_rw("b", &novasvg::Matrix::b, "Vertical shearing factor.")
-        .def_rw("c", &novasvg::Matrix::c, "Horizontal shearing factor.")
-        .def_rw("d", &novasvg::Matrix::d, "Vertical scaling factor.")
-        .def_rw("e", &novasvg::Matrix::e, "Horizontal translation offset.")
-        .def_rw("f", &novasvg::Matrix::f, "Vertical translation offset.")
-        .def("multiply", &novasvg::Matrix::operator*, nb::is_operator(), "Multiply this matrix by another.")
-        .def("translate", &novasvg::Matrix::translate, "tx"_a, "ty"_a, "Translate the matrix.")
-        .def("scale", &novasvg::Matrix::scale, "sx"_a, "sy"_a, "Scale the matrix.")
-        .def("rotate", &novasvg::Matrix::rotate, "angle"_a, "cx"_a = 0.f, "cy"_a = 0.f, "Rotate the matrix around a point.")
-        .def("invert", &novasvg::Matrix::invert, "Invert this matrix in place.")
-        .def("inverse", &novasvg::Matrix::inverse, "Return a new inverted matrix.")
-        .def("reset", &novasvg::Matrix::reset, "Reset the matrix to identity.")
-        .def_static("translated", &novasvg::Matrix::translated, "tx"_a, "ty"_a, "Create a translation matrix.")
-        .def_static("scaled", &novasvg::Matrix::scaled, "sx"_a, "sy"_a, "Create a scaling matrix.")
-        .def_static("rotated", &novasvg::Matrix::rotated, "angle"_a, "cx"_a = 0.f, "cy"_a = 0.f, "Create a rotation matrix.");
+        .def_rw("a", &nova::vg::Matrix::a, "Horizontal scaling factor.")
+        .def_rw("b", &nova::vg::Matrix::b, "Vertical shearing factor.")
+        .def_rw("c", &nova::vg::Matrix::c, "Horizontal shearing factor.")
+        .def_rw("d", &nova::vg::Matrix::d, "Vertical scaling factor.")
+        .def_rw("e", &nova::vg::Matrix::e, "Horizontal translation offset.")
+        .def_rw("f", &nova::vg::Matrix::f, "Vertical translation offset.")
+        .def("multiply", &nova::vg::Matrix::operator*, nb::is_operator(), "Multiply this matrix by another.")
+        .def("translate", &nova::vg::Matrix::translate, "tx"_a, "ty"_a, "Translate the matrix.")
+        .def("scale", &nova::vg::Matrix::scale, "sx"_a, "sy"_a, "Scale the matrix.")
+        .def("rotate", &nova::vg::Matrix::rotate, "angle"_a, "cx"_a = 0.f, "cy"_a = 0.f, "Rotate the matrix around a point.")
+        .def("invert", &nova::vg::Matrix::invert, "Invert this matrix in place.")
+        .def("inverse", &nova::vg::Matrix::inverse, "Return a new inverted matrix.")
+        .def("reset", &nova::vg::Matrix::reset, "Reset the matrix to identity.")
+        .def_static("translated", &nova::vg::Matrix::translated, "tx"_a, "ty"_a, "Create a translation matrix.")
+        .def_static("scaled", &nova::vg::Matrix::scaled, "sx"_a, "sy"_a, "Create a scaling matrix.")
+        .def_static("rotated", &nova::vg::Matrix::rotated, "angle"_a, "cx"_a = 0.f, "cy"_a = 0.f, "Create a rotation matrix.");
 
     // --- Bind Box Class ---
-    nb::class_<novasvg::Box>(m, "Box")
+    nb::class_<nova::vg::Box>(m, "Box")
         .def(nb::init<>(), "Construct a box with zero dimensions.")
         .def(nb::init<float, float, float, float>(), "x"_a, "y"_a, "w"_a, "h"_a, "Construct a box with position and size.")
-        .def_rw("x", &novasvg::Box::x, "X-coordinate of the box.")
-        .def_rw("y", &novasvg::Box::y, "Y-coordinate of the box.")
-        .def_rw("w", &novasvg::Box::w, "Width of the box.")
-        .def_rw("h", &novasvg::Box::h, "Height of the box.")
-        .def("transform", &novasvg::Box::transform, "matrix"_a, "Transform the box by a matrix in place.")
-        .def("transformed", &novasvg::Box::transformed, "matrix"_a, "Return a new transformed box.");
+        .def_rw("x", &nova::vg::Box::x, "X-coordinate of the box.")
+        .def_rw("y", &nova::vg::Box::y, "Y-coordinate of the box.")
+        .def_rw("w", &nova::vg::Box::w, "Width of the box.")
+        .def_rw("h", &nova::vg::Box::h, "Height of the box.")
+        .def("transform", &nova::vg::Box::transform, "matrix"_a, "Transform the box by a matrix in place.")
+        .def("transformed", &nova::vg::Box::transformed, "matrix"_a, "Return a new transformed box.");
 
     // --- Bind Bitmap Class ---
     // The buffer protocol, DLPack, NumPy, __array_interface__ and array import all live in
     // bitmap_interop.hpp; bind_bitmap_interop() adds them below, after the chain.
-    nb::class_<novasvg::Bitmap> bitmap_cls(m, "Bitmap", nb::type_slots(novasvg_py_interop::bitmap_slots));
+    nb::class_<nova::vg::Bitmap> bitmap_cls(m, "Bitmap", nb::type_slots(novasvg_py_interop::bitmap_slots));
     bitmap_cls
         .def(nb::init<>(), "Construct a null bitmap.")
         .def(nb::init<int, int>(), "width"_a, "height"_a, "Construct a bitmap with specified dimensions.")
-        .def_prop_ro("width", &novasvg::Bitmap::width, "Get the width of the bitmap.")
-        .def_prop_ro("height", &novasvg::Bitmap::height, "Get the height of the bitmap.")
-        .def_prop_ro("stride", &novasvg::Bitmap::stride, "Get the stride (bytes per row) of the bitmap.")
-        .def("is_null", &novasvg::Bitmap::is_null, "Check if the bitmap is null.")
-        .def("clear", &novasvg::Bitmap::clear, "value"_a, "Clear the bitmap with a Color.")
-        .def("clear", [](novasvg::Bitmap& bitmap, uint32_t value) {
-            bitmap.clear(novasvg::Color::fromValue(value));
+        .def_prop_ro("width", &nova::vg::Bitmap::width, "Get the width of the bitmap.")
+        .def_prop_ro("height", &nova::vg::Bitmap::height, "Get the height of the bitmap.")
+        .def_prop_ro("stride", &nova::vg::Bitmap::stride, "Get the stride (bytes per row) of the bitmap.")
+        .def("is_null", &nova::vg::Bitmap::is_null, "Check if the bitmap is null.")
+        .def("clear", &nova::vg::Bitmap::clear, "value"_a, "Clear the bitmap with a Color.")
+        .def("clear", [](nova::vg::Bitmap& bitmap, uint32_t value) {
+            bitmap.clear(nova::vg::Color::fromValue(value));
         }, "value"_a, "Clear the bitmap with a packed 0xRRGGBBAA value.")
-        .def("convert_to_rgba", &novasvg::Bitmap::convertToRGBA, "Convert pixel data in place from ARGB32 Premultiplied to RGBA Plain. Only needed to hand the raw "
+        .def("convert_to_rgba", &nova::vg::Bitmap::convertToRGBA, "Convert pixel data in place from ARGB32 Premultiplied to RGBA Plain. Only needed to hand the raw "
              "buffer to something else (e.g. numpy consumers wanting straight RGBA); NOT before "
              "write_to_*/to_*/write, which convert internally -- doing both converts twice.")
         // The encoders below all take the Bitmap as it comes out of
@@ -398,21 +398,21 @@ NB_MODULE(novasvg_py, m) {
         // the Bitmap in place, and encoding it afterwards converts it a
         // *second* time -- swapping red/blue channels and corrupting
         // semi-transparent pixels.
-        .def("write_to_png", [](const novasvg::Bitmap &bmp, const std::string &filename) {
+        .def("write_to_png", [](const nova::vg::Bitmap &bmp, const std::string &filename) {
             return write_to_file(bmp, filename, image_format::png);
         }, "filename"_a, "Write the bitmap to a PNG file. Returns True on success.")
-        .def("write_to_bmp", [](const novasvg::Bitmap &bmp, const std::string &filename) {
+        .def("write_to_bmp", [](const nova::vg::Bitmap &bmp, const std::string &filename) {
             return write_to_file(bmp, filename, image_format::bmp);
         }, "filename"_a, "Write the bitmap to a BMP file. Returns True on success.")
-        .def("write_to_tga", [](const novasvg::Bitmap &bmp, const std::string &filename) {
+        .def("write_to_tga", [](const nova::vg::Bitmap &bmp, const std::string &filename) {
             return write_to_file(bmp, filename, image_format::tga);
         }, "filename"_a, "Write the bitmap to a TGA file. Returns True on success.")
-        .def("write_to_jpg", [](const novasvg::Bitmap &bmp, const std::string &filename, int quality) {
+        .def("write_to_jpg", [](const nova::vg::Bitmap &bmp, const std::string &filename, int quality) {
             return write_to_file(bmp, filename, image_format::jpg, quality);
         }, "filename"_a, "quality"_a = 80,
            "Write the bitmap to a JPEG file (quality 1-100). JPEG has no alpha channel: "
            "render onto an opaque background first. Returns True on success.")
-        .def("write", [](const novasvg::Bitmap &bmp, const std::string &filename, int jpg_quality) {
+        .def("write", [](const nova::vg::Bitmap &bmp, const std::string &filename, int jpg_quality) {
             // The extension picks the encoder; anything unrecognised is PNG, as it always was.
             std::string ext = std::filesystem::path(filename).extension().string();
             image_format format = image_format::png;
@@ -422,18 +422,18 @@ NB_MODULE(novasvg_py, m) {
         }, "filename"_a, "jpg_quality"_a = 80,
            "Write the bitmap to a file, picking PNG/BMP/TGA/JPEG from the extension "
            "(.png/.bmp/.tga/.jpg/.jpeg; PNG if unrecognized). Returns True on success.")
-        .def("to_png", [](const novasvg::Bitmap &bmp) { return encode_to_bytes(bmp, image_format::png); },
+        .def("to_png", [](const nova::vg::Bitmap &bmp) { return encode_to_bytes(bmp, image_format::png); },
              "Encode the bitmap as PNG and return the file contents as bytes (no temp file).")
-        .def("to_bmp", [](const novasvg::Bitmap &bmp) { return encode_to_bytes(bmp, image_format::bmp); },
+        .def("to_bmp", [](const nova::vg::Bitmap &bmp) { return encode_to_bytes(bmp, image_format::bmp); },
              "Encode the bitmap as BMP and return the file contents as bytes.")
-        .def("to_tga", [](const novasvg::Bitmap &bmp) { return encode_to_bytes(bmp, image_format::tga); },
+        .def("to_tga", [](const nova::vg::Bitmap &bmp) { return encode_to_bytes(bmp, image_format::tga); },
              "Encode the bitmap as TGA and return the file contents as bytes.")
-        .def("to_jpg", [](const novasvg::Bitmap &bmp, int quality) {
+        .def("to_jpg", [](const nova::vg::Bitmap &bmp, int quality) {
             return encode_to_bytes(bmp, image_format::jpg, quality);
         }, "quality"_a = 80,
            "Encode the bitmap as JPEG (quality 1-100) and return the file contents as bytes. "
            "JPEG has no alpha channel: render onto an opaque background first.")
-        .def("to_bytes", [](const novasvg::Bitmap &bmp, const std::string &format, int quality) {
+        .def("to_bytes", [](const nova::vg::Bitmap &bmp, const std::string &format, int quality) {
             image_format parsed;
             if(!parse_format(format, parsed))
                 throw std::invalid_argument("unknown image format '" + format + "' (expected png, bmp, tga, jpg or jpeg)");
@@ -446,73 +446,73 @@ NB_MODULE(novasvg_py, m) {
     novasvg_py_interop::bind_bitmap_interop(bitmap_cls);
 
     // --- Bind node Class ---
-    nb::class_<novasvg::node>(m, "Node")
-        .def("is_text_node", &novasvg::node::is_text_node, "Check if the node is a text node.")
-        .def("is_element", &novasvg::node::is_element, "Check if the node is an element node.")
-        .def("to_text_node", &novasvg::node::to_text_node, "Convert the node to a TextNode.")
-        .def("to_element", &novasvg::node::to_element, "Convert the node to an Element.")
-        .def("parent_element", &novasvg::node::parent_element, "Get the parent element.")
-        .def("is_null", &novasvg::node::is_null, "Check if the node is null.")
-        .def("__bool__", &novasvg::node::operator bool, "Check if the node is valid.")
-        .def("__eq__", &novasvg::node::operator==, "Check equality.")
-        .def("__ne__", &novasvg::node::operator!=, "Check inequality.");
+    nb::class_<nova::svg::node>(m, "Node")
+        .def("is_text_node", &nova::svg::node::is_text_node, "Check if the node is a text node.")
+        .def("is_element", &nova::svg::node::is_element, "Check if the node is an element node.")
+        .def("to_text_node", &nova::svg::node::to_text_node, "Convert the node to a TextNode.")
+        .def("to_element", &nova::svg::node::to_element, "Convert the node to an Element.")
+        .def("parent_element", &nova::svg::node::parent_element, "Get the parent element.")
+        .def("is_null", &nova::svg::node::is_null, "Check if the node is null.")
+        .def("__bool__", &nova::svg::node::operator bool, "Check if the node is valid.")
+        .def("__eq__", &nova::svg::node::operator==, "Check equality.")
+        .def("__ne__", &nova::svg::node::operator!=, "Check inequality.");
 
     // --- Bind text_node Class ---
-    nb::class_<novasvg::text_node, novasvg::node>(m, "TextNode")
+    nb::class_<nova::svg::text_node, nova::svg::node>(m, "TextNode")
         .def(nb::init<>(), "Construct a null text node.")
-        .def("data", &novasvg::text_node::data, nb::rv_policy::reference, "Get the text content.")
-        .def("set_data", &novasvg::text_node::set_data, "data"_a, "Set the text content.");
+        .def("data", &nova::svg::text_node::data, nb::rv_policy::reference, "Get the text content.")
+        .def("set_data", &nova::svg::text_node::set_data, "data"_a, "Set the text content.");
 
     // --- Bind element Class ---
-    nb::class_<novasvg::element, novasvg::node>(m, "Element")
+    nb::class_<nova::svg::element, nova::svg::node>(m, "Element")
         .def(nb::init<>(), "Construct a null element.")
-        .def("has_attribute", &novasvg::element::has_attribute, "name"_a, "Check if an attribute exists.")
-        .def("get_attribute", &novasvg::element::attribute, "name"_a, nb::rv_policy::reference, "Get an attribute value.")
-        .def("set_attribute", &novasvg::element::set_attribute, "name"_a, "value"_a, "Set an attribute value.")
-        .def("render", static_cast<void (novasvg::element::*)(novasvg::Bitmap&, const novasvg::Matrix&) const>(&novasvg::element::render), "bitmap"_a, "matrix"_a = novasvg::Matrix(), "Render the element onto a bitmap.")
-        .def("render_to_bitmap", &novasvg::element::render_to_bitmap, 
-             "width"_a = -1, "height"_a = -1, "backgroundColor"_a = novasvg::Color(),
+        .def("has_attribute", &nova::svg::element::has_attribute, "name"_a, "Check if an attribute exists.")
+        .def("get_attribute", &nova::svg::element::attribute, "name"_a, nb::rv_policy::reference, "Get an attribute value.")
+        .def("set_attribute", &nova::svg::element::set_attribute, "name"_a, "value"_a, "Set an attribute value.")
+        .def("render", static_cast<void (nova::svg::element::*)(nova::vg::Bitmap&, const nova::vg::Matrix&) const>(&nova::svg::element::render), "bitmap"_a, "matrix"_a = nova::vg::Matrix(), "Render the element onto a bitmap.")
+        .def("render_to_bitmap", &nova::svg::element::render_to_bitmap, 
+             "width"_a = -1, "height"_a = -1, "backgroundColor"_a = nova::vg::Color(),
              "Render the element to a new Bitmap.")
-        .def("render_to_bitmap", [](const novasvg::element& el, int width, int height,
+        .def("render_to_bitmap", [](const nova::svg::element& el, int width, int height,
                                     uint32_t background_color) {
-            return el.render_to_bitmap(width, height, novasvg::Color::fromValue(background_color));
+            return el.render_to_bitmap(width, height, nova::vg::Color::fromValue(background_color));
         }, "width"_a = -1, "height"_a = -1, "backgroundColor"_a = 0u,
            "Render the element using a packed 0xRRGGBBAA background color.")
-        .def("get_local_matrix", &novasvg::element::local_matrix, "Get the local transformation matrix.")
-        .def("get_global_matrix", &novasvg::element::global_matrix, "Get the global transformation matrix.")
-        .def("get_local_bounding_box", &novasvg::element::local_bounding_box, "Get the local bounding box.")
-        .def("get_global_bounding_box", &novasvg::element::global_bounding_box, "Get the global bounding box.")
-        .def("get_bounding_box", &novasvg::element::bounding_box, "Get the bounding box without transformations.")
-        .def("children", &novasvg::element::children, "Get child nodes.");
+        .def("get_local_matrix", &nova::svg::element::local_matrix, "Get the local transformation matrix.")
+        .def("get_global_matrix", &nova::svg::element::global_matrix, "Get the global transformation matrix.")
+        .def("get_local_bounding_box", &nova::svg::element::local_bounding_box, "Get the local bounding box.")
+        .def("get_global_bounding_box", &nova::svg::element::global_bounding_box, "Get the global bounding box.")
+        .def("get_bounding_box", &nova::svg::element::bounding_box, "Get the bounding box without transformations.")
+        .def("children", &nova::svg::element::children, "Get child nodes.");
 
     // --- Bind document Class ---
-    nb::class_<novasvg::document>(m, "Document")
-        .def_static("load_from_file", &novasvg::document::load_file, "filename"_a, "Load an SVG document from a file.")
+    nb::class_<nova::svg::document>(m, "Document")
+        .def_static("load_from_file", &nova::svg::document::load_file, "filename"_a, "Load an SVG document from a file.")
         .def_static("load_from_data", 
-            nb::overload_cast<const std::string&>(&novasvg::document::load_data), 
+            nb::overload_cast<const std::string&>(&nova::svg::document::load_data), 
             "string"_a, "Load an SVG document from a string.")
         .def_static("load_from_data", 
             [](const nb::bytes& data) {
-                return novasvg::document::load_data(reinterpret_cast<const char*>(data.data()), data.size());
+                return nova::svg::document::load_data(reinterpret_cast<const char*>(data.data()), data.size());
             }, 
             "data"_a, "Load an SVG document from a bytes object.")
-        .def("apply_stylesheet", &novasvg::document::apply_style_sheet, "content"_a, "Apply a CSS stylesheet to the document.")
-        .def("query_selector_all", &novasvg::document::query_selector_all, "content"_a, "Select elements matching a CSS selector.")
-        .def_prop_ro("width", &novasvg::document::width, "Get the intrinsic width of the document.")
-        .def_prop_ro("height", &novasvg::document::height, "Get the intrinsic height of the document.")
-        .def("bounding_box", &novasvg::document::bounding_box, "Get the bounding box of the document content.")
-        .def("update_layout", &novasvg::document::update_layout, "Update the layout of the document if needed.")
-        .def("force_layout", &novasvg::document::force_layout, "Force an immediate layout update.")
-        .def("render", static_cast<void (novasvg::document::*)(novasvg::Bitmap&, const novasvg::Matrix&) const>(&novasvg::document::render), "bitmap"_a, "matrix"_a = novasvg::Matrix(), "Render the document onto a bitmap.")
-        .def("render_to_bitmap", &novasvg::document::render_to_bitmap, 
-             "width"_a = -1, "height"_a = -1, "backgroundColor"_a = novasvg::Color(),
+        .def("apply_stylesheet", &nova::svg::document::apply_style_sheet, "content"_a, "Apply a CSS stylesheet to the document.")
+        .def("query_selector_all", &nova::svg::document::query_selector_all, "content"_a, "Select elements matching a CSS selector.")
+        .def_prop_ro("width", &nova::svg::document::width, "Get the intrinsic width of the document.")
+        .def_prop_ro("height", &nova::svg::document::height, "Get the intrinsic height of the document.")
+        .def("bounding_box", &nova::svg::document::bounding_box, "Get the bounding box of the document content.")
+        .def("update_layout", &nova::svg::document::update_layout, "Update the layout of the document if needed.")
+        .def("force_layout", &nova::svg::document::force_layout, "Force an immediate layout update.")
+        .def("render", static_cast<void (nova::svg::document::*)(nova::vg::Bitmap&, const nova::vg::Matrix&) const>(&nova::svg::document::render), "bitmap"_a, "matrix"_a = nova::vg::Matrix(), "Render the document onto a bitmap.")
+        .def("render_to_bitmap", &nova::svg::document::render_to_bitmap, 
+             "width"_a = -1, "height"_a = -1, "backgroundColor"_a = nova::vg::Color(),
              "Render the document to a new Bitmap.")
-        .def("render_to_bitmap", [](const novasvg::document& dom, int width, int height,
+        .def("render_to_bitmap", [](const nova::svg::document& dom, int width, int height,
                                     uint32_t background_color) {
-            return dom.render_to_bitmap(width, height, novasvg::Color::fromValue(background_color));
+            return dom.render_to_bitmap(width, height, nova::vg::Color::fromValue(background_color));
         }, "width"_a = -1, "height"_a = -1, "backgroundColor"_a = 0u,
            "Render the document using a packed 0xRRGGBBAA background color.")
-        .def("element_from_point", &novasvg::document::element_from_point, "x"_a, "y"_a, "Get the topmost element at a specific point.")
-        .def("get_element_by_id", &novasvg::document::element_by_id, "id"_a, "Get an element by its ID.")
-        .def("document_element", &novasvg::document::document_element, "Get the root element of the document.");
+        .def("element_from_point", &nova::svg::document::element_from_point, "x"_a, "y"_a, "Get the topmost element at a specific point.")
+        .def("get_element_by_id", &nova::svg::document::element_by_id, "id"_a, "Get an element by its ID.")
+        .def("document_element", &nova::svg::document::document_element, "Get the root element of the document.");
 }

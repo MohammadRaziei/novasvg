@@ -69,7 +69,7 @@ files is all it takes to benchmark a new diagram -- there is no list to keep in 
 Each sample is rendered at its own aspect ratio, sized from (most specific first) the root's CSS
 `style="width:..;height:.."`, its `width`/`height` attributes, then its `viewBox`; a percentage is never
 read as pixels. Because that fits the longest side into `--width`/`--height` (320 px by default), a wide
-diagram's text comes out only a few pixels tall -- raise `NOVASVG_BENCH_WIDTH/HEIGHT` to compare text.
+diagram's text comes out only a few pixels tall -- raise `NOVA_BENCH_WIDTH/HEIGHT` to compare text.
 
 ## Using a specific Chromium for ground truth
 
@@ -77,8 +77,8 @@ By default Playwright launches the Chromium that `playwright install chromium` f
 build (CI image, no network, the exact browser the references were made with):
 
 ```
-export NOVASVG_BENCH_CHROMIUM=/path/to/chrome
-export NOVASVG_BENCH_CHROMIUM_ARGS="--no-sandbox --font-render-hinting=none"
+export NOVA_BENCH_CHROMIUM=/path/to/chrome
+export NOVA_BENCH_CHROMIUM_ARGS="--no-sandbox --font-render-hinting=none"
 ```
 
 Fonts matter just as much for text-heavy samples: mermaid lays its diagrams out with whatever font the
@@ -88,11 +88,11 @@ the same fontconfig, e.g. `FONTCONFIG_FILE` pointing at a config that exposes on
 ## How it works
 
 - **novasvg** — `cmake/FetchNovasvg.cmake` fetches it with FetchContent
-  (`NOVASVG_BENCH_GIT_URL` @ `NOVASVG_BENCH_GIT_TAG`, default GitHub `master`).
+  (`NOVA_BENCH_GIT_URL` @ `NOVA_BENCH_GIT_TAG`, default GitHub `master`).
   This directory is self-contained: it never reads the directory it sits in
   (only `data/` is shared). To benchmark a local tree, including uncommitted
   changes, pass the standard FetchContent override
-  `-DFETCHCONTENT_SOURCE_DIR_NOVASVG_SRC=/path/to/novasvg` — **without it you
+  `-DFETCHCONTENT_SOURCE_DIR_NOVA_SRC=/path/to/novasvg` — **without it you
   measure the fetched ref, not your working copy.**
   novasvg is header-only, so the code is compiled inside the benchmark's own
   target. novasvg puts its optimisation flags on the `novasvg::novasvg`
@@ -101,7 +101,7 @@ the same fontconfig, e.g. `FONTCONFIG_FILE` pointing at a config that exposes on
   the whole benchmark to a Release build (an empty build type means no `-O`
   flags at all) -- which also gives every other engine the same fair flags.
   `native/novasvg_native_bench.cpp` links `novasvg::novasvg` and calls
-  `novasvg::Document` / `novasvg::Bitmap` directly.
+  `nova::svg::Document` / `nova::vg::Bitmap` directly.
 - **lunasvg** — `cmake/FetchLunasvg.cmake` fetches it (a real CMake
   project, pulls in its own `plutovg` dependency via git submodule);
   `native/lunasvg_native_bench.cpp` links `lunasvg::lunasvg` and calls
@@ -213,13 +213,13 @@ costs that were getting conflated:
 ## Tunables
 
 ```
-cmake -S . -B build -DNOVASVG_BENCH_RUNS=10 -DNOVASVG_BENCH_WIDTH=512 -DNOVASVG_BENCH_HEIGHT=512
-# build different checkouts (novasvg: NOVASVG_BENCH_GIT_TAG, or FETCHCONTENT_SOURCE_DIR_NOVASVG_SRC for a local tree):
-cmake -S . -B build -DNOVASVG_BENCH_LUNASVG_GIT_TAG=v3.5.0     # lunasvg
-cmake -S . -B build -DNOVASVG_BENCH_THORVG_GIT_TAG=v1.0.1      # thorvg
-cmake -S . -B build -DNOVASVG_BENCH_RESVG_GIT_TAG=v0.45.1      # resvg (rust-version bound, see above)
+cmake -S . -B build -DNOVA_BENCH_RUNS=10 -DNOVA_BENCH_WIDTH=512 -DNOVA_BENCH_HEIGHT=512
+# build different checkouts (novasvg: NOVA_BENCH_GIT_TAG, or FETCHCONTENT_SOURCE_DIR_NOVA_SRC for a local tree):
+cmake -S . -B build -DNOVA_BENCH_LUNASVG_GIT_TAG=v3.5.0     # lunasvg
+cmake -S . -B build -DNOVA_BENCH_THORVG_GIT_TAG=v1.0.1      # thorvg
+cmake -S . -B build -DNOVA_BENCH_RESVG_GIT_TAG=v0.45.1      # resvg (rust-version bound, see above)
 # relocate everything the benchmark writes (defaults to outputs/ next to this README):
-cmake -S . -B build -DNOVASVG_BENCH_OUTPUT_DIR=/tmp/novasvg-bench-outputs
+cmake -S . -B build -DNOVA_BENCH_OUTPUT_DIR=/tmp/novasvg-bench-outputs
 ```
 
 ## ponytail-scoped (not done here, upgrade path if it matters later)
@@ -238,7 +238,7 @@ cmake -S . -B build -DNOVASVG_BENCH_OUTPUT_DIR=/tmp/novasvg-bench-outputs
 - **resvg's rust-version ceiling**: pinned at v0.45.1 because this
   environment's `cargo`/`rustc` (via `apt install cargo rustc`) is 1.75;
   resvg's HEAD needs 1.85+. A newer toolchain (rustup, or a newer distro
-  package) would let `NOVASVG_BENCH_RESVG_GIT_TAG` track HEAD instead.
+  package) would let `NOVA_BENCH_RESVG_GIT_TAG` track HEAD instead.
 - thorvg is built with only the SVG loader and software (sw) engine to
   keep the build fast — no font/text loaders (`-Dloaders=svg` excludes
   `ttf`), no GL/WG engines. Doesn't change results here since thorvg

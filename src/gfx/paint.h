@@ -5,8 +5,8 @@
 
 #include <ctype.h>
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 static inline float hsl_component(float h, float s, float l, float n)
 {
@@ -77,12 +77,12 @@ static void* paint_create(paint_type_t type, size_t size)
 static gradient_paint_t* gradient_create(gradient_type_t type, spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
 {
     gradient_paint_t* gradient = static_cast<gradient_paint_t*>(paint_create(
-        NOVASVG_PAINT_TYPE_GRADIENT,
+        NOVA_PAINT_TYPE_GRADIENT,
         sizeof(gradient_paint_t) + nstops * sizeof(gradient_stop_t)
     ));
     gradient->type = type;
     gradient->spread = spread;
-    gradient->matrix = matrix ? *matrix : NOVASVG_IDENTITY_MATRIX;
+    gradient->matrix = matrix ? *matrix : NOVA_IDENTITY_MATRIX;
     gradient->stops = (gradient_stop_t*)(gradient + 1);
     gradient->nstops = nstops;
 
@@ -100,5 +100,5 @@ static gradient_paint_t* gradient_create(gradient_type_t type, spread_method_t s
     return gradient;
 }
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

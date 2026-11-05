@@ -1,12 +1,16 @@
 #include "doctest.h"
 #include <novasvg/novasvg.h>
 
+#include <stb/logging.hpp>
+
 #include <cstdlib>
+#include <vector>
 #include <string>
 
-// document::render_to_pdf(): the same SVG as a vector page and as one bitmap. NOVASVG_PDF_DIR=dir also writes
+// document::render_to_pdf(): the same SVG as a vector page and as one bitmap. NOVA_PDF_DIR=dir also writes
 // vector.pdf and raster.pdf there, to open in a viewer.
-using namespace novasvg;
+using namespace nova::svg;
+using namespace nova::vg;
 
 namespace {
 
@@ -56,7 +60,7 @@ TEST_CASE("render_to_pdf: vector and raster pages")
     CHECK(r.find("/ShadingType") == std::string::npos);
     CHECK(r.find("/Subtype /Image") != std::string::npos);
 
-    if(const char* dir = std::getenv("NOVASVG_PDF_DIR")) {
+    if(const char* dir = std::getenv("NOVA_PDF_DIR")) {
         CHECK(doc->save_pdf(std::string(dir) + "/vector.pdf", document::pdf_mode::vector));
         CHECK(doc->save_pdf(std::string(dir) + "/raster.pdf", document::pdf_mode::raster));
     }
@@ -67,4 +71,37 @@ TEST_CASE("render_to_pdf: no size, no page")
     auto doc = document::load_data("<svg xmlns='http://www.w3.org/2000/svg'/>");
     REQUIRE(doc);
     CHECK(doc->render_to_pdf().empty());
+}
+
+// novasvg logs through stb::logging ("novasvg", "novasvg.svg", "novasvg.pdf"): a handler on "novasvg" sees them.
+TEST_CASE("logging: failures and PDF limits reach a stb::logging handler")
+{
+    std::vector<std::string> seen;
+    auto& lg = stb::logging::get_logger("novasvg");
+    const auto old_level = lg.get_level();
+    lg.set_level(stb::logging::level::debug);
+    auto& h = lg.add_handler(stb::logging::callback_handler([&](const stb::logging::record& r) {
+        seen.push_back(std::string(r.name) + ": " + std::string(r.message));
+    }));
+
+    CHECK_FALSE(document::load_file("/nonexistent/none.svg"));
+    CHECK_FALSE(document::load_data("<svg"));
+    auto doc = document::load_data("<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><defs>"
+        "<linearGradient id='g' spreadMethod='reflect'><stop offset='0' stop-color='red'/><stop offset='1' stop-color='blue'/></linearGradient>"
+        "</defs><rect width='10' height='10' fill='url(#g)'/></svg>");
+    REQUIRE(doc);
+    CHECK_FALSE(doc->render_to_pdf().empty());
+
+    lg.remove_handler(h);
+    lg.set_level(old_level);
+
+    auto has = [&](const char* part) {
+        for(const auto& line : seen)
+            if(line.find(part) != std::string::npos)
+                return true;
+        return false;
+    };
+    CHECK(has("novasvg.svg: cannot open"));
+    CHECK(has("novasvg.svg: cannot parse"));
+    CHECK(has("novasvg.pdf: gradient spreadMethod"));
 }

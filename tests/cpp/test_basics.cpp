@@ -18,13 +18,13 @@ std::filesystem::path data_path(const std::string& filename)
 } // namespace
 
 TEST_CASE("Version reporting") {
-    CHECK(novasvg::version() == NOVASVG_VERSION);
-    CHECK(novasvg::version_string() == NOVASVG_VERSION_STRING);
+    CHECK(nova::svg::version() == NOVA_VERSION);
+    CHECK(nova::svg::version_string() == NOVA_VERSION_STRING);
 }
 
 TEST_CASE("Load SVG data from file and render") {
     auto svg_file = data_path("rect.svg");
-    auto dom = novasvg::document::load_file(svg_file.string());
+    auto dom = nova::svg::document::load_file(svg_file.string());
     REQUIRE(dom != nullptr);
     CHECK(dom->width() == doctest::Approx(64.0f));
     CHECK(dom->height() == doctest::Approx(64.0f));
@@ -37,6 +37,6 @@ TEST_CASE("Load SVG data from file and render") {
 }
 
 TEST_CASE("Missing SVG file returns null document") {
-    auto dom = novasvg::document::load_file((project_root() / "data" / "missing.svg").string());
+    auto dom = nova::svg::document::load_file((project_root() / "data" / "missing.svg").string());
     CHECK(dom == nullptr);
 }

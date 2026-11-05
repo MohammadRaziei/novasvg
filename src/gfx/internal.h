@@ -1,20 +1,20 @@
 #pragma once
 
-#ifndef NOVASVG_PRIVATE_H
-#define NOVASVG_PRIVATE_H
+#ifndef NOVA_PRIVATE_H
+#define NOVA_PRIVATE_H
 
 #include "novasvg/gfx/render.h"
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 #if defined(_WIN32)
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova
 #include <windows.h>
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 typedef LONG ref_count_t;
 
@@ -25,11 +25,11 @@ typedef LONG ref_count_t;
 
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_ATOMICS__)
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova
 #include <stdatomic.h>
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 typedef atomic_int ref_count_t;
 
@@ -71,9 +71,9 @@ struct path {
 };
 
 typedef enum {
-    NOVASVG_PAINT_TYPE_COLOR,
-    NOVASVG_PAINT_TYPE_GRADIENT,
-    NOVASVG_PAINT_TYPE_TEXTURE
+    NOVA_PAINT_TYPE_COLOR,
+    NOVA_PAINT_TYPE_GRADIENT,
+    NOVA_PAINT_TYPE_TEXTURE
 } paint_type_t;
 
 struct paint {
@@ -87,8 +87,8 @@ typedef struct {
 } solid_paint_t;
 
 typedef enum {
-    NOVASVG_GRADIENT_TYPE_LINEAR,
-    NOVASVG_GRADIENT_TYPE_RADIAL
+    NOVA_GRADIENT_TYPE_LINEAR,
+    NOVA_GRADIENT_TYPE_RADIAL
 } gradient_type_t;
 
 typedef struct {
@@ -190,7 +190,7 @@ void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* m
 void blend(canvas_t* canvas, const span_buffer_t* span_buffer);
 void memfill32(unsigned int* dest, int length, unsigned int value);
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova
 
-#endif // NOVASVG_PRIVATE_H
+#endif // NOVA_PRIVATE_H

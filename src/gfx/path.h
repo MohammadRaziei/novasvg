@@ -5,8 +5,8 @@
 
 #include <assert.h>
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 typedef struct {
     float x1; float y1;
@@ -35,5 +35,5 @@ typedef struct {
     float y2;
 } extents_calculator_t;
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

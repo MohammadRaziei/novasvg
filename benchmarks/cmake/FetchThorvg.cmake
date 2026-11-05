@@ -10,9 +10,9 @@
 
 include(FetchContent)
 
-set(NOVASVG_BENCH_THORVG_GIT_URL "https://github.com/thorvg/thorvg.git" CACHE STRING
+set(NOVA_BENCH_THORVG_GIT_URL "https://github.com/thorvg/thorvg.git" CACHE STRING
     "thorvg source repo the native bench is built from")
-set(NOVASVG_BENCH_THORVG_GIT_TAG "main" CACHE STRING
+set(NOVA_BENCH_THORVG_GIT_TAG "main" CACHE STRING
     "thorvg git ref (branch/tag/commit)")
 
 find_program(MESON_EXECUTABLE meson)
@@ -25,8 +25,8 @@ endif()
 
 FetchContent_Declare(
     thorvg_src
-    GIT_REPOSITORY "${NOVASVG_BENCH_THORVG_GIT_URL}"
-    GIT_TAG "${NOVASVG_BENCH_THORVG_GIT_TAG}"
+    GIT_REPOSITORY "${NOVA_BENCH_THORVG_GIT_URL}"
+    GIT_TAG "${NOVA_BENCH_THORVG_GIT_TAG}"
     GIT_SHALLOW TRUE
 )
 FetchContent_Populate(thorvg_src)

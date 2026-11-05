@@ -233,7 +233,7 @@ see `data/mermaid/COVERAGE.md`) is `mmdc` (real Chrome, mermaid.js).
   - **Two false starts on *how* to bring fontconfig in, both worth
     recording:**
     1. First version linked fontconfig at build time via CMake
-       (`find_package(Fontconfig)` + a `NOVASVG_HAVE_FONTCONFIG` compile
+       (`find_package(Fontconfig)` + a `NOVA_HAVE_FONTCONFIG` compile
        define set only by this repo's own CMakeLists.txt). Real bug for a
        *header-only* library: anyone who drops these headers into their
        own project without going through this repo's CMakeLists.txt at

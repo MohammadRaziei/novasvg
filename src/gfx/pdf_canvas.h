@@ -13,7 +13,7 @@
 #include <map>
 #include <string>
 
-namespace novasvg {
+namespace nova::vg {
 
 class pdf_canvas final : public canvas {
 public:
@@ -117,4 +117,4 @@ private:
     std::vector<std::pair<std::string, int>> m_xobjects;  // resource name -> object
 };
 
-} // namespace novasvg
+} // namespace nova::vg

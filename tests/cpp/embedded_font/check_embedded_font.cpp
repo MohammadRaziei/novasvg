@@ -1,4 +1,4 @@
-// Built with NOVASVG_DISABLE_LOAD_SYSTEM_FONTS and no font registered: the machine has no fonts at all
+// Built with NOVA_DISABLE_LOAD_SYSTEM_FONTS and no font registered: the machine has no fonts at all
 // as far as novasvg can tell, which is the situation the embedded fallback font exists for.
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../doctest.h"
@@ -9,14 +9,14 @@
 
 #include <string>
 
-#ifndef NOVASVG_DISABLE_LOAD_SYSTEM_FONTS
-#error "this test must be built with NOVASVG_DISABLE_LOAD_SYSTEM_FONTS"
+#ifndef NOVA_DISABLE_LOAD_SYSTEM_FONTS
+#error "this test must be built with NOVA_DISABLE_LOAD_SYSTEM_FONTS"
 #endif
 
 namespace {
 size_t inked_pixels(const std::string& svg)
 {
-    auto dom = novasvg::document::load_data(svg);
+    auto dom = nova::svg::document::load_data(svg);
     REQUIRE(dom != nullptr);
     auto image = dom->render_to_image();
     size_t inked = 0;
@@ -44,8 +44,8 @@ TEST_CASE("text is drawn although the machine has no fonts")
 
 TEST_CASE("the embedded font lays text out exactly like the full DejaVu Sans")
 {
-    REQUIRE(novasvg::addFontFaceFromFile("Full Probe", false, false, NOVASVG_TEST_FONT_PATH));
-    auto* cache = novasvg::fontFaceCache();
+    REQUIRE(nova::vg::addFontFaceFromFile("Full Probe", false, false, NOVA_TEST_FONT_PATH));
+    auto* cache = nova::vg::fontFaceCache();
     auto full = cache->getFontFace("Full Probe", false, false);
     auto embedded = cache->getFontFace("sans-serif", false, false);
     REQUIRE(!full.is_null());
@@ -64,7 +64,7 @@ TEST_CASE("the embedded font lays text out exactly like the full DejaVu Sans")
         for(float size : {10.0f, 16.0f, 31.0f}) {
             CAPTURE(index);
             CAPTURE(size);
-            CHECK(novasvg::Font(embedded, size).measureText(text) == novasvg::Font(full, size).measureText(text));
+            CHECK(nova::vg::Font(embedded, size).measureText(text) == nova::vg::Font(full, size).measureText(text));
         }
     }
 }
@@ -73,7 +73,7 @@ namespace {
 // The directory the regular test font lives in; the bold/oblique faces sit beside it.
 std::string font_dir()
 {
-    std::string path = NOVASVG_TEST_FONT_PATH;
+    std::string path = NOVA_TEST_FONT_PATH;
     return path.substr(0, path.find_last_of("/\\") + 1);
 }
 } // namespace
@@ -86,7 +86,7 @@ TEST_CASE("bold and italic requests get the bold / oblique embedded faces, laid 
         {"DejaVuSans-Oblique.ttf", false, true},
         {"DejaVuSans-BoldOblique.ttf", true, true},
     };
-    auto* cache = novasvg::fontFaceCache();
+    auto* cache = nova::vg::fontFaceCache();
     const auto regular = cache->getFontFace("sans-serif", false, false);
     REQUIRE(!regular.is_null());
     const std::u32string samples[] = {U"Hello World", U"AV To LT Ty Yo WA", U"fi fl ffi ffl office", U"The quick brown fox jumps over the lazy dog"};
@@ -94,16 +94,16 @@ TEST_CASE("bold and italic requests get the bold / oblique embedded faces, laid 
     for(const auto& spec : faces) {
         CAPTURE(spec.file);
         const std::string family = std::string("Full ") + spec.file;
-        REQUIRE(novasvg::addFontFaceFromFile(family.c_str(), spec.bold, spec.italic, (font_dir() + spec.file).c_str()));
+        REQUIRE(nova::vg::addFontFaceFromFile(family.c_str(), spec.bold, spec.italic, (font_dir() + spec.file).c_str()));
         const auto full = cache->getFontFace(family, spec.bold, spec.italic);
         const auto embedded = cache->getFontFace("sans-serif", spec.bold, spec.italic);
         REQUIRE(!full.is_null());
         REQUIRE(!embedded.is_null());
         CHECK(embedded.get() != regular.get()); // not just the regular face under another request
         for(const auto& text : samples)
-            CHECK(novasvg::Font(embedded, 16.f).measureText(text) == novasvg::Font(full, 16.f).measureText(text));
+            CHECK(nova::vg::Font(embedded, 16.f).measureText(text) == nova::vg::Font(full, 16.f).measureText(text));
         // and it is a different design from the regular face (bold is wider, oblique has other advances)
-        CHECK(novasvg::Font(embedded, 16.f).measureText(samples[3]) != novasvg::Font(regular, 16.f).measureText(samples[3]));
+        CHECK(nova::vg::Font(embedded, 16.f).measureText(samples[3]) != nova::vg::Font(regular, 16.f).measureText(samples[3]));
     }
 }
 

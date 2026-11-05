@@ -1,11 +1,11 @@
-#ifndef NOVASVG_SVGPARSERUTILS_H
-#define NOVASVG_SVGPARSERUTILS_H
+#ifndef NOVA_SVGPARSERUTILS_H
+#define NOVA_SVGPARSERUTILS_H
 
 #include <cmath>
 #include <string_view>
 #include <limits>
 
-namespace novasvg {
+namespace nova::vg {
 
 constexpr bool IS_NUM(int cc) { return cc >= '0' && cc <= '9'; }
 constexpr bool IS_ALPHA(int cc) { return (cc >= 'a' && cc <= 'z') || (cc >= 'A' && cc <= 'Z'); }
@@ -207,6 +207,6 @@ inline bool parseNumber(std::string_view& input, T& number)
     return number >= -maxValue && number <= maxValue;
 }
 
-} // namespace novasvg
+} // namespace nova::vg
 
-#endif // NOVASVG_SVGPARSERUTILS_H
+#endif // NOVA_SVGPARSERUTILS_H

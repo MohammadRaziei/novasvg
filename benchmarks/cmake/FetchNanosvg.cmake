@@ -7,15 +7,15 @@
 
 include(FetchContent)
 
-set(NOVASVG_BENCH_NANOSVG_GIT_URL "https://github.com/memononen/nanosvg.git" CACHE STRING
+set(NOVA_BENCH_NANOSVG_GIT_URL "https://github.com/memononen/nanosvg.git" CACHE STRING
     "nanosvg source repo the native bench compiles against")
-set(NOVASVG_BENCH_NANOSVG_GIT_TAG "master" CACHE STRING
+set(NOVA_BENCH_NANOSVG_GIT_TAG "master" CACHE STRING
     "nanosvg git ref (branch/tag/commit)")
 
 FetchContent_Declare(
     nanosvg_src
-    GIT_REPOSITORY "${NOVASVG_BENCH_NANOSVG_GIT_URL}"
-    GIT_TAG "${NOVASVG_BENCH_NANOSVG_GIT_TAG}"
+    GIT_REPOSITORY "${NOVA_BENCH_NANOSVG_GIT_URL}"
+    GIT_TAG "${NOVA_BENCH_NANOSVG_GIT_TAG}"
     GIT_SHALLOW TRUE
 )
 FetchContent_Populate(nanosvg_src)
@@ -24,9 +24,9 @@ FetchContent_Populate(nanosvg_src)
 # nanosvg has no version macro and no release tags: the commit is its only real version, so record that.
 execute_process(
     COMMAND git -C "${nanosvg_src_SOURCE_DIR}" rev-parse --short=7 HEAD
-    OUTPUT_VARIABLE NOVASVG_BENCH_NANOSVG_COMMIT
+    OUTPUT_VARIABLE NOVA_BENCH_NANOSVG_COMMIT
     OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_QUIET)
-if(NOT NOVASVG_BENCH_NANOSVG_COMMIT)
-    set(NOVASVG_BENCH_NANOSVG_COMMIT "${NOVASVG_BENCH_NANOSVG_GIT_TAG}")  # not a git checkout: fall back to the ref asked for
+if(NOT NOVA_BENCH_NANOSVG_COMMIT)
+    set(NOVA_BENCH_NANOSVG_COMMIT "${NOVA_BENCH_NANOSVG_GIT_TAG}")  # not a git checkout: fall back to the ref asked for
 endif()

@@ -1,12 +1,17 @@
 #include "gfx/pdf_canvas.h"
 #include "gfx/font_face.h"
+#include <stb/logging.hpp>
 
 #include <stb/zlib.hpp>
 
+#include <atomic>
 #include <cmath>
 #include <cstdio>
 
-namespace novasvg {
+namespace nova::vg {
+namespace {
+stb::logging::logger& pdf_log() { static auto& l = stb::logging::get_logger("novasvg.pdf"); return l; }
+}  // namespace
 
 namespace {
 
@@ -137,11 +142,31 @@ void pdf_canvas::set_color(float r, float g, float b, float a)
     p.a = a;
 }
 
+namespace {
+// Once per process: a document with many gradients would otherwise repeat the same message.
+void warn_gradient_limits(SpreadMethod spread, const GradientStops& stops)
+{
+    static std::atomic<bool> spread_said{false}, alpha_said{false};
+    if(spread != SpreadMethod::Pad && !spread_said.exchange(true))
+        pdf_log().warning("gradient spreadMethod reflect/repeat is written as pad in PDF output");
+    if(!alpha_said.load()) {
+        for(const auto& s : stops) {
+            if(s.color.a < 1.f) {
+                if(!alpha_said.exchange(true))
+                    pdf_log().warning("per-stop alpha of a gradient is ignored in PDF output");
+                break;
+            }
+        }
+    }
+}
+}  // namespace
+
 void pdf_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
 {
     paint& p = m_paints.back();
     p = paint();
     p.type = paint::kind::linear;
+    warn_gradient_limits(spread, stops);
     p.p[0] = x1; p.p[1] = y1; p.p[2] = x2; p.p[3] = y2;
     p.spread = spread;
     p.stops = stops;
@@ -153,6 +178,7 @@ void pdf_canvas::set_radial_gradient(float cx, float cy, float r, float fx, floa
     paint& p = m_paints.back();
     p = paint();
     p.type = paint::kind::radial;
+    warn_gradient_limits(spread, stops);
     p.p[0] = cx; p.p[1] = cy; p.p[2] = r; p.p[3] = fx; p.p[4] = fy;
     p.spread = spread;
     p.stops = stops;
@@ -297,16 +323,16 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const Font& fon
             return num(q.x) + " " + num(q.y);
         };
         switch(command) {
-        case NOVASVG_PATH_COMMAND_MOVE_TO:
+        case NOVA_PATH_COMMAND_MOVE_TO:
             s->self->m_content += pt(points[0]) + " m\n";
             break;
-        case NOVASVG_PATH_COMMAND_LINE_TO:
+        case NOVA_PATH_COMMAND_LINE_TO:
             s->self->m_content += pt(points[0]) + " l\n";
             break;
-        case NOVASVG_PATH_COMMAND_CUBIC_TO:
+        case NOVA_PATH_COMMAND_CUBIC_TO:
             s->self->m_content += pt(points[0]) + " " + pt(points[1]) + " " + pt(points[2]) + " c\n";
             break;
-        case NOVASVG_PATH_COMMAND_CLOSE:
+        case NOVA_PATH_COMMAND_CLOSE:
             s->self->m_content += "h\n";
             break;
         }
@@ -314,7 +340,7 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const Font& fon
 
     // Same layout as canvas_add_text(): ligatures, then kerning, then the glyph's outline.
     text_iterator_t it;
-    text_iterator_init(&it, text.data(), int(text.length()), NOVASVG_TEXT_ENCODING_UTF32);
+    text_iterator_init(&it, text.data(), int(text.length()), NOVA_TEXT_ENCODING_UTF32);
     float advance = 0.f;
     codepoint_t previous = 0;
     bool has_previous = false;
@@ -613,4 +639,4 @@ bool pdf_canvas::write_to_file(const char* filename) const
     return fclose(fp) == 0 && ok;
 }
 
-} // namespace novasvg
+} // namespace nova::vg

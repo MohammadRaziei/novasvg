@@ -9,14 +9,14 @@ PROJECT_ROOT = DOCS_DIR.parent.parent.parent
 IMAGES_DIR   = PROJECT_ROOT / 'docs' / 'images'
 
 # ── Version ───────────────────────────────────────────────────────────────────
-NOVASVG_H = PROJECT_ROOT / 'include' / 'novasvg' / 'novasvg.h'
+NOVA_H = PROJECT_ROOT / 'include' / 'novasvg' / 'novasvg.h'
 version = '0.0.0'
 
-if NOVASVG_H.exists():
-    text   = NOVASVG_H.read_text()
-    _major = re.search(r'#define\s+NOVASVG_VERSION_MAJOR\s+(\d+)', text)
-    _minor = re.search(r'#define\s+NOVASVG_VERSION_MINOR\s+(\d+)', text)
-    _patch = re.search(r'#define\s+NOVASVG_VERSION_PATCH\s+(\d+)', text)
+if NOVA_H.exists():
+    text   = NOVA_H.read_text()
+    _major = re.search(r'#define\s+NOVA_VERSION_MAJOR\s+(\d+)', text)
+    _minor = re.search(r'#define\s+NOVA_VERSION_MINOR\s+(\d+)', text)
+    _patch = re.search(r'#define\s+NOVA_VERSION_PATCH\s+(\d+)', text)
     major  = int(_major.group(1)) if _major else 0
     minor  = int(_minor.group(1)) if _minor else 0
     patch  = int(_patch.group(1)) if _patch else 0

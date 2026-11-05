@@ -1,5 +1,5 @@
-#ifndef NOVASVG_CANVAS_H
-#define NOVASVG_CANVAS_H
+#ifndef NOVA_CANVAS_H
+#define NOVA_CANVAS_H
 
 #include <cstdint>
 #include <cstring>
@@ -14,7 +14,7 @@
 
 // raster_canvas: novasvg's 2D drawing surface (paths, fills, strokes, gradients,
 // text, blending), plus the Path/Rect/Transform/Point primitives that go
-// with it. Self-contained -- pulls in exactly the gfx:: engine pieces
+// with it. Self-contained -- pulls in exactly the vg:: engine pieces
 // it needs plus Font (for fill_text/stroke_text) -- so it's usable without
 // the svg/parsing layer, e.g. to draw directly onto a Bitmap.
 #include "novasvg/gfx/color.h"
@@ -22,30 +22,29 @@
 #include "novasvg/gfx/bitmap.h"
 #include "novasvg/gfx/render.h"
 
-namespace novasvg {
-using namespace gfx; // render/ layer (novasvg::render), the former plutovg
+namespace nova::vg {
 
 enum class LineCap : uint8_t {
-    Butt = NOVASVG_LINE_CAP_BUTT,
-    Round = NOVASVG_LINE_CAP_ROUND,
-    Square = NOVASVG_LINE_CAP_SQUARE
+    Butt = NOVA_LINE_CAP_BUTT,
+    Round = NOVA_LINE_CAP_ROUND,
+    Square = NOVA_LINE_CAP_SQUARE
 };
 
 enum class LineJoin : uint8_t {
-    Miter = NOVASVG_LINE_JOIN_MITER,
-    Round = NOVASVG_LINE_JOIN_ROUND,
-    Bevel = NOVASVG_LINE_JOIN_BEVEL
+    Miter = NOVA_LINE_JOIN_MITER,
+    Round = NOVA_LINE_JOIN_ROUND,
+    Bevel = NOVA_LINE_JOIN_BEVEL
 };
 
 enum class FillRule : uint8_t {
-    NonZero = NOVASVG_FILL_RULE_NON_ZERO,
-    EvenOdd = NOVASVG_FILL_RULE_EVEN_ODD
+    NonZero = NOVA_FILL_RULE_NON_ZERO,
+    EvenOdd = NOVA_FILL_RULE_EVEN_ODD
 };
 
 enum class SpreadMethod : uint8_t {
-    Pad = NOVASVG_SPREAD_METHOD_PAD,
-    Reflect = NOVASVG_SPREAD_METHOD_REFLECT,
-    Repeat = NOVASVG_SPREAD_METHOD_REPEAT
+    Pad = NOVA_SPREAD_METHOD_PAD,
+    Reflect = NOVA_SPREAD_METHOD_REFLECT,
+    Repeat = NOVA_SPREAD_METHOD_REPEAT
 };
 
 // `Color` now lives in color.h (a single merged class covering both
@@ -298,10 +297,10 @@ private:
 };
 
 enum class PathCommand {
-    MoveTo = NOVASVG_PATH_COMMAND_MOVE_TO,
-    LineTo = NOVASVG_PATH_COMMAND_LINE_TO,
-    CubicTo = NOVASVG_PATH_COMMAND_CUBIC_TO,
-    Close = NOVASVG_PATH_COMMAND_CLOSE
+    MoveTo = NOVA_PATH_COMMAND_MOVE_TO,
+    LineTo = NOVA_PATH_COMMAND_LINE_TO,
+    CubicTo = NOVA_PATH_COMMAND_CUBIC_TO,
+    Close = NOVA_PATH_COMMAND_CLOSE
 };
 
 class Path {
@@ -371,27 +370,26 @@ private:
     int m_index;
 };
 
-} // namespace novasvg
+} // namespace nova::vg
 
-namespace novasvg {
-using namespace gfx;
+namespace nova::vg {
 
 enum class TextureType {
-    Plain = NOVASVG_TEXTURE_TYPE_PLAIN,
-    Tiled = NOVASVG_TEXTURE_TYPE_TILED
+    Plain = NOVA_TEXTURE_TYPE_PLAIN,
+    Tiled = NOVA_TEXTURE_TYPE_TILED
 };
 
 enum class BlendMode {
-    Src = NOVASVG_OPERATOR_SRC,
-    Src_Over = NOVASVG_OPERATOR_SRC_OVER,
-    Dst_In = NOVASVG_OPERATOR_DST_IN,
-    Dst_Out = NOVASVG_OPERATOR_DST_OUT,
-    Multiply = NOVASVG_OPERATOR_MULTIPLY,
-    Screen = NOVASVG_OPERATOR_SCREEN,
-    Darken = NOVASVG_OPERATOR_DARKEN,
-    Lighten = NOVASVG_OPERATOR_LIGHTEN,
-    Difference = NOVASVG_OPERATOR_DIFFERENCE,
-    Exclusion = NOVASVG_OPERATOR_EXCLUSION
+    Src = NOVA_OPERATOR_SRC,
+    Src_Over = NOVA_OPERATOR_SRC_OVER,
+    Dst_In = NOVA_OPERATOR_DST_IN,
+    Dst_Out = NOVA_OPERATOR_DST_OUT,
+    Multiply = NOVA_OPERATOR_MULTIPLY,
+    Screen = NOVA_OPERATOR_SCREEN,
+    Darken = NOVA_OPERATOR_DARKEN,
+    Lighten = NOVA_OPERATOR_LIGHTEN,
+    Difference = NOVA_OPERATOR_DIFFERENCE,
+    Exclusion = NOVA_OPERATOR_EXCLUSION
 };
 
 using DashArray = std::vector<float>;
@@ -558,23 +556,22 @@ private:
 
 // ---------------------------------------------------------------
 // Implementation (formerly graphics.hpp, merged in -- everything
-// here is NOVASVG_INLINE, so there is no more reason to keep
+// here is NOVA_INLINE, so there is no more reason to keep
 // declarations and definitions in separate files).
 // ---------------------------------------------------------------
-using namespace gfx; // render/ layer (novasvg::render), the former plutovg
 
 // Color::Black/White/Transparent are defined once, in color.h.
 
-NOVASVG_INLINE const Rect Rect::Empty(0, 0, 0, 0);
-NOVASVG_INLINE const Rect Rect::Invalid(0, 0, -1, -1);
-NOVASVG_INLINE const Rect Rect::Infinite(-FLT_MAX / 2.f, -FLT_MAX / 2.f, FLT_MAX, FLT_MAX);
+NOVA_INLINE const Rect Rect::Empty(0, 0, 0, 0);
+NOVA_INLINE const Rect Rect::Invalid(0, 0, -1, -1);
+NOVA_INLINE const Rect Rect::Infinite(-FLT_MAX / 2.f, -FLT_MAX / 2.f, FLT_MAX, FLT_MAX);
 
 // Rect::Rect(const Box&) is defined in novasvg.h, right after Box itself --
 // Box belongs to the svg/document layer, not here, so this file (which
 // stays usable without that layer) only declares the conversion, it
 // doesn't define it.
 
-NOVASVG_INLINE const Transform Transform::Identity(1, 0, 0, 1, 0, 0);
+NOVA_INLINE const Transform Transform::Identity(1, 0, 0, 1, 0, 0);
 
 
 
@@ -775,6 +772,6 @@ static int gaussianRadiusForSigma(float sigma)
 
 
 
-} // namespace novasvg
+} // namespace nova::vg
 
-#endif // NOVASVG_CANVAS_H
+#endif // NOVA_CANVAS_H

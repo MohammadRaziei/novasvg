@@ -7,7 +7,7 @@
 // style is decoded on first use. DejaVu fonts are free software: see data/fonts/LICENSE-DejaVu.txt.
 #pragma once
 
-namespace novasvg {
+namespace nova::vg {
 namespace detail {
 
 // DejaVuSans.ttf: 40460 bytes of TrueType, 24668 characters of base64
@@ -930,4 +930,4 @@ inline constexpr const char* const kEmbeddedFontBoldItalicZlibBase64[] = {
 };
 
 } // namespace detail
-} // namespace novasvg
+} // namespace nova::vg

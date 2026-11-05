@@ -12,6 +12,7 @@
 
 #include <novasvg/novasvg.h>
 #include "CLI11.hpp"
+#include <stb/logging.hpp>
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -58,6 +59,22 @@ std::string human_readable_size(std::uintmax_t bytes) {
     return oss.str();
 }
 
+namespace {
+stb::logging::logger& cli_log() { static auto& l = stb::logging::get_logger("novasvg.cli"); return l; }
+
+// --log-level / --log-file: handlers are the application's business, so they are attached here, never in the library.
+void setup_logging(const std::string& level_text, const std::string& file) {
+    auto& lg = stb::logging::get_logger("novasvg");
+    lg.set_propagate(false);
+    auto level = stb::logging::level_from_string(level_text).value_or(stb::logging::level::warning);
+    lg.set_level(level);
+    auto& h = lg.add_handler(stb::logging::stream_handler(stderr));
+    h.set_formatter(stb::logging::formatter("%(levelname)s: %(message)s"));
+    if (!file.empty())
+        lg.add_handler(stb::logging::file_handler(file));
+}
+}  // namespace
+
 // ============================================================
 // Command Implementations
 // ============================================================
@@ -72,9 +89,9 @@ int cmd_convert(const std::string& input,
                 const std::string& css_file) {
     
     // Load svg
-    std::unique_ptr<novasvg::document> doc = novasvg::document::load_file(input);
+    std::unique_ptr<nova::svg::document> doc = nova::svg::document::load_file(input);
     if (!doc) {
-        std::cerr << "Error: Failed to load SVG file: " << input << "\n";
+        cli_log().error("Failed to load SVG file: %s", std::string(input).c_str());
         return 1;
     }
 
@@ -83,7 +100,7 @@ int cmd_convert(const std::string& input,
     if (!css_file.empty()) {
         std::ifstream f(css_file);
         if (!f) {
-            std::cerr << "Error: Failed to open CSS file: " << css_file << "\n";
+            cli_log().error("Failed to open CSS file: %s", std::string(css_file).c_str());
             return 1;
         }
         final_css.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
@@ -125,17 +142,17 @@ int cmd_convert(const std::string& input,
     // Render. An empty bg_color_str means -b/--background-color wasn't
     // given (see its default in the CLI11 option below) -- that's this
     // command's own "use transparent" convention, not something
-    // novasvg::Color should have an opinion about, so it's resolved
+    // nova::vg::Color should have an opinion about, so it's resolved
     // here rather than by asking Color to treat "" as a color.
-    auto bg_color = bg_color_str.empty() ? novasvg::Color::Transparent : novasvg::Color(bg_color_str);
+    auto bg_color = bg_color_str.empty() ? nova::vg::Color::Transparent : nova::vg::Color(bg_color_str);
     auto image = doc->render_to_image(width, height, bg_color);
     if (image.empty()) {
-        std::cerr << "Error: Failed to render SVG\n";
+        cli_log().error("Failed to render SVG");
         return 1;
     }
     
     if (!write_image(image, output_path.string())) {
-        std::cerr << "Error: Failed to save PNG file: " << output_path.string() << "\n";
+        cli_log().error("Failed to save PNG file: %s", output_path.string().c_str());
         return 1;
     }
     
@@ -144,7 +161,7 @@ int cmd_convert(const std::string& input,
 }
 
 // Helper function to count all elements recursively
-size_t count_all_elements(const novasvg::element& el) {
+size_t count_all_elements(const nova::svg::element& el) {
     size_t count = 1; 
     auto children = el.children();
     for (const auto& child : children) {
@@ -156,9 +173,9 @@ size_t count_all_elements(const novasvg::element& el) {
 }
 
 int cmd_info(const std::string& input, bool json_output = false) {
-    std::unique_ptr<novasvg::document> doc = novasvg::document::load_file(input);
+    std::unique_ptr<nova::svg::document> doc = nova::svg::document::load_file(input);
     if (!doc) {
-        std::cerr << "Error: Failed to load SVG file: " << input << "\n";
+        cli_log().error("Failed to load SVG file: %s", std::string(input).c_str());
         return 1;
     }
     if (json_output) {
@@ -216,9 +233,9 @@ int cmd_info(const std::string& input, bool json_output = false) {
 }
 
 int cmd_query(const std::string& selector, const std::string& input, bool json_output = false) {
-    std::unique_ptr<novasvg::document> doc = novasvg::document::load_file(input);
+    std::unique_ptr<nova::svg::document> doc = nova::svg::document::load_file(input);
     if (!doc) {
-        std::cerr << "Error: Failed to load SVG file: " << input << "\n";
+        cli_log().error("Failed to load SVG file: %s", std::string(input).c_str());
         return 1;
     }
     auto elements = doc->query_selector_all(selector);
@@ -297,7 +314,7 @@ int cmd_query(const std::string& selector, const std::string& input, bool json_o
 
 int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
     if (!fs::exists(input_dir) || !fs::is_directory(input_dir)) {
-        std::cerr << "Error: Input directory does not exist: " << input_dir << "\n";
+        cli_log().error("Input directory does not exist: %s", std::string(input_dir).c_str());
         return 1;
     }
     
@@ -317,13 +334,13 @@ int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
         std::cout << "Processing: " << path.filename() << " -> " 
                   << fs::path(output_file).filename() << "\n";
         
-        std::unique_ptr<novasvg::document> doc = novasvg::document::load_file(input_file);
-        if (!doc) { std::cerr << "  Failed to load\n"; failed++; continue; }
+        std::unique_ptr<nova::svg::document> doc = nova::svg::document::load_file(input_file);
+        if (!doc) { cli_log().error("Failed to load"); failed++; continue; }
         
         auto image = doc->render_to_image();
-        if (image.empty()) { std::cerr << "  Failed to render\n"; failed++; continue; }
+        if (image.empty()) { cli_log().error("Failed to render"); failed++; continue; }
         
-        if (!write_image(image, output_file)) { std::cerr << "  Failed to save\n"; failed++; continue; }
+        if (!write_image(image, output_file)) { cli_log().error("Failed to save"); failed++; continue; }
         
         success++;
     }
@@ -341,11 +358,15 @@ int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
 // ============================================================
 
 int main(int argc, char** argv) {
-    const std::string version_str = novasvg::version_string();
+    const std::string version_str = nova::svg::version_string();
 
     CLI::App app{"novasvg Command Line Interface v" + version_str + " - High-performance SVG rendering toolkit."};
     app.name("novasvg");
     app.set_version_flag("-v,--version", version_str, "Show version information");
+    std::string log_level = "warning", log_file;
+    app.add_option("--log-level", log_level, "Log level: debug, info, warning, error (default: warning)")
+        ->check(CLI::IsMember({"debug", "info", "warning", "error", "critical"}, CLI::ignore_case));
+    app.add_option("--log-file", log_file, "Also append log records to this file");
 
     // --------------------------------------------------------
     // Convert -- the default action. Its options live directly on the
@@ -472,10 +493,11 @@ int main(int argc, char** argv) {
             return 0;
         }
         app.parse(argc, argv);
+        setup_logging(log_level, log_file);
     } catch (const CLI::ParseError &e) {
         return app.exit(e);
     } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
+        cli_log().error("%s", e.what());
         return 1;
     }
 

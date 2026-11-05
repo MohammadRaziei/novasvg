@@ -14,7 +14,7 @@ using Pixel = std::array<int, 4>;
 
 Pixel centre(const std::string& svg)
 {
-    auto dom = novasvg::document::load_data(svg);
+    auto dom = nova::svg::document::load_data(svg);
     REQUIRE(dom != nullptr);
     auto image = dom->render_to_image(40, 40);
     const uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
@@ -116,7 +116,7 @@ TEST_CASE("var(): a <use> copy gets the value its original computed")
 
 TEST_CASE("var(): a stylesheet applied after loading changes what var() gives")
 {
-    auto dom = novasvg::document::load_data(svg("--c:red", rect + "fill=\"var(--c)\"/>"));
+    auto dom = nova::svg::document::load_data(svg("--c:red", rect + "fill=\"var(--c)\"/>"));
     REQUIRE(dom != nullptr);
     dom->apply_style_sheet(":root{--c:blue !important}");
     auto image = dom->render_to_image(40, 40);

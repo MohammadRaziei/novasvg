@@ -1,7 +1,7 @@
 #include "matrix.h"
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 static int parse_matrix_parameters(const char** begin, const char* end, float values[6], int required, int optional);
 
@@ -209,7 +209,7 @@ bool matrix_parse(matrix_t* matrix, const char* data, int length)
                 return false;
             if(count == 3)
                 matrix_translate(matrix, values[1], values[2]);
-            matrix_rotate(matrix, NOVASVG_DEG2RAD(values[0]));
+            matrix_rotate(matrix, NOVA_DEG2RAD(values[0]));
             if(count == 3) {
                 matrix_translate(matrix, -values[1], -values[2]);
             }
@@ -217,12 +217,12 @@ bool matrix_parse(matrix_t* matrix, const char* data, int length)
             int count = parse_matrix_parameters(&it, end, values, 1, 0);
             if(count == 0)
                 return false;
-            matrix_shear(matrix, NOVASVG_DEG2RAD(values[0]), 0);
+            matrix_shear(matrix, NOVA_DEG2RAD(values[0]), 0);
         } else if(skip_string(&it, end, "skewY")) {
             int count = parse_matrix_parameters(&it, end, values, 1, 0);
             if(count == 0)
                 return false;
-            matrix_shear(matrix, 0, NOVASVG_DEG2RAD(values[0]));
+            matrix_shear(matrix, 0, NOVA_DEG2RAD(values[0]));
         } else {
             return false;
         }
@@ -233,5 +233,5 @@ bool matrix_parse(matrix_t* matrix, const char* data, int length)
     return !has_trailing_comma;
 }
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

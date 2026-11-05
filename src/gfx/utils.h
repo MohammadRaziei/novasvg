@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef NOVASVG_UTILS_H
-#define NOVASVG_UTILS_H
+#ifndef NOVA_UTILS_H
+#define NOVA_UTILS_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -14,13 +14,13 @@
 
 #include "novasvg/config.h"
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
-#define NOVASVG_IS_NUM(c) ((c) >= '0' && (c) <= '9')
-#define NOVASVG_IS_ALPHA(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z'))
-#define NOVASVG_IS_ALNUM(c) (NOVASVG_IS_ALPHA(c) || NOVASVG_IS_NUM(c))
-#define NOVASVG_IS_WS(c) ((c) == ' ' || (c) == '\t' || (c) == '\n' || (c) == '\r')
+#define NOVA_IS_NUM(c) ((c) >= '0' && (c) <= '9')
+#define NOVA_IS_ALPHA(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z'))
+#define NOVA_IS_ALNUM(c) (NOVA_IS_ALPHA(c) || NOVA_IS_NUM(c))
+#define NOVA_IS_WS(c) ((c) == ' ' || (c) == '\t' || (c) == '\n' || (c) == '\r')
 
 // min/max/clamp were plain macros here (novasvg_min/max/clamp) -- pure
 // numeric helpers with an exact STL equivalent, so they're gone in favor
@@ -43,9 +43,9 @@ namespace gfx {
     } while(0)
 
 #ifdef __cplusplus
-#define NOVASVG_ARRAY_CAST(array, value) static_cast<decltype((array).data)>(value)
+#define NOVA_ARRAY_CAST(array, value) static_cast<decltype((array).data)>(value)
 #else
-#define NOVASVG_ARRAY_CAST(array, value) (value)
+#define NOVA_ARRAY_CAST(array, value) (value)
 #endif
 
 #define novasvg_array_ensure(array, count) \
@@ -54,7 +54,7 @@ namespace gfx {
             int capacity = (array).size + (count); \
             int newcapacity = (array).capacity == 0 ? 8 : (array).capacity; \
             while(newcapacity < capacity) { newcapacity *= 2; } \
-            (array).data = NOVASVG_ARRAY_CAST(array, realloc((array).data, newcapacity * sizeof((array).data[0]))); \
+            (array).data = NOVA_ARRAY_CAST(array, realloc((array).data, newcapacity * sizeof((array).data[0]))); \
             (array).capacity = newcapacity; \
         } \
     } while(0)
@@ -101,7 +101,7 @@ bool skip_ws_or_comma(const char** begin, const char* end, bool* has_comma);
 // unit conversion (%, em, ...) if that ever matters in practice.
 void skip_css_unit(const char** begin, const char* end, float* number);
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova
 
-#endif // NOVASVG_UTILS_H
+#endif // NOVA_UTILS_H

@@ -1,7 +1,7 @@
 #include "blend.h"
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 uint32_t premultiply_color_with_opacity(const color_t* color, float opacity)
 {
@@ -52,10 +52,10 @@ uint32_t BYTE_MUL(uint32_t x, uint32_t a)
 
 int gradient_clamp(const gradient_data_t* gradient, int ipos)
 {
-    if(gradient->spread == NOVASVG_SPREAD_METHOD_REPEAT) {
+    if(gradient->spread == NOVA_SPREAD_METHOD_REPEAT) {
         ipos = ipos % COLOR_TABLE_SIZE;
         ipos = ipos < 0 ? COLOR_TABLE_SIZE + ipos : ipos;
-    } else if(gradient->spread == NOVASVG_SPREAD_METHOD_REFLECT) {
+    } else if(gradient->spread == NOVA_SPREAD_METHOD_REFLECT) {
         const int limit = COLOR_TABLE_SIZE * 2;
         ipos = ipos % limit;
         ipos = ipos < 0 ? limit + ipos : ipos;
@@ -861,8 +861,8 @@ void blend_color(canvas_t* canvas, const color_t* color, const span_buffer_t* sp
     uint32_t solid = premultiply_color_with_opacity(color, state->opacity);
     uint32_t alpha = novasvg_alpha(solid);
 
-    if(alpha == 255 && state->op == NOVASVG_OPERATOR_SRC_OVER) {
-        blend_solid(canvas->surface, NOVASVG_OPERATOR_SRC, solid, span_buffer);
+    if(alpha == 255 && state->op == NOVA_OPERATOR_SRC_OVER) {
+        blend_solid(canvas->surface, NOVA_OPERATOR_SRC, solid, span_buffer);
     } else {
         blend_solid(canvas->surface, state->op, solid, span_buffer);
     }
@@ -925,7 +925,7 @@ void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const sp
         data.colortable[pos] = last_color;
     }
 
-    if(gradient->type == NOVASVG_GRADIENT_TYPE_LINEAR) {
+    if(gradient->type == NOVA_GRADIENT_TYPE_LINEAR) {
         data.values.linear.x1 = gradient->values[0];
         data.values.linear.y1 = gradient->values[1];
         data.values.linear.x2 = gradient->values[2];
@@ -960,13 +960,13 @@ void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_
         return;
     const matrix_t* matrix = &data.matrix;
     if(matrix->a == 1 && matrix->b == 0 && matrix->c == 0 && matrix->d == 1) {
-        if(texture->type == NOVASVG_TEXTURE_TYPE_PLAIN) {
+        if(texture->type == NOVA_TEXTURE_TYPE_PLAIN) {
             blend_untransformed_argb(canvas->surface, state->op, &data, span_buffer);
         } else {
             blend_untransformed_tiled_argb(canvas->surface, state->op, &data, span_buffer);
         }
     } else {
-        if(texture->type == NOVASVG_TEXTURE_TYPE_PLAIN) {
+        if(texture->type == NOVA_TEXTURE_TYPE_PLAIN) {
             blend_transformed_argb(canvas->surface, state->op, &data, span_buffer);
         } else if(fabsf(matrix->b) > 1e-6f || fabsf(matrix->c) > 1e-6f) {
             blend_transformed_bilinear_tiled_argb(canvas->surface, state->op, &data, span_buffer);
@@ -986,10 +986,10 @@ void blend(canvas_t* canvas, const span_buffer_t* span_buffer)
     }
 
     paint_t* paint = canvas->state->paint;
-    if(paint->type == NOVASVG_PAINT_TYPE_COLOR) {
+    if(paint->type == NOVA_PAINT_TYPE_COLOR) {
         solid_paint_t* solid = (solid_paint_t*)(paint);
         blend_color(canvas, &solid->color, span_buffer);
-    } else if(paint->type == NOVASVG_PAINT_TYPE_GRADIENT) {
+    } else if(paint->type == NOVA_PAINT_TYPE_GRADIENT) {
         gradient_paint_t* gradient = (gradient_paint_t*)(paint);
         blend_gradient(canvas, gradient, span_buffer);
     } else {
@@ -998,5 +998,5 @@ void blend(canvas_t* canvas, const span_buffer_t* span_buffer)
     }
 }
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

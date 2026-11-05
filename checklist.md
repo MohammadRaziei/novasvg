@@ -2,7 +2,7 @@
 
 > کانتکست: این پروژه (`github.com/mohammadraziei/novasvg`) یه رندرر SVG→PNG/BMP/TGA/JPG هست.
 > امروز روش کار شد: رندر foreignObject (مرمید)، بازنویسی کامل stb_image_write به سبک OOP خودمون
-> (کلاس `BitmapCodec`)، یکدست‌سازی `NOVASVG_INLINE` توی کل کدبیس، و جدا کردن `detail/` به فایل‌های
+> (کلاس `BitmapCodec`)، یکدست‌سازی `NOVA_INLINE` توی کل کدبیس، و جدا کردن `detail/` به فایل‌های
 > عمومیِ مستقل (`bitmap.h`, `canvas.h`, `font.h`, `color.h`). zip آخرین نسخه رو ضمیمه کن یا از
 > `github.com/mohammadraziei/novasvg` بگیر.
 
@@ -239,7 +239,7 @@
         می‌شه.
       - **سه بار روی «چطور اضافه‌ش کنیم» اشتباه کردم، هر سه ارزش ثبت‌کردن دارن:**
         ۱) اول لینکِ build-time با CMake زدم (`find_package(Fontconfig)` + یه define بنام
-        `NOVASVG_HAVE_FONTCONFIG` که فقط CMake خودمون ست می‌کرد) — این واقعاً یه باگ بود برای
+        `NOVA_HAVE_FONTCONFIG` که فقط CMake خودمون ست می‌کرد) — این واقعاً یه باگ بود برای
         یه لایبرریِ header-only: هرکی این هدرها رو بدون CMake ما توی پروژه‌ی خودش بذاره
         (که کل هدفِ header-only همینه)، بی‌سروصدا هیچی گیرش نمیاد، بدون هیچ خطا یا نشونه‌ای.
         ۲) بعد overcorrect کردم و رفتم سراغ dlopen/dlsym در runtime، که واقعاً header-only
@@ -367,7 +367,7 @@
 دو تا ریشه‌ی کاملاً جدا:
 
 - [x] **فیکس ۱ — C99 compound literal syntax.** ماکروهایی مثل
-      `#define NOVASVG_MAKE_POINT(x, y) ((point_t){x, y})` از syntax مخصوص C99 استفاده
+      `#define NOVA_MAKE_POINT(x, y) ((point_t){x, y})` از syntax مخصوص C99 استفاده
       می‌کردن که MSVC توی C++ قبول نداره (خطای `C4576`). چون `point_t`/`rect_t`/`matrix_t`/
       `color_t`/`stroke_style_t` همه‌شون plain aggregate struct هستن، حذفِ پرانتزِ اضافیِ
       دورِ نوع (`(point_t{x, y})` به‌جای `((point_t){x, y})`) دقیقاً همون معنی رو با
@@ -375,11 +375,11 @@
 - [x] **فیکس ۲ — تداخل `std::max`/`std::min` با ماکروهای `max`/`min` خودِ `<windows.h>`.**
       اول رفتم سراغ `(std::max)(...)`/`(std::min)(...)` (پرانتز دورِ اسمِ تابع، ترفندِ
       استانداردِ رایج برای خنثی‌کردنِ macro expansion) — که درست کار می‌کرد ولی خودِ کاربر
-      یادآوری کرد که قبلاً یه ماکروی امن‌تر به اسمِ `NOVASVG_MAX`/`NOVASVG_MIN` وجود داشته که
+      یادآوری کرد که قبلاً یه ماکروی امن‌تر به اسمِ `NOVA_MAX`/`NOVA_MIN` وجود داشته که
       بعداً با `std::max`/`std::min` جایگزین شده بود (که خودِ همین جایگزینی ریشه‌ی باگ بوده!).
       برگشتم سراغ اون الگو — دقیقاً همون ternary-macro که کدِ FreeTypeِ vendor-شده از قبل
       برای خودش داره (`PVG_FT_MIN`/`PVG_FT_MAX` توی `gfx/vendor/`)، فقط با
-      پیشوندِ `NOVASVG_` برای بقیه‌ی کدبیس. جای درستش هم `detail/config.h` بود (همون هدرِ
+      پیشوندِ `NOVA_` برای بقیه‌ی کدبیس. جای درستش هم `detail/config.h` بود (همون هدرِ
       پایه‌ای که خودش می‌گه «هر هدرِ top-level باید اول این رو include کنه») — که همینجا
       یه ناهماهنگیِ کوچیکِ دیگه هم پیدا شد: `color.h` با این‌که قرار بود config.h رو
       include کنه، نمی‌کرد؛ فیکس شد.
@@ -436,3 +436,27 @@
 - هنوز نمی‌تونم واقعاً روی ویندوز build بگیرم؛ این فیکس دقیقاً خطای گزارش‌شده رو هدف گرفته و
   یه الگوی استانداردِ پورتیبله (capture-less lambda به function pointer)، ولی تاییدِ قطعی با
   یه اجرای دیگه‌ی CI به دست میاد.
+
+## نشست ۵ نوامبر ۲۰۲۶ — وضعیت ریفکتور (برای چت بعدی)
+
+> جزئیات کامل: `refactor/handoff.md` (انگلیسی) و `REFACTOR_CHECKLIST.md`، بخش «Next, in this order». این بخش فقط خلاصه‌ی فارسی است.
+> بخش‌های بالاتر این فایل بیشترش مربوط به قبل از ریفکتور است و عمداً دست نخورد (مثلاً `detail/svgelement.h` الان `src/svg/svgelement.h` است).
+
+### انجام‌شده
+- [x] فونت‌ها روی `stb::font` (فایل ۶۲۶۶ خطیِ `font_impl.h` حذف شد؛ جایش `src/gfx/font_face.cpp`)
+- [x] هدرهای خصوصی gfx از `include/` رفتند به `src/gfx/`
+- [x] rasterizer و stroker از libstb؛ پوشه‌ی `src/gfx/vendor/` (پورت FreeType) حذف شد
+- [x] `pdf_canvas` و `document::render_to_pdf` / `save_pdf` با دو حالت `pdf_mode::vector` و `pdf_mode::raster`
+- [x] تصمیم نام‌گذاری: `nova::svg` و `nova::vg` (ADR-0009)
+
+### قدم بعدی، به ترتیب
+- [ ] **گیت کامل** (از اول نشست ۳ هیچ‌وقت زده نشده، فقط کامپایل و smoke تست PDF): تست‌های C++، تست فونت، لینک libstb، و golden روی ۶۷ تصویر با tolerance صفر
+- [ ] Step 5b: نوع‌های `Path/Transform/Rect/Color/Bitmap` خودمان را با نوع‌های `stb::` عوض کنیم
+- [ ] شکستن `svgelement.{h,cpp}` (حدود ۴۲۰۰ خط)، حذف `NOVA_INLINE`، API عمومی اندازه‌گیری متن
+- [ ] یک مرحله‌ی اسکریپتی: namespace (`nova::svg` / `nova::vg`) + جابه‌جایی پوشه‌ها + rename به `snake_case` (`FillRule::NonZero` → `fill_rule::non_zero` و غیره) + target جدای CMake برای `nova::vg`
+- [ ] لایه‌ها (`begin_layer`، pattern، mask) به‌صورت virtual در `canvas`؛ بهبودهای PDF (mask برداری، gradient با reflect/repeat، alpha هر stop، embed فونت، چندصفحه)
+- [ ] پایتون را دوباره روشن کنیم (فعلاً OFF)، بعد Step 7 (README، Doxygen، CI، wheel) و پاک‌سازی `refactor/`
+
+### یادآوری روش کار
+- جسورانه برو؛ تست وسط کار نه، گیت آخرِ ریفکتور. بعد از هر مرحله zip بفرست، هیچ‌وقت push نکن.
+- issue برای libstb فقط وقتی واقعاً در رسالت خودش است، وگرنه خودت در novasvg انجام بده.

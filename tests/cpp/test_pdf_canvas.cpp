@@ -6,8 +6,8 @@
 #include <string>
 
 // pdf_canvas: the vector backend of the abstract canvas. These check the document's structure; the file the first
-// test writes (when NOVASVG_PDF_OUT is set) can be opened in any PDF viewer.
-using namespace novasvg;
+// test writes (when NOVA_PDF_OUT is set) can be opened in any PDF viewer.
+using namespace nova::vg;
 
 namespace {
 std::string text_of(const std::vector<uint8_t>& bytes) { return std::string(bytes.begin(), bytes.end()); }
@@ -51,7 +51,7 @@ TEST_CASE("pdf_canvas: a page with shapes, a gradient, a clip and text")
     CHECK(s.find("startxref") != std::string::npos);
     CHECK(s.substr(s.size() - 6) == "%%EOF\n");
 
-    if(const char* out = std::getenv("NOVASVG_PDF_OUT"))
+    if(const char* out = std::getenv("NOVA_PDF_OUT"))
         CHECK(pdf->write_to_file(out));
 }
 

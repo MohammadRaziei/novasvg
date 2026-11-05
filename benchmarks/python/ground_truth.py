@@ -20,17 +20,17 @@ def chromium_launch_options(env=None):
     """Playwright launch() keyword arguments from the environment, so ground truth can use a Chromium
     that isn't the one `playwright install` fetches (CI images, no-network machines, a pinned build):
 
-      NOVASVG_BENCH_CHROMIUM       path to the browser executable
-      NOVASVG_BENCH_CHROMIUM_ARGS  extra command-line flags, whitespace separated
+      NOVA_BENCH_CHROMIUM       path to the browser executable
+      NOVA_BENCH_CHROMIUM_ARGS  extra command-line flags, whitespace separated
 
     Both unset -> {} -> Playwright's own Chromium, exactly as before.
     """
     env = os.environ if env is None else env
     options = {}
-    if env.get("NOVASVG_BENCH_CHROMIUM"):
-        options["executable_path"] = env["NOVASVG_BENCH_CHROMIUM"]
-    if env.get("NOVASVG_BENCH_CHROMIUM_ARGS", "").split():
-        options["args"] = env["NOVASVG_BENCH_CHROMIUM_ARGS"].split()
+    if env.get("NOVA_BENCH_CHROMIUM"):
+        options["executable_path"] = env["NOVA_BENCH_CHROMIUM"]
+    if env.get("NOVA_BENCH_CHROMIUM_ARGS", "").split():
+        options["args"] = env["NOVA_BENCH_CHROMIUM_ARGS"].split()
     return options
 
 

@@ -5,7 +5,7 @@
 #   #define <PREFIX>VERSION_MINOR <N>
 #   #define <PREFIX>VERSION_PATCH <N>
 #
-# Where <PREFIX> is optional (e.g. "NOVASVG_").
+# Where <PREFIX> is optional (e.g. "NOVA_").
 # Values may optionally be wrapped in parentheses: 1 or (1).
 #
 # Public API:
@@ -34,8 +34,8 @@ function(_dv_read_candidate_lines header_file version_prefix out_lines_var)
     endif()
 
     # Match lines like:
-    #   #define NOVASVG_VERSION_MAJOR 0
-    #   #define NOVASVG_VERSION_MAJOR (0)
+    #   #define NOVA_VERSION_MAJOR 0
+    #   #define NOVA_VERSION_MAJOR (0)
     #
     # Notes:
     # - We anchor at the beginning to avoid matching in comments/strings.

@@ -2,7 +2,7 @@
 
 // Bitmap (INTERNAL; the public pixel type is stb::image): a premultiplied-ARGB32 pixel buffer -- novasvg's
 // drawable surface, texture source, and render target all in one. Self-contained:
-// needs only Color and the low-level gfx::surface_t it wraps, nothing
+// needs only Color and the low-level vg::surface_t it wraps, nothing
 // from the svg/raster_canvas/Font layers, so it can be used entirely on its own
 // (e.g. to build up an image and write it out) without pulling in the
 // rest of novasvg.
@@ -25,10 +25,9 @@
 
 #include <stb/image.hpp>
 
-namespace novasvg {
-using namespace gfx;
+namespace nova::vg {
 
-class NOVASVG_API Bitmap {
+class NOVA_API Bitmap {
 public:
     /**
      * @brief Constructs a null bitmap.
@@ -180,4 +179,4 @@ private:
 stb::image bitmap_to_rgba_image(const Bitmap& bitmap);
 stb::image bitmap_release_to_image(Bitmap&& bitmap);
 
-} // namespace novasvg
+} // namespace nova::vg

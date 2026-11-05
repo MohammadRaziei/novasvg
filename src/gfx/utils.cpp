@@ -1,7 +1,7 @@
 #include "gfx/utils.h"
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 uint32_t premultiply_argb(uint32_t color)
 {
@@ -34,23 +34,23 @@ bool parse_number(const char** begin, const char* end, float* number)
         sign = -1;
     }
 
-    if(it >= end || (*it != '.' && !NOVASVG_IS_NUM(*it)))
+    if(it >= end || (*it != '.' && !NOVA_IS_NUM(*it)))
         return false;
-    if(NOVASVG_IS_NUM(*it)) {
+    if(NOVA_IS_NUM(*it)) {
         do {
             integer = 10.f * integer + (*it++ - '0');
-        } while(it < end && NOVASVG_IS_NUM(*it));
+        } while(it < end && NOVA_IS_NUM(*it));
     }
 
     if(it < end && *it == '.') {
         ++it;
-        if(it >= end || !NOVASVG_IS_NUM(*it))
+        if(it >= end || !NOVA_IS_NUM(*it))
             return false;
         float divisor = 1.f;
         do {
             fraction = 10.f * fraction + (*it++ - '0');
             divisor *= 10.f;
-        } while(it < end && NOVASVG_IS_NUM(*it));
+        } while(it < end && NOVA_IS_NUM(*it));
         fraction /= divisor;
     }
 
@@ -63,11 +63,11 @@ bool parse_number(const char** begin, const char* end, float* number)
             expsign = -1;
         }
 
-        if(it >= end || !NOVASVG_IS_NUM(*it))
+        if(it >= end || !NOVA_IS_NUM(*it))
             return false;
         do {
             exponent = 10 * exponent + (*it++ - '0');
-        } while(it < end && NOVASVG_IS_NUM(*it));
+        } while(it < end && NOVA_IS_NUM(*it));
     }
 
     *begin = it;
@@ -107,7 +107,7 @@ bool skip_string(const char** begin, const char* end, const char* data)
 bool skip_ws(const char** begin, const char* end)
 {
     const char* it = *begin;
-    while(it < end && NOVASVG_IS_WS(*it))
+    while(it < end && NOVA_IS_WS(*it))
         ++it;
     *begin = it;
     return it < end;
@@ -183,5 +183,5 @@ void skip_css_unit(const char** begin, const char* end, float* number)
     *begin = it;
 }
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

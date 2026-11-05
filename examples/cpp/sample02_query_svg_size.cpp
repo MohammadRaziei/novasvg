@@ -13,7 +13,7 @@ int main()
 {
     const auto input = project_root() / "data" / "circle.svg";
 
-    auto dom = novasvg::document::load_file(input.string());
+    auto dom = nova::svg::document::load_file(input.string());
     if(!dom)
     {
         std::cerr << "Failed to load SVG: " << input << "\n";

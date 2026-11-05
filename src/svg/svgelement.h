@@ -1,5 +1,5 @@
-#ifndef NOVASVG_SVGELEMENT_H
-#define NOVASVG_SVGELEMENT_H
+#ifndef NOVA_SVGELEMENT_H
+#define NOVA_SVGELEMENT_H
 
 #include <string>
 #include <forward_list>
@@ -15,7 +15,7 @@
 #include "novasvg/novasvg.h"
 #include "gfx/canvas.h"
 #include "gfx/font.h"
-#include "novasvg/svg/svgparserutils.h"
+#include "novasvg/gfx/parserutils.h"
 
 // ---------------------------------------------------------------
 // svg_element and its family (svg_paint_element, svg_geometry_element,
@@ -32,8 +32,8 @@
 // already visible).
 // ---------------------------------------------------------------
 
-namespace novasvg {
-using namespace gfx; // render/ layer (novasvg::render), the former plutovg
+namespace nova::svg {
+using namespace vg; // the drawing layer (nova::vg), the former plutovg
 
 // ---- svgproperty ----
 enum class PropertyID : uint8_t {
@@ -2333,7 +2333,7 @@ private:
 // ================================================================
 
 // ---- svgproperty (impl) ----
-using namespace gfx; // render/ layer (novasvg::render), the former plutovg
+using namespace vg; // the drawing layer (nova::vg), the former plutovg
 
 PropertyID propertyid(std::string_view name);
 
@@ -2342,7 +2342,7 @@ PropertyID csspropertyid(std::string_view name);
 
 
 template<>
-NOVASVG_INLINE bool svg_enumeration<SpreadMethod>::parse(std::string_view input)
+NOVA_INLINE bool svg_enumeration<SpreadMethod>::parse(std::string_view input)
 {
     static const svg_enumeration_entry<SpreadMethod> entries[] = {
         {SpreadMethod::Pad, "pad"},
@@ -2354,7 +2354,7 @@ NOVASVG_INLINE bool svg_enumeration<SpreadMethod>::parse(std::string_view input)
 }
 
 template<>
-NOVASVG_INLINE bool svg_enumeration<Units>::parse(std::string_view input)
+NOVA_INLINE bool svg_enumeration<Units>::parse(std::string_view input)
 {
     static const svg_enumeration_entry<Units> entries[] = {
         {Units::UserSpaceOnUse, "userSpaceOnUse"},
@@ -2365,7 +2365,7 @@ NOVASVG_INLINE bool svg_enumeration<Units>::parse(std::string_view input)
 }
 
 template<>
-NOVASVG_INLINE bool svg_enumeration<MarkerUnits>::parse(std::string_view input)
+NOVA_INLINE bool svg_enumeration<MarkerUnits>::parse(std::string_view input)
 {
     static const svg_enumeration_entry<MarkerUnits> entries[] = {
         {MarkerUnits::StrokeWidth, "strokeWidth"},
@@ -2376,7 +2376,7 @@ NOVASVG_INLINE bool svg_enumeration<MarkerUnits>::parse(std::string_view input)
 }
 
 template<>
-NOVASVG_INLINE bool svg_enumeration<LengthAdjust>::parse(std::string_view input)
+NOVA_INLINE bool svg_enumeration<LengthAdjust>::parse(std::string_view input)
 {
     static const svg_enumeration_entry<LengthAdjust> entries[] = {
         {LengthAdjust::Spacing, "spacing"},
@@ -2388,7 +2388,7 @@ NOVASVG_INLINE bool svg_enumeration<LengthAdjust>::parse(std::string_view input)
 
 template<typename Enum>
 template<unsigned int N>
-NOVASVG_INLINE bool svg_enumeration<Enum>::parseEnum(std::string_view input, const svg_enumeration_entry<Enum>(&entries)[N])
+NOVA_INLINE bool svg_enumeration<Enum>::parseEnum(std::string_view input, const svg_enumeration_entry<Enum>(&entries)[N])
 {
     stripLeadingAndTrailingSpaces(input);
     for(const auto& entry : entries) {
@@ -2447,7 +2447,7 @@ GradientStops buildGradientStops(const svg_gradient_element* el, float opacity);
 
 
 // ---- svggeometryelement (impl) ----
-using namespace gfx; // render/ layer (novasvg::render), the former plutovg
+using namespace vg; // the drawing layer (nova::vg), the former plutovg
 
 
 
@@ -2469,7 +2469,7 @@ using namespace gfx; // render/ layer (novasvg::render), the former plutovg
 
 
 // ---- svgtextelement (impl) ----
-using namespace gfx; // render/ layer (novasvg::render), the former plutovg
+using namespace vg; // the drawing layer (nova::vg), the former plutovg
 
 inline const svg_text_node* toSVGTextNode(const svg_node* nd)
 {
@@ -2511,7 +2511,7 @@ void handleTextChunk(svg_text_fragment_iterator begin, svg_text_fragment_iterato
 
 
 // ---- svglayoutstate (impl) ----
-using namespace gfx; // render/ layer (novasvg::render), the former plutovg
+using namespace vg; // the drawing layer (nova::vg), the former plutovg
 
 
 Color parseColor(std::string_view input, const svg_layout_state* state, const Color& defaultValue);
@@ -2536,7 +2536,7 @@ Length parseLengthOrNormal(std::string_view input);
 float parseFontSize(std::string_view input, const svg_layout_state* state);
 
 template<typename Enum, unsigned int N>
-NOVASVG_INLINE Enum parseEnumValue(std::string_view input, const svg_enumeration_entry<Enum>(&entries)[N], Enum defaultValue)
+NOVA_INLINE Enum parseEnumValue(std::string_view input, const svg_enumeration_entry<Enum>(&entries)[N], Enum defaultValue)
 {
     for(const auto& entry : entries) {
         if(input == entry.second) {
@@ -2591,14 +2591,14 @@ Font makeFont(const std::string& family, float size, bool bold, bool italic);
 
 
 // ---- svgelement (impl) ----
-using namespace gfx; // render/ layer (novasvg::render), the former plutovg
+using namespace vg; // the drawing layer (nova::vg), the former plutovg
 
 ElementID elementid(std::string_view name);
 
 
 
 
-NOVASVG_INLINE const std::string emptyString;
+NOVA_INLINE const std::string emptyString;
 
 
 
@@ -2800,7 +2800,7 @@ inline std::u32string utf8ToU32(const std::string& text)
     std::u32string result;
     result.reserve(text.size());
     text_iterator_t it;
-    text_iterator_init(&it, text.data(), (int)text.length(), NOVASVG_TEXT_ENCODING_UTF8);
+    text_iterator_init(&it, text.data(), (int)text.length(), NOVA_TEXT_ENCODING_UTF8);
     while(text_iterator_has_next(&it))
         result.push_back(text_iterator_next(&it));
     return result;
@@ -3766,6 +3766,6 @@ inline const svg_geometry_element* toSVGGeometryElement(const svg_node* nd)
 
 
 
-} // namespace novasvg
+} // namespace nova::svg
 
-#endif // NOVASVG_SVGELEMENT_H
+#endif // NOVA_SVGELEMENT_H

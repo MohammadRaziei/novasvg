@@ -1,7 +1,7 @@
 #include "paint.h"
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 void color_init_rgb(color_t* color, float r, float g, float b)
 {
@@ -338,7 +338,7 @@ paint_t* paint_create_rgb(float r, float g, float b)
 paint_t* paint_create_rgba(float r, float g, float b, float a)
 {
     solid_paint_t* solid = static_cast<solid_paint_t*>(paint_create(
-        NOVASVG_PAINT_TYPE_COLOR,
+        NOVA_PAINT_TYPE_COLOR,
         sizeof(solid_paint_t)
     ));
     solid->color.r = std::clamp(r, 0.f, 1.f);
@@ -355,7 +355,7 @@ paint_t* paint_create_color(const color_t* color)
 
 paint_t* paint_create_linear_gradient(float x1, float y1, float x2, float y2, spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
 {
-    gradient_paint_t* gradient = gradient_create(NOVASVG_GRADIENT_TYPE_LINEAR, spread, stops, nstops, matrix);
+    gradient_paint_t* gradient = gradient_create(NOVA_GRADIENT_TYPE_LINEAR, spread, stops, nstops, matrix);
     gradient->values[0] = x1;
     gradient->values[1] = y1;
     gradient->values[2] = x2;
@@ -365,7 +365,7 @@ paint_t* paint_create_linear_gradient(float x1, float y1, float x2, float y2, sp
 
 paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr, spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
 {
-    gradient_paint_t* gradient = gradient_create(NOVASVG_GRADIENT_TYPE_RADIAL, spread, stops, nstops, matrix);
+    gradient_paint_t* gradient = gradient_create(NOVA_GRADIENT_TYPE_RADIAL, spread, stops, nstops, matrix);
     gradient->values[0] = cx;
     gradient->values[1] = cy;
     gradient->values[2] = cr;
@@ -378,12 +378,12 @@ paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, fl
 paint_t* paint_create_texture(surface_t* surface, texture_type_t type, float opacity, const matrix_t* matrix)
 {
     texture_paint_t* texture = static_cast<texture_paint_t*>(paint_create(
-        NOVASVG_PAINT_TYPE_TEXTURE,
+        NOVA_PAINT_TYPE_TEXTURE,
         sizeof(texture_paint_t)
     ));
     texture->type = type;
     texture->opacity = std::clamp(opacity, 0.f, 1.f);
-    texture->matrix = matrix ? *matrix : NOVASVG_IDENTITY_MATRIX;
+    texture->matrix = matrix ? *matrix : NOVA_IDENTITY_MATRIX;
     texture->surface = surface_reference(surface);
     return &texture->base;
 }
@@ -397,7 +397,7 @@ paint_t* paint_reference(paint_t* paint)
 void paint_destroy(paint_t* paint)
 {
     if(novasvg_destroy_reference(paint)) {
-        if(paint->type == NOVASVG_PAINT_TYPE_TEXTURE) {
+        if(paint->type == NOVA_PAINT_TYPE_TEXTURE) {
             texture_paint_t* texture = (texture_paint_t*)(paint);
             surface_destroy(texture->surface);
         }
@@ -411,5 +411,5 @@ int paint_get_reference_count(const paint_t* paint)
     return novasvg_get_reference_count(paint);
 }
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

@@ -1,8 +1,7 @@
 // Definitions declared in include/novasvg/gfx/bitmap.h.
 #include "novasvg/gfx/bitmap.h"
 
-namespace novasvg {
-using namespace gfx;
+namespace nova::vg {
 
 Bitmap::Bitmap(int width, int height)
     : m_surface(surface_create(width, height))
@@ -126,4 +125,4 @@ surface_t* Bitmap::release()
     return std::exchange(m_surface, nullptr);
 }
 
-} // namespace novasvg
+} // namespace nova::vg

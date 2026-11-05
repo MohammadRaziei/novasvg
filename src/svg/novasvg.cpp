@@ -2,7 +2,7 @@
 #include "novasvg/novasvg.h"
 
 // Always included -- see the note above. Defining
-// NOVASVG_IMPLEMENTATION is no longer required and has no effect; it is
+// NOVA_IMPLEMENTATION is no longer required and has no effect; it is
 // kept as a harmless no-op purely so existing code that still defines it
 // keeps compiling unchanged.
 //
@@ -23,11 +23,16 @@
 #include "gfx/canvas.h"
 #include "gfx/font.h"
 #include "gfx/pdf_canvas.h"
+#include <stb/logging.hpp>
 #include "svgelement.h"
 #include "svgparser.hpp"
 
-namespace novasvg {
-using namespace gfx;
+namespace nova::svg {
+namespace {
+stb::logging::logger& svg_log() { static auto& l = stb::logging::get_logger("novasvg.svg"); return l; }
+stb::logging::logger& pdf_log() { static auto& l = stb::logging::get_logger("novasvg.pdf"); return l; }
+}  // namespace
+using namespace vg;
 
 // ---------------------------------------------------------------
 // Implementation (formerly detail/novasvg.hpp -- merged in since
@@ -35,134 +40,18 @@ using namespace gfx;
 // to keep the public declarations and their definitions apart).
 // ---------------------------------------------------------------
 
-using namespace gfx; // render/ layer (novasvg::render), the former plutovg
+using namespace vg; // the drawing layer (nova::vg), the former plutovg
 
 int version()
 {
-    return NOVASVG_VERSION;
+    return NOVA_VERSION;
 }
 
 std::string version_string()
 {
-    return NOVASVG_VERSION_STRING;
+    return NOVA_VERSION_STRING;
 }
 
-
-Box::Box(float x, float y, float w, float h)
-    : x(x), y(y), w(w), h(h)
-{
-}
-
-Box::Box(const Rect& rect)
-    : x(rect.x), y(rect.y), w(rect.w), h(rect.h)
-{
-}
-
-Box& Box::transform(const Matrix &matrix)
-{
-    *this = transformed(matrix);
-    return *this;
-}
-
-Box Box::transformed(const Matrix& matrix) const
-{
-    return Transform(matrix).map_rect(*this);
-}
-
-Rect::Rect(const Box& box)
-    : x(box.x), y(box.y), w(box.w), h(box.h)
-{
-}
-
-Matrix::Matrix(float a, float b, float c, float d, float e, float f)
-    : a(a), b(b), c(c), d(d), e(e), f(f)
-{
-}
-
-Matrix::Matrix(const matrix_t& matrix)
-    : a(matrix.a), b(matrix.b), c(matrix.c), d(matrix.d), e(matrix.e), f(matrix.f)
-{
-}
-
-Matrix::Matrix(const Transform& transform)
-    : Matrix(transform.matrix())
-{
-}
-
-Matrix Matrix::operator*(const Matrix& matrix) const
-{
-    return Transform(*this) * Transform(matrix);
-}
-
-Transform::Transform(const Matrix& matrix)
-    : Transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f)
-{
-}
-
-Matrix& Matrix::operator*=(const Matrix &matrix)
-{
-    return (*this = *this * matrix);
-}
-
-Matrix& Matrix::multiply(const Matrix& matrix)
-{
-    return (*this *= matrix);
-}
-
-Matrix& Matrix::scale(float sx, float sy)
-{
-    return multiply(scaled(sx, sy));
-}
-
-Matrix& Matrix::translate(float tx, float ty)
-{
-    return multiply(translated(tx, ty));
-}
-
-Matrix& Matrix::rotate(float angle, float cx, float cy)
-{
-    return multiply(rotated(angle, cx, cy));
-}
-
-Matrix& Matrix::shear(float shx, float shy)
-{
-    return multiply(sheared(shx, shy));
-}
-
-Matrix Matrix::inverse() const
-{
-    return Transform(*this).inverse();
-}
-
-Matrix& Matrix::invert()
-{
-    return (*this = inverse());
-}
-
-void Matrix::reset()
-{
-    *this = Matrix(1, 0, 0, 1, 0, 0);
-}
-
-Matrix Matrix::translated(float tx, float ty)
-{
-    return Transform::translated(tx, ty);
-}
-
-Matrix Matrix::scaled(float sx, float sy)
-{
-    return Transform::scaled(sx, sy);
-}
-
-Matrix Matrix::rotated(float angle, float cx, float cy)
-{
-    return Transform::rotated(angle, cx, cy);
-}
-
-Matrix Matrix::sheared(float shx, float shy)
-{
-    return Transform::sheared(shx, shy);
-}
 
 node::node(svg_node* nd)
     : m_node(nd)
@@ -359,8 +248,11 @@ std::unique_ptr<document> document::load_file(const std::string& filename)
 {
     std::ifstream fs;
     fs.open(filename);
-    if(!fs.is_open())
+    if(!fs.is_open()) {
+        svg_log().error("cannot open '%s'", filename.c_str());
         return nullptr;
+    }
+    svg_log().debug("loading '%s'", filename.c_str());
     std::string content;
     std::getline(fs, content, '\0');
     fs.close();
@@ -380,8 +272,10 @@ std::unique_ptr<document> document::load_data(const char* data)
 std::unique_ptr<document> document::load_data(const char* data, size_t length)
 {
     std::unique_ptr<document> dom(new document);
-    if(!dom->parse(data, length))
+    if(!dom->parse(data, length)) {
+        svg_log().error("cannot parse the document (%zu bytes)", length);
         return nullptr;
+    }
     return dom;
 }
 
@@ -490,8 +384,11 @@ std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
 {
     const float width = root_element(true)->intrinsic_width();
     const float height = root_element()->intrinsic_height();
-    if(!(width > 0.f) || !(height > 0.f))
+    if(!(width > 0.f) || !(height > 0.f)) {
+        pdf_log().error("cannot render to PDF: the document has no size (%g x %g)", width, height);
         return {};
+    }
+    pdf_log().debug("rendering %g x %g px to PDF, mode %s, %g dpi", width, height, mode == pdf_mode::vector ? "vector" : "raster", dpi);
     if(!(dpi > 0.f))
         dpi = 192.f;
     const float scale = dpi / 96.f;
@@ -585,11 +482,11 @@ document& document::operator=(document&&) = default;
 document::document() = default;
 document::~document() = default;
 
-} // namespace novasvg
+} // namespace nova::svg
 
 // ---- definitions of public-class members that used to sit in svgelement.h / svgparser.hpp ----
-namespace novasvg {
-using namespace gfx;
+namespace nova::svg {
+using namespace vg;
 
 bool document::parse(const char* data, size_t length)
 {
@@ -883,4 +780,4 @@ ElementList document::query_selector_all(const std::string& content) const
     return elements;
 }
 
-} // namespace novasvg
+} // namespace nova::svg

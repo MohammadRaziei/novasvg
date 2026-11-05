@@ -1,8 +1,8 @@
 #include "state.h"
 #include "font_face.h"
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 static state_t* state_create(void);
 static void state_reset(state_t* state);
@@ -11,12 +11,12 @@ static void state_destroy(state_t* state);
 
 int render_version(void)
 {
-    return NOVASVG_RENDER_VERSION;
+    return NOVA_RENDER_VERSION;
 }
 
 const char* render_version_string(void)
 {
-    return NOVASVG_RENDER_VERSION_STRING;
+    return NOVA_RENDER_VERSION_STRING;
 }
 
 static state_t* state_create(void)
@@ -24,14 +24,14 @@ static state_t* state_create(void)
     state_t* state = static_cast<state_t*>(malloc(sizeof(state_t)));
     state->paint = NULL;
     state->font_face = NULL;
-    state->color = NOVASVG_BLACK_COLOR;
-    state->matrix = NOVASVG_IDENTITY_MATRIX;
-    state->stroke.style = NOVASVG_DEFAULT_STROKE_STYLE;
+    state->color = NOVA_BLACK_COLOR;
+    state->matrix = NOVA_IDENTITY_MATRIX;
+    state->stroke.style = NOVA_DEFAULT_STROKE_STYLE;
     state->stroke.dash.offset = 0.f;
     novasvg_array_init(state->stroke.dash.array);
     span_buffer_init(&state->clip_spans);
-    state->winding = NOVASVG_FILL_RULE_NON_ZERO;
-    state->op = NOVASVG_OPERATOR_SRC_OVER;
+    state->winding = NOVA_FILL_RULE_NON_ZERO;
+    state->op = NOVA_OPERATOR_SRC_OVER;
     state->font_size = 12.f;
     state->opacity = 1.f;
     state->clipping = false;
@@ -45,14 +45,14 @@ static void state_reset(state_t* state)
     font_face_destroy(state->font_face);
     state->paint = NULL;
     state->font_face = NULL;
-    state->color = NOVASVG_BLACK_COLOR;
-    state->matrix = NOVASVG_IDENTITY_MATRIX;
-    state->stroke.style = NOVASVG_DEFAULT_STROKE_STYLE;
+    state->color = NOVA_BLACK_COLOR;
+    state->matrix = NOVA_IDENTITY_MATRIX;
+    state->stroke.style = NOVA_DEFAULT_STROKE_STYLE;
     state->stroke.dash.offset = 0.f;
     novasvg_array_clear(state->stroke.dash.array);
     span_buffer_reset(&state->clip_spans);
-    state->winding = NOVASVG_FILL_RULE_NON_ZERO;
-    state->op = NOVASVG_OPERATOR_SRC_OVER;
+    state->winding = NOVA_FILL_RULE_NON_ZERO;
+    state->op = NOVA_OPERATOR_SRC_OVER;
     state->font_size = 12.f;
     state->opacity = 1.f;
     state->clipping = false;
@@ -94,7 +94,7 @@ canvas_t* canvas_create(surface_t* surface)
     canvas->state = state_create();
     canvas->freed_state = NULL;
     canvas->face_cache = NULL;
-    canvas->clip_rect = NOVASVG_MAKE_RECT(0, 0, surface->width, surface->height);
+    canvas->clip_rect = NOVA_MAKE_RECT(0, 0, surface->width, surface->height);
     span_buffer_init(&canvas->clip_spans);
     span_buffer_init(&canvas->fill_spans);
     return canvas;
@@ -410,7 +410,7 @@ void canvas_reset_matrix(canvas_t* canvas)
 
 void canvas_set_matrix(canvas_t* canvas, const matrix_t* matrix)
 {
-    canvas->state->matrix = matrix ? *matrix : NOVASVG_IDENTITY_MATRIX;
+    canvas->state->matrix = matrix ? *matrix : NOVA_IDENTITY_MATRIX;
 }
 
 void canvas_get_matrix(const canvas_t* canvas, matrix_t* matrix)
@@ -542,7 +542,7 @@ void canvas_fill_extents(canvas_t *canvas, rect_t* extents)
 
 void canvas_stroke_extents(canvas_t *canvas, rect_t* extents)
 {
-    rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, &canvas->state->stroke, NOVASVG_FILL_RULE_NON_ZERO);
+    rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, &canvas->state->stroke, NOVA_FILL_RULE_NON_ZERO);
     span_buffer_extents(&canvas->fill_spans, extents);
 }
 
@@ -599,7 +599,7 @@ void canvas_fill_preserve(canvas_t* canvas)
 
 void canvas_stroke_preserve(canvas_t* canvas)
 {
-    rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, NOVASVG_FILL_RULE_NON_ZERO);
+    rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, NOVA_FILL_RULE_NON_ZERO);
     if(canvas->state->clipping) {
         span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
         blend(canvas, &canvas->clip_spans);
@@ -771,5 +771,5 @@ float canvas_text_extents(canvas_t* canvas, const void* text, int length, text_e
     return 0.f;
 }
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

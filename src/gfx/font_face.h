@@ -7,8 +7,8 @@
 
 #include <stdint.h>
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
 // Design units per em (the font's own grid), e.g. 1000 or 2048.
 float font_face_get_units_per_em(const font_face_t* face);
@@ -23,5 +23,5 @@ float font_face_get_kern_advance(font_face_t* face, float size, codepoint_t ch1,
 // fi, fl) the rest of the sequence is consumed from `it` and the ligature's code point returned.
 codepoint_t font_face_apply_ligature(font_face_t* face, text_iterator_t* it, codepoint_t codepoint);
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

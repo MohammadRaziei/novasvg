@@ -2,8 +2,8 @@
 #include "gfx/pdf_canvas.h"
 #include "svgelement.h"
 
-namespace novasvg {
-using namespace gfx;
+namespace nova::svg {
+using namespace vg;
 
 PropertyID propertyid(std::string_view name)
 {
@@ -170,7 +170,7 @@ bool svg_angle::parse(std::string_view input)
         return false;
     if(!input.empty()) {
         if(input == "rad")
-            value *= 180.f / NOVASVG_PI;
+            value *= 180.f / NOVA_PI;
         else if(input == "grad")
             value *= 360.f / 400.f;
         else if(input == "turn")
@@ -298,7 +298,7 @@ float LengthContext::viewportDimension(LengthDirection direction) const
     case LengthDirection::Vertical:
         return viewportSize.h;
     default:
-        return std::sqrt(viewportSize.w * viewportSize.w + viewportSize.h * viewportSize.h) / NOVASVG_SQRT2;
+        return std::sqrt(viewportSize.w * viewportSize.w + viewportSize.h * viewportSize.h) / NOVA_SQRT2;
     }
 }
 
@@ -1231,7 +1231,7 @@ Rect svg_geometry_element::strokeBoundingBox() const
     if(m_stroke.isRenderable()) {
         float capLimit = m_strokeData.lineWidth() / 2.f;
         if(m_strokeData.lineCap() == LineCap::Square)
-            capLimit *= NOVASVG_SQRT2;
+            capLimit *= NOVA_SQRT2;
         float joinLimit = m_strokeData.lineWidth() / 2.f;
         if(m_strokeData.lineJoin() == LineJoin::Miter) {
             joinLimit *= m_strokeData.miterLimit();
@@ -1313,7 +1313,7 @@ void svg_geometry_element::updateMarkerPositions(svg_marker_position_list& posit
             outslopePoints[1] = points[0];
             if(index == 0 && markerStart) {
                 auto slope = outslopePoints[1] - outslopePoints[0];
-                auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVASVG_PI;
+                auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVA_PI;
                 const auto& orient = markerStart->orient();
                 if(orient.orientType() == svg_angle::OrientType::AutoStartReverse)
                     angle -= 180.f;
@@ -1323,8 +1323,8 @@ void svg_geometry_element::updateMarkerPositions(svg_marker_position_list& posit
             if(index > 0 && markerMid) {
                 auto inslope = inslopePoints[1] - inslopePoints[0];
                 auto outslope = outslopePoints[1] - outslopePoints[0];
-                auto inangle = 180.f * std::atan2(inslope.y, inslope.x) / NOVASVG_PI;
-                auto outangle = 180.f * std::atan2(outslope.y, outslope.x) / NOVASVG_PI;
+                auto inangle = 180.f * std::atan2(inslope.y, inslope.x) / NOVA_PI;
+                auto outangle = 180.f * std::atan2(outslope.y, outslope.x) / NOVA_PI;
                 if(std::abs(inangle - outangle) > 180.f)
                     inangle += 360.f;
                 auto angle = (inangle + outangle) * 0.5f;
@@ -1334,7 +1334,7 @@ void svg_geometry_element::updateMarkerPositions(svg_marker_position_list& posit
 
         if(markerEnd && it.isDone()) {
             auto slope = inslopePoints[1] - inslopePoints[0];
-            auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVASVG_PI;
+            auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVA_PI;
             positions.emplace_back(markerEnd, origin, angle);
         }
 
@@ -1865,7 +1865,7 @@ void svg_text_fragments_builder::handleText(const svg_text_node* nd)
     }
 
     text_iterator_t it;
-    text_iterator_init(&it, text.data(), text.length(), NOVASVG_TEXT_ENCODING_UTF8);
+    text_iterator_init(&it, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF8);
     while(text_iterator_has_next(&it)) {
         auto currentCharacter = text_iterator_next(&it);
         if(currentCharacter == '\t' || currentCharacter == '\n' || currentCharacter == '\r')
@@ -4241,4 +4241,4 @@ void svg_mask_element::layoutElement(const svg_layout_state& state)
     svg_element::layoutElement(state);
 }
 
-} // namespace novasvg
+} // namespace nova::svg

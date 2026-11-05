@@ -34,7 +34,7 @@ namespace nb = nanobind;
 
 namespace novasvg_py_interop {
 
-using novasvg::Bitmap;
+using nova::vg::Bitmap;
 
 // surface_create() refuses sizes at or above this.
 constexpr std::int64_t kMaxSide = (1 << 15) - 1;

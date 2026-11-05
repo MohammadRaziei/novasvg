@@ -20,14 +20,14 @@
  * SOFTWARE.
 */
 
-#ifndef NOVASVG_RENDER_H
-#define NOVASVG_RENDER_H
+#ifndef NOVA_RENDER_H
+#define NOVA_RENDER_H
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
 
-#include "../config.h"   // NOVASVG_API, NOVASVG_INLINE, STB_MAX/MIN (one definition, shared with novasvg.h)
+#include "../config.h"   // NOVA_API, NOVA_INLINE, STB_MAX/MIN (one definition, shared with novasvg.h)
 
 // STB_MAX/STB_MIN are defined in detail/config.h, which #includes
 // (transitively, via canvas.h) this header -- always available by the
@@ -36,33 +36,33 @@
 // Pure C++ project: no separate C translation units link against this,
 // so the extern "C" wrapper this file used to have (for use as a
 // standalone C library) has been dropped along with the novasvg_ prefix
-// below -- everything here now lives in namespace novasvg::render
+// below -- everything here now lives in namespace nova::vg
 // instead.
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
-#define NOVASVG_RENDER_VERSION_MAJOR 1
-#define NOVASVG_RENDER_VERSION_MINOR 3
-#define NOVASVG_RENDER_VERSION_MICRO 2
+#define NOVA_RENDER_VERSION_MAJOR 1
+#define NOVA_RENDER_VERSION_MINOR 3
+#define NOVA_RENDER_VERSION_MICRO 2
 
-#define NOVASVG_RENDER_VERSION_ENCODE(major, minor, micro) (((major) * 10000) + ((minor) * 100) + ((micro) * 1))
-#define NOVASVG_RENDER_VERSION NOVASVG_RENDER_VERSION_ENCODE(NOVASVG_RENDER_VERSION_MAJOR, NOVASVG_RENDER_VERSION_MINOR, NOVASVG_RENDER_VERSION_MICRO)
+#define NOVA_RENDER_VERSION_ENCODE(major, minor, micro) (((major) * 10000) + ((minor) * 100) + ((micro) * 1))
+#define NOVA_RENDER_VERSION NOVA_RENDER_VERSION_ENCODE(NOVA_RENDER_VERSION_MAJOR, NOVA_RENDER_VERSION_MINOR, NOVA_RENDER_VERSION_MICRO)
 
-#define NOVASVG_RENDER_VERSION_XSTRINGIZE(major, minor, micro) #major"."#minor"."#micro
-#define NOVASVG_RENDER_VERSION_STRINGIZE(major, minor, micro) NOVASVG_RENDER_VERSION_XSTRINGIZE(major, minor, micro)
-#define NOVASVG_RENDER_VERSION_STRING NOVASVG_RENDER_VERSION_STRINGIZE(NOVASVG_RENDER_VERSION_MAJOR, NOVASVG_RENDER_VERSION_MINOR, NOVASVG_RENDER_VERSION_MICRO)
+#define NOVA_RENDER_VERSION_XSTRINGIZE(major, minor, micro) #major"."#minor"."#micro
+#define NOVA_RENDER_VERSION_STRINGIZE(major, minor, micro) NOVA_RENDER_VERSION_XSTRINGIZE(major, minor, micro)
+#define NOVA_RENDER_VERSION_STRING NOVA_RENDER_VERSION_STRINGIZE(NOVA_RENDER_VERSION_MAJOR, NOVA_RENDER_VERSION_MINOR, NOVA_RENDER_VERSION_MICRO)
 
 /**
  * @brief Gets the version of the novasvg rendering library.
  * @return An integer representing the version of the novasvg rendering library.
  */
-NOVASVG_API int render_version(void);
+NOVA_API int render_version(void);
 
 /**
  * @brief Gets the version of the novasvg rendering library as a string.
  * @return A string representing the version of the novasvg rendering library.
  */
-NOVASVG_API const char* render_version_string(void);
+NOVA_API const char* render_version_string(void);
 
 /**
  * @brief A function pointer type for a cleanup callback.
@@ -78,14 +78,14 @@ typedef void (*destroy_func_t)(void* closure);
  */
 typedef void (*write_func_t)(void* closure, void* data, int size);
 
-#define NOVASVG_PI      3.14159265358979323846f
-#define NOVASVG_TWO_PI  6.28318530717958647693f
-#define NOVASVG_HALF_PI 1.57079632679489661923f
-#define NOVASVG_SQRT2   1.41421356237309504880f
-#define NOVASVG_KAPPA   0.55228474983079339840f
+#define NOVA_PI      3.14159265358979323846f
+#define NOVA_TWO_PI  6.28318530717958647693f
+#define NOVA_HALF_PI 1.57079632679489661923f
+#define NOVA_SQRT2   1.41421356237309504880f
+#define NOVA_KAPPA   0.55228474983079339840f
 
-#define NOVASVG_DEG2RAD(x) ((x) * (NOVASVG_PI / 180.0f))
-#define NOVASVG_RAD2DEG(x) ((x) * (180.0f / NOVASVG_PI))
+#define NOVA_DEG2RAD(x) ((x) * (NOVA_PI / 180.0f))
+#define NOVA_RAD2DEG(x) ((x) * (180.0f / NOVA_PI))
 
 /**
  * @brief A structure representing a point in 2D space.
@@ -95,8 +95,8 @@ typedef struct point {
     float y; ///< The y-coordinate of the point.
 } point_t;
 
-#define NOVASVG_MAKE_POINT(x, y) (point_t{x, y})
-#define NOVASVG_EMPTY_POINT NOVASVG_MAKE_POINT(0, 0)
+#define NOVA_MAKE_POINT(x, y) (point_t{x, y})
+#define NOVA_EMPTY_POINT NOVA_MAKE_POINT(0, 0)
 
 /**
  * @brief A structure representing a rectangle in 2D space.
@@ -108,8 +108,8 @@ typedef struct rect {
     float h; ///< The height of the rectangle.
 } rect_t;
 
-#define NOVASVG_MAKE_RECT(x, y, w, h) (rect_t{x, y, w, h})
-#define NOVASVG_EMPTY_RECT NOVASVG_MAKE_RECT(0, 0, 0, 0)
+#define NOVA_MAKE_RECT(x, y, w, h) (rect_t{x, y, w, h})
+#define NOVA_EMPTY_RECT NOVA_MAKE_RECT(0, 0, 0, 0)
 
 /**
  * @brief A structure representing a 2D transformation matrix.
@@ -123,10 +123,10 @@ typedef struct matrix {
     float f; ///< The vertical translation offset.
 } matrix_t;
 
-#define NOVASVG_MAKE_MATRIX(a, b, c, d, e, f) (matrix_t{a, b, c, d, e, f})
-#define NOVASVG_MAKE_SCALE(x, y) NOVASVG_MAKE_MATRIX(x, 0, 0, y, 0, 0)
-#define NOVASVG_MAKE_TRANSLATE(x, y) NOVASVG_MAKE_MATRIX(1, 0, 0, 1, x, y)
-#define NOVASVG_IDENTITY_MATRIX NOVASVG_MAKE_MATRIX(1, 0, 0, 1, 0, 0)
+#define NOVA_MAKE_MATRIX(a, b, c, d, e, f) (matrix_t{a, b, c, d, e, f})
+#define NOVA_MAKE_SCALE(x, y) NOVA_MAKE_MATRIX(x, 0, 0, y, 0, 0)
+#define NOVA_MAKE_TRANSLATE(x, y) NOVA_MAKE_MATRIX(1, 0, 0, 1, x, y)
+#define NOVA_IDENTITY_MATRIX NOVA_MAKE_MATRIX(1, 0, 0, 1, 0, 0)
 
 /**
  * @brief Initializes a 2D transformation matrix.
@@ -138,13 +138,13 @@ typedef struct matrix {
  * @param e The horizontal translation offset.
  * @param f The vertical translation offset.
  */
-NOVASVG_API void matrix_init(matrix_t* matrix, float a, float b, float c, float d, float e, float f);
+NOVA_API void matrix_init(matrix_t* matrix, float a, float b, float c, float d, float e, float f);
 
 /**
  * @brief Initializes a 2D transformation matrix to the identity matrix.
  * @param matrix A pointer to the `matrix_t` object to be initialized.
  */
-NOVASVG_API void matrix_init_identity(matrix_t* matrix);
+NOVA_API void matrix_init_identity(matrix_t* matrix);
 
 /**
  * @brief Initializes a 2D transformation matrix for translation.
@@ -152,7 +152,7 @@ NOVASVG_API void matrix_init_identity(matrix_t* matrix);
  * @param tx The translation offset in the x-direction.
  * @param ty The translation offset in the y-direction.
  */
-NOVASVG_API void matrix_init_translate(matrix_t* matrix, float tx, float ty);
+NOVA_API void matrix_init_translate(matrix_t* matrix, float tx, float ty);
 
 /**
  * @brief Initializes a 2D transformation matrix for scaling.
@@ -160,14 +160,14 @@ NOVASVG_API void matrix_init_translate(matrix_t* matrix, float tx, float ty);
  * @param sx The scaling factor in the x-direction.
  * @param sy The scaling factor in the y-direction.
  */
-NOVASVG_API void matrix_init_scale(matrix_t* matrix, float sx, float sy);
+NOVA_API void matrix_init_scale(matrix_t* matrix, float sx, float sy);
 
 /**
  * @brief Initializes a 2D transformation matrix for rotation.
  * @param matrix A pointer to the `matrix_t` object to be initialized.
  * @param angle The rotation angle in radians.
  */
-NOVASVG_API void matrix_init_rotate(matrix_t* matrix, float angle);
+NOVA_API void matrix_init_rotate(matrix_t* matrix, float angle);
 
 /**
  * @brief Initializes a 2D transformation matrix for shearing.
@@ -175,7 +175,7 @@ NOVASVG_API void matrix_init_rotate(matrix_t* matrix, float angle);
  * @param shx The shearing factor in the x-direction.
  * @param shy The shearing factor in the y-direction.
  */
-NOVASVG_API void matrix_init_shear(matrix_t* matrix, float shx, float shy);
+NOVA_API void matrix_init_shear(matrix_t* matrix, float shx, float shy);
 
 /**
  * @brief Adds a translation with offsets `tx` and `ty` to the matrix.
@@ -183,7 +183,7 @@ NOVASVG_API void matrix_init_shear(matrix_t* matrix, float shx, float shy);
  * @param tx The translation offset in the x-direction.
  * @param ty The translation offset in the y-direction.
  */
-NOVASVG_API void matrix_translate(matrix_t* matrix, float tx, float ty);
+NOVA_API void matrix_translate(matrix_t* matrix, float tx, float ty);
 
 /**
  * @brief Scales the matrix by factors `sx` and `sy`
@@ -191,14 +191,14 @@ NOVASVG_API void matrix_translate(matrix_t* matrix, float tx, float ty);
  * @param sx The scaling factor in the x-direction.
  * @param sy The scaling factor in the y-direction.
  */
-NOVASVG_API void matrix_scale(matrix_t* matrix, float sx, float sy);
+NOVA_API void matrix_scale(matrix_t* matrix, float sx, float sy);
 
 /**
  * @brief Rotates the matrix by the specified angle (in radians).
  * @param matrix A pointer to the `matrix_t` object to be modified.
  * @param angle The rotation angle in radians.
  */
-NOVASVG_API void matrix_rotate(matrix_t* matrix, float angle);
+NOVA_API void matrix_rotate(matrix_t* matrix, float angle);
 
 /**
  * @brief Shears the matrix by factors `shx` and `shy`.
@@ -206,7 +206,7 @@ NOVASVG_API void matrix_rotate(matrix_t* matrix, float angle);
  * @param shx The shearing factor in the x-direction.
  * @param shy The shearing factor in the y-direction.
  */
-NOVASVG_API void matrix_shear(matrix_t* matrix, float shx, float shy);
+NOVA_API void matrix_shear(matrix_t* matrix, float shx, float shy);
 
 /**
  * @brief Multiplies `left` and `right` matrices and stores the result in `matrix`.
@@ -215,7 +215,7 @@ NOVASVG_API void matrix_shear(matrix_t* matrix, float shx, float shy);
  * @param left A pointer to the first `matrix_t` matrix.
  * @param right A pointer to the second `matrix_t` matrix.
  */
-NOVASVG_API void matrix_multiply(matrix_t* matrix, const matrix_t* left, const matrix_t* right);
+NOVA_API void matrix_multiply(matrix_t* matrix, const matrix_t* left, const matrix_t* right);
 
 /**
  * @brief Calculates the inverse of `matrix` and stores it in `inverse`.
@@ -227,7 +227,7 @@ NOVASVG_API void matrix_multiply(matrix_t* matrix, const matrix_t* left, const m
  * @param inverse A pointer to the `matrix_t` object to store the result, or `NULL`.
  * @return `true` if the matrix is invertible; `false` otherwise.
  */
-NOVASVG_API bool matrix_invert(const matrix_t* matrix, matrix_t* inverse);
+NOVA_API bool matrix_invert(const matrix_t* matrix, matrix_t* inverse);
 
 /**
  * @brief Transforms the point `(x, y)` using `matrix` and stores the result in `(xx, yy)`.
@@ -237,7 +237,7 @@ NOVASVG_API bool matrix_invert(const matrix_t* matrix, matrix_t* inverse);
  * @param xx A pointer to store the transformed x-coordinate.
  * @param yy A pointer to store the transformed y-coordinate.
  */
-NOVASVG_API void matrix_map(const matrix_t* matrix, float x, float y, float* xx, float* yy);
+NOVA_API void matrix_map(const matrix_t* matrix, float x, float y, float* xx, float* yy);
 
 /**
  * @brief Transforms the `src` point using `matrix` and stores the result in `dst`.
@@ -246,7 +246,7 @@ NOVASVG_API void matrix_map(const matrix_t* matrix, float x, float y, float* xx,
  * @param src A pointer to the `point_t` object to transform.
  * @param dst A pointer to the `point_t` to store the transformed point.
  */
-NOVASVG_API void matrix_map_point(const matrix_t* matrix, const point_t* src, point_t* dst);
+NOVA_API void matrix_map_point(const matrix_t* matrix, const point_t* src, point_t* dst);
 
 /**
  * @brief Transforms an array of `src` points using `matrix` and stores the results in `dst`.
@@ -256,7 +256,7 @@ NOVASVG_API void matrix_map_point(const matrix_t* matrix, const point_t* src, po
  * @param dst A pointer to the array of `point_t` to store the transformed points.
  * @param count The number of points to transform.
  */
-NOVASVG_API void matrix_map_points(const matrix_t* matrix, const point_t* src, point_t* dst, int count);
+NOVA_API void matrix_map_points(const matrix_t* matrix, const point_t* src, point_t* dst, int count);
 
 /**
  * @brief Transforms the `src` rectangle using `matrix` and stores the result in `dst`.
@@ -265,7 +265,7 @@ NOVASVG_API void matrix_map_points(const matrix_t* matrix, const point_t* src, p
  * @param src A pointer to the `rect_t` object to transform.
  * @param dst A pointer to the `rect_t` to store the transformed rectangle.
  */
-NOVASVG_API void matrix_map_rect(const matrix_t* matrix, const rect_t* src, rect_t* dst);
+NOVA_API void matrix_map_rect(const matrix_t* matrix, const rect_t* src, rect_t* dst);
 
 /**
  * @brief Parses an svg transform string into a matrix.
@@ -276,7 +276,7 @@ NOVASVG_API void matrix_map_rect(const matrix_t* matrix, const rect_t* src, rect
  * 
  * @return `true` on success, `false` on failure.
  */
-NOVASVG_API bool matrix_parse(matrix_t* matrix, const char* data, int length);
+NOVA_API bool matrix_parse(matrix_t* matrix, const char* data, int length);
 
 /**
  * @brief Represents a 2D path for drawing operations.
@@ -287,10 +287,10 @@ typedef struct path path_t;
  * @brief Enumeration defining path commands.
  */
 typedef enum path_command {
-    NOVASVG_PATH_COMMAND_MOVE_TO, ///< Moves the current point to a new position.
-    NOVASVG_PATH_COMMAND_LINE_TO, ///< Draws a straight line to a new point.
-    NOVASVG_PATH_COMMAND_CUBIC_TO, ///< Draws a cubic Bézier curve to a new point.
-    NOVASVG_PATH_COMMAND_CLOSE ///< Closes the current path by drawing a line to the starting point.
+    NOVA_PATH_COMMAND_MOVE_TO, ///< Moves the current point to a new position.
+    NOVA_PATH_COMMAND_LINE_TO, ///< Draws a straight line to a new point.
+    NOVA_PATH_COMMAND_CUBIC_TO, ///< Draws a cubic Bézier curve to a new point.
+    NOVA_PATH_COMMAND_CLOSE ///< Closes the current path by drawing a line to the starting point.
 } path_command_t;
 
 /**
@@ -298,10 +298,10 @@ typedef enum path_command {
  *
  * A path el can be a command with a length or a coordinate point.
  * Each command type in the path el array is followed by a specific number of points:
- * - `NOVASVG_PATH_COMMAND_MOVE_TO`: 1 point
- * - `NOVASVG_PATH_COMMAND_LINE_TO`: 1 point
- * - `NOVASVG_PATH_COMMAND_CUBIC_TO`: 3 points
- * - `NOVASVG_PATH_COMMAND_CLOSE`: 1 point
+ * - `NOVA_PATH_COMMAND_MOVE_TO`: 1 point
+ * - `NOVA_PATH_COMMAND_LINE_TO`: 1 point
+ * - `NOVA_PATH_COMMAND_CUBIC_TO`: 3 points
+ * - `NOVA_PATH_COMMAND_CLOSE`: 1 point
  *
  * @example
  * const path_element_t* elements;
@@ -309,19 +309,19 @@ typedef enum path_command {
  * for(int i = 0; i < count; i += elements[i].header.length) {
  *     path_command_t command = elements[i].header.command;
  *     switch(command) {
- *     case NOVASVG_PATH_COMMAND_MOVE_TO:
+ *     case NOVA_PATH_COMMAND_MOVE_TO:
  *         printf("MoveTo: %g %g\n", elements[i + 1].point.x, elements[i + 1].point.y);
  *         break;
- *     case NOVASVG_PATH_COMMAND_LINE_TO:
+ *     case NOVA_PATH_COMMAND_LINE_TO:
  *         printf("LineTo: %g %g\n", elements[i + 1].point.x, elements[i + 1].point.y);
  *         break;
- *     case NOVASVG_PATH_COMMAND_CUBIC_TO:
+ *     case NOVA_PATH_COMMAND_CUBIC_TO:
  *         printf("CubicTo: %g %g %g %g %g %g\n",
  *                elements[i + 1].point.x, elements[i + 1].point.y,
  *                elements[i + 2].point.x, elements[i + 2].point.y,
  *                elements[i + 3].point.x, elements[i + 3].point.y);
  *         break;
- *     case NOVASVG_PATH_COMMAND_CLOSE:
+ *     case NOVA_PATH_COMMAND_CLOSE:
  *         printf("Close: %g %g\n", elements[i + 1].point.x, elements[i + 1].point.y);
  *         break;
  *     }
@@ -350,7 +350,7 @@ typedef struct path_iterator {
  * @param it The path iterator to initialize.
  * @param path The path to iterate over.
  */
-NOVASVG_API void path_iterator_init(path_iterator_t* it, const path_t* path);
+NOVA_API void path_iterator_init(path_iterator_t* it, const path_t* path);
 
 /**
  * @brief Checks if there are more elements to iterate over.
@@ -358,7 +358,7 @@ NOVASVG_API void path_iterator_init(path_iterator_t* it, const path_t* path);
  * @param it The path iterator.
  * @return `true` if there are more elements; otherwise, `false`.
  */
-NOVASVG_API bool path_iterator_has_next(const path_iterator_t* it);
+NOVA_API bool path_iterator_has_next(const path_iterator_t* it);
 
 /**
  * @brief Retrieves the current command and its associated points, then advances the iterator.
@@ -367,14 +367,14 @@ NOVASVG_API bool path_iterator_has_next(const path_iterator_t* it);
  * @param points An array to store the points for the current command.
  * @return The path command for the current el.
  */
-NOVASVG_API path_command_t path_iterator_next(path_iterator_t* it, point_t points[3]);
+NOVA_API path_command_t path_iterator_next(path_iterator_t* it, point_t points[3]);
 
 /**
  * @brief Creates a new path object.
  *
  * @return A pointer to the newly created path object.
  */
-NOVASVG_API path_t* path_create(void);
+NOVA_API path_t* path_create(void);
 
 /**
  * @brief Increases the reference count of a path object.
@@ -382,7 +382,7 @@ NOVASVG_API path_t* path_create(void);
  * @param path A pointer to a `path_t` object.
  * @return A pointer to the same `path_t` object.
  */
-NOVASVG_API path_t* path_reference(path_t* path);
+NOVA_API path_t* path_reference(path_t* path);
 
 /**
  * @brief Decreases the reference count of a path object.
@@ -393,7 +393,7 @@ NOVASVG_API path_t* path_reference(path_t* path);
  *
  * @param path A pointer to the `path_t` object.
  */
-NOVASVG_API void path_destroy(path_t* path);
+NOVA_API void path_destroy(path_t* path);
 
 /**
  * @brief Retrieves the reference count of a path object.
@@ -401,7 +401,7 @@ NOVASVG_API void path_destroy(path_t* path);
  * @param path A pointer to a `path_t` object.
  * @return The current reference count of the path object.
  */
-NOVASVG_API int path_get_reference_count(const path_t* path);
+NOVA_API int path_get_reference_count(const path_t* path);
 
 /**
  * @brief Retrieves the elements of a path.
@@ -412,7 +412,7 @@ NOVASVG_API int path_get_reference_count(const path_t* path);
  * @param elements A pointer to a pointer that will be set to the array of path elements.
  * @return The number of elements in the path.
  */
-NOVASVG_API int path_get_elements(const path_t* path, const path_element_t** elements);
+NOVA_API int path_get_elements(const path_t* path, const path_element_t** elements);
 
 /**
  * @brief Moves the current point to a new position.
@@ -424,7 +424,7 @@ NOVASVG_API int path_get_elements(const path_t* path, const path_element_t** ele
  * @param x The x-coordinate of the new position.
  * @param y The y-coordinate of the new position.
  */
-NOVASVG_API void path_move_to(path_t* path, float x, float y);
+NOVA_API void path_move_to(path_t* path, float x, float y);
 
 /**
  * @brief Adds a straight line segment to the path.
@@ -436,7 +436,7 @@ NOVASVG_API void path_move_to(path_t* path, float x, float y);
  * @param x The x-coordinate of the end point of the line segment.
  * @param y The y-coordinate of the end point of the line segment.
  */
-NOVASVG_API void path_line_to(path_t* path, float x, float y);
+NOVA_API void path_line_to(path_t* path, float x, float y);
 
 /**
  * @brief Adds a quadratic Bézier curve to the path.
@@ -451,7 +451,7 @@ NOVASVG_API void path_line_to(path_t* path, float x, float y);
  * @param x2 The x-coordinate of the end point of the curve.
  * @param y2 The y-coordinate of the end point of the curve.
  */
-NOVASVG_API void path_quad_to(path_t* path, float x1, float y1, float x2, float y2);
+NOVA_API void path_quad_to(path_t* path, float x1, float y1, float x2, float y2);
 
 /**
  * @brief Adds a cubic Bézier curve to the path.
@@ -468,7 +468,7 @@ NOVASVG_API void path_quad_to(path_t* path, float x1, float y1, float x2, float 
  * @param x3 The x-coordinate of the end point of the curve.
  * @param y3 The y-coordinate of the end point of the curve.
  */
-NOVASVG_API void path_cubic_to(path_t* path, float x1, float y1, float x2, float y2, float x3, float y3);
+NOVA_API void path_cubic_to(path_t* path, float x1, float y1, float x2, float y2, float x3, float y3);
 
 /**
  * @brief Adds an elliptical arc to the path.
@@ -487,7 +487,7 @@ NOVASVG_API void path_cubic_to(path_t* path, float x1, float y1, float x2, float
  * @param x The x-coordinate of the end point of the arc.
  * @param y The y-coordinate of the end point of the arc.
  */
-NOVASVG_API void path_arc_to(path_t* path, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y);
+NOVA_API void path_arc_to(path_t* path, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y);
 
 /**
  * @brief Closes the current sub-path.
@@ -498,7 +498,7 @@ NOVASVG_API void path_arc_to(path_t* path, float rx, float ry, float angle, bool
  *
  * @param path A pointer to a `path_t` object.
  */
-NOVASVG_API void path_close(path_t* path);
+NOVA_API void path_close(path_t* path);
 
 /**
  * @brief Retrieves the current point of the path.
@@ -510,7 +510,7 @@ NOVASVG_API void path_close(path_t* path);
  * @param x The x-coordinate of the current point.
  * @param y The y-coordinate of the current point.
  */
-NOVASVG_API void path_get_current_point(const path_t* path, float* x, float* y);
+NOVA_API void path_get_current_point(const path_t* path, float* x, float* y);
 
 /**
  * @brief Reserves space for path elements.
@@ -521,7 +521,7 @@ NOVASVG_API void path_get_current_point(const path_t* path, float* x, float* y);
  * @param path A pointer to a `path_t` object.
  * @param count The number of path elements to reserve space for.
  */
-NOVASVG_API void path_reserve(path_t* path, int count);
+NOVA_API void path_reserve(path_t* path, int count);
 
 /**
  * @brief Resets the path.
@@ -530,7 +530,7 @@ NOVASVG_API void path_reserve(path_t* path, int count);
  *
  * @param path A pointer to a `path_t` object.
  */
-NOVASVG_API void path_reset(path_t* path);
+NOVA_API void path_reset(path_t* path);
 
 /**
  * @brief Adds a rectangle to the path.
@@ -543,7 +543,7 @@ NOVASVG_API void path_reset(path_t* path);
  * @param w The width of the rectangle.
  * @param h The height of the rectangle.
  */
-NOVASVG_API void path_add_rect(path_t* path, float x, float y, float w, float h);
+NOVA_API void path_add_rect(path_t* path, float x, float y, float w, float h);
 
 /**
  * @brief Adds a rounded rectangle to the path.
@@ -559,7 +559,7 @@ NOVASVG_API void path_add_rect(path_t* path, float x, float y, float w, float h)
  * @param rx The x-radius of the rectangle's corners.
  * @param ry The y-radius of the rectangle's corners.
  */
-NOVASVG_API void path_add_round_rect(path_t* path, float x, float y, float w, float h, float rx, float ry);
+NOVA_API void path_add_round_rect(path_t* path, float x, float y, float w, float h, float rx, float ry);
 
 /**
  * @brief Adds an ellipse to the path.
@@ -572,7 +572,7 @@ NOVASVG_API void path_add_round_rect(path_t* path, float x, float y, float w, fl
  * @param rx The x-radius of the ellipse.
  * @param ry The y-radius of the ellipse.
  */
-NOVASVG_API void path_add_ellipse(path_t* path, float cx, float cy, float rx, float ry);
+NOVA_API void path_add_ellipse(path_t* path, float cx, float cy, float rx, float ry);
 
 /**
  * @brief Adds a circle to the path.
@@ -584,7 +584,7 @@ NOVASVG_API void path_add_ellipse(path_t* path, float cx, float cy, float rx, fl
  * @param cy The y-coordinate of the circle's center.
  * @param r The radius of the circle.
  */
-NOVASVG_API void path_add_circle(path_t* path, float cx, float cy, float r);
+NOVA_API void path_add_circle(path_t* path, float cx, float cy, float r);
 
 /**
  * @brief Adds an arc to the path.
@@ -600,7 +600,7 @@ NOVASVG_API void path_add_circle(path_t* path, float cx, float cy, float r);
  * @param a1 The end angle of the arc in radians.
  * @param ccw If true, the arc is drawn counter-clockwise; if false, clockwise.
  */
-NOVASVG_API void path_add_arc(path_t* path, float cx, float cy, float r, float a0, float a1, bool ccw);
+NOVA_API void path_add_arc(path_t* path, float cx, float cy, float r, float a0, float a1, bool ccw);
 
 /**
  * @brief Adds a sub-path to the path.
@@ -612,7 +612,7 @@ NOVASVG_API void path_add_arc(path_t* path, float cx, float cy, float r, float a
  * @param source A pointer to the `path_t` object to copy elements from.
  * @param matrix A pointer to a `matrix_t` object, or `NULL` to apply no transformation.
  */
-NOVASVG_API void path_add_path(path_t* path, const path_t* source, const matrix_t* matrix);
+NOVA_API void path_add_path(path_t* path, const path_t* source, const matrix_t* matrix);
 
 /**
  * @brief Applies a transformation matrix to the path.
@@ -622,7 +622,7 @@ NOVASVG_API void path_add_path(path_t* path, const path_t* source, const matrix_
  * @param path A pointer to a `path_t` object.
  * @param matrix A pointer to a `matrix_t` object.
  */
-NOVASVG_API void path_transform(path_t* path, const matrix_t* matrix);
+NOVA_API void path_transform(path_t* path, const matrix_t* matrix);
 
 /**
  * @brief Callback function type for traversing a path.
@@ -643,7 +643,7 @@ typedef void (*path_traverse_func_t)(void* closure, path_command_t command, cons
  * @param traverse_func The callback function to be called for each el of the path.
  * @param closure User-defined data passed to the callback.
  */
-NOVASVG_API void path_traverse(const path_t* path, path_traverse_func_t traverse_func, void* closure);
+NOVA_API void path_traverse(const path_t* path, path_traverse_func_t traverse_func, void* closure);
 
 /**
  * @brief Traverses the path with Bézier curves flattened to line segments.
@@ -652,7 +652,7 @@ NOVASVG_API void path_traverse(const path_t* path, path_traverse_func_t traverse
  * @param traverse_func The callback function to be called for each el of the path.
  * @param closure User-defined data passed to the callback.
  */
-NOVASVG_API void path_traverse_flatten(const path_t* path, path_traverse_func_t traverse_func, void* closure);
+NOVA_API void path_traverse_flatten(const path_t* path, path_traverse_func_t traverse_func, void* closure);
 
 /**
  * @brief Traverses the path with a dashed pattern and calls the callback for each segment.
@@ -664,7 +664,7 @@ NOVASVG_API void path_traverse_flatten(const path_t* path, path_traverse_func_t 
  * @param traverse_func The callback function to be called for each el of the path.
  * @param closure User-defined data passed to the callback.
  */
-NOVASVG_API void path_traverse_dashed(const path_t* path, float offset, const float* dashes, int ndashes, path_traverse_func_t traverse_func, void* closure);
+NOVA_API void path_traverse_dashed(const path_t* path, float offset, const float* dashes, int ndashes, path_traverse_func_t traverse_func, void* closure);
 
 /**
  * @brief Creates a copy of the path.
@@ -672,7 +672,7 @@ NOVASVG_API void path_traverse_dashed(const path_t* path, float offset, const fl
  * @param path A pointer to the `path_t` object to clone.
  * @return A pointer to the newly created path clone.
  */
-NOVASVG_API path_t* path_clone(const path_t* path);
+NOVA_API path_t* path_clone(const path_t* path);
 
 /**
  * @brief Creates a copy of the path with Bézier curves flattened to line segments.
@@ -680,7 +680,7 @@ NOVASVG_API path_t* path_clone(const path_t* path);
  * @param path A pointer to the `path_t` object to clone.
  * @return A pointer to the newly created path clone with flattened curves.
  */
-NOVASVG_API path_t* path_clone_flatten(const path_t* path);
+NOVA_API path_t* path_clone_flatten(const path_t* path);
 
 /**
  * @brief Creates a copy of the path with a dashed pattern applied.
@@ -691,7 +691,7 @@ NOVASVG_API path_t* path_clone_flatten(const path_t* path);
  * @param ndashes The number of elements in the `dashes` array.
  * @return A pointer to the newly created path clone with dashed pattern.
  */
-NOVASVG_API path_t* path_clone_dashed(const path_t* path, float offset, const float* dashes, int ndashes);
+NOVA_API path_t* path_clone_dashed(const path_t* path, float offset, const float* dashes, int ndashes);
 
 /**
  * @brief Computes the bounding box and total length of the path.
@@ -701,7 +701,7 @@ NOVASVG_API path_t* path_clone_dashed(const path_t* path, float offset, const fl
  * @param tight If `true`, computes a precise bounding box; otherwise, aligns to control points.
  * @return The total length of the path.
  */
-NOVASVG_API float path_extents(const path_t* path, rect_t* extents, bool tight);
+NOVA_API float path_extents(const path_t* path, rect_t* extents, bool tight);
 
 /**
  * @brief Calculates the total length of the path.
@@ -709,7 +709,7 @@ NOVASVG_API float path_extents(const path_t* path, rect_t* extents, bool tight);
  * @param path A pointer to a `path_t` object.
  * @return The total length of the path.
  */
-NOVASVG_API float path_length(const path_t* path);
+NOVA_API float path_length(const path_t* path);
 
 /**
  * @brief Parses svg path data into a `path_t` object.
@@ -719,16 +719,16 @@ NOVASVG_API float path_length(const path_t* path);
  * @param length The length of `data`, or `-1` for null-terminated data.
  * @return `true` if successful; `false` otherwise.
  */
-NOVASVG_API bool path_parse(path_t* path, const char* data, int length);
+NOVA_API bool path_parse(path_t* path, const char* data, int length);
 
 /**
  * @brief Text encodings used for converting text data to code points.
  */
 typedef enum text_encoding {
-    NOVASVG_TEXT_ENCODING_LATIN1, ///< Latin-1 encoding
-    NOVASVG_TEXT_ENCODING_UTF8, ///< UTF-8 encoding
-    NOVASVG_TEXT_ENCODING_UTF16, ///< UTF-16 encoding
-    NOVASVG_TEXT_ENCODING_UTF32 ///< UTF-32 encoding
+    NOVA_TEXT_ENCODING_LATIN1, ///< Latin-1 encoding
+    NOVA_TEXT_ENCODING_UTF8, ///< UTF-8 encoding
+    NOVA_TEXT_ENCODING_UTF16, ///< UTF-16 encoding
+    NOVA_TEXT_ENCODING_UTF32 ///< UTF-32 encoding
 } text_encoding_t;
 
 /**
@@ -754,7 +754,7 @@ typedef unsigned int codepoint_t;
  * @param length Length of the text data, or -1 if the data is null-terminated.
  * @param encoding Encoding of the text data.
  */
-NOVASVG_API void text_iterator_init(text_iterator_t* it, const void* text, int length, text_encoding_t encoding);
+NOVA_API void text_iterator_init(text_iterator_t* it, const void* text, int length, text_encoding_t encoding);
 
 /**
  * @brief Checks if there are more code points to iterate.
@@ -762,7 +762,7 @@ NOVASVG_API void text_iterator_init(text_iterator_t* it, const void* text, int l
  * @param it Pointer to the text iterator.
  * @return `true` if more code points are available; otherwise, `false`.
  */
-NOVASVG_API bool text_iterator_has_next(const text_iterator_t* it);
+NOVA_API bool text_iterator_has_next(const text_iterator_t* it);
 
 /**
  * @brief Retrieves the next code point and advances the iterator.
@@ -770,7 +770,7 @@ NOVASVG_API bool text_iterator_has_next(const text_iterator_t* it);
  * @param it Pointer to the text iterator.
  * @return The next code point.
  */
-NOVASVG_API codepoint_t text_iterator_next(text_iterator_t* it);
+NOVA_API codepoint_t text_iterator_next(text_iterator_t* it);
 
 /**
  * @brief Represents a font face.
@@ -784,7 +784,7 @@ typedef struct font_face font_face_t;
  * @param ttcindex Index of the font face within a TrueType Collection (TTC).
  * @return A pointer to the loaded `font_face_t` object, or `NULL` on failure.
  */
-NOVASVG_API font_face_t* font_face_load_from_file(const char* filename, int ttcindex);
+NOVA_API font_face_t* font_face_load_from_file(const char* filename, int ttcindex);
 
 /**
  * @brief Loads a font face from memory.
@@ -796,7 +796,7 @@ NOVASVG_API font_face_t* font_face_load_from_file(const char* filename, int ttci
  * @param closure User-defined data passed to `destroy_func`.
  * @return A pointer to the loaded `font_face_t` object, or `NULL` on failure.
  */
-NOVASVG_API font_face_t* font_face_load_from_data(const void* data, unsigned int length, int ttcindex, destroy_func_t destroy_func, void* closure);
+NOVA_API font_face_t* font_face_load_from_data(const void* data, unsigned int length, int ttcindex, destroy_func_t destroy_func, void* closure);
 
 /**
  * @brief Increments the reference count of a font face.
@@ -804,14 +804,14 @@ NOVASVG_API font_face_t* font_face_load_from_data(const void* data, unsigned int
  * @param face A pointer to a `font_face_t` object.
  * @return A pointer to the same `font_face_t` object with an incremented reference count.
  */
-NOVASVG_API font_face_t* font_face_reference(font_face_t* face);
+NOVA_API font_face_t* font_face_reference(font_face_t* face);
 
 /**
  * @brief Decrements the reference count and potentially destroys the font face.
  *
  * @param face A pointer to a `font_face_t` object.
  */
-NOVASVG_API void font_face_destroy(font_face_t* face);
+NOVA_API void font_face_destroy(font_face_t* face);
 
 /**
  * @brief Retrieves the current reference count of a font face.
@@ -819,7 +819,7 @@ NOVASVG_API void font_face_destroy(font_face_t* face);
  * @param face A pointer to a `font_face_t` object.
  * @return The reference count of the font face.
  */
-NOVASVG_API int font_face_get_reference_count(const font_face_t* face);
+NOVA_API int font_face_get_reference_count(const font_face_t* face);
 
 /**
  * @brief Retrieves metrics for a font face at a specified size.
@@ -831,7 +831,7 @@ NOVASVG_API int font_face_get_reference_count(const font_face_t* face);
  * @param line_gap Pointer to store the line gap metric.
  * @param extents Pointer to a `rect_t` object to store the font bounding box.
  */
-NOVASVG_API void font_face_get_metrics(const font_face_t* face, float size, float* ascent, float* descent, float* line_gap, rect_t* extents);
+NOVA_API void font_face_get_metrics(const font_face_t* face, float size, float* ascent, float* descent, float* line_gap, rect_t* extents);
 
 /**
  * @brief Retrieves metrics for a specified glyph at a given size.
@@ -843,7 +843,7 @@ NOVASVG_API void font_face_get_metrics(const font_face_t* face, float size, floa
  * @param left_side_bearing Pointer to store the left side bearing of the glyph.
  * @param extents Pointer to a `rect_t` object to store the glyph bounding box.
  */
-NOVASVG_API void font_face_get_glyph_metrics(font_face_t* face, float size, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents);
+NOVA_API void font_face_get_glyph_metrics(font_face_t* face, float size, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents);
 
 /**
  * @brief Retrieves the path of a glyph and its advance width.
@@ -856,7 +856,7 @@ NOVASVG_API void font_face_get_glyph_metrics(font_face_t* face, float size, code
  * @param path Pointer to a `path_t` object to store the glyph path.
  * @return The advance width of the glyph.
  */
-NOVASVG_API float font_face_get_glyph_path(font_face_t* face, float size, float x, float y, codepoint_t codepoint, path_t* path);
+NOVA_API float font_face_get_glyph_path(font_face_t* face, float size, float x, float y, codepoint_t codepoint, path_t* path);
 
 /**
  * @brief Traverses the path of a glyph and calls a callback for each path el.
@@ -870,7 +870,7 @@ NOVASVG_API float font_face_get_glyph_path(font_face_t* face, float size, float 
  * @param closure User-defined data passed to the callback function.
  * @return The advance width of the glyph.
  */
-NOVASVG_API float font_face_traverse_glyph_path(font_face_t* face, float size, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure);
+NOVA_API float font_face_traverse_glyph_path(font_face_t* face, float size, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure);
 
 /**
  * @brief Computes the bounding box of a text string and its advance width.
@@ -883,7 +883,7 @@ NOVASVG_API float font_face_traverse_glyph_path(font_face_t* face, float size, f
  * @param extents Pointer to a `rect_t` object to store the bounding box of the text.
  * @return The total advance width of the text.
  */
-NOVASVG_API float font_face_text_extents(font_face_t* face, float size, const void* text, int length, text_encoding_t encoding, rect_t* extents);
+NOVA_API float font_face_text_extents(font_face_t* face, float size, const void* text, int length, text_encoding_t encoding, rect_t* extents);
 
 /**
  * @brief Represents a cache of loaded font faces.
@@ -895,7 +895,7 @@ typedef struct font_face_cache font_face_cache_t;
  *
  * @return Pointer to a newly allocated `font_face_cache_t` object.
  */
-NOVASVG_API font_face_cache_t* font_face_cache_create(void);
+NOVA_API font_face_cache_t* font_face_cache_create(void);
 
 /**
  * @brief Increments the reference count of a font‐face cache.
@@ -903,14 +903,14 @@ NOVASVG_API font_face_cache_t* font_face_cache_create(void);
  * @param cache A pointer to a `font_face_cache_t` object.
  * @return A pointer to the same `font_face_cache_t` object with an incremented reference count.
  */
-NOVASVG_API font_face_cache_t* font_face_cache_reference(font_face_cache_t* cache);
+NOVA_API font_face_cache_t* font_face_cache_reference(font_face_cache_t* cache);
 
 /**
  * @brief Decrement the reference count of a font‐face cache and destroy it when it reaches zero.
  *
  * @param cache A pointer to a `font_face_cache_t` object to release.
  */
-NOVASVG_API void font_face_cache_destroy(font_face_cache_t* cache);
+NOVA_API void font_face_cache_destroy(font_face_cache_t* cache);
 
 /**
  * @brief Retrieve the current reference count of a font‐face cache.
@@ -918,14 +918,14 @@ NOVASVG_API void font_face_cache_destroy(font_face_cache_t* cache);
  * @param cache A pointer to a `font_face_cache_t` object.
  * @return The current reference count, or 0 if cache is NULL.
  */
-NOVASVG_API int font_face_cache_reference_count(const font_face_cache_t* cache);
+NOVA_API int font_face_cache_reference_count(const font_face_cache_t* cache);
 
 /**
  * @brief Remove all entries from a font‐face cache.
  *
  * @param cache A pointer to a `font_face_cache_t` object to reset.
  */
-NOVASVG_API void font_face_cache_reset(font_face_cache_t* cache);
+NOVA_API void font_face_cache_reset(font_face_cache_t* cache);
 
 /**
  * @brief Add a font face to the cache with the specified family and style.
@@ -936,7 +936,7 @@ NOVASVG_API void font_face_cache_reset(font_face_cache_t* cache);
  * @param italic Whether the font is italic.
  * @param face A pointer to the `font_face_t` to add. The cache increments its reference count.
  */
-NOVASVG_API void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold, bool italic, font_face_t* face);
+NOVA_API void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold, bool italic, font_face_t* face);
 
 /**
  * @brief Load a font face from a file and add it to the cache with the specified family and style.
@@ -949,7 +949,7 @@ NOVASVG_API void font_face_cache_add(font_face_cache_t* cache, const char* famil
  * @param ttcindex Index of the face in a TrueType collection (use 0 for non-TTC fonts).
  * @return `true` on success, `false` if the file could not be loaded.
  */
-NOVASVG_API bool font_face_cache_add_file(font_face_cache_t* cache, const char* family, bool bold, bool italic, const char* filename, int ttcindex);
+NOVA_API bool font_face_cache_add_file(font_face_cache_t* cache, const char* family, bool bold, bool italic, const char* filename, int ttcindex);
 
 /**
  * @brief Retrieve a font face from the cache by family and style.
@@ -960,7 +960,7 @@ NOVASVG_API bool font_face_cache_add_file(font_face_cache_t* cache, const char* 
  * @param italic Whether the font is italic.
  * @return A pointer to the matching `font_face_t` object, or NULL if not found. The returned face is owned by the cache and must not be destroyed by the caller.
  */
-NOVASVG_API font_face_t* font_face_cache_get(font_face_cache_t* cache, const char* family, bool bold, bool italic);
+NOVA_API font_face_t* font_face_cache_get(font_face_cache_t* cache, const char* family, bool bold, bool italic);
 
 /**
  * @brief Load all font faces from a file and add them to the cache.
@@ -969,7 +969,7 @@ NOVASVG_API font_face_t* font_face_cache_get(font_face_cache_t* cache, const cha
  * @param filename Path to the font file (TrueType, OpenType, or font collection).
  * @return The number of faces successfully loaded, or `-1` if font face cache loading is disabled.
  */
-NOVASVG_API int font_face_cache_load_file(font_face_cache_t* cache, const char* filename);
+NOVA_API int font_face_cache_load_file(font_face_cache_t* cache, const char* filename);
 
 /**
  * @brief Load all font faces from files in a directory recursively and add them to the cache.
@@ -980,7 +980,7 @@ NOVASVG_API int font_face_cache_load_file(font_face_cache_t* cache, const char* 
  * @param dirname Path to the directory containing font files.
  * @return The number of faces successfully loaded, or `-1` if font face cache loading is disabled.
  */
-NOVASVG_API int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirname);
+NOVA_API int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirname);
 
 /**
  * @brief Load all available system font faces and add them to the cache.
@@ -990,7 +990,7 @@ NOVASVG_API int font_face_cache_load_dir(font_face_cache_t* cache, const char* d
  * @param cache A pointer to a `font_face_cache_t` object.
  * @return The number of faces successfully loaded, or `-1` if font face cache loading is disabled.
  */
-NOVASVG_API int font_face_cache_load_sys(font_face_cache_t* cache);
+NOVA_API int font_face_cache_load_sys(font_face_cache_t* cache);
 
 /**
  * @brief Represents a color with red, green, blue, and alpha components.
@@ -1002,16 +1002,16 @@ typedef struct color {
     float a; ///< Alpha (opacity) component (0 to 1).
 } color_t;
 
-#define NOVASVG_MAKE_COLOR(r, g, b, a) (color_t{r, g, b, a})
+#define NOVA_MAKE_COLOR(r, g, b, a) (color_t{r, g, b, a})
 
-#define NOVASVG_BLACK_COLOR   NOVASVG_MAKE_COLOR(0, 0, 0, 1)
-#define NOVASVG_WHITE_COLOR   NOVASVG_MAKE_COLOR(1, 1, 1, 1)
-#define NOVASVG_RED_COLOR     NOVASVG_MAKE_COLOR(1, 0, 0, 1)
-#define NOVASVG_GREEN_COLOR   NOVASVG_MAKE_COLOR(0, 1, 0, 1)
-#define NOVASVG_BLUE_COLOR    NOVASVG_MAKE_COLOR(0, 0, 1, 1)
-#define NOVASVG_YELLOW_COLOR  NOVASVG_MAKE_COLOR(1, 1, 0, 1)
-#define NOVASVG_CYAN_COLOR    NOVASVG_MAKE_COLOR(0, 1, 1, 1)
-#define NOVASVG_MAGENTA_COLOR NOVASVG_MAKE_COLOR(1, 0, 1, 1)
+#define NOVA_BLACK_COLOR   NOVA_MAKE_COLOR(0, 0, 0, 1)
+#define NOVA_WHITE_COLOR   NOVA_MAKE_COLOR(1, 1, 1, 1)
+#define NOVA_RED_COLOR     NOVA_MAKE_COLOR(1, 0, 0, 1)
+#define NOVA_GREEN_COLOR   NOVA_MAKE_COLOR(0, 1, 0, 1)
+#define NOVA_BLUE_COLOR    NOVA_MAKE_COLOR(0, 0, 1, 1)
+#define NOVA_YELLOW_COLOR  NOVA_MAKE_COLOR(1, 1, 0, 1)
+#define NOVA_CYAN_COLOR    NOVA_MAKE_COLOR(0, 1, 1, 1)
+#define NOVA_MAGENTA_COLOR NOVA_MAKE_COLOR(1, 0, 1, 1)
 
 /**
  * @brief Initializes a color using RGB components in the 0-1 range.
@@ -1021,7 +1021,7 @@ typedef struct color {
  * @param g Green component (0 to 1).
  * @param b Blue component (0 to 1).
  */
-NOVASVG_API void color_init_rgb(color_t* color, float r, float g, float b);
+NOVA_API void color_init_rgb(color_t* color, float r, float g, float b);
 
 /**
  * @brief Initializes a color using RGBA components in the 0-1 range.
@@ -1032,7 +1032,7 @@ NOVASVG_API void color_init_rgb(color_t* color, float r, float g, float b);
  * @param b Blue component (0 to 1).
  * @param a Alpha component (0 to 1).
  */
-NOVASVG_API void color_init_rgba(color_t* color, float r, float g, float b, float a);
+NOVA_API void color_init_rgba(color_t* color, float r, float g, float b, float a);
 
 /**
  * @brief Initializes a color using RGB components in the 0-255 range.
@@ -1042,7 +1042,7 @@ NOVASVG_API void color_init_rgba(color_t* color, float r, float g, float b, floa
  * @param g Green component (0 to 255).
  * @param b Blue component (0 to 255).
  */
-NOVASVG_API void color_init_rgb8(color_t* color, int r, int g, int b);
+NOVA_API void color_init_rgb8(color_t* color, int r, int g, int b);
 
 /**
  * @brief Initializes a color using RGBA components in the 0-255 range.
@@ -1053,7 +1053,7 @@ NOVASVG_API void color_init_rgb8(color_t* color, int r, int g, int b);
  * @param b Blue component (0 to 255).
  * @param a Alpha component (0 to 255).
  */
-NOVASVG_API void color_init_rgba8(color_t* color, int r, int g, int b, int a);
+NOVA_API void color_init_rgba8(color_t* color, int r, int g, int b, int a);
 
 /**
  * @brief Initializes a color from a 32-bit unsigned RGBA value.
@@ -1061,7 +1061,7 @@ NOVASVG_API void color_init_rgba8(color_t* color, int r, int g, int b, int a);
  * @param color A pointer to a `color_t` object.
  * @param value 32-bit unsigned RGBA value.
  */
-NOVASVG_API void color_init_rgba32(color_t* color, unsigned int value);
+NOVA_API void color_init_rgba32(color_t* color, unsigned int value);
 
 /**
  * @brief Initializes a color from a 32-bit unsigned ARGB value.
@@ -1069,7 +1069,7 @@ NOVASVG_API void color_init_rgba32(color_t* color, unsigned int value);
  * @param color A pointer to a `color_t` object.
  * @param value 32-bit unsigned ARGB value.
  */
-NOVASVG_API void color_init_argb32(color_t* color, unsigned int value);
+NOVA_API void color_init_argb32(color_t* color, unsigned int value);
 
 /**
  * @brief Initializes a color with the specified HSL color values.
@@ -1079,7 +1079,7 @@ NOVASVG_API void color_init_argb32(color_t* color, unsigned int value);
  * @param s Saturation component (0 to 1).
  * @param l Lightness component (0 to 1).
  */
-NOVASVG_API void color_init_hsl(color_t* color, float h, float s, float l);
+NOVA_API void color_init_hsl(color_t* color, float h, float s, float l);
 
 /**
  * @brief Initializes a color with the specified HSLA color values.
@@ -1090,7 +1090,7 @@ NOVASVG_API void color_init_hsl(color_t* color, float h, float s, float l);
  * @param l Lightness component (0 to 1).
  * @param a Alpha component (0 to 1).
  */
-NOVASVG_API void color_init_hsla(color_t* color, float h, float s, float l, float a);
+NOVA_API void color_init_hsla(color_t* color, float h, float s, float l, float a);
 
 /**
  * @brief Converts a color to a 32-bit unsigned RGBA value.
@@ -1099,7 +1099,7 @@ NOVASVG_API void color_init_hsla(color_t* color, float h, float s, float l, floa
  * 
  * @return 32-bit unsigned RGBA value.
  */
-NOVASVG_API unsigned int color_to_rgba32(const color_t* color);
+NOVA_API unsigned int color_to_rgba32(const color_t* color);
 
 /**
  * @brief Converts a color to a 32-bit unsigned ARGB value.
@@ -1108,7 +1108,7 @@ NOVASVG_API unsigned int color_to_rgba32(const color_t* color);
  * 
  * @return 32-bit unsigned ARGB value.
  */
-NOVASVG_API unsigned int color_to_argb32(const color_t* color);
+NOVA_API unsigned int color_to_argb32(const color_t* color);
 
 /**
  * @brief Parses a color from a string using CSS color syntax.
@@ -1119,7 +1119,7 @@ NOVASVG_API unsigned int color_to_argb32(const color_t* color);
  * 
  * @return The number of characters consumed on success (including leading/trailing spaces), or 0 on failure.
  */
-NOVASVG_API int color_parse(color_t* color, const char* data, int length);
+NOVA_API int color_parse(color_t* color, const char* data, int length);
 
 /**
  * @brief Represents an image surface for drawing operations.
@@ -1138,9 +1138,9 @@ typedef struct surface surface_t;
  * @return A pointer to the newly created `surface_t` object.
  */
 /** @brief Decodes base64 text (used for data: URIs). Returns a malloc'd buffer the caller frees, or NULL. */
-NOVASVG_API uint8_t* base64_decode(const char* data, int length, size_t* out_length);
+NOVA_API uint8_t* base64_decode(const char* data, int length, size_t* out_length);
 
-NOVASVG_API surface_t* surface_create(int width, int height);
+NOVA_API surface_t* surface_create(int width, int height);
 
 /**
  * @brief Creates an image surface using existing pixel data.
@@ -1151,7 +1151,7 @@ NOVASVG_API surface_t* surface_create(int width, int height);
  * @param stride The number of bytes per row in the pixel data.
  * @return A pointer to the newly created `surface_t` object.
  */
-NOVASVG_API surface_t* surface_create_for_data(unsigned char* data, int width, int height, int stride);
+NOVA_API surface_t* surface_create_for_data(unsigned char* data, int width, int height, int stride);
 
 /**
  * @brief Loads an image surface from a file.
@@ -1159,7 +1159,7 @@ NOVASVG_API surface_t* surface_create_for_data(unsigned char* data, int width, i
  * @param filename Path to the image file.
  * @return Pointer to the surface, or `NULL` on failure.
  */
-NOVASVG_API surface_t* surface_load_from_image_file(const char* filename);
+NOVA_API surface_t* surface_load_from_image_file(const char* filename);
 
 /**
  * @brief Loads an image surface from raw image data.
@@ -1168,7 +1168,7 @@ NOVASVG_API surface_t* surface_load_from_image_file(const char* filename);
  * @param length Length of the data in bytes.
  * @return Pointer to the surface, or `NULL` on failure.
  */
-NOVASVG_API surface_t* surface_load_from_image_data(const void* data, int length);
+NOVA_API surface_t* surface_load_from_image_data(const void* data, int length);
 
 /**
  * @brief Loads an image surface from base64-encoded data.
@@ -1177,7 +1177,7 @@ NOVASVG_API surface_t* surface_load_from_image_data(const void* data, int length
  * @param length Length of the data in bytes, or `-1` if null-terminated.
  * @return Pointer to the surface, or `NULL` on failure.
  */
-NOVASVG_API surface_t* surface_load_from_image_base64(const char* data, int length);
+NOVA_API surface_t* surface_load_from_image_base64(const char* data, int length);
 
 /**
  * @brief Increments the reference count for a surface.
@@ -1185,14 +1185,14 @@ NOVASVG_API surface_t* surface_load_from_image_base64(const char* data, int leng
  * @param surface Pointer to the `surface_t` object.
  * @return Pointer to the `surface_t` object.
  */
-NOVASVG_API surface_t* surface_reference(surface_t* surface);
+NOVA_API surface_t* surface_reference(surface_t* surface);
 
 /**
  * @brief Decrements the reference count and destroys the surface if the count reaches zero.
  *
  * @param surface Pointer to the `surface_t` object .
  */
-NOVASVG_API void surface_destroy(surface_t* surface);
+NOVA_API void surface_destroy(surface_t* surface);
 
 /**
  * @brief Gets the current reference count of a surface.
@@ -1200,7 +1200,7 @@ NOVASVG_API void surface_destroy(surface_t* surface);
  * @param surface Pointer to the `surface_t` object.
  * @return The reference count of the surface.
  */
-NOVASVG_API int surface_get_reference_count(const surface_t* surface);
+NOVA_API int surface_get_reference_count(const surface_t* surface);
 
 /**
  * @brief Gets the pixel data of the surface.
@@ -1208,7 +1208,7 @@ NOVASVG_API int surface_get_reference_count(const surface_t* surface);
  * @param surface Pointer to the `surface_t` object.
  * @return Pointer to the pixel data.
  */
-NOVASVG_API unsigned char* surface_get_data(const surface_t* surface);
+NOVA_API unsigned char* surface_get_data(const surface_t* surface);
 
 /**
  * @brief Gets the width of the surface.
@@ -1216,7 +1216,7 @@ NOVASVG_API unsigned char* surface_get_data(const surface_t* surface);
  * @param surface Pointer to the `surface_t` object.
  * @return Width of the surface in pixels.
  */
-NOVASVG_API int surface_get_width(const surface_t* surface);
+NOVA_API int surface_get_width(const surface_t* surface);
 
 /**
  * @brief Gets the height of the surface.
@@ -1224,7 +1224,7 @@ NOVASVG_API int surface_get_width(const surface_t* surface);
  * @param surface Pointer to the `surface_t` object.
  * @return Height of the surface in pixels.
  */
-NOVASVG_API int surface_get_height(const surface_t* surface);
+NOVA_API int surface_get_height(const surface_t* surface);
 
 /**
  * @brief Gets the stride of the surface.
@@ -1232,7 +1232,7 @@ NOVASVG_API int surface_get_height(const surface_t* surface);
  * @param surface Pointer to the `surface_t` object.
  * @return Number of bytes per row.
  */
-NOVASVG_API int surface_get_stride(const surface_t* surface);
+NOVA_API int surface_get_stride(const surface_t* surface);
 
 /**
  * @brief Clears the entire surface with the specified color.
@@ -1240,7 +1240,7 @@ NOVASVG_API int surface_get_stride(const surface_t* surface);
  * @param surface Pointer to the target surface.
  * @param color Pointer to the color used for clearing.
  */
-NOVASVG_API void surface_clear(surface_t* surface, const color_t* color);
+NOVA_API void surface_clear(surface_t* surface, const color_t* color);
 
 /**
  * @brief Converts pixel data from premultiplied ARGB to RGBA format.
@@ -1254,7 +1254,7 @@ NOVASVG_API void surface_clear(surface_t* surface, const color_t* color);
  * @param height Image height in pixels.
  * @param stride Number of bytes per image row in the buffers.
  */
-NOVASVG_API void convert_argb_to_rgba(unsigned char* dst, const unsigned char* src, int width, int height, int stride);
+NOVA_API void convert_argb_to_rgba(unsigned char* dst, const unsigned char* src, int width, int height, int stride);
 
 /**
  * @brief Converts pixel data from RGBA to premultiplied ARGB format.
@@ -1268,23 +1268,23 @@ NOVASVG_API void convert_argb_to_rgba(unsigned char* dst, const unsigned char* s
  * @param height Image height in pixels.
  * @param stride Number of bytes per image row in the buffers.
  */
-NOVASVG_API void convert_rgba_to_argb(unsigned char* dst, const unsigned char* src, int width, int height, int stride);
+NOVA_API void convert_rgba_to_argb(unsigned char* dst, const unsigned char* src, int width, int height, int stride);
 
 /**
  * @brief Defines the type of texture, either plain or tiled.
  */
 typedef enum {
-    NOVASVG_TEXTURE_TYPE_PLAIN, ///< Plain texture.
-    NOVASVG_TEXTURE_TYPE_TILED ///< Tiled texture.
+    NOVA_TEXTURE_TYPE_PLAIN, ///< Plain texture.
+    NOVA_TEXTURE_TYPE_TILED ///< Tiled texture.
 } texture_type_t;
 
 /**
  * @brief Defines the spread method for gradients.
  */
 typedef enum {
-    NOVASVG_SPREAD_METHOD_PAD, ///< Pad the gradient's edges.
-    NOVASVG_SPREAD_METHOD_REFLECT, ///< Reflect the gradient beyond its bounds.
-    NOVASVG_SPREAD_METHOD_REPEAT ///< Repeat the gradient pattern.
+    NOVA_SPREAD_METHOD_PAD, ///< Pad the gradient's edges.
+    NOVA_SPREAD_METHOD_REFLECT, ///< Reflect the gradient beyond its bounds.
+    NOVA_SPREAD_METHOD_REPEAT ///< Repeat the gradient pattern.
 } spread_method_t;
 
 /**
@@ -1308,7 +1308,7 @@ typedef struct paint paint_t;
  * @param b The blue component (0 to 1).
  * @return A pointer to the created `paint_t` object.
  */
-NOVASVG_API paint_t* paint_create_rgb(float r, float g, float b);
+NOVA_API paint_t* paint_create_rgb(float r, float g, float b);
 
 /**
  * @brief Creates a solid RGBA paint.
@@ -1319,7 +1319,7 @@ NOVASVG_API paint_t* paint_create_rgb(float r, float g, float b);
  * @param a The alpha component (0 to 1).
  * @return A pointer to the created `paint_t` object.
  */
-NOVASVG_API paint_t* paint_create_rgba(float r, float g, float b, float a);
+NOVA_API paint_t* paint_create_rgba(float r, float g, float b, float a);
 
 /**
  * @brief Creates a solid color paint.
@@ -1327,7 +1327,7 @@ NOVASVG_API paint_t* paint_create_rgba(float r, float g, float b, float a);
  * @param color A pointer to the `color_t` object.
  * @return A pointer to the created `paint_t` object.
  */
-NOVASVG_API paint_t* paint_create_color(const color_t* color);
+NOVA_API paint_t* paint_create_color(const color_t* color);
 
 /**
  * @brief Creates a linear gradient paint.
@@ -1342,7 +1342,7 @@ NOVASVG_API paint_t* paint_create_color(const color_t* color);
  * @param matrix Optional transformation matrix.
  * @return A pointer to the created `paint_t` object.
  */
-NOVASVG_API paint_t* paint_create_linear_gradient(float x1, float y1, float x2, float y2,
+NOVA_API paint_t* paint_create_linear_gradient(float x1, float y1, float x2, float y2,
     spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
 
 /**
@@ -1360,7 +1360,7 @@ NOVASVG_API paint_t* paint_create_linear_gradient(float x1, float y1, float x2, 
  * @param matrix Optional transformation matrix.
  * @return A pointer to the created `paint_t` object.
  */
-NOVASVG_API paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr,
+NOVA_API paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr,
     spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
 
 /**
@@ -1372,7 +1372,7 @@ NOVASVG_API paint_t* paint_create_radial_gradient(float cx, float cy, float cr, 
  * @param matrix Optional transformation matrix.
  * @return A pointer to the created `paint_t` object.
  */
-NOVASVG_API paint_t* paint_create_texture(surface_t* surface, texture_type_t type, float opacity, const matrix_t* matrix);
+NOVA_API paint_t* paint_create_texture(surface_t* surface, texture_type_t type, float opacity, const matrix_t* matrix);
 
 /**
  * @brief Increments the reference count of a paint object.
@@ -1380,14 +1380,14 @@ NOVASVG_API paint_t* paint_create_texture(surface_t* surface, texture_type_t typ
  * @param paint A pointer to the `paint_t` object.
  * @return A pointer to the referenced `paint_t` object.
  */
-NOVASVG_API paint_t* paint_reference(paint_t* paint);
+NOVA_API paint_t* paint_reference(paint_t* paint);
 
 /**
  * @brief Decrements the reference count and destroys the paint if the count reaches zero.
  *
  * @param paint A pointer to the `paint_t` object.
  */
-NOVASVG_API void paint_destroy(paint_t* paint);
+NOVA_API void paint_destroy(paint_t* paint);
 
 /**
  * @brief Retrieves the reference count of a paint object.
@@ -1395,58 +1395,58 @@ NOVASVG_API void paint_destroy(paint_t* paint);
  * @param paint A pointer to the `paint_t` object.
  * @return The reference count of the `paint_t` object.
  */
-NOVASVG_API int paint_get_reference_count(const paint_t* paint);
+NOVA_API int paint_get_reference_count(const paint_t* paint);
 
 /**
  * @brief Defines fill rule types for filling paths.
  */
 typedef enum {
-    NOVASVG_FILL_RULE_NON_ZERO, ///< Non-zero winding fill rule.
-    NOVASVG_FILL_RULE_EVEN_ODD ///< Even-odd fill rule.
+    NOVA_FILL_RULE_NON_ZERO, ///< Non-zero winding fill rule.
+    NOVA_FILL_RULE_EVEN_ODD ///< Even-odd fill rule.
 } fill_rule_t;
 
 /**
  * @brief Defines compositing operations.
  */
 typedef enum {
-    NOVASVG_OPERATOR_CLEAR,       ///< Clears the destination (resulting in a fully transparent image).
-    NOVASVG_OPERATOR_SRC,         ///< Source replaces destination.
-    NOVASVG_OPERATOR_DST,         ///< Destination is kept, source is ignored.
-    NOVASVG_OPERATOR_SRC_OVER,    ///< Source is composited over destination.
-    NOVASVG_OPERATOR_DST_OVER,    ///< Destination is composited over source.
-    NOVASVG_OPERATOR_SRC_IN,      ///< Source within destination (only the overlapping part of source is shown).
-    NOVASVG_OPERATOR_DST_IN,      ///< Destination within source.
-    NOVASVG_OPERATOR_SRC_OUT,     ///< Source outside destination (non-overlapping part of source is shown).
-    NOVASVG_OPERATOR_DST_OUT,     ///< Destination outside source.
-    NOVASVG_OPERATOR_SRC_ATOP,    ///< Source atop destination (source shown over destination but only in the destination's bounds).
-    NOVASVG_OPERATOR_DST_ATOP,    ///< Destination atop source (destination shown over source but only in the source's bounds).
-    NOVASVG_OPERATOR_XOR,         ///< Source and destination are combined, but their overlapping regions are cleared.
+    NOVA_OPERATOR_CLEAR,       ///< Clears the destination (resulting in a fully transparent image).
+    NOVA_OPERATOR_SRC,         ///< Source replaces destination.
+    NOVA_OPERATOR_DST,         ///< Destination is kept, source is ignored.
+    NOVA_OPERATOR_SRC_OVER,    ///< Source is composited over destination.
+    NOVA_OPERATOR_DST_OVER,    ///< Destination is composited over source.
+    NOVA_OPERATOR_SRC_IN,      ///< Source within destination (only the overlapping part of source is shown).
+    NOVA_OPERATOR_DST_IN,      ///< Destination within source.
+    NOVA_OPERATOR_SRC_OUT,     ///< Source outside destination (non-overlapping part of source is shown).
+    NOVA_OPERATOR_DST_OUT,     ///< Destination outside source.
+    NOVA_OPERATOR_SRC_ATOP,    ///< Source atop destination (source shown over destination but only in the destination's bounds).
+    NOVA_OPERATOR_DST_ATOP,    ///< Destination atop source (destination shown over source but only in the source's bounds).
+    NOVA_OPERATOR_XOR,         ///< Source and destination are combined, but their overlapping regions are cleared.
     // CSS blend modes (W3C Compositing and Blending): the source is blended with the backdrop's colour,
     // then composited over it. Appended after the Porter-Duff operators; same order as the tables in blend.h.
-    NOVASVG_OPERATOR_MULTIPLY,    ///< Backdrop * source: darkens, white is neutral.
-    NOVASVG_OPERATOR_SCREEN,      ///< Inverse of multiply: lightens, black is neutral.
-    NOVASVG_OPERATOR_DARKEN,      ///< The darker of backdrop and source, per channel.
-    NOVASVG_OPERATOR_LIGHTEN,     ///< The lighter of backdrop and source, per channel.
-    NOVASVG_OPERATOR_DIFFERENCE,  ///< Absolute difference of backdrop and source, per channel.
-    NOVASVG_OPERATOR_EXCLUSION    ///< Like difference, with lower contrast.
+    NOVA_OPERATOR_MULTIPLY,    ///< Backdrop * source: darkens, white is neutral.
+    NOVA_OPERATOR_SCREEN,      ///< Inverse of multiply: lightens, black is neutral.
+    NOVA_OPERATOR_DARKEN,      ///< The darker of backdrop and source, per channel.
+    NOVA_OPERATOR_LIGHTEN,     ///< The lighter of backdrop and source, per channel.
+    NOVA_OPERATOR_DIFFERENCE,  ///< Absolute difference of backdrop and source, per channel.
+    NOVA_OPERATOR_EXCLUSION    ///< Like difference, with lower contrast.
 } operator_t;
 
 /**
  * @brief Defines the shape used at the ends of open subpaths.
  */
 typedef enum {
-    NOVASVG_LINE_CAP_BUTT, ///< Flat edge at the end of the stroke.
-    NOVASVG_LINE_CAP_ROUND, ///< Rounded ends at the end of the stroke.
-    NOVASVG_LINE_CAP_SQUARE ///< Square ends at the end of the stroke.
+    NOVA_LINE_CAP_BUTT, ///< Flat edge at the end of the stroke.
+    NOVA_LINE_CAP_ROUND, ///< Rounded ends at the end of the stroke.
+    NOVA_LINE_CAP_SQUARE ///< Square ends at the end of the stroke.
 } line_cap_t;
 
 /**
  * @brief Defines the shape used at the corners of paths.
  */
 typedef enum {
-    NOVASVG_LINE_JOIN_MITER, ///< Miter join with sharp corners.
-    NOVASVG_LINE_JOIN_ROUND, ///< Rounded join.
-    NOVASVG_LINE_JOIN_BEVEL ///< Beveled join with a flattened corner.
+    NOVA_LINE_JOIN_MITER, ///< Miter join with sharp corners.
+    NOVA_LINE_JOIN_ROUND, ///< Rounded join.
+    NOVA_LINE_JOIN_BEVEL ///< Beveled join with a flattened corner.
 } line_join_t;
 
 /**
@@ -1460,7 +1460,7 @@ typedef struct canvas_context canvas_t;
  * @param surface A pointer to a `surface_t` object.
  * @return A pointer to the newly created `canvas_t` object.
  */
-NOVASVG_API canvas_t* canvas_create(surface_t* surface);
+NOVA_API canvas_t* canvas_create(surface_t* surface);
 
 /**
  * @brief Increases the reference count of the canvas.
@@ -1468,14 +1468,14 @@ NOVASVG_API canvas_t* canvas_create(surface_t* surface);
  * @param canvas A pointer to a `canvas_t` object.
  * @return The same pointer to the `canvas_t` object.
  */
-NOVASVG_API canvas_t* canvas_reference(canvas_t* canvas);
+NOVA_API canvas_t* canvas_reference(canvas_t* canvas);
 
 /**
  * @brief Decreases the reference count and destroys the canvas when it reaches zero.
  *
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_destroy(canvas_t* canvas);
+NOVA_API void canvas_destroy(canvas_t* canvas);
 
 /**
  * @brief Retrieves the reference count of the canvas.
@@ -1483,7 +1483,7 @@ NOVASVG_API void canvas_destroy(canvas_t* canvas);
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current reference count.
  */
-NOVASVG_API int canvas_get_reference_count(const canvas_t* canvas);
+NOVA_API int canvas_get_reference_count(const canvas_t* canvas);
 
 /**
  * @brief Gets the surface associated with the canvas.
@@ -1491,21 +1491,21 @@ NOVASVG_API int canvas_get_reference_count(const canvas_t* canvas);
  * @param canvas A pointer to a `canvas_t` object.
  * @return A pointer to the `surface_t` object.
  */
-NOVASVG_API surface_t* canvas_get_surface(const canvas_t* canvas);
+NOVA_API surface_t* canvas_get_surface(const canvas_t* canvas);
 
 /**
  * @brief Saves the current state of the canvas.
  *
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_save(canvas_t* canvas);
+NOVA_API void canvas_save(canvas_t* canvas);
 
 /**
  * @brief Restores the canvas to the most recently saved state.
  *
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_restore(canvas_t* canvas);
+NOVA_API void canvas_restore(canvas_t* canvas);
 
 /**
  * @brief Sets the current paint to a solid color.
@@ -1517,7 +1517,7 @@ NOVASVG_API void canvas_restore(canvas_t* canvas);
  * @param g The green component (0 to 1).
  * @param b The blue component (0 to 1).
  */
-NOVASVG_API void canvas_set_rgb(canvas_t* canvas, float r, float g, float b);
+NOVA_API void canvas_set_rgb(canvas_t* canvas, float r, float g, float b);
 
 /**
  * @brief Sets the current paint to a solid color.
@@ -1530,7 +1530,7 @@ NOVASVG_API void canvas_set_rgb(canvas_t* canvas, float r, float g, float b);
  * @param b The blue component (0 to 1).
  * @param a The alpha component (0 to 1).
  */
-NOVASVG_API void canvas_set_rgba(canvas_t* canvas, float r, float g, float b, float a);
+NOVA_API void canvas_set_rgba(canvas_t* canvas, float r, float g, float b, float a);
 
 /**
  * @brief Sets the current paint to a solid color.
@@ -1540,7 +1540,7 @@ NOVASVG_API void canvas_set_rgba(canvas_t* canvas, float r, float g, float b, fl
  * @param canvas A pointer to a `canvas_t` object.
  * @param color A pointer to a `color_t` object.
  */
-NOVASVG_API void canvas_set_color(canvas_t* canvas, const color_t* color);
+NOVA_API void canvas_set_color(canvas_t* canvas, const color_t* color);
 
 /**
  * @brief Sets the current paint to a linear gradient.
@@ -1557,7 +1557,7 @@ NOVASVG_API void canvas_set_color(canvas_t* canvas, const color_t* color);
  * @param nstops Number of gradient stops.
  * @param matrix Optional transformation matrix.
  */
-NOVASVG_API void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2,
+NOVA_API void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2,
     spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
 
 /**
@@ -1577,7 +1577,7 @@ NOVASVG_API void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1
  * @param nstops Number of gradient stops.
  * @param matrix Optional transformation matrix.
  */
-NOVASVG_API void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr,
+NOVA_API void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr,
     spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
 
 /**
@@ -1591,7 +1591,7 @@ NOVASVG_API void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy
  * @param opacity The opacity of the texture (0 to 1).
  * @param matrix Optional transformation matrix.
  */
-NOVASVG_API void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type_t type, float opacity, const matrix_t* matrix);
+NOVA_API void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type_t type, float opacity, const matrix_t* matrix);
 
 /**
  * @brief Sets the current paint.
@@ -1601,7 +1601,7 @@ NOVASVG_API void canvas_set_texture(canvas_t* canvas, surface_t* surface, textur
  * @param canvas A pointer to a `canvas_t` object.
  * @param paint The paint to be used for subsequent drawing operations.
  */
-NOVASVG_API void canvas_set_paint(canvas_t* canvas, paint_t* paint);
+NOVA_API void canvas_set_paint(canvas_t* canvas, paint_t* paint);
 
 /**
  * @brief Retrieves the current paint.
@@ -1612,7 +1612,7 @@ NOVASVG_API void canvas_set_paint(canvas_t* canvas, paint_t* paint);
  * @param color A pointer to a `color_t` object where the current color will be stored.
  * @return The current `paint_t` used for drawing operations. If no paint is set, `NULL` is returned.
  */
-NOVASVG_API paint_t* canvas_get_paint(const canvas_t* canvas, color_t* color);
+NOVA_API paint_t* canvas_get_paint(const canvas_t* canvas, color_t* color);
 
 /**
  * @brief Assigns a font-face cache to the canvas for font management.
@@ -1620,7 +1620,7 @@ NOVASVG_API paint_t* canvas_get_paint(const canvas_t* canvas, color_t* color);
  * @param canvas A pointer to a `canvas_t` object.
  * @param cache A pointer to a `font_face_cache_t` object, or NULL to unset the current cache.
  */
-NOVASVG_API void canvas_set_font_face_cache(canvas_t* canvas, font_face_cache_t* cache);
+NOVA_API void canvas_set_font_face_cache(canvas_t* canvas, font_face_cache_t* cache);
 
 /**
  * @brief Returns the font-face cache associated with the canvas.
@@ -1628,7 +1628,7 @@ NOVASVG_API void canvas_set_font_face_cache(canvas_t* canvas, font_face_cache_t*
  * @param canvas A pointer to a `canvas_t` object.
  * @return A pointer to the associated `font_face_cache_t` object, or NULL if none is set.
  */
-NOVASVG_API font_face_cache_t* canvas_get_font_face_cache(const canvas_t* canvas);
+NOVA_API font_face_cache_t* canvas_get_font_face_cache(const canvas_t* canvas);
 
 /**
  * @brief Add a font face to the canvas using the specified family and style.
@@ -1639,7 +1639,7 @@ NOVASVG_API font_face_cache_t* canvas_get_font_face_cache(const canvas_t* canvas
  * @param italic Whether the font is italic.
  * @param face A pointer to the `font_face_t` object to add.
  */
-NOVASVG_API void canvas_add_font_face(canvas_t* canvas, const char* family, bool bold, bool italic, font_face_t* face);
+NOVA_API void canvas_add_font_face(canvas_t* canvas, const char* family, bool bold, bool italic, font_face_t* face);
 
 /**
  * @brief Load a font face from a file and add it to the canvas using the specified family and style.
@@ -1652,7 +1652,7 @@ NOVASVG_API void canvas_add_font_face(canvas_t* canvas, const char* family, bool
  * @param ttcindex Index within a TrueType Collection (use 0 for regular font files).
  * @return `true` on success, or `false` if the font could not be loaded.
  */
-NOVASVG_API bool canvas_add_font_file(canvas_t* canvas, const char* family, bool bold, bool italic, const char* filename, int ttcindex);
+NOVA_API bool canvas_add_font_file(canvas_t* canvas, const char* family, bool bold, bool italic, const char* filename, int ttcindex);
 
 /**
  * @brief Selects and sets the current font face on the canvas.
@@ -1663,7 +1663,7 @@ NOVASVG_API bool canvas_add_font_file(canvas_t* canvas, const char* family, bool
  * @param italic Whether to match an italic variant.
  * @return `true` if a matching font was found and set, `false` otherwise.
  */
-NOVASVG_API bool canvas_select_font_face(canvas_t* canvas, const char* family, bool bold, bool italic);
+NOVA_API bool canvas_select_font_face(canvas_t* canvas, const char* family, bool bold, bool italic);
 
 /**
  * @brief Sets the font face and size for text rendering on the canvas.
@@ -1674,7 +1674,7 @@ NOVASVG_API bool canvas_select_font_face(canvas_t* canvas, const char* family, b
  * @param face A pointer to a `font_face_t` object representing the font face to use.
  * @param size The size of the font, in pixels. This determines the height of the rendered text.
  */
-NOVASVG_API void canvas_set_font(canvas_t* canvas, font_face_t* face, float size);
+NOVA_API void canvas_set_font(canvas_t* canvas, font_face_t* face, float size);
 
 /**
  * @brief Sets the font face for text rendering on the canvas.
@@ -1684,7 +1684,7 @@ NOVASVG_API void canvas_set_font(canvas_t* canvas, font_face_t* face, float size
  * @param canvas A pointer to a `canvas_t` object.
  * @param face A pointer to a `font_face_t` object representing the font face to use.
  */
-NOVASVG_API void canvas_set_font_face(canvas_t* canvas, font_face_t* face);
+NOVA_API void canvas_set_font_face(canvas_t* canvas, font_face_t* face);
 
 /**
  * @brief Retrieves the current font face used for text rendering on the canvas.
@@ -1694,7 +1694,7 @@ NOVASVG_API void canvas_set_font_face(canvas_t* canvas, font_face_t* face);
  * @param canvas A pointer to a `canvas_t` object.
  * @return A pointer to a `font_face_t` object representing the current font face.
  */
-NOVASVG_API font_face_t* canvas_get_font_face(const canvas_t* canvas);
+NOVA_API font_face_t* canvas_get_font_face(const canvas_t* canvas);
 
 /**
  * @brief Sets the font size for text rendering on the canvas.
@@ -1704,7 +1704,7 @@ NOVASVG_API font_face_t* canvas_get_font_face(const canvas_t* canvas);
  * @param canvas A pointer to a `canvas_t` object.
  * @param size The size of the font, in pixels. This value defines the height of the rendered text.
  */
-NOVASVG_API void canvas_set_font_size(canvas_t* canvas, float size);
+NOVA_API void canvas_set_font_size(canvas_t* canvas, float size);
 
 /**
  * @brief Retrieves the current font size used for text rendering on the canvas.
@@ -1714,47 +1714,47 @@ NOVASVG_API void canvas_set_font_size(canvas_t* canvas, float size);
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current font size, in pixels. This value represents the height of the rendered text.
  */
-NOVASVG_API float canvas_get_font_size(const canvas_t* canvas);
+NOVA_API float canvas_get_font_size(const canvas_t* canvas);
 
 /**
  * @brief Sets the fill rule.
  *
- * If not set, the default fill rule is `NOVASVG_FILL_RULE_NON_ZERO`.
+ * If not set, the default fill rule is `NOVA_FILL_RULE_NON_ZERO`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param winding The fill rule.
  */
-NOVASVG_API void canvas_set_fill_rule(canvas_t* canvas, fill_rule_t winding);
+NOVA_API void canvas_set_fill_rule(canvas_t* canvas, fill_rule_t winding);
 
 /**
  * @brief Retrieves the current fill rule.
  *
- * If not set, the default fill rule is `NOVASVG_FILL_RULE_NON_ZERO`.
+ * If not set, the default fill rule is `NOVA_FILL_RULE_NON_ZERO`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current fill rule.
  */
-NOVASVG_API fill_rule_t canvas_get_fill_rule(const canvas_t* canvas);
+NOVA_API fill_rule_t canvas_get_fill_rule(const canvas_t* canvas);
 
 /**
  * @brief Sets the compositing operator.
  *
- * If not set, the default compositing operator is `NOVASVG_OPERATOR_SRC_OVER`.
+ * If not set, the default compositing operator is `NOVA_OPERATOR_SRC_OVER`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param op The compositing operator.
  */
-NOVASVG_API void canvas_set_operator(canvas_t* canvas, operator_t op);
+NOVA_API void canvas_set_operator(canvas_t* canvas, operator_t op);
 
 /**
  * @brief Retrieves the current compositing operator.
  *
- * If not set, the default compositing operator is `NOVASVG_OPERATOR_SRC_OVER`.
+ * If not set, the default compositing operator is `NOVA_OPERATOR_SRC_OVER`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current compositing operator.
  */
-NOVASVG_API operator_t canvas_get_operator(const canvas_t* canvas);
+NOVA_API operator_t canvas_get_operator(const canvas_t* canvas);
 
 /**
  * @brief Sets the global opacity.
@@ -1764,7 +1764,7 @@ NOVASVG_API operator_t canvas_get_operator(const canvas_t* canvas);
  * @param canvas A pointer to a `canvas_t` object.
  * @param opacity The opacity value (0 to 1).
  */
-NOVASVG_API void canvas_set_opacity(canvas_t* canvas, float opacity);
+NOVA_API void canvas_set_opacity(canvas_t* canvas, float opacity);
 
 /**
  * @brief Retrieves the current global opacity.
@@ -1774,7 +1774,7 @@ NOVASVG_API void canvas_set_opacity(canvas_t* canvas, float opacity);
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current opacity value.
  */
-NOVASVG_API float canvas_get_opacity(const canvas_t* canvas);
+NOVA_API float canvas_get_opacity(const canvas_t* canvas);
 
 /**
  * @brief Sets the line width.
@@ -1784,7 +1784,7 @@ NOVASVG_API float canvas_get_opacity(const canvas_t* canvas);
  * @param canvas A pointer to a `canvas_t` object.
  * @param line_width The width of the stroke.
  */
-NOVASVG_API void canvas_set_line_width(canvas_t* canvas, float line_width);
+NOVA_API void canvas_set_line_width(canvas_t* canvas, float line_width);
 
 /**
  * @brief Retrieves the current line width.
@@ -1794,47 +1794,47 @@ NOVASVG_API void canvas_set_line_width(canvas_t* canvas, float line_width);
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current line width.
  */
-NOVASVG_API float canvas_get_line_width(const canvas_t* canvas);
+NOVA_API float canvas_get_line_width(const canvas_t* canvas);
 
 /**
  * @brief Sets the line cap style.
  *
- * If not set, the default line cap is `NOVASVG_LINE_CAP_BUTT`.
+ * If not set, the default line cap is `NOVA_LINE_CAP_BUTT`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param line_cap The line cap style.
  */
-NOVASVG_API void canvas_set_line_cap(canvas_t* canvas, line_cap_t line_cap);
+NOVA_API void canvas_set_line_cap(canvas_t* canvas, line_cap_t line_cap);
 
 /**
  * @brief Retrieves the current line cap style.
  *
- * If not set, the default line cap is `NOVASVG_LINE_CAP_BUTT`.
+ * If not set, the default line cap is `NOVA_LINE_CAP_BUTT`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current line cap style.
  */
-NOVASVG_API line_cap_t canvas_get_line_cap(const canvas_t* canvas);
+NOVA_API line_cap_t canvas_get_line_cap(const canvas_t* canvas);
 
 /**
  * @brief Sets the line join style.
  *
- * If not set, the default line join is `NOVASVG_LINE_JOIN_MITER`.
+ * If not set, the default line join is `NOVA_LINE_JOIN_MITER`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param line_join The line join style.
  */
-NOVASVG_API void canvas_set_line_join(canvas_t* canvas, line_join_t line_join);
+NOVA_API void canvas_set_line_join(canvas_t* canvas, line_join_t line_join);
 
 /**
  * @brief Retrieves the current line join style.
  *
- * If not set, the default line join is `NOVASVG_LINE_JOIN_MITER`.
+ * If not set, the default line join is `NOVA_LINE_JOIN_MITER`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current line join style.
  */
-NOVASVG_API line_join_t canvas_get_line_join(const canvas_t* canvas);
+NOVA_API line_join_t canvas_get_line_join(const canvas_t* canvas);
 
 /**
  * @brief Sets the miter limit.
@@ -1844,7 +1844,7 @@ NOVASVG_API line_join_t canvas_get_line_join(const canvas_t* canvas);
  * @param canvas A pointer to a `canvas_t` object.
  * @param miter_limit The miter limit value.
  */
-NOVASVG_API void canvas_set_miter_limit(canvas_t* canvas, float miter_limit);
+NOVA_API void canvas_set_miter_limit(canvas_t* canvas, float miter_limit);
 
 /**
  * @brief Retrieves the current miter limit.
@@ -1854,7 +1854,7 @@ NOVASVG_API void canvas_set_miter_limit(canvas_t* canvas, float miter_limit);
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current miter limit value.
  */
-NOVASVG_API float canvas_get_miter_limit(const canvas_t* canvas);
+NOVA_API float canvas_get_miter_limit(const canvas_t* canvas);
 
 /**
  * @brief Sets the dash pattern.
@@ -1866,7 +1866,7 @@ NOVASVG_API float canvas_get_miter_limit(const canvas_t* canvas);
  * @param dashes Array of dash lengths.
  * @param ndashes Number of dash lengths.
  */
-NOVASVG_API void canvas_set_dash(canvas_t* canvas, float offset, const float* dashes, int ndashes);
+NOVA_API void canvas_set_dash(canvas_t* canvas, float offset, const float* dashes, int ndashes);
 
 /**
  * @brief Sets the dash offset.
@@ -1876,7 +1876,7 @@ NOVASVG_API void canvas_set_dash(canvas_t* canvas, float offset, const float* da
  * @param canvas A pointer to a `canvas_t` object.
  * @param offset The dash offset.
  */
-NOVASVG_API void canvas_set_dash_offset(canvas_t* canvas, float offset);
+NOVA_API void canvas_set_dash_offset(canvas_t* canvas, float offset);
 
 /**
  * @brief Retrieves the current dash offset.
@@ -1886,7 +1886,7 @@ NOVASVG_API void canvas_set_dash_offset(canvas_t* canvas, float offset);
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current dash offset.
  */
-NOVASVG_API float canvas_get_dash_offset(const canvas_t* canvas);
+NOVA_API float canvas_get_dash_offset(const canvas_t* canvas);
 
 /**
  * @brief Sets the dash pattern.
@@ -1897,7 +1897,7 @@ NOVASVG_API float canvas_get_dash_offset(const canvas_t* canvas);
  * @param dashes Array of dash lengths.
  * @param ndashes Number of dash lengths.
  */
-NOVASVG_API void canvas_set_dash_array(canvas_t* canvas, const float* dashes, int ndashes);
+NOVA_API void canvas_set_dash_array(canvas_t* canvas, const float* dashes, int ndashes);
 
 /**
  * @brief Retrieves the current dash pattern.
@@ -1908,7 +1908,7 @@ NOVASVG_API void canvas_set_dash_array(canvas_t* canvas, const float* dashes, in
  * @param dashes Pointer to store the dash array.
  * @return The number of dash lengths.
  */
-NOVASVG_API int canvas_get_dash_array(const canvas_t* canvas, const float** dashes);
+NOVA_API int canvas_get_dash_array(const canvas_t* canvas, const float** dashes);
 
 /**
  * @brief Translates the current transformation matrix by offsets `tx` and `ty`.
@@ -1916,7 +1916,7 @@ NOVASVG_API int canvas_get_dash_array(const canvas_t* canvas, const float** dash
  * @param tx The translation offset in the x-direction.
  * @param ty The translation offset in the y-direction.
  */
-NOVASVG_API void canvas_translate(canvas_t* canvas, float tx, float ty);
+NOVA_API void canvas_translate(canvas_t* canvas, float tx, float ty);
 
 /**
  * @brief Scales the current transformation matrix by factors `sx` and `sy`.
@@ -1924,7 +1924,7 @@ NOVASVG_API void canvas_translate(canvas_t* canvas, float tx, float ty);
  * @param sx The scaling factor in the x-direction.
  * @param sy The scaling factor in the y-direction.
  */
-NOVASVG_API void canvas_scale(canvas_t* canvas, float sx, float sy);
+NOVA_API void canvas_scale(canvas_t* canvas, float sx, float sy);
 
 /**
  * @brief Shears the current transformation matrix by factors `shx` and `shy`.
@@ -1932,41 +1932,41 @@ NOVASVG_API void canvas_scale(canvas_t* canvas, float sx, float sy);
  * @param shx The shearing factor in the x-direction.
  * @param shy The shearing factor in the y-direction.
  */
-NOVASVG_API void canvas_shear(canvas_t* canvas, float shx, float shy);
+NOVA_API void canvas_shear(canvas_t* canvas, float shx, float shy);
 
 /**
  * @brief Rotates the current transformation matrix by the specified angle (in radians).
  * @param canvas A pointer to a `canvas_t` object.
  * @param angle The rotation angle in radians.
  */
-NOVASVG_API void canvas_rotate(canvas_t* canvas, float angle);
+NOVA_API void canvas_rotate(canvas_t* canvas, float angle);
 
 /**
  * @brief Multiplies the current transformation matrix with the specified `matrix`.
  * @param canvas A pointer to a `canvas_t` object.
  * @param matrix A pointer to the `matrix_t` object.
  */
-NOVASVG_API void canvas_transform(canvas_t* canvas, const matrix_t* matrix);
+NOVA_API void canvas_transform(canvas_t* canvas, const matrix_t* matrix);
 
 /**
  * @brief Resets the current transformation matrix to the identity matrix.
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_reset_matrix(canvas_t* canvas);
+NOVA_API void canvas_reset_matrix(canvas_t* canvas);
 
 /**
  * @brief Resets the current transformation matrix to the specified `matrix`.
  * @param canvas A pointer to a `canvas_t` object.
  * @param matrix A pointer to the `matrix_t` object.
  */
-NOVASVG_API void canvas_set_matrix(canvas_t* canvas, const matrix_t* matrix);
+NOVA_API void canvas_set_matrix(canvas_t* canvas, const matrix_t* matrix);
 
 /**
  * @brief Stores the current transformation matrix in `matrix`.
  * @param canvas A pointer to a `canvas_t` object.
  * @param A pointer to the `matrix_t` to store the matrix.
  */
-NOVASVG_API void canvas_get_matrix(const canvas_t* canvas, matrix_t* matrix);
+NOVA_API void canvas_get_matrix(const canvas_t* canvas, matrix_t* matrix);
 
 /**
  * @brief Transforms the point `(x, y)` using the current transformation matrix and stores the result in `(xx, yy)`.
@@ -1976,7 +1976,7 @@ NOVASVG_API void canvas_get_matrix(const canvas_t* canvas, matrix_t* matrix);
  * @param xx A pointer to store the transformed x-coordinate.
  * @param yy A pointer to store the transformed y-coordinate.
  */
-NOVASVG_API void canvas_map(const canvas_t* canvas, float x, float y, float* xx, float* yy);
+NOVA_API void canvas_map(const canvas_t* canvas, float x, float y, float* xx, float* yy);
 
 /**
  * @brief Transforms the `src` point using the current transformation matrix and stores the result in `dst`.
@@ -1985,7 +1985,7 @@ NOVASVG_API void canvas_map(const canvas_t* canvas, float x, float y, float* xx,
  * @param src A pointer to the `point_t` point to transform.
  * @param dst A pointer to the `point_t` to store the transformed point.
  */
-NOVASVG_API void canvas_map_point(const canvas_t* canvas, const point_t* src, point_t* dst);
+NOVA_API void canvas_map_point(const canvas_t* canvas, const point_t* src, point_t* dst);
 
 /**
  * @brief Transforms the `src` rectangle using the current transformation matrix and stores the result in `dst`.
@@ -1994,7 +1994,7 @@ NOVASVG_API void canvas_map_point(const canvas_t* canvas, const point_t* src, po
  * @param src A pointer to the `rect_t` rectangle to transform.
  * @param dst A pointer to the `rect_t` to store the transformed rectangle.
  */
-NOVASVG_API void canvas_map_rect(const canvas_t* canvas, const rect_t* src, rect_t* dst);
+NOVA_API void canvas_map_rect(const canvas_t* canvas, const rect_t* src, rect_t* dst);
 
 /**
  * @brief Moves the current point to a new position.
@@ -2006,7 +2006,7 @@ NOVASVG_API void canvas_map_rect(const canvas_t* canvas, const rect_t* src, rect
  * @param x The x-coordinate of the new position.
  * @param y The y-coordinate of the new position.
  */
-NOVASVG_API void canvas_move_to(canvas_t* canvas, float x, float y);
+NOVA_API void canvas_move_to(canvas_t* canvas, float x, float y);
 
 /**
  * @brief Adds a straight line segment to the current path.
@@ -2018,7 +2018,7 @@ NOVASVG_API void canvas_move_to(canvas_t* canvas, float x, float y);
  * @param x The x-coordinate of the end point of the line.
  * @param y The y-coordinate of the end point of the line.
  */
-NOVASVG_API void canvas_line_to(canvas_t* canvas, float x, float y);
+NOVA_API void canvas_line_to(canvas_t* canvas, float x, float y);
 
 /**
  * @brief Adds a quadratic Bézier curve to the current path.
@@ -2032,7 +2032,7 @@ NOVASVG_API void canvas_line_to(canvas_t* canvas, float x, float y);
  * @param x2 The x-coordinate of the end point of the curve.
  * @param y2 The y-coordinate of the end point of the curve.
  */
-NOVASVG_API void canvas_quad_to(canvas_t* canvas, float x1, float y1, float x2, float y2);
+NOVA_API void canvas_quad_to(canvas_t* canvas, float x1, float y1, float x2, float y2);
 
 /**
  * @brief Adds a cubic Bézier curve to the current path.
@@ -2048,7 +2048,7 @@ NOVASVG_API void canvas_quad_to(canvas_t* canvas, float x1, float y1, float x2, 
  * @param x3 The x-coordinate of the end point of the curve.
  * @param y3 The y-coordinate of the end point of the curve.
  */
-NOVASVG_API void canvas_cubic_to(canvas_t* canvas, float x1, float y1, float x2, float y2, float x3, float y3);
+NOVA_API void canvas_cubic_to(canvas_t* canvas, float x1, float y1, float x2, float y2, float x3, float y3);
 
 /**
  * @brief Adds an elliptical arc to the current path.
@@ -2066,7 +2066,7 @@ NOVASVG_API void canvas_cubic_to(canvas_t* canvas, float x1, float y1, float x2,
  * @param x The x-coordinate of the end point.
  * @param y The y-coordinate of the end point.
  */
-NOVASVG_API void canvas_arc_to(canvas_t* canvas, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y);
+NOVA_API void canvas_arc_to(canvas_t* canvas, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y);
 
 /**
  * @brief Adds a rectangle to the current path.
@@ -2079,7 +2079,7 @@ NOVASVG_API void canvas_arc_to(canvas_t* canvas, float rx, float ry, float angle
  * @param w The width of the rectangle.
  * @param h The height of the rectangle.
  */
-NOVASVG_API void canvas_rect(canvas_t* canvas, float x, float y, float w, float h);
+NOVA_API void canvas_rect(canvas_t* canvas, float x, float y, float w, float h);
 
 /**
  * @brief Adds a rounded rectangle to the current path.
@@ -2095,7 +2095,7 @@ NOVASVG_API void canvas_rect(canvas_t* canvas, float x, float y, float w, float 
  * @param rx The x-radius of the corners.
  * @param ry The y-radius of the corners.
  */
-NOVASVG_API void canvas_round_rect(canvas_t* canvas, float x, float y, float w, float h, float rx, float ry);
+NOVA_API void canvas_round_rect(canvas_t* canvas, float x, float y, float w, float h, float rx, float ry);
 
 /**
  * @brief Adds an ellipse to the current path.
@@ -2108,7 +2108,7 @@ NOVASVG_API void canvas_round_rect(canvas_t* canvas, float x, float y, float w, 
  * @param rx The x-radius of the ellipse.
  * @param ry The y-radius of the ellipse.
  */
-NOVASVG_API void canvas_ellipse(canvas_t* canvas, float cx, float cy, float rx, float ry);
+NOVA_API void canvas_ellipse(canvas_t* canvas, float cx, float cy, float rx, float ry);
 
 /**
  * @brief Adds a circle to the current path.
@@ -2120,7 +2120,7 @@ NOVASVG_API void canvas_ellipse(canvas_t* canvas, float cx, float cy, float rx, 
  * @param cy The y-coordinate of the circle's center.
  * @param r The radius of the circle.
  */
-NOVASVG_API void canvas_circle(canvas_t* canvas, float cx, float cy, float r);
+NOVA_API void canvas_circle(canvas_t* canvas, float cx, float cy, float r);
 
 /**
  * @brief Adds an arc to the current path.
@@ -2137,7 +2137,7 @@ NOVASVG_API void canvas_circle(canvas_t* canvas, float cx, float cy, float r);
  * @param a1 The ending angle of the arc in radians.
  * @param ccw If true, add the arc counter-clockwise; otherwise, clockwise.
  */
-NOVASVG_API void canvas_arc(canvas_t* canvas, float cx, float cy, float r, float a0, float a1, bool ccw);
+NOVA_API void canvas_arc(canvas_t* canvas, float cx, float cy, float r, float a0, float a1, bool ccw);
 
 /**
  * @brief Adds a path to the current path.
@@ -2147,7 +2147,7 @@ NOVASVG_API void canvas_arc(canvas_t* canvas, float cx, float cy, float r, float
  * @param canvas A pointer to a `canvas_t` object.
  * @param path A pointer to the `path_t` object to be added.
  */
-NOVASVG_API void canvas_add_path(canvas_t* canvas, const path_t* path);
+NOVA_API void canvas_add_path(canvas_t* canvas, const path_t* path);
 
 /**
  * @brief Starts a new path on the canvas.
@@ -2156,7 +2156,7 @@ NOVASVG_API void canvas_add_path(canvas_t* canvas, const path_t* path);
  *
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_new_path(canvas_t* canvas);
+NOVA_API void canvas_new_path(canvas_t* canvas);
 
 /**
  * @brief Closes the current path.
@@ -2165,7 +2165,7 @@ NOVASVG_API void canvas_new_path(canvas_t* canvas);
  *
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_close_path(canvas_t* canvas);
+NOVA_API void canvas_close_path(canvas_t* canvas);
 
 /**
  * @brief Retrieves the current point of the canvas.
@@ -2177,7 +2177,7 @@ NOVASVG_API void canvas_close_path(canvas_t* canvas);
  * @param x The x-coordinate of the current point.
  * @param y The y-coordinate of the current point.
  */
-NOVASVG_API void canvas_get_current_point(const canvas_t* canvas, float* x, float* y);
+NOVA_API void canvas_get_current_point(const canvas_t* canvas, float* x, float* y);
 
 /**
  * @brief Gets the current path from the canvas.
@@ -2187,7 +2187,7 @@ NOVASVG_API void canvas_get_current_point(const canvas_t* canvas, float* x, floa
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current path.
  */
-NOVASVG_API path_t* canvas_get_path(const canvas_t* canvas);
+NOVA_API path_t* canvas_get_path(const canvas_t* canvas);
 
 /**
  * @brief Tests whether a point lies within the current fill region.
@@ -2203,7 +2203,7 @@ NOVASVG_API path_t* canvas_get_path(const canvas_t* canvas);
  * @param y The Y coordinate of the point, in user space.
  * @return `true` if the point is within the fill region, `false` otherwise.
  */
-NOVASVG_API bool canvas_fill_contains(canvas_t* canvas, float x, float y);
+NOVA_API bool canvas_fill_contains(canvas_t* canvas, float x, float y);
 
 /**
  * @brief Tests whether a point lies within the current stroke region.
@@ -2219,7 +2219,7 @@ NOVASVG_API bool canvas_fill_contains(canvas_t* canvas, float x, float y);
  * @param y The Y coordinate of the point, in user space.
  * @return `true` if the point is within the stroke region, `false` otherwise.
  */
-NOVASVG_API bool canvas_stroke_contains(canvas_t* canvas, float x, float y);
+NOVA_API bool canvas_stroke_contains(canvas_t* canvas, float x, float y);
 
 /**
  * @brief Tests whether a point lies within the current clipping region.
@@ -2235,7 +2235,7 @@ NOVASVG_API bool canvas_stroke_contains(canvas_t* canvas, float x, float y);
  * @param y The Y coordinate of the point, in user space.
  * @return `true` if the point is within the clipping region, `false` otherwise.
  */
-NOVASVG_API bool canvas_clip_contains(canvas_t* canvas, float x, float y);
+NOVA_API bool canvas_clip_contains(canvas_t* canvas, float x, float y);
 
 /**
  * @brief Computes the bounding box of the area that would be affected by a fill operation.
@@ -2249,7 +2249,7 @@ NOVASVG_API bool canvas_clip_contains(canvas_t* canvas, float x, float y);
  * @param canvas A pointer to a `canvas_t` object.
  * @param extents A pointer to a `rect_t` structure that receives the bounding box.
  */
-NOVASVG_API void canvas_fill_extents(canvas_t* canvas, rect_t* extents);
+NOVA_API void canvas_fill_extents(canvas_t* canvas, rect_t* extents);
 
 /**
  * @brief Computes the bounding box of the area that would be affected by a stroke operation.
@@ -2263,7 +2263,7 @@ NOVASVG_API void canvas_fill_extents(canvas_t* canvas, rect_t* extents);
  * @param canvas A pointer to a `canvas_t` object.
  * @param extents A pointer to a `rect_t` structure that receives the bounding box.
  */
-NOVASVG_API void canvas_stroke_extents(canvas_t* canvas, rect_t* extents);
+NOVA_API void canvas_stroke_extents(canvas_t* canvas, rect_t* extents);
 
 /**
  * @brief Gets the bounding box of the current clipping region.
@@ -2277,7 +2277,7 @@ NOVASVG_API void canvas_stroke_extents(canvas_t* canvas, rect_t* extents);
  * @param canvas A pointer to a `canvas_t` object.
  * @param extents A pointer to a `rect_t` structure that receives the bounding box.
  */
-NOVASVG_API void canvas_clip_extents(canvas_t* canvas, rect_t* extents);
+NOVA_API void canvas_clip_extents(canvas_t* canvas, rect_t* extents);
 
 /**
  * @brief A drawing operator that fills the current path according to the current fill rule.
@@ -2286,7 +2286,7 @@ NOVASVG_API void canvas_clip_extents(canvas_t* canvas, rect_t* extents);
  *
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_fill(canvas_t* canvas);
+NOVA_API void canvas_fill(canvas_t* canvas);
 
 /**
  * @brief A drawing operator that strokes the current path according to the current stroke settings.
@@ -2295,7 +2295,7 @@ NOVASVG_API void canvas_fill(canvas_t* canvas);
  *
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_stroke(canvas_t* canvas);
+NOVA_API void canvas_stroke(canvas_t* canvas);
 
 /**
  * @brief A drawing operator that intersects the current clipping region with the current path according to the current fill rule.
@@ -2304,7 +2304,7 @@ NOVASVG_API void canvas_stroke(canvas_t* canvas);
  *
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_clip(canvas_t* canvas);
+NOVA_API void canvas_clip(canvas_t* canvas);
 
 /**
  * @brief A drawing operator that paints the current clipping region using the current paint.
@@ -2312,7 +2312,7 @@ NOVASVG_API void canvas_clip(canvas_t* canvas);
  * @note The current path will not be affected by this operation.
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_paint(canvas_t* canvas);
+NOVA_API void canvas_paint(canvas_t* canvas);
 
 /**
  * @brief A drawing operator that fills the current path according to the current fill rule.
@@ -2321,7 +2321,7 @@ NOVASVG_API void canvas_paint(canvas_t* canvas);
  *
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_fill_preserve(canvas_t* canvas);
+NOVA_API void canvas_fill_preserve(canvas_t* canvas);
 
 /**
  * @brief A drawing operator that strokes the current path according to the current stroke settings.
@@ -2330,7 +2330,7 @@ NOVASVG_API void canvas_fill_preserve(canvas_t* canvas);
  *
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_stroke_preserve(canvas_t* canvas);
+NOVA_API void canvas_stroke_preserve(canvas_t* canvas);
 
 /**
  * @brief A drawing operator that intersects the current clipping region with the current path according to the current fill rule.
@@ -2339,7 +2339,7 @@ NOVASVG_API void canvas_stroke_preserve(canvas_t* canvas);
  *
  * @param canvas A pointer to a `canvas_t` object.
  */
-NOVASVG_API void canvas_clip_preserve(canvas_t* canvas);
+NOVA_API void canvas_clip_preserve(canvas_t* canvas);
 
 /**
  * @brief Fills a rectangle according to the current fill rule.
@@ -2351,7 +2351,7 @@ NOVASVG_API void canvas_clip_preserve(canvas_t* canvas);
  * @param w The width of the rectangle.
  * @param h The height of the rectangle.
  */
-NOVASVG_API void canvas_fill_rect(canvas_t* canvas, float x, float y, float w, float h);
+NOVA_API void canvas_fill_rect(canvas_t* canvas, float x, float y, float w, float h);
 
 /**
  * @brief Fills a path according to the current fill rule.
@@ -2360,7 +2360,7 @@ NOVASVG_API void canvas_fill_rect(canvas_t* canvas, float x, float y, float w, f
  * @param canvas A pointer to a `canvas_t` object.
  * @param path The `path_t` object.
  */
-NOVASVG_API void canvas_fill_path(canvas_t* canvas, const path_t* path);
+NOVA_API void canvas_fill_path(canvas_t* canvas, const path_t* path);
 
 /**
  * @brief Strokes a rectangle with the current stroke settings.
@@ -2372,7 +2372,7 @@ NOVASVG_API void canvas_fill_path(canvas_t* canvas, const path_t* path);
  * @param w The width of the rectangle.
  * @param h The height of the rectangle.
  */
-NOVASVG_API void canvas_stroke_rect(canvas_t* canvas, float x, float y, float w, float h);
+NOVA_API void canvas_stroke_rect(canvas_t* canvas, float x, float y, float w, float h);
 
 /**
  * @brief Strokes a path with the current stroke settings.
@@ -2381,7 +2381,7 @@ NOVASVG_API void canvas_stroke_rect(canvas_t* canvas, float x, float y, float w,
  * @param canvas A pointer to a `canvas_t` object.
  * @param path The `path_t` object.
  */
-NOVASVG_API void canvas_stroke_path(canvas_t* canvas, const path_t* path);
+NOVA_API void canvas_stroke_path(canvas_t* canvas, const path_t* path);
 
 /**
  * @brief Intersects the current clipping region with a rectangle according to the current fill rule.
@@ -2393,7 +2393,7 @@ NOVASVG_API void canvas_stroke_path(canvas_t* canvas, const path_t* path);
  * @param w The width of the rectangle.
  * @param h The height of the rectangle.
  */
-NOVASVG_API void canvas_clip_rect(canvas_t* canvas, float x, float y, float w, float h);
+NOVA_API void canvas_clip_rect(canvas_t* canvas, float x, float y, float w, float h);
 
 /**
  * @brief Intersects the current clipping region with a path according to the current fill rule.
@@ -2402,7 +2402,7 @@ NOVASVG_API void canvas_clip_rect(canvas_t* canvas, float x, float y, float w, f
  * @param canvas A pointer to a `canvas_t` object.
  * @param path The `path_t` object.
  */
-NOVASVG_API void canvas_clip_path(canvas_t* canvas, const path_t* path);
+NOVA_API void canvas_clip_path(canvas_t* canvas, const path_t* path);
 
 /**
  * @brief Adds a glyph to the current path at the specified origin.
@@ -2413,7 +2413,7 @@ NOVASVG_API void canvas_clip_path(canvas_t* canvas, const path_t* path);
  * @param y The y-coordinate of the origin.
  * @return The advance width of the glyph.
  */
-NOVASVG_API float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x, float y);
+NOVA_API float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x, float y);
 
 /**
  * @brief Adds text to the current path at the specified origin.
@@ -2426,7 +2426,7 @@ NOVASVG_API float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, floa
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVASVG_API float canvas_add_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y);
+NOVA_API float canvas_add_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y);
 
 /**
  * @brief Fills a text at the specified origin.
@@ -2440,7 +2440,7 @@ NOVASVG_API float canvas_add_text(canvas_t* canvas, const void* text, int length
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVASVG_API float canvas_fill_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y);
+NOVA_API float canvas_fill_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y);
 
 /**
  * @brief Strokes a text at the specified origin.
@@ -2454,7 +2454,7 @@ NOVASVG_API float canvas_fill_text(canvas_t* canvas, const void* text, int lengt
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVASVG_API float canvas_stroke_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y);
+NOVA_API float canvas_stroke_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y);
 
 /**
  * @brief Intersects the current clipping region with text at the specified origin.
@@ -2468,7 +2468,7 @@ NOVASVG_API float canvas_stroke_text(canvas_t* canvas, const void* text, int len
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVASVG_API float canvas_clip_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y);
+NOVA_API float canvas_clip_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y);
 
 /**
  * @brief Retrieves font metrics for the current font.
@@ -2479,7 +2479,7 @@ NOVASVG_API float canvas_clip_text(canvas_t* canvas, const void* text, int lengt
  * @param line_gap The line gap of the font.
  * @param extents The bounding box of the font.
  */
-NOVASVG_API void canvas_font_metrics(const canvas_t* canvas, float* ascent, float* descent, float* line_gap, rect_t* extents);
+NOVA_API void canvas_font_metrics(const canvas_t* canvas, float* ascent, float* descent, float* line_gap, rect_t* extents);
 
 /**
  * @brief Retrieves metrics for a specific glyph.
@@ -2490,7 +2490,7 @@ NOVASVG_API void canvas_font_metrics(const canvas_t* canvas, float* ascent, floa
  * @param left_side_bearing The left side bearing of the glyph.
  * @param extents The bounding box of the glyph.
  */
-NOVASVG_API void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents);
+NOVA_API void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents);
 
 /**
  * @brief Retrieves the extents of a text.
@@ -2502,9 +2502,9 @@ NOVASVG_API void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, f
  * @param extents The bounding box of the text.
  * @return The total advance width of the text.
  */
-NOVASVG_API float canvas_text_extents(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, rect_t* extents);
+NOVA_API float canvas_text_extents(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, rect_t* extents);
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova
 
-#endif // NOVASVG_RENDER_H
+#endif // NOVA_RENDER_H

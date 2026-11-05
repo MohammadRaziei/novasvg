@@ -1,5 +1,5 @@
-#ifndef NOVASVG_COLOR_H
-#define NOVASVG_COLOR_H
+#ifndef NOVA_COLOR_H
+#define NOVA_COLOR_H
 
 // Self-contained on purpose: this header is included standalone by
 // tests/cpp/test_novacolor.cpp, not just via the novasvg.h umbrella.
@@ -21,7 +21,7 @@
  * @namespace novasvg
  * @brief Main namespace for the NovaSVG library
  */
-namespace novasvg {
+namespace nova::vg {
 struct ColorBlend;
 
 /**
@@ -150,15 +150,15 @@ public:
      *
      * This constructor lets Color be built (implicitly) from any other
      * color type that exposes red()/green()/blue()/alpha() accessors
-     * returning integral values -- for example novasvg::Color from
-     * graphics.h. It exists so that novasvg::Color can be used
-     * as a drop-in replacement for novasvg::Color throughout the engine.
+     * returning integral values -- for example nova::vg::Color from
+     * graphics.h. It exists so that nova::vg::Color can be used
+     * as a drop-in replacement for nova::vg::Color throughout the engine.
      *
      * @warning The conversion is always done component-by-component
      *          (r, g, b, a), NEVER via value()/raw 32-bit integers.
      *          Different Color types are free to pack RGBA into a
      *          32-bit value using different byte orders -- this class
-     *          uses 0xRRGGBBAA, while e.g. novasvg::Color uses
+     *          uses 0xRRGGBBAA, while e.g. nova::vg::Color uses
      *          0xAARRGGBB. Converting through the packed value would
      *          silently corrupt colors.
      *
@@ -166,8 +166,8 @@ public:
      *
      * @par Example
      * @code
-     * novasvg::Color engine_color(255, 0, 0);     // engine's own Color
-     * novasvg::Color c = engine_color;      // implicit conversion in
+     * nova::vg::Color engine_color(255, 0, 0);     // engine's own Color
+     * nova::vg::Color c = engine_color;      // implicit conversion in
      * @endcode
      */
     template <typename OtherColor,
@@ -187,7 +187,7 @@ public:
      *
      * Symmetric counterpart to the templated constructor above. Lets this
      * Color be handed to APIs expecting a different Color type (e.g. the
-     * engine's novasvg::Color) without ever touching value()/raw bit
+     * engine's nova::vg::Color) without ever touching value()/raw bit
      * layout. Kept explicit (a named method, not an implicit conversion
      * operator) since an unconstrained implicit `operator T()` would be
      * far too eager to match unrelated types and would also collide with
@@ -197,9 +197,9 @@ public:
      *
      * @par Example
      * @code
-     * using namespace novasvg::color_literals;
-     * novasvg::Color c = "red"_c;
-     * novasvg::Color engine_color = c.as<novasvg::Color>();  // out
+     * using namespace nova::vg::color_literals;
+     * nova::vg::Color c = "red"_c;
+     * nova::vg::Color engine_color = c.as<nova::vg::Color>();  // out
      * @endcode
      */
     template <typename OtherColor>
@@ -974,12 +974,12 @@ inline std::ostream& operator<<(std::ostream& os, const ColorBlend& blend) {
     return os;
 }
 
-} // namespace novasvg
+} // namespace nova::vg
 
 // ==================== Color Literals Namespace ====================
 
 /**
- * @namespace novasvg::color_literals
+ * @namespace nova::vg::color_literals
  * @brief String literal operators for creating Color instances.
  * 
  * This namespace provides the _c suffix operator for creating colors
@@ -987,7 +987,7 @@ inline std::ostream& operator<<(std::ostream& os, const ColorBlend& blend) {
  * 
  * @par Usage
  * @code
- * using namespace novasvg::color_literals;
+ * using namespace nova::vg::color_literals;
  * 
  * Color c1 = "red"_c;           // From color name
  * Color c2 = "#FF0000"_c;      // From hex
@@ -995,10 +995,10 @@ inline std::ostream& operator<<(std::ostream& os, const ColorBlend& blend) {
  * Color c4 = "gray"_c | 50 | "black"_c;  // Chain blends
  * @endcode
  * 
- * @note Always include "using namespace novasvg::color_literals;" or
+ * @note Always include "using namespace nova::vg::color_literals;" or
  *       use explicit qualification to use these literals.
  */
-namespace novasvg::color_literals {
+namespace nova::vg::color_literals {
 
 /**
  * @brief String literal operator for creating Color instances.
@@ -1017,7 +1017,7 @@ namespace novasvg::color_literals {
  * 
  * @par Example
  * @code
- * using namespace novasvg::color_literals;
+ * using namespace nova::vg::color_literals;
  * 
  * Color c1 = "red"_c;         // Color::red()
  * Color c2 = "#FF0000"_c;     // Color::fromHash("#FF0000")
@@ -1028,10 +1028,10 @@ namespace novasvg::color_literals {
  * @note The string must be a valid string literal. For runtime strings,
  *       use Color::fromString() instead.
  */
-inline novasvg::Color operator""_c(const char* str, std::size_t len) {
-    return novasvg::Color::fromString(std::string(str, len));
+inline nova::vg::Color operator""_c(const char* str, std::size_t len) {
+    return nova::vg::Color::fromString(std::string(str, len));
 }
 
-} // namespace novasvg::color_literals
+} // namespace nova::vg::color_literals
 
-#endif // NOVASVG_COLOR_H
+#endif // NOVA_COLOR_H

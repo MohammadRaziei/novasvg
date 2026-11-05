@@ -31,10 +31,10 @@ See \ref about for the full origin story.
 
 int main() {
     // Load SVG from file
-    auto document = novasvg::Document::loadFromFile("image.svg");
+    auto document = nova::svg::Document::loadFromFile("image.svg");
     
     // Create bitmap for rendering
-    novasvg::Bitmap bitmap(800, 600);
+    nova::vg::Bitmap bitmap(800, 600);
     
     // Render SVG to bitmap
     document.render(bitmap);
@@ -77,7 +77,7 @@ Check the `examples/` directory for complete examples:
 ```bash
 mkdir build
 cd build
-cmake .. -DNOVASVG_BUILD_EXAMPLES=ON -DNOVASVG_BUILD_TESTS=ON
+cmake .. -DNOVA_BUILD_EXAMPLES=ON -DNOVA_BUILD_TESTS=ON
 make
 ```
 

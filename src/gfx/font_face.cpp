@@ -5,6 +5,7 @@
 // table or `head.macStyle`, so the small system-font scanner below reads those two tables itself.
 #include "font_face.h"
 #include "gfx/internal.h"
+#include <stb/logging.hpp>
 
 #include <stb/font.hpp>
 
@@ -17,7 +18,7 @@
 #include <unordered_map>
 #include <vector>
 
-#ifndef NOVASVG_DISABLE_FONT_FACE_CACHE_LOAD
+#ifndef NOVA_DISABLE_FONT_FACE_CACHE_LOAD
 #include <ctype.h>
 #ifdef _WIN32
 #include <windows.h>
@@ -41,25 +42,28 @@
 #include <threads.h>
 #endif
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
+namespace {
+stb::logging::logger& font_log() { static auto& l = stb::logging::get_logger("novasvg.font"); return l; }
+}  // namespace
 
 static int text_iterator_length(const void* data, text_encoding_t encoding)
 {
     int length = 0;
     switch(encoding) {
-    case NOVASVG_TEXT_ENCODING_LATIN1:
-    case NOVASVG_TEXT_ENCODING_UTF8: {
+    case NOVA_TEXT_ENCODING_LATIN1:
+    case NOVA_TEXT_ENCODING_UTF8: {
         const uint8_t* text = static_cast<const uint8_t*>(data);
         while(*text++)
             length++;
         break;
-    } case NOVASVG_TEXT_ENCODING_UTF16: {
+    } case NOVA_TEXT_ENCODING_UTF16: {
         const uint16_t* text = static_cast<const uint16_t*>(data);
         while(*text++)
             length++;
         break;
-    } case NOVASVG_TEXT_ENCODING_UTF32: {
+    } case NOVA_TEXT_ENCODING_UTF32: {
         const uint32_t* text = static_cast<const uint32_t*>(data);
         while(*text++)
             length++;
@@ -90,11 +94,11 @@ codepoint_t text_iterator_next(text_iterator_t* it)
 {
     codepoint_t codepoint = 0;
     switch(it->encoding) {
-    case NOVASVG_TEXT_ENCODING_LATIN1: {
+    case NOVA_TEXT_ENCODING_LATIN1: {
         const uint8_t* text = static_cast<const uint8_t*>(it->text);
         codepoint = text[it->index++];
         break;
-    } case NOVASVG_TEXT_ENCODING_UTF8: {
+    } case NOVA_TEXT_ENCODING_UTF8: {
         static const uint8_t trailing[256] = {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -122,7 +126,7 @@ codepoint_t text_iterator_next(text_iterator_t* it)
         codepoint += text[it->index++];
         codepoint -= offset_value;
         break;
-    } case NOVASVG_TEXT_ENCODING_UTF16: {
+    } case NOVA_TEXT_ENCODING_UTF16: {
         const uint16_t* text = static_cast<const uint16_t*>(it->text);
         codepoint = text[it->index++];
         if(((codepoint) & 0xfffffc00) == 0xd800) {
@@ -133,7 +137,7 @@ codepoint_t text_iterator_next(text_iterator_t* it)
         }
 
         break;
-    } case NOVASVG_TEXT_ENCODING_UTF32: {
+    } case NOVA_TEXT_ENCODING_UTF32: {
         const uint32_t* text = static_cast<const uint32_t*>(it->text);
         codepoint = text[it->index++];
         break;
@@ -274,7 +278,13 @@ font_face_t* font_face_load_from_data(const void* data, unsigned int length, int
     try {
         const auto* bytes = static_cast<const std::uint8_t*>(data);
         face = new font_face(stb::font::from_memory(std::vector<std::uint8_t>(bytes, bytes + length), ttcindex));
+    } catch(const std::exception& e) {
+        font_log().warning("cannot load a font from memory (%u bytes, index %d): %s", length, ttcindex, e.what());
+        if(destroy_func)
+            destroy_func(closure);
+        return NULL;
     } catch(...) {
+        font_log().warning("cannot load a font from memory (%u bytes, index %d)", length, ttcindex);
         if(destroy_func)
             destroy_func(closure);
         return NULL;
@@ -371,16 +381,16 @@ static void glyph_traverse_func(void* closure, path_command_t command, const poi
 {
     path_t* path = (path_t*)(closure);
     switch(command) {
-    case NOVASVG_PATH_COMMAND_MOVE_TO:
+    case NOVA_PATH_COMMAND_MOVE_TO:
         path_move_to(path, points[0].x, points[0].y);
         break;
-    case NOVASVG_PATH_COMMAND_LINE_TO:
+    case NOVA_PATH_COMMAND_LINE_TO:
         path_line_to(path, points[0].x, points[0].y);
         break;
-    case NOVASVG_PATH_COMMAND_CUBIC_TO:
+    case NOVA_PATH_COMMAND_CUBIC_TO:
         path_cubic_to(path, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
         break;
-    case NOVASVG_PATH_COMMAND_CLOSE:
+    case NOVA_PATH_COMMAND_CLOSE:
         assert(false);
     }
 }
@@ -407,14 +417,14 @@ float font_face_traverse_glyph_path(font_face_t* face, float size, float x, floa
             points[0].y = cmd.p[0].y;
             current_point = points[0];
             matrix_map_points(&matrix, points, points, 1);
-            traverse_func(closure, NOVASVG_PATH_COMMAND_MOVE_TO, points, 1);
+            traverse_func(closure, NOVA_PATH_COMMAND_MOVE_TO, points, 1);
             break;
         case stb::outline_op::line_to:
             points[0].x = cmd.p[0].x;
             points[0].y = cmd.p[0].y;
             current_point = points[0];
             matrix_map_points(&matrix, points, points, 1);
-            traverse_func(closure, NOVASVG_PATH_COMMAND_LINE_TO, points, 1);
+            traverse_func(closure, NOVA_PATH_COMMAND_LINE_TO, points, 1);
             break;
         case stb::outline_op::quad_to: // TrueType: raised to a cubic, as the renderer only knows cubics
             points[0].x = 2.f / 3.f * cmd.p[0].x + 1.f / 3.f * current_point.x;
@@ -425,7 +435,7 @@ float font_face_traverse_glyph_path(font_face_t* face, float size, float x, floa
             points[2].y = cmd.p[1].y;
             current_point = points[2];
             matrix_map_points(&matrix, points, points, 3);
-            traverse_func(closure, NOVASVG_PATH_COMMAND_CUBIC_TO, points, 3);
+            traverse_func(closure, NOVA_PATH_COMMAND_CUBIC_TO, points, 3);
             break;
         case stb::outline_op::cubic_to: // CFF
             points[0].x = cmd.p[0].x;
@@ -436,7 +446,7 @@ float font_face_traverse_glyph_path(font_face_t* face, float size, float x, floa
             points[2].y = cmd.p[2].y;
             current_point = points[2];
             matrix_map_points(&matrix, points, points, 3);
-            traverse_func(closure, NOVASVG_PATH_COMMAND_CUBIC_TO, points, 3);
+            traverse_func(closure, NOVA_PATH_COMMAND_CUBIC_TO, points, 3);
             break;
         case stb::outline_op::close:
             // Contours were never closed explicitly here (stb_truetype gave none): the fill closes
@@ -689,8 +699,10 @@ void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold
 bool font_face_cache_add_file(font_face_cache_t* cache, const char* family, bool bold, bool italic, const char* filename, int ttcindex)
 {
     font_face_t* face = font_face_load_from_file(filename, ttcindex);
-    if(face == NULL)
+    if(face == NULL) {
+        font_log().warning("cannot add '%s' to the font cache (family '%s')", filename, family);
         return false;
+    }
     font_face_cache_add(cache, family, bold, italic, face);
     font_face_destroy(face);
     return true;
@@ -750,7 +762,7 @@ font_face_t* font_face_cache_get(font_face_cache_t* cache, const char* family, b
 }
 
 
-#ifndef NOVASVG_DISABLE_FONT_FACE_CACHE_LOAD
+#ifndef NOVA_DISABLE_FONT_FACE_CACHE_LOAD
 
 // ---- just enough of the sfnt container to list the faces of a font file and read their family name and style
 typedef uint8_t tt_uint8;
@@ -1156,7 +1168,7 @@ int font_face_cache_load_sys(font_face_cache_t* cache)
     return -1;
 }
 
-#endif // NOVASVG_DISABLE_FONT_FACE_CACHE_LOAD
+#endif // NOVA_DISABLE_FONT_FACE_CACHE_LOAD
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

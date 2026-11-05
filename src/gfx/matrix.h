@@ -3,8 +3,8 @@
 #include "novasvg/gfx/render.h"
 #include "gfx/utils.h"
 
-namespace novasvg {
-namespace gfx {
+namespace nova {
+namespace vg {
 
-} // namespace gfx
-} // namespace novasvg
+} // namespace vg
+} // namespace nova

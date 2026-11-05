@@ -5,7 +5,8 @@
 #include "svg/svgelement.h" // private header: this test exercises the HTML scanner directly
 
 // Bold / italic runs inside <foreignObject>: the HTML scanner (no fonts needed).
-using namespace novasvg;
+using namespace nova::svg;
+using namespace nova::vg;
 
 namespace {
 std::string describe(std::string_view html, unsigned char base = 0)
