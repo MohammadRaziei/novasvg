@@ -25,6 +25,7 @@ struct AttributeSelector {
 
     MatchType matchType{MatchType::None};
     PropertyID id{PropertyID::Unknown};
+    std::string name; // the attribute's name, used when `id` is Unknown (`data-*` & co)
     std::string value;
 };
 
@@ -181,6 +182,15 @@ static bool matchAttributeValue(const AttributeSelector& selector, std::string_v
 
 static bool matchAttributeSelector(const AttributeSelector& selector, const SVGElement* element)
 {
+    if(selector.id == PropertyID::Unknown) {
+        const auto* value = element->findCustomAttribute(selector.name);
+        if(value == nullptr)
+            return false;
+        if(selector.matchType == AttributeSelector::MatchType::None)
+            return true; // `[attr]` matches an attribute that is there, even an empty one
+        return matchAttributeValue(selector, *value);
+    }
+
     return matchAttributeValue(selector, element->getAttribute(selector.id));
 }
 
@@ -394,6 +404,7 @@ static bool parseAttributeSelector(std::string_view& input, SimpleSelector& simp
         return false;
     AttributeSelector a;
     a.id = propertyid(name);
+    a.name = name;
     a.matchType = AttributeSelector::MatchType::None;
     if(skipDelimiter(input, '='))
         a.matchType = AttributeSelector::MatchType::Equals;
@@ -1302,6 +1313,11 @@ NOVASVG_INLINE bool Document::parse(const char* data, size_t length)
                         m_rootElement->addElementById(buffer, element);
                     element->setAttribute(Specificity::PresentationAttribute, id, buffer);
                 }
+            } else if(element != nullptr) {
+                // Not an attribute novasvg knows: keep it for CSS attribute selectors.
+                std::string name = buffer;
+                decodeText(input.substr(0, n), buffer);
+                element->setCustomAttribute(name, buffer);
             }
 
             input.remove_prefix(n + 1);

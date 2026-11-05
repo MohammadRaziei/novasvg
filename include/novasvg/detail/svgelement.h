@@ -835,6 +835,11 @@ public:
     void setAttributes(const AttributeList& attributes);
     bool setAttribute(const Attribute& attribute);
 
+    // Attributes novasvg does not know (`data-*`, `aria-*`, ...). They paint nothing, but CSS attribute
+    // selectors (`[data-k]`, `[data-k="1"]`) match on them.
+    const std::string* findCustomAttribute(const std::string& name) const;
+    void setCustomAttribute(const std::string& name, const std::string& value);
+
     virtual void parseAttribute(PropertyID id, const std::string& value);
 
     // CSS custom properties (`--name: value`, from `style=""` or a stylesheet) declared on this element: the
@@ -932,6 +937,8 @@ private:
 
     ElementID m_id;
     AttributeList m_attributes;
+    // Attributes with a name that is not a PropertyID, as written; only read by CSS attribute selectors.
+    std::map<std::string, std::string> m_customAttributes;
     SVGPropertyList m_properties;
     SVGNodeList m_children;
     // `--name` -> (cascade priority, value as written, possibly with var() of its own)
@@ -5267,6 +5274,17 @@ NOVASVG_INLINE const std::string& SVGElement::getAttribute(PropertyID id) const
     return emptyString;
 }
 
+NOVASVG_INLINE const std::string* SVGElement::findCustomAttribute(const std::string& name) const
+{
+    auto it = m_customAttributes.find(name);
+    return it == m_customAttributes.end() ? nullptr : &it->second;
+}
+
+NOVASVG_INLINE void SVGElement::setCustomAttribute(const std::string& name, const std::string& value)
+{
+    m_customAttributes[name] = value;
+}
+
 // Whether `value` has a `var(` function in it. Not for the attributes that are names or references, never CSS values.
 inline bool usesVariables(PropertyID id, const std::string& value)
 {
@@ -5660,6 +5678,7 @@ NOVASVG_INLINE std::unique_ptr<SVGNode> SVGElement::clone(bool deep) const
 {
     auto element = SVGElement::create(document(), m_id);
     element->setAttributes(m_attributes);
+    element->m_customAttributes = m_customAttributes;
     if(deep) { cloneChildren(element.get()); }
     return element;
 }
