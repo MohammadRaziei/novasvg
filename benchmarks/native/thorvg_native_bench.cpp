@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     const auto jobs = bench::readManifest(argv[1]);
     const int runs = std::max(1, std::stoi(argv[2]));
 
-    if(tvg::Initializer::init(0) != tvg::Result::Success) {
+    if(tvg::Initializer::init(0) != tvg::result::Success) {
         std::cerr << "thorvg::Initializer::init failed\n";
         return 1;
     }
@@ -37,19 +37,19 @@ int main(int argc, char** argv)
         auto* canvas = tvg::SwCanvas::gen();
         if(!canvas)
             throw std::runtime_error("SwCanvas::gen() failed");
-        if(canvas->target(pixels.data(), job.width, job.width, job.height, tvg::ColorSpace::ABGR8888S) != tvg::Result::Success) {
+        if(canvas->target(pixels.data(), job.width, job.width, job.height, tvg::ColorSpace::ABGR8888S) != tvg::result::Success) {
             delete canvas;
             throw std::runtime_error("SwCanvas::target failed");
         }
 
         auto* picture = tvg::Picture::gen();
-        if(!picture || picture->load(job.svg_path.c_str()) != tvg::Result::Success) {
+        if(!picture || picture->load(job.svg_path.c_str()) != tvg::result::Success) {
             delete canvas;
             throw std::runtime_error("failed to load/parse SVG");
         }
         picture->size(static_cast<float>(job.width), static_cast<float>(job.height));
 
-        if(canvas->add(picture) != tvg::Result::Success) {
+        if(canvas->add(picture) != tvg::result::Success) {
             delete canvas;
             throw std::runtime_error("Canvas::add failed");
         }

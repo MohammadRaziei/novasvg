@@ -222,6 +222,11 @@ private:
     std::shared_ptr<void> m_prepared;
 };
 
+/// What `renderer` says the markup measures when drawn with `base` (and, with a `family`, the bold / italic variants of
+/// it), without rendering anything. For callers that size their own layout from it (the Python binding).
+std::optional<foreign_object_size> measure_foreign_object(const foreign_object_renderer& renderer, std::string_view markup, const Font& base,
+                                                          const std::string& family, bool bold, bool italic, float max_width);
+
 class svg_symbol_element final : public svg_graphics_element, public svg_fit_to_view_box {
 public:
     svg_symbol_element(document* dom);

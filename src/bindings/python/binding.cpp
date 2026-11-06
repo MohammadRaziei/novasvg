@@ -19,7 +19,6 @@
 #include "vg/canvas.h" // Transform, Path, ...
 #include "vg/font.h"
 #include "svg/svgelement.h" // private: foreignObject text measurement
-#include "svg/svg_foreign_object_host.h"
 #include "bitmap_interop.hpp"
 #include <filesystem>
 
@@ -263,26 +262,14 @@ NB_MODULE(novasvg_py, m) {
         auto renderer = nova::svg::default_foreign_object_renderer();
         if(!renderer)
             throw std::runtime_error("novasvg was built without the simple foreignObject renderer");
-        // With `family` the other bold/italic faces come from that family, as when painting (element_painter);
-        // `font` is the face of the base style. Without it every run is measured with `font` alone.
-        const unsigned char base = (unsigned char)((bold ? nova::svg::svg_foreign_object_element::style_bold : 0)
-                                                   | (italic ? nova::svg::svg_foreign_object_element::style_italic : 0));
-        nova::svg::element_painter painter(font, family.value_or(std::string()), base, nullptr, family.has_value());
-        nova::svg::foreign_object_context context;
-        context.markup = html;
-        context.font.family = family.value_or(std::string());
-        context.font.size = font.size();
-        context.font.bold = bold;
-        context.font.italic = italic;
         nova::svg::foreign_object_size size;
-        if(auto measured = renderer->measure(context, painter, max_width.value_or(-1.f)))
+        if(auto measured = nova::svg::measure_foreign_object(*renderer, html, font, family.value_or(std::string()), bold, italic, max_width.value_or(-1.f)))
             size = *measured;
-        nova::svg::foreign_object_size& metrics = size;
         nb::dict result;
-        result["height"] = metrics.height;
-        result["width"] = metrics.width;
-        result["line_count"] = metrics.line_count;
-        result["line_height"] = metrics.line_height;
+        result["height"] = size.height;
+        result["width"] = size.width;
+        result["line_count"] = size.line_count;
+        result["line_height"] = size.line_height;
         return result;
     }, "html"_a, "font"_a, "max_width"_a = nb::none(), "family"_a = nb::none(), "bold"_a = false, "italic"_a = false,
        "Height/width (and line count/line-height) novasvg will use when painting <foreignObject> "
