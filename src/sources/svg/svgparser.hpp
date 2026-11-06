@@ -5,7 +5,7 @@
 
 #include <stb/zlib.hpp>
 
-#include "nova/vg/render.h"  // base64_decode (data: URIs)
+#include "vg/render.h"  // base64_decode (data: URIs)
 
 namespace nova::svg {
 

@@ -176,7 +176,7 @@ struct path_guard {
 };
 } // namespace
 
-std::shared_ptr<raster_canvas> raster_canvas::create(const Bitmap& bitmap)
+std::shared_ptr<raster_canvas> raster_canvas::create(const pixmap& bitmap)
 {
     return std::shared_ptr<raster_canvas>(new raster_canvas(bitmap));
 }
@@ -290,7 +290,7 @@ void raster_canvas::clip_rect(const Rect& rect, FillRule clipRule, const Transfo
     canvas_clip_rect(m_canvas, rect.x, rect.y, rect.w, rect.h);
 }
 
-void raster_canvas::draw_image(const Bitmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform)
+void raster_canvas::draw_image(const pixmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform)
 {
     auto xScale = dstRect.w / srcRect.w;
     auto yScale = dstRect.h / srcRect.h;
@@ -538,7 +538,7 @@ raster_canvas::~raster_canvas()
     surface_destroy(m_surface);
 }
 
-raster_canvas::raster_canvas(const Bitmap& bitmap)
+raster_canvas::raster_canvas(const pixmap& bitmap)
     : m_surface(surface_reference(bitmap.surface()))
     , m_canvas(canvas_create(m_surface))
     , m_translation({1, 0, 0, 1, 0, 0})

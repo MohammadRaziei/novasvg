@@ -1,21 +1,10 @@
 #pragma once
 
-// nova::vg geometry that the svg layer and the engine share: Box, and the forward declarations of the engine's
-// own Rect / Transform / surface / matrix. Nothing here knows SVG.
+// Box: the axis-aligned bounding box the svg API returns. Nothing here knows SVG.
 
 #include "../config.h"
-#include "color.h"
 
-namespace nova {
-namespace vg {
-struct surface;
-struct matrix;
-using surface_t = surface;
-using matrix_t = matrix;
-} // namespace vg
-} // namespace nova
 
-#include "bitmap.h"
 
 #include <stb/outline.hpp>  // stb::matrix
 
@@ -67,6 +56,5 @@ public:
     float h{0}; ///< The height of the box.
 };
 
-class Transform;
 
 } // namespace nova::vg

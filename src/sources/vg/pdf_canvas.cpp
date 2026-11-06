@@ -414,7 +414,7 @@ void pdf_canvas::clip_rect(const Rect& rect, FillRule clip_rule, const Transform
     m_content += clip_rule == FillRule::EvenOdd ? "W* n\n" : "W n\n";
 }
 
-int pdf_canvas::add_image(const Bitmap& image, int* width, int* height)
+int pdf_canvas::add_image(const pixmap& image, int* width, int* height)
 {
     stb::image rgba = bitmap_to_rgba_image(image);
     const int w = rgba.width();
@@ -462,7 +462,7 @@ void pdf_canvas::place_image(int object, int w, int h, const Rect& dst, const Re
     m_content += num(iw) + " 0 0 " + num(-ih) + " " + num(ix) + " " + num(iy + ih) + " cm\n/" + name + " Do\nQ\n";
 }
 
-void pdf_canvas::draw_image(const Bitmap& image, const Rect& dst, const Rect& src, const Transform& transform)
+void pdf_canvas::draw_image(const pixmap& image, const Rect& dst, const Rect& src, const Transform& transform)
 {
     if(image.is_null() || src.w <= 0.f || src.h <= 0.f || dst.w <= 0.f || dst.h <= 0.f)
         return;
@@ -473,7 +473,7 @@ void pdf_canvas::draw_image(const Bitmap& image, const Rect& dst, const Rect& sr
     place_image(object, w, h, dst, src, &transform.matrix(), 1.f, BlendMode::Src_Over);
 }
 
-void pdf_canvas::draw_raster_group(const Bitmap& image, const Rect& dst, BlendMode blend_mode, float opacity)
+void pdf_canvas::draw_raster_group(const pixmap& image, const Rect& dst, BlendMode blend_mode, float opacity)
 {
     if(image.is_null() || dst.w <= 0.f || dst.h <= 0.f)
         return;
@@ -484,7 +484,7 @@ void pdf_canvas::draw_raster_group(const Bitmap& image, const Rect& dst, BlendMo
     place_image(object, w, h, dst, Rect(0, 0, float(w), float(h)), nullptr, opacity, blend_mode);
 }
 
-void pdf_canvas::set_tiled_image(const Bitmap& tile, const Transform& transform, float opacity)
+void pdf_canvas::set_tiled_image(const pixmap& tile, const Transform& transform, float opacity)
 {
     if(tile.is_null())
         return;

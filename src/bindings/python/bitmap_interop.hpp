@@ -1,20 +1,21 @@
 #pragma once
 
-// Bitmap <-> Python array interop: buffer protocol (memoryview), NumPy, DLPack
+// pixmap <-> Python array interop: buffer protocol (memoryview), NumPy, DLPack
 // (numpy / torch / jax / cupy), NumPy's __array_interface__ (Pillow) and import
 // from any uint8 array-like. Nothing here imports NumPy or Pillow unless a
 // NumPy object is actually asked for.
 //
-// Pixel formats. A Bitmap always stores premultiplied ARGB32: one native-endian
+// Pixel formats. A pixmap always stores premultiplied ARGB32: one native-endian
 // uint32 per pixel, i.e. the bytes B, G, R, A on little-endian machines. That is
 // what the renderer draws in, so every *zero-copy* export (memoryview, DLPack,
 // __array_interface__, numpy()) shows exactly that memory ("raw"). Everything
 // that needs ordinary straight-alpha RGBA (tobytes(), numpy(rgba=True),
 // to_pil(), and importing arrays) converts, and therefore copies.
 //
-// Import always copies, so a Bitmap never views Python memory and nothing has to
+// Import always copies, so a pixmap never views Python memory and nothing has to
 // be kept alive for it.
 
+#include "vg/pixmap.h"
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/string.h>
@@ -34,7 +35,7 @@ namespace nb = nanobind;
 
 namespace novasvg_py_interop {
 
-using nova::vg::Bitmap;
+using nova::vg::pixmap;
 
 // surface_create() refuses sizes at or above this.
 constexpr std::int64_t kMaxSide = (1 << 15) - 1;
@@ -70,7 +71,7 @@ inline void unpack_straight(std::uint32_t px, std::uint8_t out[4]) {
 }
 
 // Straight RGBA, tightly packed (width * 4 bytes per row), into `dst`.
-inline void to_straight_rgba(const Bitmap& bmp, std::uint8_t* dst) {
+inline void to_straight_rgba(const pixmap& bmp, std::uint8_t* dst) {
     const int w = bmp.width(), h = bmp.height(), stride = bmp.stride();
     for (int y = 0; y < h; ++y) {
         const auto* src = reinterpret_cast<const std::uint32_t*>(bmp.data() + std::size_t(y) * stride);
@@ -80,16 +81,16 @@ inline void to_straight_rgba(const Bitmap& bmp, std::uint8_t* dst) {
 }
 
 // The memory as it is, tightly packed (a copy; drops any row padding).
-inline void to_raw_packed(const Bitmap& bmp, std::uint8_t* dst) {
+inline void to_raw_packed(const pixmap& bmp, std::uint8_t* dst) {
     const std::size_t row = std::size_t(bmp.width()) * 4;
     for (int y = 0; y < bmp.height(); ++y)
         std::memcpy(dst + std::size_t(y) * row, bmp.data() + std::size_t(y) * bmp.stride(), row);
 }
 
-// A new Bitmap from a strided uint8 view of (h, w, c) pixels.
+// A new pixmap from a strided uint8 view of (h, w, c) pixels.
 //   raw == false: straight-alpha L / LA / RGB / RGBA (c = 1..4), converted.
-//   raw == true : c must be 4 and the bytes are already in the Bitmap's own layout.
-inline Bitmap bitmap_from_pixels(const std::uint8_t* p, std::int64_t h, std::int64_t w, std::int64_t c,
+//   raw == true : c must be 4 and the bytes are already in the pixmap's own layout.
+inline pixmap bitmap_from_pixels(const std::uint8_t* p, std::int64_t h, std::int64_t w, std::int64_t c,
                                  std::int64_t s0, std::int64_t s1, std::int64_t s2, bool raw) {
     if (c < 1 || c > 4) throw std::invalid_argument("expected shape (H, W) or (H, W, 1..4)");
     if (h < 1 || w < 1) throw std::invalid_argument("the array is empty");
@@ -98,7 +99,7 @@ inline Bitmap bitmap_from_pixels(const std::uint8_t* p, std::int64_t h, std::int
     if (raw && c != 4)
         throw std::invalid_argument("raw=True needs shape (H, W, 4): premultiplied BGRA, the Bitmap's own layout");
 
-    Bitmap bmp(static_cast<int>(w), static_cast<int>(h));
+    pixmap bmp(static_cast<int>(w), static_cast<int>(h));
     if (bmp.is_null()) throw std::runtime_error("could not allocate the Bitmap");
 
     auto at = [&](std::int64_t y, std::int64_t x, std::int64_t k) -> std::uint32_t {
@@ -136,10 +137,10 @@ struct py_buffer {  // releases a Py_buffer however the scope is left
 
 // An object that only speaks NumPy's __array_interface__ (version 3), e.g. a Pillow
 // image. `data` is (address, read-only flag) or an object with the buffer protocol
-// (Pillow gives bytes). The pixels are converted into a new Bitmap, so nothing outlives
+// (Pillow gives bytes). The pixels are converted into a new pixmap, so nothing outlives
 // the call. As with NumPy itself an address cannot be checked: hand over only objects
 // you trust. A buffer is bounds-checked against shape and strides.
-inline Bitmap bitmap_from_array_interface(nb::handle obj, bool raw) {
+inline pixmap bitmap_from_array_interface(nb::handle obj, bool raw) {
     nb::dict ai = nb::cast<nb::dict>(obj.attr("__array_interface__"));
     if (!ai.contains("typestr") || !ai.contains("shape"))
         throw std::invalid_argument("__array_interface__ needs 'shape' and 'typestr'");
@@ -190,7 +191,7 @@ inline Bitmap bitmap_from_array_interface(nb::handle obj, bool raw) {
 
 using array_ro = nb::ndarray<nb::ro, nb::device::cpu>;
 
-inline Bitmap bitmap_from_object(nb::handle obj, bool raw) {
+inline pixmap bitmap_from_object(nb::handle obj, bool raw) {
     array_ro a;
     if (!nb::try_cast(obj, a, /*convert=*/false)) {
         // Not a buffer / DLPack object: maybe one that only has NumPy's array interface (Pillow).
@@ -210,7 +211,7 @@ inline Bitmap bitmap_from_object(nb::handle obj, bool raw) {
 // ---- buffer protocol --------------------------------------------------------
 
 // memoryview(bitmap) is a writable 3-D (height, width, 4) uint8 view of the raw
-// pixels, no copy, no numpy. The view holds a reference to the Bitmap, so the pixels
+// pixels, no copy, no numpy. The view holds a reference to the pixmap, so the pixels
 // cannot be freed under it. numpy reads this too, so np.asarray(bitmap) is zero-copy.
 struct buffer_meta {
     Py_ssize_t shape[3];
@@ -222,7 +223,7 @@ inline int bitmap_getbuffer(PyObject* exporter, Py_buffer* view, int flags) {
         PyErr_SetString(PyExc_BufferError, "no buffer requested");
         return -1;
     }
-    auto* bmp = nb::inst_ptr<Bitmap>(nb::handle(exporter));
+    auto* bmp = nb::inst_ptr<pixmap>(nb::handle(exporter));
     if (bmp->is_null()) {
         PyErr_SetString(PyExc_BufferError, "cannot export a null Bitmap");
         return -1;
@@ -284,16 +285,16 @@ inline void require_numpy(const char* what) {
 
 using numpy_pixels = nb::ndarray<nb::numpy, std::uint8_t, nb::ndim<3>>;
 
-// The raw pixels as an ndarray sharing the Bitmap's memory; `self` owns it.
+// The raw pixels as an ndarray sharing the pixmap's memory; `self` owns it.
 inline numpy_pixels raw_pixels_of(nb::handle self) {
-    auto& bmp = nb::cast<Bitmap&>(self);
+    auto& bmp = nb::cast<pixmap&>(self);
     const std::size_t shape[3] = {std::size_t(bmp.height()), std::size_t(bmp.width()), 4};
     const std::int64_t strides[3] = {bmp.stride(), 4, 1};
     return numpy_pixels(bmp.data(), 3, shape, self, strides);
 }
 
 // A new ndarray holding straight RGBA (or the packed raw bytes), owned by itself.
-inline numpy_pixels copied_pixels_of(const Bitmap& bmp, bool rgba) {
+inline numpy_pixels copied_pixels_of(const pixmap& bmp, bool rgba) {
     const std::size_t shape[3] = {std::size_t(bmp.height()), std::size_t(bmp.width()), 4};
     auto* buf = new std::uint8_t[shape[0] * shape[1] * 4];
     if (rgba) to_straight_rgba(bmp, buf);
@@ -302,14 +303,14 @@ inline numpy_pixels copied_pixels_of(const Bitmap& bmp, bool rgba) {
     return numpy_pixels(buf, 3, shape, owner);
 }
 
-inline void require_pixels(const Bitmap& bmp, const char* what) {
+inline void require_pixels(const pixmap& bmp, const char* what) {
     if (bmp.is_null()) throw std::invalid_argument(std::string("cannot use a null Bitmap for ") + what);
 }
 
-// An independent Bitmap with its own pixels (Bitmap's own copy constructor shares them).
-inline Bitmap deep_copy(const Bitmap& bmp) {
-    if (bmp.is_null()) return Bitmap();
-    Bitmap out(bmp.width(), bmp.height());
+// An independent pixmap with its own pixels (pixmap's own copy constructor shares them).
+inline pixmap deep_copy(const pixmap& bmp) {
+    if (bmp.is_null()) return pixmap();
+    pixmap out(bmp.width(), bmp.height());
     if (out.is_null()) throw std::runtime_error("could not allocate the Bitmap");
     for (int y = 0; y < bmp.height(); ++y)
         std::memcpy(out.data() + std::size_t(y) * out.stride(), bmp.data() + std::size_t(y) * bmp.stride(),
@@ -319,11 +320,11 @@ inline Bitmap deep_copy(const Bitmap& bmp) {
 
 // ---- the Python methods -----------------------------------------------------
 
-inline void bind_bitmap_interop(nb::class_<Bitmap>& cls) {
+inline void bind_bitmap_interop(nb::class_<pixmap>& cls) {
     using namespace nb::literals;
 
     cls.def(
-           "__init__", [](Bitmap* self, nb::handle array) { new (self) Bitmap(bitmap_from_object(array, false)); },
+           "__init__", [](pixmap* self, nb::handle array) { new (self) pixmap(bitmap_from_object(array, false)); },
            "array"_a,
            "Bitmap(array): a new Bitmap from a uint8 array-like of shape (H, W) or (H, W, 1..4) holding straight\n"
            "(not premultiplied) L, LA, RGB or RGBA pixels. A copy. See Bitmap.from_array for raw=True.")
@@ -349,19 +350,19 @@ inline void bind_bitmap_interop(nb::class_<Bitmap>& cls) {
             "np.from_dlpack(bitmap). The array must be uint8 on the CPU (call .cpu() on a GPU tensor); see\n"
             "from_array for the shapes and raw=. Always a copy.")
 
-        // --- copying is explicit: Bitmap's C++ copy shares the pixels ---
-        .def("copy", [](const Bitmap& b) { return deep_copy(b); },
+        // --- copying is explicit: pixmap's C++ copy shares the pixels ---
+        .def("copy", [](const pixmap& b) { return deep_copy(b); },
              "An independent Bitmap that owns its own pixels (a deep copy).")
-        .def("__copy__", [](const Bitmap& b) { return deep_copy(b); })
-        .def("__deepcopy__", [](const Bitmap& b, nb::handle) { return deep_copy(b); }, "memo"_a)
+        .def("__copy__", [](const pixmap& b) { return deep_copy(b); })
+        .def("__deepcopy__", [](const pixmap& b, nb::handle) { return deep_copy(b); }, "memo"_a)
 
         .def_prop_ro("shape",
-                     [](const Bitmap& b) { return std::make_tuple(b.height(), b.width(), b.is_null() ? 0 : 4); },
+                     [](const pixmap& b) { return std::make_tuple(b.height(), b.width(), b.is_null() ? 0 : 4); },
                      "(height, width, 4), the shape of the arrays this Bitmap exports.")
 
         // DLPack: np.from_dlpack(bitmap), torch.from_dlpack(bitmap), jax.numpy.from_dlpack(bitmap),
         // cupy.from_dlpack(bitmap) ... zero-copy, and novasvg imports none of them. The pixels go out as
-        // nanobind's own DLPack object (no numpy needed) that keeps this Bitmap alive.
+        // nanobind's own DLPack object (no numpy needed) that keeps this pixmap alive.
         .def(
             "__dlpack__",
             [](nb::handle self, nb::args args, nb::kwargs kwargs) {
@@ -370,9 +371,9 @@ inline void bind_bitmap_interop(nb::class_<Bitmap>& cls) {
                     nb::object want_copy = kwargs["copy"];
                     nb::del(kwargs["copy"]);
                     if (!want_copy.is_none() && nb::cast<bool>(want_copy))
-                        owner = nb::cast(deep_copy(nb::cast<Bitmap&>(self)));
+                        owner = nb::cast(deep_copy(nb::cast<pixmap&>(self)));
                 }
-                auto& bmp = nb::cast<Bitmap&>(owner);
+                auto& bmp = nb::cast<pixmap&>(owner);
                 require_pixels(bmp, "DLPack");
                 const std::size_t shape[3] = {std::size_t(bmp.height()), std::size_t(bmp.width()), 4};
                 const std::int64_t strides[3] = {bmp.stride(), 4, 1};
@@ -382,12 +383,12 @@ inline void bind_bitmap_interop(nb::class_<Bitmap>& cls) {
             },
             "DLPack export of the raw pixels (uint8, shape (height, width, 4), premultiplied BGRA on\n"
             "little-endian, no copy). Use np.from_dlpack(bitmap), torch.from_dlpack(bitmap), ...")
-        .def("__dlpack_device__", [](const Bitmap&) { return std::make_tuple(1, 0); },  // kDLCPU, device 0
+        .def("__dlpack_device__", [](const pixmap&) { return std::make_tuple(1, 0); },  // kDLCPU, device 0
              "(device type, device id): always the CPU.")
 
         .def(
             "tobytes",
-            [](const Bitmap& b, bool rgba) {
+            [](const pixmap& b, bool rgba) {
                 require_pixels(b, "tobytes()");
                 const std::size_t n = std::size_t(b.height()) * std::size_t(b.width()) * 4;
                 PyObject* out = PyBytes_FromStringAndSize(nullptr, Py_ssize_t(n));
@@ -406,7 +407,7 @@ inline void bind_bitmap_interop(nb::class_<Bitmap>& cls) {
             "__array__",
             [](nb::handle self, nb::object dtype, nb::object copy) -> nb::object {
                 require_numpy("Bitmap.__array__ (np.asarray)");
-                require_pixels(nb::cast<Bitmap&>(self), "NumPy");
+                require_pixels(nb::cast<pixmap&>(self), "NumPy");
                 nb::object a = nb::cast(raw_pixels_of(self));
                 if (!dtype.is_none()) {
                     nb::module_ np = nb::module_::import_("numpy");
@@ -420,7 +421,7 @@ inline void bind_bitmap_interop(nb::class_<Bitmap>& cls) {
         .def_prop_ro(
             "__array_interface__",
             [](nb::handle self) {
-                const auto& b = nb::cast<const Bitmap&>(self);
+                const auto& b = nb::cast<const pixmap&>(self);
                 if (b.is_null()) throw nb::attribute_error("a null Bitmap has no array interface");
                 nb::dict d;
                 d["version"] = 3;
@@ -437,7 +438,7 @@ inline void bind_bitmap_interop(nb::class_<Bitmap>& cls) {
             "numpy",
             [](nb::handle self, bool rgba, nb::object dtype, bool copy) -> nb::object {
                 require_numpy("Bitmap.numpy()");
-                auto& bmp = nb::cast<Bitmap&>(self);
+                auto& bmp = nb::cast<pixmap&>(self);
                 if (bmp.is_null())  // an empty array (the old code returned None here)
                     return nb::module_::import_("numpy").attr("zeros")(nb::make_tuple(0, 0, 4), "uint8");
                 nb::object a = rgba ? nb::cast(copied_pixels_of(bmp, true))
@@ -454,7 +455,7 @@ inline void bind_bitmap_interop(nb::class_<Bitmap>& cls) {
             "until convert_to_rgba() is called. rgba=True returns a copy as ordinary straight RGBA instead\n"
             "(do not combine it with convert_to_rgba(), which already converts the buffer). copy=True copies the\n"
             "raw view. A dtype other than uint8 is always a copy.")
-        .def("__repr__", [](const Bitmap& b) {
+        .def("__repr__", [](const pixmap& b) {
             if (b.is_null()) return std::string("Bitmap(null)");
             return "Bitmap(width=" + std::to_string(b.width()) + ", height=" + std::to_string(b.height()) + ")";
         });

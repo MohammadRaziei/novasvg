@@ -1,4 +1,5 @@
 // Implementation of the public API declared in include/nova/svg/svg.h.
+#include "vg/pixmap.h"
 #include "nova/svg/svg.h"
 
 // Always included -- see the note above. Defining
@@ -139,7 +140,7 @@ void element::set_attribute(const std::string& name, const std::string& value)
     }
 }
 
-void element::render(Bitmap& bitmap, const stb::matrix& matrix) const
+void element::render(pixmap& bitmap, const stb::matrix& matrix) const
 {
     if(m_node == nullptr || bitmap.is_null())
         return;
@@ -148,13 +149,13 @@ void element::render(Bitmap& bitmap, const stb::matrix& matrix) const
     el(true)->render(state);
 }
 
-Bitmap element::render_to_bitmap(int width, int height, const stb::color& backgroundColor) const
+pixmap element::render_to_pixmap(int width, int height, const stb::color& backgroundColor) const
 {
     if(m_node == nullptr)
-        return Bitmap();
+        return pixmap();
     auto elementBounds = el(true)->local_transform().map_rect(el()->paint_bounding_box());
     if(elementBounds.empty())
-        return Bitmap();
+        return pixmap();
     if(width <= 0 && height <= 0) {
         width = static_cast<int>(std::ceil(elementBounds.w));
         height = static_cast<int>(std::ceil(elementBounds.h));
@@ -168,7 +169,7 @@ Bitmap element::render_to_bitmap(int width, int height, const stb::color& backgr
     auto yScale = height / elementBounds.h;
 
     stb::matrix matrix{xScale, 0, 0, yScale, -elementBounds.x * xScale, -elementBounds.y * yScale};
-    Bitmap bitmap(width, height);
+    pixmap bitmap(width, height);
     if(backgroundColor.value()) bitmap.clear(backgroundColor);
     render(bitmap, matrix);
     return bitmap;
@@ -178,18 +179,18 @@ void element::render(stb::image& image, const stb::matrix& matrix) const
 {
     if(m_node == nullptr || image.empty())
         return;
-    Bitmap layer(image.width(), image.height());  // transparent
+    pixmap layer(image.width(), image.height());  // transparent
     if(layer.is_null())
         return;
     render(layer, matrix);
-    stb::image over = bitmap_release_to_image(std::move(layer));
+    stb::image over = pixmap_release_to_image(std::move(layer));
     if(!over.empty())
         image.blend(over);
 }
 
 stb::image element::render_to_image(int width, int height, const stb::color& backgroundColor) const
 {
-    return bitmap_release_to_image(render_to_bitmap(width, height, backgroundColor));
+    return pixmap_release_to_image(render_to_pixmap(width, height, backgroundColor));
 }
 
 stb::matrix element::local_matrix() const
@@ -304,7 +305,7 @@ void document::force_layout()
     m_rootElement->force_layout();
 }
 
-void document::render(Bitmap& bitmap, const stb::matrix& matrix) const
+void document::render(pixmap& bitmap, const stb::matrix& matrix) const
 {
     if(bitmap.is_null())
         return;
@@ -319,7 +320,7 @@ void document::render(Bitmap& bitmap, const stb::matrix& matrix) const
     // correct-looking standalone render, honor it here the same way:
     // clear the bitmap to it before any content paints, so it sits under
     // everything and behind any transparency in the content itself. Takes
-    // priority over render_to_bitmap()'s own `backgroundColor` argument
+    // priority over render_to_pixmap()'s own `backgroundColor` argument
     // (this runs after that clear) since that argument means "what to
     // show through transparent content", and content here isn't actually
     // transparent -- it explicitly asked for this color.
@@ -333,7 +334,7 @@ void document::render(Bitmap& bitmap, const stb::matrix& matrix) const
     // correct-looking standalone render, honor it here the same way:
     // clear the bitmap to it before any content paints, so it sits under
     // everything and behind any transparency in the content itself. Takes
-    // priority over render_to_bitmap()'s own `backgroundColor` argument
+    // priority over render_to_pixmap()'s own `backgroundColor` argument
     // (this runs after that clear) since that argument means "what to
     // show through transparent content", and content here isn't actually
     // transparent -- it explicitly asked for this color.
@@ -355,12 +356,12 @@ void document::render(Bitmap& bitmap, const stb::matrix& matrix) const
     root_element(true)->render(state);
 }
 
-Bitmap document::render_to_bitmap(int width, int height, const stb::color& backgroundColor) const
+pixmap document::render_to_pixmap(int width, int height, const stb::color& backgroundColor) const
 {
     auto intrinsic_width = root_element(true)->intrinsic_width();
     auto intrinsic_height = root_element()->intrinsic_height();
     if(intrinsic_width == 0.f || intrinsic_height == 0.f)
-        return Bitmap();
+        return pixmap();
     if(width <= 0 && height <= 0) {
         width = static_cast<int>(std::ceil(intrinsic_width));
         height = static_cast<int>(std::ceil(intrinsic_height));
@@ -374,7 +375,7 @@ Bitmap document::render_to_bitmap(int width, int height, const stb::color& backg
     auto yScale = height / intrinsic_height;
 
     stb::matrix matrix{xScale, 0, 0, yScale, 0, 0};
-    Bitmap bitmap(width, height);
+    pixmap bitmap(width, height);
     if(backgroundColor.value()) bitmap.clear(backgroundColor);
     render(bitmap, matrix);
     return bitmap;
@@ -398,14 +399,14 @@ std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
     if(mode == pdf_mode::raster) {
         const int pixel_width = static_cast<int>(std::ceil(width * scale));
         const int pixel_height = static_cast<int>(std::ceil(height * scale));
-        Bitmap bitmap = render_to_bitmap(pixel_width, pixel_height);
+        pixmap bitmap = render_to_pixmap(pixel_width, pixel_height);
         if(bitmap.is_null())
             return {};
         pdf->draw_image(bitmap, Rect(0, 0, width, height), Rect(0, 0, float(pixel_width), float(pixel_height)), Transform());
         return pdf->data();
     }
 
-    // Same rule as render(Bitmap&): a root `background-color` sits under everything.
+    // Same rule as render(pixmap&): a root `background-color` sits under everything.
     if(const auto& bg = root_element(true)->attribute(PropertyID::Background_Color); !bg.empty()) {
         color_t color;
         if(color_parse(&color, bg.data(), static_cast<int>(bg.length())) > 0) {
@@ -440,18 +441,18 @@ void document::render(stb::image& image, const stb::matrix& matrix) const
 {
     if(image.empty())
         return;
-    Bitmap layer(image.width(), image.height());  // transparent
+    pixmap layer(image.width(), image.height());  // transparent
     if(layer.is_null())
         return;
     render(layer, matrix);
-    stb::image over = bitmap_release_to_image(std::move(layer));
+    stb::image over = pixmap_release_to_image(std::move(layer));
     if(!over.empty())
         image.blend(over);
 }
 
 stb::image document::render_to_image(int width, int height, const stb::color& backgroundColor) const
 {
-    return bitmap_release_to_image(render_to_bitmap(width, height, backgroundColor));
+    return pixmap_release_to_image(render_to_pixmap(width, height, backgroundColor));
 }
 
 element document::element_from_point(float x, float y) const

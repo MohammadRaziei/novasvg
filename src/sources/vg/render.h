@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "../config.h"   // NOVA_API, NOVA_INLINE, STB_MAX/MIN (one definition, shared with novasvg.h)
+#include "nova/config.h"   // NOVA_API, NOVA_INLINE, STB_MAX/MIN (one definition, shared with novasvg.h)
 
 // STB_MAX/STB_MIN are defined in detail/config.h, which #includes
 // (transitively, via canvas.h) this header -- always available by the

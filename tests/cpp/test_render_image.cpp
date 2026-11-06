@@ -46,7 +46,7 @@ TEST_CASE("renderToImage with a background colour, and an empty image when there
 
     auto blank = nova::svg::document::load_data("<svg xmlns='http://www.w3.org/2000/svg'></svg>");
     REQUIRE(blank != nullptr);
-    CHECK(blank->render_to_image(-1, 100).empty());  // nothing to size from, same as render_to_bitmap's null
+    CHECK(blank->render_to_image(-1, 100).empty());  // nothing to size from, same as render_to_pixmap's null
 }
 
 TEST_CASE("render onto an existing image keeps its pixels where nothing is drawn, and its format")

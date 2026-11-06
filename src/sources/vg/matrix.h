@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nova/vg/render.h"
+#include "render.h"
 #include "utils.h"
 
 namespace nova {

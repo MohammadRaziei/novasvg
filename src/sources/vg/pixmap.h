@@ -1,13 +1,13 @@
 #pragma once
 
-// Bitmap (INTERNAL; the public pixel type is stb::image): a premultiplied-ARGB32 pixel buffer -- novasvg's
+// pixmap (INTERNAL; the public pixel type is stb::image): a premultiplied-ARGB32 pixel buffer -- novasvg's
 // drawable surface, texture source, and render target all in one. Self-contained:
 // needs only stb::color and the low-level vg::surface_t it wraps, nothing
 // from the svg/raster_canvas/Font layers, so it can be used entirely on its own
 // (e.g. to build up an image and write it out) without pulling in the
 // rest of novasvg.
 
-#include "color.h"
+#include <stb/color.hpp>
 #include "render.h"  // memfill32, color_to_argb32, color_init_rgba32 (surface_clear()), surface_t
 
 #include <cstdint>
@@ -27,12 +27,12 @@
 
 namespace nova::vg {
 
-class NOVA_API Bitmap {
+class NOVA_API pixmap {
 public:
     /**
      * @brief Constructs a null bitmap.
      */
-    Bitmap() = default;
+    pixmap() = default;
 
     /**
      * @brief Constructs a bitmap with the specified width and height.
@@ -40,7 +40,7 @@ public:
      * @param width The width of the bitmap in pixels.
      * @param height The height of the bitmap in pixels.
      */
-    Bitmap(int width, int height);
+    pixmap(int width, int height);
 
     /**
      * @brief Constructs a bitmap with the provided pixel data, width, height, and stride.
@@ -50,49 +50,49 @@ public:
      * @param height The height of the bitmap in pixels.
      * @param stride The number of bytes per row of pixel data (stride).
     */
-    Bitmap(uint8_t* data, int width, int height, int stride);
+    pixmap(uint8_t* data, int width, int height, int stride);
 
     /**
      * @brief Copy constructor.
      * @param bitmap The bitmap to copy.
      */
-    Bitmap(const Bitmap& bitmap);
+    pixmap(const pixmap& bitmap);
 
     /**
      * @brief Move constructor.
      * @param bitmap The bitmap to move.
      */
-    Bitmap(Bitmap&& bitmap);
+    pixmap(pixmap&& bitmap);
 
     /**
      * @internal
      */
-    Bitmap(surface_t* surface) : m_surface(surface) {}
+    pixmap(surface_t* surface) : m_surface(surface) {}
 
     /**
      * @brief Cleans up any resources associated with the bitmap.
      */
-    ~Bitmap();
+    ~pixmap();
 
     /**
      * @brief Copy assignment operator.
      * @param bitmap The bitmap to copy.
      * @return A reference to this bitmap.
      */
-    Bitmap& operator=(const Bitmap& bitmap);
+    pixmap& operator=(const pixmap& bitmap);
 
     /**
      * @brief Move assignment operator.
      * @param bitmap The bitmap to move.
      * @return A reference to this bitmap.
      */
-    Bitmap& operator=(Bitmap&& bitmap);
+    pixmap& operator=(pixmap&& bitmap);
 
     /**
      * @brief Swaps the content of this bitmap with another.
      * @param bitmap The bitmap to swap with.
      */
-    void swap(Bitmap& bitmap);
+    void swap(pixmap& bitmap);
 
     /**
      * @brief Gets the pointer to the raw pixel data.
@@ -166,17 +166,17 @@ private:
 
 
 
-// Bitmap is internal. Its pixels are premultiplied ARGB32 because that is what the rasterizer draws in and
+// pixmap is internal. Its pixels are premultiplied ARGB32 because that is what the rasterizer draws in and
 // what canvas_set_texture samples (<image>, patterns): both need premultiplied alpha for `over` to be correct.
 // The public pixel type is stb::image (straight RGBA); these two functions are the boundary.
 
-// A straight-alpha RGBA copy of `bitmap` (one conversion pass, out of place). Works for any stride: a Bitmap
+// A straight-alpha RGBA copy of `bitmap` (one conversion pass, out of place). Works for any stride: a pixmap
 // over caller-owned memory may be wider than width * 4, an image never is.
 
 // The same image without a copy: the bitmap's own buffer is converted in place and the image keeps the
 // bitmap alive. This is what render() hands to callers. A bitmap whose rows are padded (stride > width * 4)
 // cannot be wrapped (stb::image has no stride), so that case takes the copying path above.
-stb::image bitmap_to_rgba_image(const Bitmap& bitmap);
-stb::image bitmap_release_to_image(Bitmap&& bitmap);
+stb::image bitmap_to_rgba_image(const pixmap& bitmap);
+stb::image pixmap_release_to_image(pixmap&& bitmap);
 
 } // namespace nova::vg

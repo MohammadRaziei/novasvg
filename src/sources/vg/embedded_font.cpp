@@ -3,7 +3,7 @@
 
 #include <stb/zlib.hpp>
 
-#include "nova/vg/render.h"  // base64_decode
+#include "render.h"  // base64_decode
 
 #ifndef NOVA_DISABLE_EMBEDDED_FONT
 #include "default_font.h"

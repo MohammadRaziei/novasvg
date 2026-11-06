@@ -1,3 +1,4 @@
+#include "vg/pixmap.h"
 #include "doctest.h"
 
 #include <filesystem>
@@ -32,13 +33,13 @@ std::string read_file(const std::filesystem::path& path)
 } // namespace
 
 TEST_CASE("Bitmap advanced operations") {
-    // Test Bitmap constructor with data
+    // Test pixmap constructor with data
     const int width = 100;
     const int height = 100;
     const int stride = width * 4;
     std::vector<uint8_t> data(width * height * 4, 0xFF); // White ARGB
     
-    nova::vg::Bitmap bitmap(data.data(), width, height, stride);
+    nova::vg::pixmap bitmap(data.data(), width, height, stride);
     CHECK_FALSE(bitmap.is_null());
     CHECK(bitmap.width() == width);
     CHECK(bitmap.height() == height);
@@ -49,14 +50,14 @@ TEST_CASE("Bitmap advanced operations") {
     
     // The straight-alpha image made from a bitmap encodes without trouble
     {
-        nova::vg::Bitmap copy(data.data(), width, height, stride);
+        nova::vg::pixmap copy(data.data(), width, height, stride);
         auto image = nova::vg::bitmap_to_rgba_image(copy);
         CHECK_FALSE(image.empty());
         CHECK_FALSE(image.to_png().empty());
     }
 
     // Test move assignment operator
-    nova::vg::Bitmap bitmap2;
+    nova::vg::pixmap bitmap2;
     bitmap2 = std::move(bitmap);
     CHECK_FALSE(bitmap2.is_null());
     CHECK(bitmap.is_null()); // Should be null after move
@@ -143,7 +144,7 @@ TEST_CASE("Document render with matrix") {
     REQUIRE(dom != nullptr);
     
     // Create bitmap
-    nova::vg::Bitmap bitmap(100, 100);
+    nova::vg::pixmap bitmap(100, 100);
     
     // Test render with identity matrix
     dom->render(bitmap, stb::matrix());
@@ -170,7 +171,7 @@ TEST_CASE("Element render with matrix") {
         CHECK_FALSE(rectElement.is_null());
         
         // Create bitmap
-        nova::vg::Bitmap bitmap(50, 50);
+        nova::vg::pixmap bitmap(50, 50);
         
         // Test render with identity matrix
         rectElement.render(bitmap, stb::matrix());
@@ -196,15 +197,15 @@ TEST_CASE("Document methods with edge cases") {
     CHECK(bbox.w == doctest::Approx(0.0f));
     CHECK(bbox.h == doctest::Approx(0.0f));
     
-    // Test render_to_bitmap with empty dimensions
-    auto bitmap = dom->render_to_bitmap(0, 0);
+    // Test render_to_pixmap with empty dimensions
+    auto bitmap = dom->render_to_pixmap(0, 0);
     CHECK(bitmap.is_null());
     
-    // Test render_to_bitmap with auto-scaling from empty svg
-    auto bitmap2 = dom->render_to_bitmap(-1, 100);
+    // Test render_to_pixmap with auto-scaling from empty svg
+    auto bitmap2 = dom->render_to_pixmap(-1, 100);
     CHECK(bitmap2.is_null());
     
-    auto bitmap3 = dom->render_to_bitmap(100, -1);
+    auto bitmap3 = dom->render_to_pixmap(100, -1);
     CHECK(bitmap3.is_null());
 }
 

@@ -18,11 +18,11 @@
 // text, blending), plus the Path/Rect/Transform/Point primitives that go
 // with it. Self-contained -- pulls in exactly the vg:: engine pieces
 // it needs plus Font (for fill_text/stroke_text) -- so it's usable without
-// the svg/parsing layer, e.g. to draw directly onto a Bitmap.
-#include "nova/vg/color.h"
+// the svg/parsing layer, e.g. to draw directly onto a pixmap.
+#include "color.h"
 #include "font.h"
-#include "nova/vg/bitmap.h"
-#include "nova/vg/render.h"
+#include "pixmap.h"
+#include "render.h"
 
 namespace nova::vg {
 
@@ -388,7 +388,7 @@ private:
 using GradientStop = gradient_stop_t;
 using GradientStops = std::vector<GradientStop>;
 
-class Bitmap;
+class pixmap;
 
 /// Backend-independent vector drawing target.
 ///
@@ -414,7 +414,7 @@ public:
     virtual void clip_path(const stb::outline& path, FillRule clip_rule, const Transform& transform) = 0;
     virtual void clip_rect(const Rect& rect, FillRule clip_rule, const Transform& transform) = 0;
 
-    virtual void draw_image(const Bitmap& image, const Rect& dst_rect, const Rect& src_rect, const Transform& transform) = 0;
+    virtual void draw_image(const pixmap& image, const Rect& dst_rect, const Rect& src_rect, const Transform& transform) = 0;
 
     virtual void save() = 0;
     virtual void restore() = 0;
@@ -422,7 +422,7 @@ public:
 
 class raster_canvas final : public canvas {
 public:
-    static std::shared_ptr<raster_canvas> create(const Bitmap& bitmap);
+    static std::shared_ptr<raster_canvas> create(const pixmap& bitmap);
     static std::shared_ptr<raster_canvas> create(float x, float y, float width, float height);
     static std::shared_ptr<raster_canvas> create(const Rect& extents);
 
@@ -441,7 +441,7 @@ public:
     void clip_path(const stb::outline& path, FillRule clipRule, const Transform& transform) override;
     void clip_rect(const Rect& rect, FillRule clipRule, const Transform& transform) override;
 
-    void draw_image(const Bitmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform) override;
+    void draw_image(const pixmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform) override;
     void blend_canvas(const raster_canvas& canvas, BlendMode blendMode, float opacity);
 
     void save() override;
@@ -502,7 +502,7 @@ public:
     ~raster_canvas();
 
 private:
-    raster_canvas(const Bitmap& bitmap);
+    raster_canvas(const pixmap& bitmap);
     raster_canvas(int x, int y, int width, int height);
     surface_t* m_surface;
     canvas_t* m_canvas;

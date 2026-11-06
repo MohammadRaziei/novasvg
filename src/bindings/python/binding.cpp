@@ -1,3 +1,4 @@
+#include "vg/pixmap.h"
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/optional.h>
 #include <optional>
@@ -27,8 +28,8 @@ using namespace nb::literals;
 
 namespace {
 
-// Python's Bitmap stays the premultiplied-ARGB32 render target. Encoding goes through the public pixel type:
-// bitmap_to_rgba_image() makes a straight-alpha stb::image copy (the Bitmap itself is left alone), and libstb's
+// Python's pixmap stays the premultiplied-ARGB32 render target. Encoding goes through the public pixel type:
+// bitmap_to_rgba_image() makes a straight-alpha stb::image copy (the pixmap itself is left alone), and libstb's
 // encoders write it. One path for every format, so the bytes and the file variants cannot drift apart.
 enum class image_format { png, bmp, tga, jpg };
 
@@ -51,7 +52,7 @@ int clamp_quality(int quality)
 
 // A null bitmap is the caller's mistake (ValueError); an encoder that fails or produces nothing is a
 // RuntimeError, never a silent empty `bytes` (an empty result would look like a valid, empty image).
-nb::bytes encode_to_bytes(const nova::vg::Bitmap& bitmap, image_format format, int quality = 80)
+nb::bytes encode_to_bytes(const nova::vg::pixmap& bitmap, image_format format, int quality = 80)
 {
     if(bitmap.is_null())
         throw std::invalid_argument(std::string("cannot encode a null Bitmap as ") + format_name(format));
@@ -73,7 +74,7 @@ nb::bytes encode_to_bytes(const nova::vg::Bitmap& bitmap, image_format format, i
 }
 
 // File variants report success as a bool, like they always did.
-bool write_to_file(const nova::vg::Bitmap& bitmap, const std::string& filename, image_format format, int quality = 80)
+bool write_to_file(const nova::vg::pixmap& bitmap, const std::string& filename, image_format format, int quality = 80)
 {
     if(bitmap.is_null())
         return false;
@@ -374,46 +375,46 @@ NB_MODULE(novasvg_py, m) {
         .def("transform", &nova::vg::Box::transform, "matrix"_a, "Transform the box by a matrix in place.")
         .def("transformed", &nova::vg::Box::transformed, "matrix"_a, "Return a new transformed box.");
 
-    // --- Bind Bitmap Class ---
+    // --- Bind pixmap Class ---
     // The buffer protocol, DLPack, NumPy, __array_interface__ and array import all live in
     // bitmap_interop.hpp; bind_bitmap_interop() adds them below, after the chain.
-    nb::class_<nova::vg::Bitmap> bitmap_cls(m, "Bitmap", nb::type_slots(novasvg_py_interop::bitmap_slots));
+    nb::class_<nova::vg::pixmap> bitmap_cls(m, "Bitmap", nb::type_slots(novasvg_py_interop::bitmap_slots));
     bitmap_cls
         .def(nb::init<>(), "Construct a null bitmap.")
         .def(nb::init<int, int>(), "width"_a, "height"_a, "Construct a bitmap with specified dimensions.")
-        .def_prop_ro("width", &nova::vg::Bitmap::width, "Get the width of the bitmap.")
-        .def_prop_ro("height", &nova::vg::Bitmap::height, "Get the height of the bitmap.")
-        .def_prop_ro("stride", &nova::vg::Bitmap::stride, "Get the stride (bytes per row) of the bitmap.")
-        .def("is_null", &nova::vg::Bitmap::is_null, "Check if the bitmap is null.")
-        .def("clear", &nova::vg::Bitmap::clear, "value"_a, "Clear the bitmap with a stb::color.")
-        .def("clear", [](nova::vg::Bitmap& bitmap, uint32_t value) {
+        .def_prop_ro("width", &nova::vg::pixmap::width, "Get the width of the bitmap.")
+        .def_prop_ro("height", &nova::vg::pixmap::height, "Get the height of the bitmap.")
+        .def_prop_ro("stride", &nova::vg::pixmap::stride, "Get the stride (bytes per row) of the bitmap.")
+        .def("is_null", &nova::vg::pixmap::is_null, "Check if the bitmap is null.")
+        .def("clear", &nova::vg::pixmap::clear, "value"_a, "Clear the bitmap with a stb::color.")
+        .def("clear", [](nova::vg::pixmap& bitmap, uint32_t value) {
             bitmap.clear(stb::color::from_value(value));
         }, "value"_a, "Clear the bitmap with a packed 0xRRGGBBAA value.")
-        .def("convert_to_rgba", &nova::vg::Bitmap::convertToRGBA, "Convert pixel data in place from ARGB32 Premultiplied to RGBA Plain. Only needed to hand the raw "
+        .def("convert_to_rgba", &nova::vg::pixmap::convertToRGBA, "Convert pixel data in place from ARGB32 Premultiplied to RGBA Plain. Only needed to hand the raw "
              "buffer to something else (e.g. numpy consumers wanting straight RGBA); NOT before "
              "write_to_*/to_*/write, which convert internally -- doing both converts twice.")
-        // The encoders below all take the Bitmap as it comes out of
-        // render_to_bitmap() (ARGB32 premultiplied) and do their own
+        // The encoders below all take the pixmap as it comes out of
+        // render_to_pixmap() (ARGB32 premultiplied) and do their own
         // premultiplied->straight-RGBA conversion internally, into a
         // scratch copy. Do NOT call convert_to_rgba() first: that converts
-        // the Bitmap in place, and encoding it afterwards converts it a
+        // the pixmap in place, and encoding it afterwards converts it a
         // *second* time -- swapping red/blue channels and corrupting
         // semi-transparent pixels.
-        .def("write_to_png", [](const nova::vg::Bitmap &bmp, const std::string &filename) {
+        .def("write_to_png", [](const nova::vg::pixmap &bmp, const std::string &filename) {
             return write_to_file(bmp, filename, image_format::png);
         }, "filename"_a, "Write the bitmap to a PNG file. Returns True on success.")
-        .def("write_to_bmp", [](const nova::vg::Bitmap &bmp, const std::string &filename) {
+        .def("write_to_bmp", [](const nova::vg::pixmap &bmp, const std::string &filename) {
             return write_to_file(bmp, filename, image_format::bmp);
         }, "filename"_a, "Write the bitmap to a BMP file. Returns True on success.")
-        .def("write_to_tga", [](const nova::vg::Bitmap &bmp, const std::string &filename) {
+        .def("write_to_tga", [](const nova::vg::pixmap &bmp, const std::string &filename) {
             return write_to_file(bmp, filename, image_format::tga);
         }, "filename"_a, "Write the bitmap to a TGA file. Returns True on success.")
-        .def("write_to_jpg", [](const nova::vg::Bitmap &bmp, const std::string &filename, int quality) {
+        .def("write_to_jpg", [](const nova::vg::pixmap &bmp, const std::string &filename, int quality) {
             return write_to_file(bmp, filename, image_format::jpg, quality);
         }, "filename"_a, "quality"_a = 80,
            "Write the bitmap to a JPEG file (quality 1-100). JPEG has no alpha channel: "
            "render onto an opaque background first. Returns True on success.")
-        .def("write", [](const nova::vg::Bitmap &bmp, const std::string &filename, int jpg_quality) {
+        .def("write", [](const nova::vg::pixmap &bmp, const std::string &filename, int jpg_quality) {
             // The extension picks the encoder; anything unrecognised is PNG, as it always was.
             std::string ext = std::filesystem::path(filename).extension().string();
             image_format format = image_format::png;
@@ -423,18 +424,18 @@ NB_MODULE(novasvg_py, m) {
         }, "filename"_a, "jpg_quality"_a = 80,
            "Write the bitmap to a file, picking PNG/BMP/TGA/JPEG from the extension "
            "(.png/.bmp/.tga/.jpg/.jpeg; PNG if unrecognized). Returns True on success.")
-        .def("to_png", [](const nova::vg::Bitmap &bmp) { return encode_to_bytes(bmp, image_format::png); },
+        .def("to_png", [](const nova::vg::pixmap &bmp) { return encode_to_bytes(bmp, image_format::png); },
              "Encode the bitmap as PNG and return the file contents as bytes (no temp file).")
-        .def("to_bmp", [](const nova::vg::Bitmap &bmp) { return encode_to_bytes(bmp, image_format::bmp); },
+        .def("to_bmp", [](const nova::vg::pixmap &bmp) { return encode_to_bytes(bmp, image_format::bmp); },
              "Encode the bitmap as BMP and return the file contents as bytes.")
-        .def("to_tga", [](const nova::vg::Bitmap &bmp) { return encode_to_bytes(bmp, image_format::tga); },
+        .def("to_tga", [](const nova::vg::pixmap &bmp) { return encode_to_bytes(bmp, image_format::tga); },
              "Encode the bitmap as TGA and return the file contents as bytes.")
-        .def("to_jpg", [](const nova::vg::Bitmap &bmp, int quality) {
+        .def("to_jpg", [](const nova::vg::pixmap &bmp, int quality) {
             return encode_to_bytes(bmp, image_format::jpg, quality);
         }, "quality"_a = 80,
            "Encode the bitmap as JPEG (quality 1-100) and return the file contents as bytes. "
            "JPEG has no alpha channel: render onto an opaque background first.")
-        .def("to_bytes", [](const nova::vg::Bitmap &bmp, const std::string &format, int quality) {
+        .def("to_bytes", [](const nova::vg::pixmap &bmp, const std::string &format, int quality) {
             image_format parsed;
             if(!parse_format(format, parsed))
                 throw std::invalid_argument("unknown image format '" + format + "' (expected png, bmp, tga, jpg or jpeg)");
@@ -470,13 +471,13 @@ NB_MODULE(novasvg_py, m) {
         .def("has_attribute", &nova::svg::element::has_attribute, "name"_a, "Check if an attribute exists.")
         .def("get_attribute", &nova::svg::element::attribute, "name"_a, nb::rv_policy::reference, "Get an attribute value.")
         .def("set_attribute", &nova::svg::element::set_attribute, "name"_a, "value"_a, "Set an attribute value.")
-        .def("render", static_cast<void (nova::svg::element::*)(nova::vg::Bitmap&, const stb::matrix&) const>(&nova::svg::element::render), "bitmap"_a, "matrix"_a = stb::matrix(), "Render the element onto a bitmap.")
-        .def("render_to_bitmap", &nova::svg::element::render_to_bitmap, 
+        .def("render", static_cast<void (nova::svg::element::*)(nova::vg::pixmap&, const stb::matrix&) const>(&nova::svg::element::render), "bitmap"_a, "matrix"_a = stb::matrix(), "Render the element onto a bitmap.")
+        .def("render_to_bitmap", &nova::svg::element::render_to_pixmap, 
              "width"_a = -1, "height"_a = -1, "backgroundColor"_a = stb::color(),
              "Render the element to a new Bitmap.")
         .def("render_to_bitmap", [](const nova::svg::element& el, int width, int height,
                                     uint32_t background_color) {
-            return el.render_to_bitmap(width, height, stb::color::from_value(background_color));
+            return el.render_to_pixmap(width, height, stb::color::from_value(background_color));
         }, "width"_a = -1, "height"_a = -1, "backgroundColor"_a = 0u,
            "Render the element using a packed 0xRRGGBBAA background color.")
         .def("get_local_matrix", &nova::svg::element::local_matrix, "Get the local transformation matrix.")
@@ -504,13 +505,13 @@ NB_MODULE(novasvg_py, m) {
         .def("bounding_box", &nova::svg::document::bounding_box, "Get the bounding box of the document content.")
         .def("update_layout", &nova::svg::document::update_layout, "Update the layout of the document if needed.")
         .def("force_layout", &nova::svg::document::force_layout, "Force an immediate layout update.")
-        .def("render", static_cast<void (nova::svg::document::*)(nova::vg::Bitmap&, const stb::matrix&) const>(&nova::svg::document::render), "bitmap"_a, "matrix"_a = stb::matrix(), "Render the document onto a bitmap.")
-        .def("render_to_bitmap", &nova::svg::document::render_to_bitmap, 
+        .def("render", static_cast<void (nova::svg::document::*)(nova::vg::pixmap&, const stb::matrix&) const>(&nova::svg::document::render), "bitmap"_a, "matrix"_a = stb::matrix(), "Render the document onto a bitmap.")
+        .def("render_to_bitmap", &nova::svg::document::render_to_pixmap, 
              "width"_a = -1, "height"_a = -1, "backgroundColor"_a = stb::color(),
              "Render the document to a new Bitmap.")
         .def("render_to_bitmap", [](const nova::svg::document& dom, int width, int height,
                                     uint32_t background_color) {
-            return dom.render_to_bitmap(width, height, stb::color::from_value(background_color));
+            return dom.render_to_pixmap(width, height, stb::color::from_value(background_color));
         }, "width"_a = -1, "height"_a = -1, "backgroundColor"_a = 0u,
            "Render the document using a packed 0xRRGGBBAA background color.")
         .def("element_from_point", &nova::svg::document::element_from_point, "x"_a, "y"_a, "Get the topmost element at a specific point.")

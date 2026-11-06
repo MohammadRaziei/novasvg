@@ -1,73 +1,73 @@
-// Definitions declared in include/nova/vg/bitmap.h.
-#include "nova/vg/bitmap.h"
+// Definitions declared in src/sources/vg/pixmap.h.
+#include "pixmap.h"
 
 namespace nova::vg {
 
-Bitmap::Bitmap(int width, int height)
+pixmap::pixmap(int width, int height)
     : m_surface(surface_create(width, height))
 {
 }
 
-Bitmap::Bitmap(uint8_t* data, int width, int height, int stride)
+pixmap::pixmap(uint8_t* data, int width, int height, int stride)
     : m_surface(surface_create_for_data(data, width, height, stride))
 {
 }
 
-Bitmap::Bitmap(const Bitmap& bitmap)
+pixmap::pixmap(const pixmap& bitmap)
     : m_surface(surface_reference(bitmap.surface()))
 {
 }
 
-Bitmap::Bitmap(Bitmap&& bitmap)
+pixmap::pixmap(pixmap&& bitmap)
     : m_surface(bitmap.release())
 {
 }
 
-Bitmap::~Bitmap()
+pixmap::~pixmap()
 {
     surface_destroy(m_surface);
 }
 
-Bitmap& Bitmap::operator=(const Bitmap& bitmap)
+pixmap& pixmap::operator=(const pixmap& bitmap)
 {
-    Bitmap(bitmap).swap(*this);
+    pixmap(bitmap).swap(*this);
     return *this;
 }
 
-void Bitmap::swap(Bitmap& bitmap)
+void pixmap::swap(pixmap& bitmap)
 {
     std::swap(m_surface, bitmap.m_surface);
 }
 
-uint8_t* Bitmap::data() const
+uint8_t* pixmap::data() const
 {
     if(m_surface)
         return surface_get_data(m_surface);
     return nullptr;
 }
 
-int Bitmap::width() const
+int pixmap::width() const
 {
     if(m_surface)
         return surface_get_width(m_surface);
     return 0;
 }
 
-int Bitmap::height() const
+int pixmap::height() const
 {
     if(m_surface)
         return surface_get_height(m_surface);
     return 0;
 }
 
-int Bitmap::stride() const
+int pixmap::stride() const
 {
     if(m_surface)
         return surface_get_stride(m_surface);
     return 0;
 }
 
-void Bitmap::clear(const stb::color& value)
+void pixmap::clear(const stb::color& value)
 {
     if(m_surface == nullptr)
         return;
@@ -76,7 +76,7 @@ void Bitmap::clear(const stb::color& value)
     surface_clear(m_surface, &color);
 }
 
-void Bitmap::convertToRGBA()
+void pixmap::convertToRGBA()
 {
     if(m_surface == nullptr)
         return;
@@ -85,13 +85,13 @@ void Bitmap::convertToRGBA()
     stb::premultiplied_argb_to_rgba(data, stride, data, stride, surface_get_width(m_surface), surface_get_height(m_surface));
 }
 
-Bitmap& Bitmap::operator=(Bitmap&& bitmap)
+pixmap& pixmap::operator=(pixmap&& bitmap)
 {
-    Bitmap(std::move(bitmap)).swap(*this);
+    pixmap(std::move(bitmap)).swap(*this);
     return *this;
 }
 
-stb::image bitmap_to_rgba_image(const Bitmap& bitmap)
+stb::image bitmap_to_rgba_image(const pixmap& bitmap)
 {
     if(bitmap.is_null())
         return stb::image();
@@ -106,7 +106,7 @@ stb::image bitmap_to_rgba_image(const Bitmap& bitmap)
     return stb::image::wrap(width, height, stb::pixel_format::rgba, data, std::move(pixels));
 }
 
-stb::image bitmap_release_to_image(Bitmap&& bitmap)
+stb::image pixmap_release_to_image(pixmap&& bitmap)
 {
     if(bitmap.is_null())
         return stb::image();
@@ -115,12 +115,12 @@ stb::image bitmap_release_to_image(Bitmap&& bitmap)
     bitmap.convertToRGBA();
     const int width = bitmap.width();
     const int height = bitmap.height();
-    auto keep = std::make_shared<Bitmap>(std::move(bitmap));
+    auto keep = std::make_shared<pixmap>(std::move(bitmap));
     uint8_t* data = keep->data();
     return stb::image::wrap(width, height, stb::pixel_format::rgba, data, std::move(keep));
 }
 
-surface_t* Bitmap::release()
+surface_t* pixmap::release()
 {
     return std::exchange(m_surface, nullptr);
 }

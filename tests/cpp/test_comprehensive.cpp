@@ -1,3 +1,4 @@
+#include "vg/pixmap.h"
 #include "doctest.h"
 
 #include <filesystem>
@@ -130,7 +131,7 @@ TEST_CASE("Box operations") {
 
 TEST_CASE("Bitmap operations") {
     // Create bitmap with dimensions
-    nova::vg::Bitmap bitmap(100, 150);
+    nova::vg::pixmap bitmap(100, 150);
     REQUIRE_FALSE(bitmap.is_null());
     CHECK(bitmap.width() == 100);
     CHECK(bitmap.height() == 150);
@@ -144,12 +145,12 @@ TEST_CASE("Bitmap operations") {
     bitmap.clear(stb::color::from_value(0xFF0000FF)); // Red color
     
     // Test copy constructor
-    nova::vg::Bitmap bitmap2 = bitmap;
+    nova::vg::pixmap bitmap2 = bitmap;
     CHECK(bitmap2.width() == 100);
     CHECK(bitmap2.height() == 150);
     
     // Test move constructor
-    nova::vg::Bitmap bitmap3 = std::move(bitmap2);
+    nova::vg::pixmap bitmap3 = std::move(bitmap2);
     CHECK(bitmap3.width() == 100);
     CHECK(bitmap2.is_null()); // Should be null after move
     
@@ -227,10 +228,10 @@ TEST_CASE("Element methods") {
         // CHECK(rectElement.attribute("test") == "value");
         
         // Test render methods
-        nova::vg::Bitmap bitmap(64, 64);
+        nova::vg::pixmap bitmap(64, 64);
         rectElement.render(bitmap);
         
-        auto renderedBitmap = rectElement.render_to_bitmap(64, 64);
+        auto renderedBitmap = rectElement.render_to_pixmap(64, 64);
         CHECK_FALSE(renderedBitmap.is_null());
     }
 }
@@ -278,18 +279,18 @@ TEST_CASE("Complex SVG rendering") {
     REQUIRE(dom != nullptr);
     
     // Test rendering at different sizes
-    auto bitmap1 = dom->render_to_bitmap(100, 100);
+    auto bitmap1 = dom->render_to_pixmap(100, 100);
     CHECK_FALSE(bitmap1.is_null());
     CHECK(bitmap1.width() == 100);
     CHECK(bitmap1.height() == 100);
     
     // Test with auto-scaling (width = -1)
-    auto bitmap2 = dom->render_to_bitmap(-1, 200);
+    auto bitmap2 = dom->render_to_pixmap(-1, 200);
     CHECK_FALSE(bitmap2.is_null());
     CHECK(bitmap2.height() == 200);
     
     // Test with background color
-    auto bitmap3 = dom->render_to_bitmap(100, 100, stb::color::from_value(0xFFFFFFFF));
+    auto bitmap3 = dom->render_to_pixmap(100, 100, stb::color::from_value(0xFFFFFFFF));
     CHECK_FALSE(bitmap3.is_null());
 }
 
@@ -357,7 +358,7 @@ TEST_CASE("Font face APIs") {
 
 TEST_CASE("Bitmap edge cases") {
     // Test null bitmap
-    nova::vg::Bitmap nullBitmap;
+    nova::vg::pixmap nullBitmap;
     CHECK(nullBitmap.is_null());
     CHECK(nullBitmap.width() == 0);
     CHECK(nullBitmap.height() == 0);
@@ -365,18 +366,18 @@ TEST_CASE("Bitmap edge cases") {
     CHECK(nullBitmap.data() == nullptr);
     
     // Test bitmap with zero dimensions (should create null bitmap)
-    nova::vg::Bitmap zeroBitmap(0, 0);
+    nova::vg::pixmap zeroBitmap(0, 0);
     CHECK(zeroBitmap.is_null());
     
-    nova::vg::Bitmap negativeBitmap(-1, -1);
+    nova::vg::pixmap negativeBitmap(-1, -1);
     CHECK(negativeBitmap.is_null());
     
     // Test copy of null bitmap
-    nova::vg::Bitmap copiedNull = nullBitmap;
+    nova::vg::pixmap copiedNull = nullBitmap;
     CHECK(copiedNull.is_null());
     
     // Test move of null bitmap
-    nova::vg::Bitmap movedNull = std::move(nullBitmap);
+    nova::vg::pixmap movedNull = std::move(nullBitmap);
     CHECK(movedNull.is_null());
 }
 

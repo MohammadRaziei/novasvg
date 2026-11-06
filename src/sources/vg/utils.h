@@ -72,7 +72,6 @@ namespace vg {
 #define novasvg_array_clear(array) ((array).size = 0)
 #define novasvg_array_destroy(array) free((array).data)
 
-uint32_t premultiply_argb(uint32_t color);
 
 bool parse_number(const char** begin, const char* end, float* number);
 

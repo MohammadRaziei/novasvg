@@ -4,7 +4,7 @@
 #include "utils.h"
 
 // Image decoding is libstb's (stb::image); this layer only rasterizes and turns decoded pixels into a
-// premultiplied surface. Writing images is Bitmap's job (it asks libstb too).
+// premultiplied surface. Writing images is pixmap's job (it asks libstb too).
 #include <stb/image.hpp>
 
 // The standard headers the old inlined stb_image used to pull in for the rest of this file.

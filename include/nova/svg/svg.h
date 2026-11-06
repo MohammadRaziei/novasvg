@@ -46,18 +46,15 @@
 #define NOVA_VERSION_STRINGIZE(major, minor, patch) NOVA_VERSION_XSTRINGIZE(major, minor, patch)
 #define NOVA_VERSION_STRING NOVA_VERSION_STRINGIZE(NOVA_VERSION_MAJOR, NOVA_VERSION_MINOR, NOVA_VERSION_PATCH)
 
-#include "../vg/color.h"
+#include <stb/color.hpp>
+#include <stb/image.hpp>
+#include <stb/outline.hpp>
 
+#include "../vg/geometry.h"
 
-/**
- * @brief Callback for cleaning up resources.
- *
- * This function is called to release resources associated with a specific operation.
- *
- * @param closure A user-defined pointer to the resource or context to be freed.
- */
-
-
+namespace nova::vg {
+class pixmap;  // @internal: the premultiplied-ARGB32 render target; the public pixel type is stb::image
+}
 
 namespace nova::svg {
 using namespace vg;
@@ -83,8 +80,6 @@ int version();
 std::string version_string();
 
 } // namespace nova::svg
-
-#include "../vg/geometry.h"
 
 namespace nova::svg {
 using namespace vg;
@@ -243,15 +238,15 @@ public:
     stb::image render_to_image(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
 
     /**
-     * @internal Premultiplied-ARGB32 rendering target (Bitmap is not part of the public API; use the
+     * @internal Premultiplied-ARGB32 rendering target (pixmap is not part of the public API; use the
      * stb::image overloads above).
      */
-    void render(Bitmap& bitmap, const stb::matrix& matrix = stb::matrix()) const;
+    void render(pixmap& bitmap, const stb::matrix& matrix = stb::matrix()) const;
 
     /**
-     * @internal See render(Bitmap&).
+     * @internal See render(pixmap&).
      */
-    Bitmap render_to_bitmap(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
+    pixmap render_to_pixmap(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
 
     /**
      * @brief Retrieves the local transformation matrix of the el.
@@ -395,15 +390,15 @@ public:
     stb::image render_to_image(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
 
     /**
-     * @internal Premultiplied-ARGB32 rendering target (Bitmap is not part of the public API; use the
+     * @internal Premultiplied-ARGB32 rendering target (pixmap is not part of the public API; use the
      * stb::image overloads above).
      */
-    void render(Bitmap& bitmap, const stb::matrix& matrix = stb::matrix()) const;
+    void render(pixmap& bitmap, const stb::matrix& matrix = stb::matrix()) const;
 
     /**
-     * @internal See render(Bitmap&).
+     * @internal See render(pixmap&).
      */
-    Bitmap render_to_bitmap(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
+    pixmap render_to_pixmap(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
 
     /**
      * @brief How render_to_pdf() writes the page.

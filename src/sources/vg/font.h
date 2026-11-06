@@ -1,12 +1,12 @@
 #pragma once
 
 // Font: TrueType font loading, face caching, and text measurement.
-// Self-contained -- doesn't need Bitmap, raster_canvas, or the svg layer -- so it
+// Self-contained -- doesn't need pixmap, raster_canvas, or the svg layer -- so it
 // can be used entirely on its own (e.g. to measure how wide some text
 // would come out in a given font) without pulling in the rest of novasvg.
 
-#include "nova/vg/parserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no svg-tree dependency, consistent with this header's own self-contained goal
-#include "nova/vg/render.h"  // path_move_to/line_to/cubic_to, used to extract glyph outlines
+#include "parserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no svg-tree dependency, consistent with this header's own self-contained goal
+#include "render.h"  // path_move_to/line_to/cubic_to, used to extract glyph outlines
 
 #include <string>
 #include <string_view>

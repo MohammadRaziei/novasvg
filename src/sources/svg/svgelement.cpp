@@ -1,4 +1,5 @@
 // Definitions of the SVG element classes declared in svgelement.h.
+#include "vg/pixmap.h"
 #include "vg/pdf_canvas.h"
 #include "svgelement.h"
 
@@ -843,7 +844,7 @@ void svg_render_state::endGroup(const svg_blend_info& blendInfo)
         auto& layer = static_cast<raster_canvas&>(*m_canvas);
         auto& page = static_cast<pdf_canvas&>(*m_parent->m_canvas);
         const Rect e = layer.extents();
-        page.draw_raster_group(Bitmap(surface_reference(layer.surface())), Rect(e.x / m_layerScale, e.y / m_layerScale, e.w / m_layerScale, e.h / m_layerScale), blendMode, opacity);
+        page.draw_raster_group(pixmap(surface_reference(layer.surface())), Rect(e.x / m_layerScale, e.y / m_layerScale, e.w / m_layerScale, e.h / m_layerScale), blendMode, opacity);
         return;
     }
 
@@ -1157,7 +1158,7 @@ bool svg_pattern_element::applyPaint(svg_render_state& state, float opacity) con
     patternTransform.translate(patternRect.x, patternRect.y);
     patternTransform.scale(patternRect.w / patternImage->width(), patternRect.h / patternImage->height());
     if(pdf)
-        pdf->set_tiled_image(Bitmap(surface_reference(patternImage->surface())), patternTransform, opacity);
+        pdf->set_tiled_image(pixmap(surface_reference(patternImage->surface())), patternTransform, opacity);
     else
         state.raster()->set_texture(*patternImage, TextureType::Tiled, opacity, patternTransform);
     return true;
@@ -3676,13 +3677,13 @@ void svg_image_element::render(svg_render_state& state) const
     newState.endGroup(blendInfo);
 }
 
-Bitmap loadImageResource(const std::string& href)
+pixmap loadImageResource(const std::string& href)
 {
     if(href.compare(0, 5, "data:") == 0) {
         std::string_view input(href);
         auto index = input.find(',', 5);
         if(index == std::string_view::npos)
-            return Bitmap();
+            return pixmap();
         input.remove_prefix(index + 1);
         return surface_load_from_image_base64(input.data(), input.length());
     }

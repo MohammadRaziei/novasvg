@@ -3,21 +3,6 @@
 namespace nova {
 namespace vg {
 
-uint32_t premultiply_argb(uint32_t color)
-{
-    uint32_t a = novasvg_alpha(color);
-    uint32_t r = novasvg_red(color);
-    uint32_t g = novasvg_green(color);
-    uint32_t b = novasvg_blue(color);
-    if(a != 255) {
-        r = (r * a) / 255;
-        g = (g * a) / 255;
-        b = (b * a) / 255;
-    }
-
-    return (a << 24) | (r << 16) | (g << 8) | (b);
-}
-
 bool parse_number(const char** begin, const char* end, float* number)
 {
     const char* it = *begin;

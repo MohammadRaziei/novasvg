@@ -1,5 +1,5 @@
 // Drives novasvg through its own C++ API directly (nova::svg::document /
-// nova::vg::Bitmap) -- see manifest.h for the shared timing/manifest
+// nova::vg::pixmap) -- see manifest.h for the shared timing/manifest
 // protocol every native_*_bench binary speaks.
 //
 // Before timing anything, one throwaway render pays novasvg's process-wide
@@ -24,14 +24,14 @@ int main(int argc, char** argv)
             "<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'>"
             "<text x='0' y='1'>x</text></svg>");
         if(warm)
-            warm->render_to_bitmap(1, 1, stb::color::Transparent);
+            warm->render_to_pixmap(1, 1, stb::color::Transparent);
     }
 
     bench::runAll(jobs, runs, [](const bench::Job& job, bool isLast) {
         auto doc = nova::svg::document::load_file(job.svg_path);
         if(!doc)
             throw std::runtime_error("failed to load/parse SVG");
-        auto bitmap = doc->render_to_bitmap(job.width, job.height, stb::color::Transparent);
+        auto bitmap = doc->render_to_pixmap(job.width, job.height, stb::color::Transparent);
         if(bitmap.is_null())
             throw std::runtime_error("renderToBitmap returned a null bitmap");
         if(isLast && !bitmap.write(job.out_path))

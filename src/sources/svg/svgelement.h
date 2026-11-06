@@ -1,6 +1,7 @@
 #ifndef NOVA_SVGELEMENT_H
 #define NOVA_SVGELEMENT_H
 
+#include "vg/pixmap.h"
 #include <string>
 #include <forward_list>
 #include <list>
@@ -15,7 +16,7 @@
 #include "nova/svg/svg.h"
 #include "vg/canvas.h"
 #include "vg/font.h"
-#include "nova/vg/parserutils.h"
+#include "vg/parserutils.h"
 
 // ---------------------------------------------------------------
 // svg_element and its family (svg_paint_element, svg_geometry_element,
@@ -1126,7 +1127,7 @@ public:
     const svg_length& width() const { return m_width; }
     const svg_length& height() const { return m_height; }
     const svg_preserve_aspect_ratio& preserveAspectRatio() const { return m_preserveAspectRatio; }
-    const Bitmap& image() const { return m_image; }
+    const pixmap& image() const { return m_image; }
 
     Rect fillBoundingBox() const final;
     Rect strokeBoundingBox() const final;
@@ -1139,7 +1140,7 @@ private:
     svg_length m_width;
     svg_length m_height;
     svg_preserve_aspect_ratio m_preserveAspectRatio;
-    Bitmap m_image;
+    pixmap m_image;
 };
 
 class svg_foreign_object_element;
@@ -2779,7 +2780,7 @@ inline bool isDisallowedElement(const svg_element* el)
 
 
 
-Bitmap loadImageResource(const std::string& href);
+pixmap loadImageResource(const std::string& href);
 
 
 // ---------------------------------------------------------------

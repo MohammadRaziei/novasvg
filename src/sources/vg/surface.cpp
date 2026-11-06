@@ -1,4 +1,5 @@
 #include "surface.h"
+#include <stb/image.hpp>
 
 namespace nova {
 namespace vg {
@@ -182,7 +183,12 @@ int surface_get_stride(const surface_t* surface)
 
 void surface_clear(surface_t* surface, const color_t* color)
 {
-    uint32_t pixel = premultiply_argb(color_to_argb32(color));
+    // libstb's straight-RGBA -> premultiplied-ARGB32 conversion (c * a / 255, packed 0xAARRGGBB), on one pixel.
+    const uint32_t argb = color_to_argb32(color);
+    const uint8_t rgba[4] = {static_cast<uint8_t>(novasvg_red(argb)), static_cast<uint8_t>(novasvg_green(argb)),
+                             static_cast<uint8_t>(novasvg_blue(argb)), static_cast<uint8_t>(novasvg_alpha(argb))};
+    uint32_t pixel = 0;
+    stb::rgba_to_premultiplied_argb(reinterpret_cast<uint8_t*>(&pixel), sizeof(pixel), rgba, sizeof(rgba), 1, 1);
     for(int y = 0; y < surface->height; y++) {
         uint32_t* pixels = (uint32_t*)(surface->data + surface->stride * y);
         memfill32(pixels, surface->width, pixel);

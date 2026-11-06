@@ -34,7 +34,7 @@ public:
     void clip_path(const stb::outline& path, FillRule clip_rule, const Transform& transform) override;
     void clip_rect(const Rect& rect, FillRule clip_rule, const Transform& transform) override;
 
-    void draw_image(const Bitmap& image, const Rect& dst_rect, const Rect& src_rect, const Transform& transform) override;
+    void draw_image(const pixmap& image, const Rect& dst_rect, const Rect& src_rect, const Transform& transform) override;
 
     // ---- beyond the `canvas` interface; the svg layer calls these when its target is a pdf_canvas ----
 
@@ -51,10 +51,10 @@ public:
     void end_group(BlendMode blend_mode, float opacity);
 
     // A finished raster group (premultiplied ARGB32) placed at `dst` (user units).
-    void draw_raster_group(const Bitmap& image, const Rect& dst, BlendMode blend_mode, float opacity);
+    void draw_raster_group(const pixmap& image, const Rect& dst, BlendMode blend_mode, float opacity);
 
     // Makes the current paint a tiled image: `tile` repeated, `transform` mapping tile pixels to user space.
-    void set_tiled_image(const Bitmap& tile, const Transform& transform, float opacity);
+    void set_tiled_image(const pixmap& tile, const Transform& transform, float opacity);
 
     void save() override;
     void restore() override;
@@ -93,7 +93,7 @@ private:
     int shading_pattern(const matrix_t& transform);
     int tiling_pattern(const matrix_t& transform);
     // Adds `image` as an Image XObject (Flate RGB, plus an SMask when it has alpha). Returns its object number.
-    int add_image(const Bitmap& image, int* width, int* height);
+    int add_image(const pixmap& image, int* width, int* height);
     void place_image(int object, int width, int height, const Rect& dst, const Rect& src, const matrix_t* transform, float alpha, BlendMode blend_mode);
 
     float m_width, m_height;
