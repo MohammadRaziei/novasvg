@@ -11,7 +11,7 @@ namespace nova::vg {
 namespace detail {
 
 // DejaVuSans.ttf: 40460 bytes of TrueType, 24668 characters of base64
-inline constexpr const char* const kEmbeddedFontZlibBase64[] = {
+inline constexpr const char* const k_embedded_font_zlib_base64[] = {
     "eNrtvQlclVX6B37OezdFU3Y0NVlENNdERDH3JTUXckEkI1FATBEFzAxNuJdExwxkyw1FRUNcxhBRccusRGlzzGkcdVostXLKaZrG",
     "lHvu/znf972Xi2I186uZ+f8/f27v9557luc853ue85ztdmWcMeZKoGfssaHDhiu5unGMvTiHYjs8Fj5uwj+3dHyXPucz5vnBYxMm",
     "DV5bWDaBsXWxlP79mEETRywv/nAJY+sjGVPKx03o1uMZ08PNGePLKT1iRmLMvL49541hzPASxTWdGZMyj5noxV6cRulNZ85ZFO/1",
@@ -263,7 +263,7 @@ inline constexpr const char* const kEmbeddedFontZlibBase64[] = {
 };
 
 // DejaVuSans-Bold.ttf: 33788 bytes of TrueType, 21232 characters of base64
-inline constexpr const char* const kEmbeddedFontBoldZlibBase64[] = {
+inline constexpr const char* const k_embedded_font_bold_zlib_base64[] = {
     "eNrtfQtcVcUW98x+HPCovB8qIi/xaIrIWzDLB4IPQFNEVDJBQBAB5aGhorzKzGuaICmKKaKRmhmSmaGm5uuW17pe6pqaeb1eK826",
     "fmU+OHO+NWvvczggdOu+ut/v97Hd/zN79sxaa9asWbNm5giEEkKsSRERybzI8FERwjKxHyEL6iC3b+SE8ZMeFx7/Kzx/TEiXwZGT",
     "Jo/YMHbnMEJKLeH9D+Mn+fpn+A1YQAh9Fp7jZmUmzhvSe9dIQuRB8LxkdmLuPGIBF1mwCZ67zJ5bkDr7KR94b5FMSHB8Wkpicp9R",
@@ -481,7 +481,7 @@ inline constexpr const char* const kEmbeddedFontBoldZlibBase64[] = {
 };
 
 // DejaVuSans-Oblique.ttf: 32208 bytes of TrueType, 21248 characters of base64
-inline constexpr const char* const kEmbeddedFontItalicZlibBase64[] = {
+inline constexpr const char* const k_embedded_font_italic_zlib_base64[] = {
     "eNrtfQlcVNUa+Dn33pnBURFZRUEZBhhNERVxXHLHHYEQUQmJHVxYZBERTREUzXpiqCGKopkZLpmZoblk5hb5lHhoPu2Zma989cpn",
     "vf6mzJn/d757ZxgUX739/X+//1zvN+ee5TvffrY7QighpANZSkSSNS54zFhhidiDkJylkNt9XHjYlMFrJ78Dz7sIadN/3JSpozZO",
     "rBlByKLrUP5j2JSAfrPFHpGE0AXwHJWYHp81xGf3aEJUfeB5UWp8ThbRwEVycuG5XercgpRpM1NWEaJJImTgn9KS45P8tk16C8qa",
@@ -699,7 +699,7 @@ inline constexpr const char* const kEmbeddedFontItalicZlibBase64[] = {
 };
 
 // DejaVuSans-BoldOblique.ttf: 34916 bytes of TrueType, 22544 characters of base64
-inline constexpr const char* const kEmbeddedFontBoldItalicZlibBase64[] = {
+inline constexpr const char* const k_embedded_font_bold_italic_zlib_base64[] = {
     "eNrtvQlclEfSP979PM/MwChygwgoNxo8wAFGUFQU8QIkiIgGDSAgHhxyeMZwDIkxxo23iGLUqMEzLp4xHnFNYlzXNa4vcY36Gtc1",
     "bowxt2uU6flV1/PMMCBms8e7u//P58/4fOeZfqqrq6qrq6u7BySUEGJPKolIiofHDYsXKsQehCy4B6XdhyePGRt2s89kQl5wIaTD",
     "xOFjxw1ZN2rnYEIWFcPzH8aM7dN3Rp+Qx4TQufA5bUpBVnH/gF1DCVGFwucXpmaVFhMNvMiCz+Bzx6kz5+U5Cc2XCdHkEBL1h/zc",

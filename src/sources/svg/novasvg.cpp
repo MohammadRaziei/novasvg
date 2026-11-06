@@ -99,7 +99,7 @@ const std::string& text_node::data() const
 {
     if(m_node)
         return text()->data();
-    return emptyString;
+    return empty_string;
 }
 
 void text_node::set_data(const std::string& data)
@@ -130,7 +130,7 @@ const std::string& element::attribute(const std::string& name) const
 {
     if(m_node)
         return el()->attribute(name);
-    return emptyString;
+    return empty_string;
 }
 
 void element::set_attribute(const std::string& name, const std::string& value)
@@ -145,7 +145,7 @@ void element::render(pixmap& bitmap, const stb::matrix& matrix) const
     if(m_node == nullptr || bitmap.is_null())
         return;
     auto canvas = raster_canvas::create(bitmap);
-    svg_render_state state(nullptr, nullptr, matrix, svg_render_mode::Painting, canvas);
+    svg_render_state state(nullptr, nullptr, matrix, svg_render_mode::painting, canvas);
     el(true)->render(state);
 }
 
@@ -153,22 +153,22 @@ pixmap element::render_to_pixmap(int width, int height, const stb::color& backgr
 {
     if(m_node == nullptr)
         return pixmap();
-    auto elementBounds = el(true)->local_transform().map_rect(el()->paint_bounding_box());
-    if(elementBounds.empty())
+    auto element_bounds = el(true)->local_transform().map_rect(el()->paint_bounding_box());
+    if(element_bounds.empty())
         return pixmap();
     if(width <= 0 && height <= 0) {
-        width = static_cast<int>(std::ceil(elementBounds.w));
-        height = static_cast<int>(std::ceil(elementBounds.h));
+        width = static_cast<int>(std::ceil(element_bounds.w));
+        height = static_cast<int>(std::ceil(element_bounds.h));
     } else if(width > 0 && height <= 0) {
-        height = static_cast<int>(std::ceil(width * elementBounds.h / elementBounds.w));
+        height = static_cast<int>(std::ceil(width * element_bounds.h / element_bounds.w));
     } else if(height > 0 && width <= 0) {
-        width = static_cast<int>(std::ceil(height * elementBounds.w / elementBounds.h));
+        width = static_cast<int>(std::ceil(height * element_bounds.w / element_bounds.h));
     }
 
-    auto xScale = width / elementBounds.w;
-    auto yScale = height / elementBounds.h;
+    auto x_scale = width / element_bounds.w;
+    auto y_scale = height / element_bounds.h;
 
-    stb::matrix matrix{xScale, 0, 0, yScale, -elementBounds.x * xScale, -elementBounds.y * yScale};
+    stb::matrix matrix{x_scale, 0, 0, y_scale, -element_bounds.x * x_scale, -element_bounds.y * y_scale};
     pixmap bitmap(width, height);
     if(backgroundColor.value()) bitmap.clear(backgroundColor);
     render(bitmap, matrix);
@@ -227,11 +227,11 @@ Box element::bounding_box() const
     return Box();
 }
 
-NodeList element::children() const
+node_list element::children() const
 {
     if(m_node == nullptr)
-        return NodeList();
-    NodeList children;
+        return node_list();
+    node_list children;
     for(const auto& child : el()->children())
         children.push_back(child.get());
     return children;
@@ -297,12 +297,12 @@ Box document::bounding_box() const
 
 void document::update_layout()
 {
-    m_rootElement->layout_if_needed();
+    m_root_element->layout_if_needed();
 }
 
 void document::force_layout()
 {
-    m_rootElement->force_layout();
+    m_root_element->force_layout();
 }
 
 void document::render(pixmap& bitmap, const stb::matrix& matrix) const
@@ -338,7 +338,7 @@ void document::render(pixmap& bitmap, const stb::matrix& matrix) const
     // (this runs after that clear) since that argument means "what to
     // show through transparent content", and content here isn't actually
     // transparent -- it explicitly asked for this color.
-    if(const auto& bg = root_element(true)->attribute(PropertyID::Background_Color); !bg.empty()) {
+    if(const auto& bg = root_element(true)->attribute(property_id::Background_Color); !bg.empty()) {
         color_t color;
         if(color_parse(&color, bg.data(), static_cast<int>(bg.length())) > 0) {
             auto argb = color_to_argb32(&color);
@@ -352,7 +352,7 @@ void document::render(pixmap& bitmap, const stb::matrix& matrix) const
     }
 
     auto canvas = raster_canvas::create(bitmap);
-    svg_render_state state(nullptr, nullptr, matrix, svg_render_mode::Painting, canvas);
+    svg_render_state state(nullptr, nullptr, matrix, svg_render_mode::painting, canvas);
     root_element(true)->render(state);
 }
 
@@ -371,10 +371,10 @@ pixmap document::render_to_pixmap(int width, int height, const stb::color& backg
         width = static_cast<int>(std::ceil(height * intrinsic_width / intrinsic_height));
     }
 
-    auto xScale = width / intrinsic_width;
-    auto yScale = height / intrinsic_height;
+    auto x_scale = width / intrinsic_width;
+    auto y_scale = height / intrinsic_height;
 
-    stb::matrix matrix{xScale, 0, 0, yScale, 0, 0};
+    stb::matrix matrix{x_scale, 0, 0, y_scale, 0, 0};
     pixmap bitmap(width, height);
     if(backgroundColor.value()) bitmap.clear(backgroundColor);
     render(bitmap, matrix);
@@ -407,7 +407,7 @@ std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
     }
 
     // Same rule as render(pixmap&): a root `background-color` sits under everything.
-    if(const auto& bg = root_element(true)->attribute(PropertyID::Background_Color); !bg.empty()) {
+    if(const auto& bg = root_element(true)->attribute(property_id::Background_Color); !bg.empty()) {
         color_t color;
         if(color_parse(&color, bg.data(), static_cast<int>(bg.length())) > 0) {
             auto argb = color_to_argb32(&color);
@@ -420,7 +420,7 @@ std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
         }
     }
 
-    svg_render_state state(nullptr, nullptr, Transform(), svg_render_mode::Painting, pdf);
+    svg_render_state state(nullptr, nullptr, Transform(), svg_render_mode::painting, pdf);
     root_element(true)->render(state);
     return pdf->data();
 }
@@ -462,19 +462,19 @@ element document::element_from_point(float x, float y) const
 
 element document::element_by_id(const std::string& id) const
 {
-    return m_rootElement->element_by_id(id);
+    return m_root_element->element_by_id(id);
 }
 
 element document::document_element() const
 {
-    return m_rootElement.get();
+    return m_root_element.get();
 }
 
 svg_root_element* document::root_element(bool layout_if_needed) const
 {
     if(layout_if_needed)
-        m_rootElement->layout_if_needed();
-    return m_rootElement.get();
+        m_root_element->layout_if_needed();
+    return m_root_element.get();
 }
 
 document::document(document&&) = default;
@@ -492,29 +492,29 @@ using namespace vg;
 bool document::parse(const char* data, size_t length)
 {
     std::string buffer;
-    std::string styleSheet;
-    svg_element* currentElement = nullptr;
+    std::string style_sheet;
+    svg_element* current_element = nullptr;
     int ignoring = 0;
-    auto handleText = [&](std::string_view text, bool in_cdata) {
-        if(text.empty() || currentElement == nullptr || ignoring > 0)
+    auto handle_text = [&](std::string_view text, bool in_cdata) {
+        if(text.empty() || current_element == nullptr || ignoring > 0)
             return;
-        if(currentElement->id() != ElementID::Text && currentElement->id() != ElementID::Tspan && currentElement->id() != ElementID::Style) {
+        if(current_element->id() != element_id::Text && current_element->id() != element_id::tspan && current_element->id() != element_id::Style) {
             return;
         }
 
         if(in_cdata) {
             buffer.assign(text);
         } else {
-            decodeText(text, buffer);
+            decode_text(text, buffer);
         }
 
-        if(currentElement->id() == ElementID::Style) {
-            removeStyleComments(buffer);
-            styleSheet.append(buffer);
+        if(current_element->id() == element_id::Style) {
+            remove_style_comments(buffer);
+            style_sheet.append(buffer);
         } else {
             auto nd = std::make_unique<svg_text_node>(this);
             nd->set_data(buffer);
-            currentElement->addChild(std::move(nd));
+            current_element->add_child(std::move(nd));
         }
     };
 
@@ -531,20 +531,20 @@ bool document::parse(const char* data, size_t length)
     }
 
     while(!input.empty()) {
-        if(currentElement) {
+        if(current_element) {
             auto text = input.substr(0, input.find('<'));
-            handleText(text, false);
+            handle_text(text, false);
             input.remove_prefix(text.length());
         } else {
-            if(!skipOptionalSpaces(input)) {
+            if(!skip_optional_spaces(input)) {
                 break;
             }
         }
 
-        if(!skipDelimiter(input, '<'))
+        if(!skip_delimiter(input, '<'))
             return false;
-        if(skipDelimiter(input, '?')) {
-            if(!readIdentifier(input, buffer))
+        if(skip_delimiter(input, '?')) {
+            if(!read_identifier(input, buffer))
                 return false;
             auto n = input.find("?>");
             if(n == std::string_view::npos)
@@ -553,12 +553,12 @@ bool document::parse(const char* data, size_t length)
             continue;
         }
 
-        if(skipDelimiter(input, '!')) {
+        if(skip_delimiter(input, '!')) {
             if(skipString(input, "--")) {
                 auto n = input.find("-->");
                 if(n == std::string_view::npos)
                     return false;
-                handleText(input.substr(0, n), false);
+                handle_text(input.substr(0, n), false);
                 input.remove_prefix(n + 3);
                 continue;
             }
@@ -567,7 +567,7 @@ bool document::parse(const char* data, size_t length)
                 auto n = input.find("]]>");
                 if(n == std::string_view::npos)
                     return false;
-                handleText(input.substr(0, n), true);
+                handle_text(input.substr(0, n), true);
                 input.remove_prefix(n + 3);
                 continue;
             }
@@ -587,7 +587,7 @@ bool document::parse(const char* data, size_t length)
                     }
                 }
 
-                if(!skipDelimiter(input, '>'))
+                if(!skip_delimiter(input, '>'))
                     return false;
                 continue;
             }
@@ -595,57 +595,57 @@ bool document::parse(const char* data, size_t length)
             return false;
         }
 
-        if(skipDelimiter(input, '/')) {
-            if(currentElement == nullptr && ignoring == 0)
+        if(skip_delimiter(input, '/')) {
+            if(current_element == nullptr && ignoring == 0)
                 return false;
-            if(!readIdentifier(input, buffer))
+            if(!read_identifier(input, buffer))
                 return false;
             if(ignoring == 0) {
                 auto id = elementid(buffer);
-                if(id != currentElement->id())
+                if(id != current_element->id())
                     return false;
-                currentElement = currentElement->parent_element();
+                current_element = current_element->parent_element();
             } else {
                 --ignoring;
             }
 
-            skipOptionalSpaces(input);
-            if(!skipDelimiter(input, '>'))
+            skip_optional_spaces(input);
+            if(!skip_delimiter(input, '>'))
                 return false;
             continue;
         }
 
-        if(!readIdentifier(input, buffer))
+        if(!read_identifier(input, buffer))
             return false;
         svg_element* el = nullptr;
         if(ignoring > 0) {
             ++ignoring;
         } else {
             auto id = elementid(buffer);
-            if(id == ElementID::Unknown) {
+            if(id == element_id::unknown) {
                 ignoring = 1;
             } else {
-                if(m_rootElement && currentElement == nullptr)
+                if(m_root_element && current_element == nullptr)
                     return false;
-                if(m_rootElement == nullptr) {
-                    if(id != ElementID::Svg)
+                if(m_root_element == nullptr) {
+                    if(id != element_id::Svg)
                         return false;
-                    m_rootElement = std::make_unique<svg_root_element>(this);
-                    el = m_rootElement.get();
+                    m_root_element = std::make_unique<svg_root_element>(this);
+                    el = m_root_element.get();
                 } else {
                     auto child = svg_element::create(this, id);
                     el = child.get();
-                    currentElement->addChild(std::move(child));
+                    current_element->add_child(std::move(child));
                 }
             }
         }
 
-        skipOptionalSpaces(input);
-        while(readIdentifier(input, buffer)) {
-            skipOptionalSpaces(input);
-            if(!skipDelimiter(input, '='))
+        skip_optional_spaces(input);
+        while(read_identifier(input, buffer)) {
+            skip_optional_spaces(input);
+            if(!skip_delimiter(input, '='))
                 return false;
-            skipOptionalSpaces(input);
+            skip_optional_spaces(input);
             if(input.empty() || !(input.front() == '\"' || input.front() == '\''))
                 return false;
             auto quote = input.front();
@@ -653,48 +653,53 @@ bool document::parse(const char* data, size_t length)
             auto n = input.find(quote);
             if(n == std::string_view::npos)
                 return false;
-            auto id = PropertyID::Unknown;
+            auto id = property_id::unknown;
             if(el != nullptr)
                 id = propertyid(buffer);
-            if(id != PropertyID::Unknown) {
-                decodeText(input.substr(0, n), buffer);
-                if(id == PropertyID::Style) {
-                    removeStyleComments(buffer);
-                    parseInlineStyle(buffer, el);
+            if(id != property_id::unknown) {
+                decode_text(input.substr(0, n), buffer);
+                if(id == property_id::Style) {
+                    remove_style_comments(buffer);
+                    parse_inline_style(buffer, el);
                 } else {
-                    if(id == PropertyID::Id)
-                        m_rootElement->addElementById(buffer, el);
-                    el->set_attribute(Specificity::PresentationAttribute, id, buffer);
+                    if(id == property_id::Id)
+                        m_root_element->add_element_by_id(buffer, el);
+                    el->set_attribute(Specificity::presentation_attribute, id, buffer);
                 }
+            } else if(el != nullptr) {
+                // Not an attribute novasvg knows: keep it for CSS attribute selectors.
+                std::string name = buffer;
+                decode_text(input.substr(0, n), buffer);
+                el->set_custom_attribute(name, buffer);
             }
 
             input.remove_prefix(n + 1);
-            skipOptionalSpaces(input);
+            skip_optional_spaces(input);
         }
 
-        if(skipDelimiter(input, '>')) {
+        if(skip_delimiter(input, '>')) {
             if(el != nullptr) {
-                if(el->id() == ElementID::ForeignObject) {
+                if(el->id() == element_id::ForeignObject) {
                     // foreignObject content is arbitrary HTML/XML, not svg --
                     // capture it verbatim instead of trying (and failing) to
                     // parse div/span/p/etc. as svg elements. Mirrors the
                     // CDATA/comment handling above: find the matching close
                     // tag and skip straight past it.
-                    static constexpr std::string_view closeTag = "</foreignObject>";
-                    auto n = input.find(closeTag);
+                    static constexpr std::string_view close_tag = "</foreignObject>";
+                    auto n = input.find(close_tag);
                     if(n == std::string_view::npos)
                         return false;
-                    static_cast<svg_foreign_object_element*>(el)->setRawContent(std::string(input.substr(0, n)));
-                    input.remove_prefix(n + closeTag.length());
+                    static_cast<svg_foreign_object_element*>(el)->set_raw_content(std::string(input.substr(0, n)));
+                    input.remove_prefix(n + close_tag.length());
                 } else {
-                    currentElement = el;
+                    current_element = el;
                 }
             }
             continue;
         }
 
-        if(skipDelimiter(input, '/')) {
-            if(!skipDelimiter(input, '>'))
+        if(skip_delimiter(input, '/')) {
+            if(!skip_delimiter(input, '>'))
                 return false;
             if(ignoring > 0)
                 --ignoring;
@@ -704,30 +709,30 @@ bool document::parse(const char* data, size_t length)
         return false;
     }
 
-    if(m_rootElement == nullptr || ignoring > 0 || !input.empty())
+    if(m_root_element == nullptr || ignoring > 0 || !input.empty())
         return false;
-    apply_style_sheet(styleSheet);
-    m_rootElement->build();
+    apply_style_sheet(style_sheet);
+    m_root_element->build();
     return true;
 }
 
 void document::apply_style_sheet(const std::string& content)
 {
-    auto rules = parseStyleSheet(content);
+    auto rules = parse_style_sheet(content);
     std::sort(rules.begin(), rules.end());
     if(!rules.empty()) {
-        const RuleIndex index(rules);
+        const rule_index index(rules);
         std::vector<uint32_t> candidates;
-        m_rootElement->transverse([&](svg_element* el) {
+        m_root_element->transverse([&](svg_element* el) {
             index.candidates(el, candidates);
             for(auto i : candidates) {
                 const auto& rule = rules[i];
                 if(rule.match(el)) {
                     for(const auto& declaration : rule.declarations()) {
-                        if(declaration.id != PropertyID::Unknown)
+                        if(declaration.id != property_id::unknown)
                             el->set_attribute(declaration.specificity, declaration.id, declaration.value);
-                        else if(isCustomPropertyName(declaration.name))
-                            el->setCustomProperty(declaration.specificity, declaration.name, declaration.value);
+                        else if(is_custom_property_name(declaration.name))
+                            el->set_custom_property(declaration.specificity, declaration.name, declaration.value);
                     }
                 }
             }
@@ -736,42 +741,42 @@ void document::apply_style_sheet(const std::string& content)
 
     // Every custom property is known now (the elements' own `style`, and every sheet so far): the values that
     // use var() are given theirs.
-    m_rootElement->transverse([](svg_element* el) { el->resolveVariables(); });
+    m_root_element->transverse([](svg_element* el) { el->resolve_variables(); });
 
     if(!content.empty())
-        m_rootElement->addStyleSheet(content);
+        m_root_element->add_style_sheet(content);
 
     // The HTML in a foreignObject is not part of the el tree above, so it is styled here, from every
     // sheet applied so far (a stylesheet given later than the one in the file sits after it in the cascade).
     // Built only if there is a foreignObject to style; and when `content` is the only sheet so far those
     // rules are exactly the ones just parsed and sorted, so they are not parsed a second time.
-    RuleDataList htmlRules;
-    bool haveHtmlRules = false;
-    m_rootElement->transverse([&](svg_element* el) {
-        if(el->id() != ElementID::ForeignObject)
+    rule_data_list html_rules;
+    bool have_html_rules = false;
+    m_root_element->transverse([&](svg_element* el) {
+        if(el->id() != element_id::ForeignObject)
             return;
-        if(!haveHtmlRules) {
-            const auto& sheets = m_rootElement->styleSheets();
+        if(!have_html_rules) {
+            const auto& sheets = m_root_element->style_sheets();
             if(!content.empty() && sheets.size() == 1)
-                htmlRules = std::move(rules);
+                html_rules = std::move(rules);
             else
-                htmlRules = parseStyleSheets(sheets);
-            haveHtmlRules = true;
+                html_rules = parse_style_sheets(sheets);
+            have_html_rules = true;
         }
 
-        resolveForeignObjectStyle(static_cast<svg_foreign_object_element*>(el), htmlRules);
+        resolve_foreign_object_style(static_cast<svg_foreign_object_element*>(el), html_rules);
     });
 }
 
-ElementList document::query_selector_all(const std::string& content) const
+element_list document::query_selector_all(const std::string& content) const
 {
-    auto selectors = parseQuerySelectors(content);
+    auto selectors = parse_query_selectors(content);
     if(selectors.empty())
-        return ElementList();
-    ElementList elements;
-    m_rootElement->transverse([&](svg_element* el) {
+        return element_list();
+    element_list elements;
+    m_root_element->transverse([&](svg_element* el) {
         for(const auto& selector : selectors) {
-            if(matchSelector(selector, el)) {
+            if(match_selector(selector, el)) {
                 elements.push_back(el);
                 break;
             }

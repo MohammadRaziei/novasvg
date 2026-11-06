@@ -33,7 +33,7 @@ svg_layout_state::svg_layout_state(const svg_layout_state& parent, const svg_ele
     , m_text_orientation(parent.text_orientation())
     , m_direction(parent.direction())
     , m_visibility(parent.visibility())
-    , m_overflow(el->isRootElement() ? Overflow::Visible : Overflow::Hidden)
+    , m_overflow(el->is_root_element() ? Overflow::visible : Overflow::hidden)
     , m_pointer_events(parent.pointer_events())
     , m_marker_start(parent.marker_start())
     , m_marker_mid(parent.marker_mid())
@@ -42,134 +42,134 @@ svg_layout_state::svg_layout_state(const svg_layout_state& parent, const svg_ele
 {
     for(const auto& attribute : el->attributes()) {
         std::string_view input(attribute.value());
-        stripLeadingAndTrailingSpaces(input);
+        strip_leading_and_trailing_spaces(input);
         if(input.empty() || input.compare("inherit") == 0)
             continue;
         switch(attribute.id()) {
-        case PropertyID::Fill:
-            m_fill = parsePaint(input, this, stb::color::black());
+        case property_id::Fill:
+            m_fill = parse_paint(input, this, stb::color::black());
             break;
-        case PropertyID::Stroke:
-            m_stroke = parsePaint(input, this, stb::color::transparent());
+        case property_id::Stroke:
+            m_stroke = parse_paint(input, this, stb::color::transparent());
             break;
-        case PropertyID::Color:
-            m_color = parseColor(input, this, stb::color::black());
+        case property_id::Color:
+            m_color = parse_color(input, this, stb::color::black());
             break;
-        case PropertyID::Stop_Color:
-            m_stop_color = parseColor(input, this, stb::color::black());
+        case property_id::Stop_Color:
+            m_stop_color = parse_color(input, this, stb::color::black());
             break;
-        case PropertyID::Opacity:
-            m_opacity = parseNumberOrPercentage(input, true, 1.f);
+        case property_id::Opacity:
+            m_opacity = parse_number_or_percentage(input, true, 1.f);
             break;
-        case PropertyID::Mix_Blend_Mode:
-            m_mix_blend_mode = parseMixBlendMode(input);
+        case property_id::Mix_Blend_Mode:
+            m_mix_blend_mode = parse_mix_blend_mode(input);
             break;
-        case PropertyID::Fill_Opacity:
-            m_fill_opacity = parseNumberOrPercentage(input, true, 1.f);
+        case property_id::Fill_Opacity:
+            m_fill_opacity = parse_number_or_percentage(input, true, 1.f);
             break;
-        case PropertyID::Stroke_Opacity:
-            m_stroke_opacity = parseNumberOrPercentage(input, true, 1.f);
+        case property_id::Stroke_Opacity:
+            m_stroke_opacity = parse_number_or_percentage(input, true, 1.f);
             break;
-        case PropertyID::Stop_Opacity:
-            m_stop_opacity = parseNumberOrPercentage(input, true, 1.f);
+        case property_id::Stop_Opacity:
+            m_stop_opacity = parse_number_or_percentage(input, true, 1.f);
             break;
-        case PropertyID::Stroke_Miterlimit:
-            m_stroke_miterlimit = parseNumberOrPercentage(input, false, 4.f);
+        case property_id::Stroke_Miterlimit:
+            m_stroke_miterlimit = parse_number_or_percentage(input, false, 4.f);
             break;
-        case PropertyID::Font_Size:
-            m_font_size = parseFontSize(input, this);
+        case property_id::Font_Size:
+            m_font_size = parse_font_size(input, this);
             break;
-        case PropertyID::Letter_Spacing:
-            m_letter_spacing = parseLengthOrNormal(input);
+        case property_id::Letter_Spacing:
+            m_letter_spacing = parse_length_or_normal(input);
             break;
-        case PropertyID::Word_Spacing:
-            m_word_spacing = parseLengthOrNormal(input);
+        case property_id::Word_Spacing:
+            m_word_spacing = parse_length_or_normal(input);
             break;
-        case PropertyID::Baseline_Shift:
-            m_baseline_shift = parseBaselineShift(input);
+        case property_id::Baseline_Shift:
+            m_baseline_shift = parse_baseline_shift(input);
             break;
-        case PropertyID::Stroke_Width:
-            m_stroke_width = parseLength(input, LengthNegativeMode::Forbid, Length(1.f, LengthUnits::None));
+        case property_id::Stroke_Width:
+            m_stroke_width = parse_length(input, length_negative_mode::forbid, Length(1.f, length_units::None));
             break;
-        case PropertyID::Stroke_Dashoffset:
-            m_stroke_dashoffset = parseLength(input, LengthNegativeMode::Allow, Length(0.f, LengthUnits::None));
+        case property_id::Stroke_Dashoffset:
+            m_stroke_dashoffset = parse_length(input, length_negative_mode::allow, Length(0.f, length_units::None));
             break;
-        case PropertyID::Stroke_Dasharray:
-            m_stroke_dasharray = parseDashArray(input);
+        case property_id::Stroke_Dasharray:
+            m_stroke_dasharray = parse_dash_array(input);
             break;
-        case PropertyID::Stroke_Linecap:
-            m_stroke_linecap = parseLineCap(input);
+        case property_id::Stroke_Linecap:
+            m_stroke_linecap = parse_line_cap(input);
             break;
-        case PropertyID::Stroke_Linejoin:
-            m_stroke_linejoin = parseLineJoin(input);
+        case property_id::Stroke_Linejoin:
+            m_stroke_linejoin = parse_line_join(input);
             break;
-        case PropertyID::Fill_Rule:
-            m_fill_rule = parseFillRule(input);
+        case property_id::Fill_Rule:
+            m_fill_rule = parse_fill_rule(input);
             break;
-        case PropertyID::Clip_Rule:
-            m_clip_rule = parseFillRule(input);
+        case property_id::Clip_Rule:
+            m_clip_rule = parse_fill_rule(input);
             break;
-        case PropertyID::Font_Weight:
-            m_font_weight = parseFontWeight(input);
+        case property_id::Font_Weight:
+            m_font_weight = parse_font_weight(input);
             break;
-        case PropertyID::Font_Style:
-            m_font_style = parseFontStyle(input);
+        case property_id::Font_Style:
+            m_font_style = parse_font_style(input);
             break;
-        case PropertyID::Alignment_Baseline:
-            m_alignment_baseline = parseAlignmentBaseline(input);
+        case property_id::Alignment_Baseline:
+            m_alignment_baseline = parse_alignment_baseline(input);
             break;
-        case PropertyID::Dominant_Baseline:
-            m_dominant_baseline = parseDominantBaseline(input);
+        case property_id::Dominant_Baseline:
+            m_dominant_baseline = parse_dominant_baseline(input);
             break;
-        case PropertyID::Direction:
-            m_direction = parseDirection(input);
+        case property_id::Direction:
+            m_direction = parse_direction(input);
             break;
-        case PropertyID::Text_Anchor:
-            m_text_anchor = parseTextAnchor(input);
+        case property_id::Text_Anchor:
+            m_text_anchor = parse_text_anchor(input);
             break;
-        case PropertyID::White_Space:
-            m_white_space = parseWhiteSpace(input);
+        case property_id::White_Space:
+            m_white_space = parse_white_space(input);
             break;
-        case PropertyID::Writing_Mode:
-            m_writing_mode = parseWritingMode(input);
+        case property_id::Writing_Mode:
+            m_writing_mode = parse_writing_mode(input);
             break;
-        case PropertyID::Text_Orientation:
-            m_text_orientation = parseTextOrientation(input);
+        case property_id::Text_Orientation:
+            m_text_orientation = parse_text_orientation(input);
             break;
-        case PropertyID::Display:
-            m_display = parseDisplay(input);
+        case property_id::Display:
+            m_display = parse_display(input);
             break;
-        case PropertyID::Visibility:
-            m_visibility = parseVisibility(input);
+        case property_id::Visibility:
+            m_visibility = parse_visibility(input);
             break;
-        case PropertyID::Overflow:
-            m_overflow = parseOverflow(input);
+        case property_id::Overflow:
+            m_overflow = parse_overflow(input);
             break;
-        case PropertyID::Pointer_Events:
-            m_pointer_events = parsePointerEvents(input);
+        case property_id::Pointer_Events:
+            m_pointer_events = parse_pointer_events(input);
             break;
-        case PropertyID::Mask_Type:
-            m_mask_type = parseMaskType(input);
+        case property_id::Mask_Type:
+            m_mask_type = parse_mask_type(input);
             break;
-        case PropertyID::Mask:
-            m_mask = parseUrl(input);
+        case property_id::Mask:
+            m_mask = parse_url(input);
             break;
-        case PropertyID::Clip_Path:
-            m_clip_path = parseUrl(input);
+        case property_id::Clip_Path:
+            m_clip_path = parse_url(input);
             break;
-        case PropertyID::Filter:
-            m_filter = parseUrl(input);
+        case property_id::Filter:
+            m_filter = parse_url(input);
             break;
-        case PropertyID::Marker_Start:
-            m_marker_start = parseUrl(input);
+        case property_id::Marker_Start:
+            m_marker_start = parse_url(input);
             break;
-        case PropertyID::Marker_Mid:
-            m_marker_mid = parseUrl(input);
+        case property_id::Marker_Mid:
+            m_marker_mid = parse_url(input);
             break;
-        case PropertyID::Marker_End:
-            m_marker_end = parseUrl(input);
+        case property_id::Marker_End:
+            m_marker_end = parse_url(input);
             break;
-        case PropertyID::Font_Family:
+        case property_id::Font_Family:
             m_font_family.assign(input);
             break;
         default:
@@ -178,23 +178,23 @@ svg_layout_state::svg_layout_state(const svg_layout_state& parent, const svg_ele
     }
 }
 
-Font makeFont(const std::string& family, float size, bool bold, bool italic)
+Font make_font(const std::string& family, float size, bool bold, bool italic)
 {
     // Walk the font-family stack name by name (see
     // FontFaceCache::getFontFaceForFamilyStack()): an @font-face-embedded
     // font wins under its exact declared name, an uninstalled name falls
     // back to a metric-compatible substitute, unresolvable names are skipped.
-    FontFace face = fontFaceCache()->getFontFaceForFamilyStack(family, bold, italic);
+    FontFace face = fontFaceCache()->get_font_face_for_family_stack(family, bold, italic);
 
     // Absolute last resort: the hardcoded generic-family table.
     if(face.is_null())
-        face = fontFaceCache()->getFontFace(emptyString, bold, italic);
+        face = fontFaceCache()->get_font_face(empty_string, bold, italic);
     return Font(face, size);
 }
 
 Font svg_layout_state::font() const
 {
-    return makeFont(m_font_family, m_font_size, m_font_weight == FontWeight::Bold, m_font_style == FontStyle::Italic);
+    return make_font(m_font_family, m_font_size, m_font_weight == FontWeight::Bold, m_font_style == FontStyle::Italic);
 }
 
 } // namespace nova::svg

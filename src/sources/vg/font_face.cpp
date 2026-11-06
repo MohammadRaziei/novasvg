@@ -152,10 +152,10 @@ codepoint_t text_iterator_next(text_iterator_t* it)
 
 typedef CRITICAL_SECTION mutex_t;
 
-#define novasvg_mutex_init(mutex) InitializeCriticalSection(mutex)
-#define novasvg_mutex_lock(mutex) EnterCriticalSection(mutex)
-#define novasvg_mutex_unlock(mutex) LeaveCriticalSection(mutex)
-#define novasvg_mutex_destroy(mutex) DeleteCriticalSection(mutex)
+#define novasvg_mutex_init(mutex) initialize_critical_section(mutex)
+#define novasvg_mutex_lock(mutex) enter_critical_section(mutex)
+#define novasvg_mutex_unlock(mutex) leave_critical_section(mutex)
+#define novasvg_mutex_destroy(mutex) delete_critical_section(mutex)
 
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && defined(HAVE_THREADS_H) && !defined(__STDC_NO_THREADS__)
 
@@ -817,24 +817,24 @@ static tt_uint32 tt_find_table(const tt_uint8* data, tt_uint32 font_start, const
 
 static void* mmap(const char* filename, long* length)
 {
-    HANDLE file = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE file = create_file_a(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if(file == INVALID_HANDLE_VALUE)
         return NULL;
-    DWORD size = GetFileSize(file, NULL);
+    DWORD size = get_file_size(file, NULL);
     if(size == INVALID_FILE_SIZE) {
-        CloseHandle(file);
+        close_handle(file);
         return NULL;
     }
 
-    HANDLE mapping = CreateFileMappingA(file, NULL, PAGE_READONLY, 0, 0, NULL);
+    HANDLE mapping = create_file_mapping_a(file, NULL, PAGE_READONLY, 0, 0, NULL);
     if(mapping == NULL) {
-        CloseHandle(file);
+        close_handle(file);
         return NULL;
     }
 
-    void* data = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
-    CloseHandle(mapping);
-    CloseHandle(file);
+    void* data = map_view_of_file(mapping, FILE_MAP_READ, 0, 0, 0);
+    close_handle(mapping);
+    close_handle(file);
 
     if(data == NULL)
         return NULL;
@@ -844,7 +844,7 @@ static void* mmap(const char* filename, long* length)
 
 static void unmap(void* data, long length)
 {
-    UnmapViewOfFile(data);
+    unmap_view_of_file(data);
 }
 
 #else
@@ -1077,7 +1077,7 @@ int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirname)
     snprintf(search_path, sizeof(search_path), "%s\\*", dirname);
 
     WIN32_FIND_DATAA find_data;
-    HANDLE handle = FindFirstFileA(search_path, &find_data);
+    HANDLE handle = find_first_file_a(search_path, &find_data);
     if(handle == INVALID_HANDLE_VALUE) {
         return 0;
     }
@@ -1085,20 +1085,20 @@ int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirname)
     int num_faces = 0;
 
     do {
-        const char* name = find_data.cFileName;
+        const char* name = find_data.c_file_name;
         if(strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
             continue;
         char path[MAX_PATH * 2];
         snprintf(path, sizeof(path), "%s\\%s", dirname, name);
 
-        if(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        if(find_data.dw_file_attributes & FILE_ATTRIBUTE_DIRECTORY) {
             num_faces += font_face_cache_load_dir(cache, path);
         } else if(font_face_supports_file(path)) {
             num_faces += font_face_cache_load_file(cache, path);
         }
-    } while(FindNextFileA(handle, &find_data));
+    } while(find_next_file_a(handle, &find_data));
 
-    FindClose(handle);
+    find_close(handle);
     return num_faces;
 }
 

@@ -24,18 +24,18 @@ public:
     virtual ~svg_node() = default;
     virtual bool is_text_node() const { return false; }
     virtual bool is_element() const { return false; }
-    virtual bool isPaintElement() const { return false; }
-    virtual bool isGraphicsElement() const { return false; }
-    virtual bool isGeometryElement() const { return false; }
-    virtual bool isTextPositioningElement() const { return false; }
+    virtual bool is_paint_element() const { return false; }
+    virtual bool is_graphics_element() const { return false; }
+    virtual bool is_geometry_element() const { return false; }
+    virtual bool is_text_positioning_element() const { return false; }
 
     document* dom() const { return m_document; }
     svg_root_element* root_element() const { return m_document->root_element(); }
 
-    svg_element* parent_element() const { return m_parentElement; }
-    void setParentElement(svg_element* parent) { m_parentElement = parent; }
+    svg_element* parent_element() const { return m_parent_element; }
+    void set_parent_element(svg_element* parent) { m_parent_element = parent; }
 
-    bool isRootElement() const { return m_parentElement == nullptr; }
+    bool is_root_element() const { return m_parent_element == nullptr; }
 
     virtual std::unique_ptr<svg_node> clone(bool deep) const = 0;
 
@@ -43,7 +43,7 @@ private:
     svg_node(const svg_node&) = delete;
     svg_node& operator=(const svg_node&) = delete;
     document* m_document;
-    svg_element* m_parentElement = nullptr;
+    svg_element* m_parent_element = nullptr;
 };
 
 class svg_text_node final : public svg_node {
@@ -69,72 +69,72 @@ private:
  * means it, whatever CSS the file carried).
  */
 namespace Specificity {
-constexpr int PresentationAttribute = 0x1;
-constexpr int Stylesheet = 0x10;
+constexpr int presentation_attribute = 0x1;
+constexpr int stylesheet = 0x10;
 constexpr int InlineStyle = 0x100;
-constexpr int StylesheetImportant = 0x1000;
-constexpr int InlineImportant = 0x2000;
-constexpr int Api = 0x4000;
+constexpr int stylesheet_important = 0x1000;
+constexpr int inline_important = 0x2000;
+constexpr int api = 0x4000;
 } // namespace Specificity
 
 class Attribute {
 public:
     Attribute() = default;
-    Attribute(int specificity, PropertyID id, std::string value)
+    Attribute(int specificity, property_id id, std::string value)
         : m_specificity(specificity), m_id(id), m_value(std::move(value))
     {}
 
     int specificity() const { return m_specificity; }
-    PropertyID id() const { return m_id; }
+    property_id id() const { return m_id; }
     const std::string& value() const { return m_value; }
 
 private:
     int m_specificity;
-    PropertyID m_id;
+    property_id m_id;
     std::string m_value;
 };
 
-using AttributeList = std::forward_list<Attribute>;
+using attribute_list = std::forward_list<Attribute>;
 
-enum class ElementID : uint8_t {
-    Unknown = 0,
-    Star,
+enum class element_id : uint8_t {
+    unknown = 0,
+    star,
     Circle,
     ClipPath,
     Defs,
-    Ellipse,
-    FeComposite,
-    FeDropShadow,
-    FeFlood,
-    FeGaussianBlur,
-    FeMerge,
-    FeMergeNode,
-    FeOffset,
+    ellipse,
+    fe_composite,
+    fe_drop_shadow,
+    fe_flood,
+    fe_gaussian_blur,
+    fe_merge,
+    fe_merge_node,
+    fe_offset,
     Filter,
     ForeignObject,
     G,
     Image,
     Line,
-    LinearGradient,
-    Marker,
+    linear_gradient,
+    marker,
     Mask,
     Path,
     Pattern,
-    Polygon,
-    Polyline,
-    RadialGradient,
+    polygon,
+    polyline,
+    radial_gradient,
     Rect,
     Stop,
     Style,
     Svg,
     Switch,
-    Symbol,
+    symbol,
     Text,
-    Tspan,
-    Use
+    tspan,
+    use
 };
 
-ElementID elementid(std::string_view name);
+element_id elementid(std::string_view name);
 
 using svg_node_list = std::list<std::unique_ptr<svg_node>>;
 using svg_property_list = std::forward_list<svg_property*>;
@@ -148,81 +148,86 @@ class svg_paint_element;
 class svg_layout_state;
 class svg_render_state;
 
-extern const std::string emptyString;
+extern const std::string empty_string;
 
 class svg_element : public svg_node {
 public:
-    static std::unique_ptr<svg_element> create(document* dom, ElementID id);
+    static std::unique_ptr<svg_element> create(document* dom, element_id id);
 
-    svg_element(document* dom, ElementID id);
+    svg_element(document* dom, element_id id);
     virtual ~svg_element() = default;
 
     bool has_attribute(std::string_view name) const;
     const std::string& attribute(std::string_view name) const;
     bool set_attribute(std::string_view name, const std::string& value);
 
-    const Attribute* findAttribute(PropertyID id) const;
-    bool has_attribute(PropertyID id) const;
-    const std::string& attribute(PropertyID id) const;
-    bool set_attribute(int specificity, PropertyID id, const std::string& value);
-    void setAttributes(const AttributeList& attributes);
+    const Attribute* find_attribute(property_id id) const;
+    bool has_attribute(property_id id) const;
+    const std::string& attribute(property_id id) const;
+
+    // Attributes novasvg does not know (`data-*`, `aria-*`, ...). They paint nothing, but CSS attribute
+    // selectors (`[data-k]`, `[data-k="1"]`) match on them.
+    const std::string* find_custom_attribute(const std::string& name) const;
+    void set_custom_attribute(const std::string& name, const std::string& value);
+    bool set_attribute(int specificity, property_id id, const std::string& value);
+    void set_attributes(const attribute_list& attributes);
     bool set_attribute(const Attribute& attribute);
 
-    virtual void parseAttribute(PropertyID id, const std::string& value);
+    virtual void parse_attribute(property_id id, const std::string& value);
 
     // CSS custom properties (`--name: value`, from `style=""` or a stylesheet) declared on this el: the
     // higher cascade priority wins, a tie goes to the later one. Names are case-sensitive.
-    void setCustomProperty(int specificity, const std::string& name, const std::string& value);
+    void set_custom_property(int specificity, const std::string& name, const std::string& value);
     // The el (this one or the nearest ancestor: custom properties inherit) that gives `name` a value.
-    const svg_element* findCustomPropertyOwner(const std::string& name) const;
-    const std::string& customProperty(const std::string& name) const;
+    const svg_element* find_custom_property_owner(const std::string& name) const;
+    const std::string& custom_property(const std::string& name) const;
     // Gives every attribute whose value uses `var()` its value, now that the custom properties are known.
     // An attribute whose `var()` cannot be resolved (no such property and no fallback) is left as it was.
-    void resolveVariables();
+    void resolve_variables();
 
-    svg_element* previousElement() const;
-    svg_element* nextElement() const;
+    svg_element* previous_element() const;
+    svg_element* next_element() const;
 
-    svg_node* addChild(std::unique_ptr<svg_node> child);
+    svg_node* add_child(std::unique_ptr<svg_node> child);
     svg_node* firstChild() const;
     svg_node* lastChild() const;
 
-    ElementID id() const { return m_id; }
-    const AttributeList& attributes() const { return m_attributes; }
+    element_id id() const { return m_id; }
+    const attribute_list& attributes() const { return m_attributes; }
     const svg_property_list& properties() const { return m_properties; }
     const svg_node_list& children() const { return m_children; }
 
-    virtual Transform local_transform() const { return Transform::Identity; }
-    virtual Rect fillBoundingBox() const;
-    virtual Rect strokeBoundingBox() const;
+    virtual Transform local_transform() const { return Transform::identity; }
+    virtual Rect fill_bounding_box() const;
+    virtual Rect stroke_bounding_box() const;
     virtual Rect paint_bounding_box() const;
 
-    svg_marker_element* getMarker(std::string_view id) const;
-    svg_clip_path_element* getClipper(std::string_view id) const;
-    svg_mask_element* getMasker(std::string_view id) const;
-    svg_filter_element* getFilterElement(std::string_view id) const;
-    svg_paint_element* getPainter(std::string_view id) const;
+    svg_marker_element* get_marker(std::string_view id) const;
+    svg_clip_path_element* get_clipper(std::string_view id) const;
+    svg_mask_element* get_masker(std::string_view id) const;
+    svg_filter_element* get_filter_element(std::string_view id) const;
+    svg_paint_element* get_painter(std::string_view id) const;
 
     svg_element* element_from_point(float x, float y);
 
     template<typename T>
     void transverse(T callback);
 
-    void addProperty(svg_property& value);
-    svg_property* getProperty(PropertyID id) const;
-    Size currentViewportSize() const;
+    void add_property(svg_property& value);
+    svg_property* get_property(property_id id) const;
+    Size current_viewport_size() const;
     float font_size() const { return m_font_size; }
 
-    void cloneChildren(svg_element* parent_element) const;
+    void clone_children(svg_element* parent_element) const;
     std::unique_ptr<svg_node> clone(bool deep) const final;
 
     virtual void build();
 
-    virtual void layoutElement(const svg_layout_state& state);
-    void layoutChildren(svg_layout_state& state);
+    virtual void layout_element(const svg_layout_state& state);
+    void layout_children(svg_layout_state& state);
     virtual void layout(svg_layout_state& state);
 
-    void renderChildren(svg_render_state& state) const;
+    void render_children(svg_render_state& state) const;
     virtual void render(svg_render_state& state) const;
 
     // Template Method hook for filter-primitive elements (feGaussianBlur,
@@ -232,66 +237,68 @@ public:
     // including feMergeNode which only makes sense as feMerge's child)
     // is "not a primitive" -- returns nullptr, which svg_filter_element's
     // pipeline simply skips over.
-    virtual std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const { return nullptr; }
+    virtual std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const { return nullptr; }
 
-    bool isDisplayNone() const { return m_display == Display::None; }
-    bool isOverflowHidden() const { return m_overflow == Overflow::Hidden; }
-    bool isVisibilityHidden() const { return m_visibility != Visibility::Visible; }
+    bool is_display_none() const { return m_display == Display::None; }
+    bool is_overflow_hidden() const { return m_overflow == Overflow::hidden; }
+    bool is_visibility_hidden() const { return m_visibility != Visibility::visible; }
 
-    bool isHiddenElement() const;
-    bool isPointableElement() const;
+    bool is_hidden_element() const;
+    bool is_pointable_element() const;
 
     const svg_clip_path_element* clipper() const { return m_clipper; }
     const svg_mask_element* masker() const { return m_masker; }
-    const svg_filter_element* filterElement() const { return m_filter; }
+    const svg_filter_element* filter_element() const { return m_filter; }
     float opacity() const { return m_opacity; }
     MixBlendMode mixBlendMode() const { return m_mix_blend_mode; }
 
     bool is_element() const final { return true; }
 
 private:
-    mutable Rect m_paintBoundingBox = Rect::Invalid;
+    mutable Rect m_paint_bounding_box = Rect::invalid;
     const svg_clip_path_element* m_clipper = nullptr;
     const svg_mask_element* m_masker = nullptr;
     const svg_filter_element* m_filter = nullptr;
     float m_opacity = 1.f;
-    MixBlendMode m_mix_blend_mode = MixBlendMode::Normal;
+    MixBlendMode m_mix_blend_mode = MixBlendMode::normal;
 
     float m_font_size = 12.f;
     Display m_display = Display::Inline;
-    Overflow m_overflow = Overflow::Visible;
-    Visibility m_visibility = Visibility::Visible;
+    Overflow m_overflow = Overflow::visible;
+    Visibility m_visibility = Visibility::visible;
     PointerEvents m_pointer_events = PointerEvents::Auto;
 
-    ElementID m_id;
-    AttributeList m_attributes;
+    element_id m_id;
+    attribute_list m_attributes;
+    // Attributes with a name that is not a property_id, as written; only read by CSS attribute selectors.
+    std::map<std::string, std::string> m_custom_attributes;
     svg_property_list m_properties;
     svg_node_list m_children;
     // `--name` -> (cascade priority, value as written, possibly with var() of its own)
-    std::map<std::string, std::pair<int, std::string>> m_customProperties;
+    std::map<std::string, std::pair<int, std::string>> m_custom_properties;
     // Attributes whose value uses var(), as written. Their value in m_attributes is the resolved one (or this
     // very text while it is unresolved), so that a <use> copies what was computed; resolveVariables() starts
     // from the text kept here, so a stylesheet applied later can still change the result.
-    std::map<PropertyID, std::string> m_variableSources;
+    std::map<property_id, std::string> m_variable_sources;
 };
 
-inline const svg_element* toSVGElement(const svg_node* nd)
+inline const svg_element* to_svg_element(const svg_node* nd)
 {
     if(nd && nd->is_element())
         return static_cast<const svg_element*>(nd);
     return nullptr;
 }
 
-inline svg_element* toSVGElement(svg_node* nd)
+inline svg_element* to_svg_element(svg_node* nd)
 {
     if(nd && nd->is_element())
         return static_cast<svg_element*>(nd);
     return nullptr;
 }
 
-inline svg_element* toSVGElement(const std::unique_ptr<svg_node>& nd)
+inline svg_element* to_svg_element(const std::unique_ptr<svg_node>& nd)
 {
-    return toSVGElement(nd.get());
+    return to_svg_element(nd.get());
 }
 
 template<typename T>
@@ -299,7 +306,7 @@ inline void svg_element::transverse(T callback)
 {
     callback(this);
     for(const auto& child : m_children) {
-        if(auto el = toSVGElement(child)) {
+        if(auto el = to_svg_element(child)) {
             el->transverse(callback);
         }
     }

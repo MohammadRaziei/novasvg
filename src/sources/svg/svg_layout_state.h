@@ -37,7 +37,7 @@ public:
     const BaselineShift& baseline_shift() const { return m_baseline_shift; }
     const Length& stroke_width() const { return m_stroke_width; }
     const Length& stroke_dashoffset() const { return m_stroke_dashoffset; }
-    const LengthList& stroke_dasharray() const { return m_stroke_dasharray; }
+    const length_list& stroke_dasharray() const { return m_stroke_dasharray; }
 
     LineCap stroke_linecap() const { return m_stroke_linecap; }
     LineJoin stroke_linejoin() const { return m_stroke_linejoin; }
@@ -84,20 +84,20 @@ private:
     stb::color m_stop_color = stb::color::black();
 
     float m_opacity = 1.f;
-    MixBlendMode m_mix_blend_mode = MixBlendMode::Normal; // like opacity: not inherited
+    MixBlendMode m_mix_blend_mode = MixBlendMode::normal; // like opacity: not inherited
     float m_fill_opacity = 1.f;
     float m_stroke_opacity = 1.f;
     float m_stop_opacity = 1.f;
     float m_stroke_miterlimit = 4.f;
     float m_font_size = 12.f;
 
-    Length m_letter_spacing{0.f, LengthUnits::None};
-    Length m_word_spacing{0.f, LengthUnits::None};
+    Length m_letter_spacing{0.f, length_units::None};
+    Length m_word_spacing{0.f, length_units::None};
 
     BaselineShift m_baseline_shift;
-    Length m_stroke_width{1.f, LengthUnits::None};
-    Length m_stroke_dashoffset{0.f, LengthUnits::None};
-    LengthList m_stroke_dasharray;
+    Length m_stroke_width{1.f, length_units::None};
+    Length m_stroke_dashoffset{0.f, length_units::None};
+    length_list m_stroke_dasharray;
 
     LineCap m_stroke_linecap = LineCap::Butt;
     LineJoin m_stroke_linejoin = LineJoin::Miter;
@@ -105,8 +105,8 @@ private:
     FillRule m_fill_rule = FillRule::NonZero;
     FillRule m_clip_rule = FillRule::NonZero;
 
-    FontWeight m_font_weight = FontWeight::Normal;
-    FontStyle m_font_style = FontStyle::Normal;
+    FontWeight m_font_weight = FontWeight::normal;
+    FontStyle m_font_style = FontStyle::normal;
 
     AlignmentBaseline m_alignment_baseline = AlignmentBaseline::Auto;
     DominantBaseline m_dominant_baseline = DominantBaseline::Auto;
@@ -114,14 +114,14 @@ private:
     TextAnchor m_text_anchor = TextAnchor::Start;
     WhiteSpace m_white_space = WhiteSpace::Default;
     WritingMode m_writing_mode = WritingMode::Horizontal;
-    TextOrientation m_text_orientation = TextOrientation::Mixed;
-    Direction m_direction = Direction::Ltr;
+    TextOrientation m_text_orientation = TextOrientation::mixed;
+    Direction m_direction = Direction::ltr;
 
     Display m_display = Display::Inline;
-    Visibility m_visibility = Visibility::Visible;
-    Overflow m_overflow = Overflow::Visible;
+    Visibility m_visibility = Visibility::visible;
+    Overflow m_overflow = Overflow::visible;
     PointerEvents m_pointer_events = PointerEvents::Auto;
-    MaskType m_mask_type = MaskType::Luminance;
+    MaskType m_mask_type = MaskType::luminance;
 
     std::string m_mask;
     std::string m_clip_path;

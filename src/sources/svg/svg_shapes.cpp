@@ -5,71 +5,71 @@
 namespace nova::svg {
 using namespace vg;
 
-Rect svg_marker_position::markerBoundingBox(float strokeWidth) const
+Rect svg_marker_position::marker_bounding_box(float strokeWidth) const
 {
-    return m_element->markerBoundingBox(m_origin, m_angle, strokeWidth);
+    return m_element->marker_bounding_box(m_origin, m_angle, strokeWidth);
 }
 
-void svg_marker_position::renderMarker(svg_render_state& state, float strokeWidth) const
+void svg_marker_position::render_marker(svg_render_state& state, float strokeWidth) const
 {
-    m_element->renderMarker(state, m_origin, m_angle, strokeWidth);
+    m_element->render_marker(state, m_origin, m_angle, strokeWidth);
 }
 
-svg_geometry_element::svg_geometry_element(document* dom, ElementID id)
+svg_geometry_element::svg_geometry_element(document* dom, element_id id)
     : svg_graphics_element(dom, id)
 {
 }
 
-Rect svg_geometry_element::strokeBoundingBox() const
+Rect svg_geometry_element::stroke_bounding_box() const
 {
-    auto strokeBoundingBox = fillBoundingBox();
-    if(m_stroke.isRenderable()) {
-        float capLimit = m_strokeData.lineWidth() / 2.f;
-        if(m_strokeData.lineCap() == LineCap::Square)
-            capLimit *= NOVA_SQRT2;
-        float joinLimit = m_strokeData.lineWidth() / 2.f;
-        if(m_strokeData.lineJoin() == LineJoin::Miter) {
-            joinLimit *= m_strokeData.miterLimit();
+    auto stroke_bounding_box = fill_bounding_box();
+    if(m_stroke.is_renderable()) {
+        float cap_limit = m_stroke_data.lineWidth() / 2.f;
+        if(m_stroke_data.lineCap() == LineCap::Square)
+            cap_limit *= NOVA_SQRT2;
+        float join_limit = m_stroke_data.lineWidth() / 2.f;
+        if(m_stroke_data.lineJoin() == LineJoin::Miter) {
+            join_limit *= m_stroke_data.miterLimit();
         }
 
-        strokeBoundingBox.inflate(STB_MAX(capLimit, joinLimit));
+        stroke_bounding_box.inflate(STB_MAX(cap_limit, join_limit));
     }
 
-    for(const auto& markerPosition : m_markerPositions)
-        strokeBoundingBox.unite(markerPosition.markerBoundingBox(m_strokeData.lineWidth()));
-    return strokeBoundingBox;
+    for(const auto& marker_position : m_marker_positions)
+        stroke_bounding_box.unite(marker_position.marker_bounding_box(m_stroke_data.lineWidth()));
+    return stroke_bounding_box;
 }
 
-void svg_geometry_element::layoutElement(const svg_layout_state& state)
+void svg_geometry_element::layout_element(const svg_layout_state& state)
 {
     m_fill_rule = state.fill_rule();
     m_clip_rule = state.clip_rule();
-    m_fill = getPaintServer(state.fill(), state.fill_opacity());
-    m_stroke = getPaintServer(state.stroke(), state.stroke_opacity());
-    m_strokeData = getStrokeData(state);
-    svg_graphics_element::layoutElement(state);
+    m_fill = get_paint_server(state.fill(), state.fill_opacity());
+    m_stroke = get_paint_server(state.stroke(), state.stroke_opacity());
+    m_stroke_data = get_stroke_data(state);
+    svg_graphics_element::layout_element(state);
 
     m_path.clear();
-    m_markerPositions.clear();
-    m_fillBoundingBox = updateShape(m_path);
-    updateMarkerPositions(m_markerPositions, state);
+    m_marker_positions.clear();
+    m_fill_bounding_box = update_shape(m_path);
+    update_marker_positions(m_marker_positions, state);
 }
 
-void svg_geometry_element::updateMarkerPositions(svg_marker_position_list& positions, const svg_layout_state& state)
+void svg_geometry_element::update_marker_positions(svg_marker_position_list& positions, const svg_layout_state& state)
 {
     if(m_path.empty())
         return;
-    auto markerStart = getMarker(state.marker_start());
-    auto markerMid = getMarker(state.marker_mid());
-    auto markerEnd = getMarker(state.marker_end());
+    auto markerStart = get_marker(state.marker_start());
+    auto markerMid = get_marker(state.marker_mid());
+    auto markerEnd = get_marker(state.marker_end());
     if(markerStart == nullptr && markerMid == nullptr && markerEnd == nullptr) {
         return;
     }
 
     Point origin;
     Point startPoint;
-    Point inslopePoints[2];
-    Point outslopePoints[2];
+    Point inslope_points[2];
+    Point outslope_points[2];
 
     int index = 0;
     std::array<Point, 3> points;
@@ -78,23 +78,23 @@ void svg_geometry_element::updateMarkerPositions(svg_marker_position_list& posit
         switch(it.current_segment(points)) {
         case segment_kind::move_to:
             startPoint = points[0];
-            inslopePoints[0] = origin;
-            inslopePoints[1] = points[0];
+            inslope_points[0] = origin;
+            inslope_points[1] = points[0];
             origin = points[0];
             break;
         case segment_kind::line_to:
-            inslopePoints[0] = origin;
-            inslopePoints[1] = points[0];
+            inslope_points[0] = origin;
+            inslope_points[1] = points[0];
             origin = points[0];
             break;
         case segment_kind::cubic_to:
-            inslopePoints[0] = points[1];
-            inslopePoints[1] = points[2];
+            inslope_points[0] = points[1];
+            inslope_points[1] = points[2];
             origin = points[2];
             break;
         case segment_kind::close:
-            inslopePoints[0] = origin;
-            inslopePoints[1] = points[0];
+            inslope_points[0] = origin;
+            inslope_points[1] = points[0];
             origin = startPoint;
             startPoint = Point();
             break;
@@ -104,20 +104,20 @@ void svg_geometry_element::updateMarkerPositions(svg_marker_position_list& posit
 
         if(!it.done() && (markerStart || markerMid)) {
             it.current_segment(points);
-            outslopePoints[0] = origin;
-            outslopePoints[1] = points[0];
+            outslope_points[0] = origin;
+            outslope_points[1] = points[0];
             if(index == 0 && markerStart) {
-                auto slope = outslopePoints[1] - outslopePoints[0];
+                auto slope = outslope_points[1] - outslope_points[0];
                 auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVA_PI;
                 const auto& orient = markerStart->orient();
-                if(orient.orientType() == svg_angle::OrientType::AutoStartReverse)
+                if(orient.orientType() == svg_angle::OrientType::auto_start_reverse)
                     angle -= 180.f;
                 positions.emplace_back(markerStart, origin, angle);
             }
 
             if(index > 0 && markerMid) {
-                auto inslope = inslopePoints[1] - inslopePoints[0];
-                auto outslope = outslopePoints[1] - outslopePoints[0];
+                auto inslope = inslope_points[1] - inslope_points[0];
+                auto outslope = outslope_points[1] - outslope_points[0];
                 auto inangle = 180.f * std::atan2(inslope.y, inslope.x) / NOVA_PI;
                 auto outangle = 180.f * std::atan2(outslope.y, outslope.x) / NOVA_PI;
                 if(std::abs(inangle - outangle) > 180.f)
@@ -128,7 +128,7 @@ void svg_geometry_element::updateMarkerPositions(svg_marker_position_list& posit
         }
 
         if(markerEnd && it.done()) {
-            auto slope = inslopePoints[1] - inslopePoints[0];
+            auto slope = inslope_points[1] - inslope_points[0];
             auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVA_PI;
             positions.emplace_back(markerEnd, origin, angle);
         }
@@ -139,49 +139,49 @@ void svg_geometry_element::updateMarkerPositions(svg_marker_position_list& posit
 
 void svg_geometry_element::render(svg_render_state& state) const
 {
-    if(!isRenderable())
+    if(!is_renderable())
         return;
-    svg_blend_info blendInfo(this);
+    svg_blend_info blend_info(this);
     svg_render_state newState(this, state, local_transform());
-    newState.beginGroup(blendInfo);
+    newState.beginGroup(blend_info);
     if(newState.mode() == svg_render_mode::Clipping) {
         newState->set_color(stb::color::white());
-        newState->fill_path(m_path, m_clip_rule, newState.currentTransform());
+        newState->fill_path(m_path, m_clip_rule, newState.current_transform());
     } else {
-        if(m_fill.applyPaint(newState))
-            newState->fill_path(m_path, m_fill_rule, newState.currentTransform());
-        if(m_stroke.applyPaint(newState)) {
-            newState->stroke_path(m_path, m_strokeData, newState.currentTransform());
+        if(m_fill.apply_paint(newState))
+            newState->fill_path(m_path, m_fill_rule, newState.current_transform());
+        if(m_stroke.apply_paint(newState)) {
+            newState->stroke_path(m_path, m_stroke_data, newState.current_transform());
         }
 
-        for(const auto& markerPosition : m_markerPositions) {
-            markerPosition.renderMarker(newState, m_strokeData.lineWidth());
+        for(const auto& marker_position : m_marker_positions) {
+            marker_position.render_marker(newState, m_stroke_data.lineWidth());
         }
     }
 
-    newState.endGroup(blendInfo);
+    newState.endGroup(blend_info);
 }
 
 svg_line_element::svg_line_element(document* dom)
-    : svg_geometry_element(dom, ElementID::Line)
-    , m_x1(PropertyID::X1, LengthDirection::Horizontal, LengthNegativeMode::Allow)
-    , m_y1(PropertyID::Y1, LengthDirection::Vertical, LengthNegativeMode::Allow)
-    , m_x2(PropertyID::X2, LengthDirection::Horizontal, LengthNegativeMode::Allow)
-    , m_y2(PropertyID::Y2, LengthDirection::Vertical, LengthNegativeMode::Allow)
+    : svg_geometry_element(dom, element_id::Line)
+    , m_x1(property_id::X1, length_direction::Horizontal, length_negative_mode::allow)
+    , m_y1(property_id::Y1, length_direction::vertical, length_negative_mode::allow)
+    , m_x2(property_id::X2, length_direction::Horizontal, length_negative_mode::allow)
+    , m_y2(property_id::Y2, length_direction::vertical, length_negative_mode::allow)
 {
-    addProperty(m_x1);
-    addProperty(m_y1);
-    addProperty(m_x2);
-    addProperty(m_y2);
+    add_property(m_x1);
+    add_property(m_y1);
+    add_property(m_x2);
+    add_property(m_y2);
 }
 
-Rect svg_line_element::updateShape(stb::outline& path)
+Rect svg_line_element::update_shape(stb::outline& path)
 {
     LengthContext lengthContext(this);
-    auto x1 = lengthContext.valueForLength(m_x1);
-    auto y1 = lengthContext.valueForLength(m_y1);
-    auto x2 = lengthContext.valueForLength(m_x2);
-    auto y2 = lengthContext.valueForLength(m_y2);
+    auto x1 = lengthContext.value_for_length(m_x1);
+    auto y1 = lengthContext.value_for_length(m_y1);
+    auto x2 = lengthContext.value_for_length(m_x2);
+    auto y2 = lengthContext.value_for_length(m_y2);
 
     path.move_to(x1, y1);
     path.line_to(x2, y2);
@@ -189,36 +189,36 @@ Rect svg_line_element::updateShape(stb::outline& path)
 }
 
 svg_rect_element::svg_rect_element(document* dom)
-    : svg_geometry_element(dom, ElementID::Rect)
-    , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow)
-    , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow)
-    , m_width(PropertyID::Width, LengthDirection::Horizontal, LengthNegativeMode::Forbid)
-    , m_height(PropertyID::Height, LengthDirection::Vertical, LengthNegativeMode::Forbid)
-    , m_rx(PropertyID::Rx, LengthDirection::Horizontal, LengthNegativeMode::Forbid)
-    , m_ry(PropertyID::Ry, LengthDirection::Vertical, LengthNegativeMode::Forbid)
+    : svg_geometry_element(dom, element_id::Rect)
+    , m_x(property_id::X, length_direction::Horizontal, length_negative_mode::allow)
+    , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow)
+    , m_width(property_id::Width, length_direction::Horizontal, length_negative_mode::forbid)
+    , m_height(property_id::Height, length_direction::vertical, length_negative_mode::forbid)
+    , m_rx(property_id::Rx, length_direction::Horizontal, length_negative_mode::forbid)
+    , m_ry(property_id::Ry, length_direction::vertical, length_negative_mode::forbid)
 {
-    addProperty(m_x);
-    addProperty(m_y);
-    addProperty(m_width);
-    addProperty(m_height);
-    addProperty(m_rx);
-    addProperty(m_ry);
+    add_property(m_x);
+    add_property(m_y);
+    add_property(m_width);
+    add_property(m_height);
+    add_property(m_rx);
+    add_property(m_ry);
 }
 
-Rect svg_rect_element::updateShape(stb::outline& path)
+Rect svg_rect_element::update_shape(stb::outline& path)
 {
     LengthContext lengthContext(this);
-    auto width = lengthContext.valueForLength(m_width);
-    auto height = lengthContext.valueForLength(m_height);
+    auto width = lengthContext.value_for_length(m_width);
+    auto height = lengthContext.value_for_length(m_height);
     if(width <= 0.f || height <= 0.f) {
         return Rect::Empty;
     }
 
-    auto x = lengthContext.valueForLength(m_x);
-    auto y = lengthContext.valueForLength(m_y);
+    auto x = lengthContext.value_for_length(m_x);
+    auto y = lengthContext.value_for_length(m_y);
 
-    auto rx = lengthContext.valueForLength(m_rx);
-    auto ry = lengthContext.valueForLength(m_ry);
+    auto rx = lengthContext.value_for_length(m_rx);
+    auto ry = lengthContext.value_for_length(m_ry);
 
     if(rx <= 0.f) rx = ry;
     if(ry <= 0.f) ry = rx;
@@ -231,66 +231,66 @@ Rect svg_rect_element::updateShape(stb::outline& path)
 }
 
 svg_ellipse_element::svg_ellipse_element(document* dom)
-    : svg_geometry_element(dom, ElementID::Ellipse)
-    , m_cx(PropertyID::Cx, LengthDirection::Horizontal, LengthNegativeMode::Allow)
-    , m_cy(PropertyID::Cy, LengthDirection::Vertical, LengthNegativeMode::Allow)
-    , m_rx(PropertyID::Rx, LengthDirection::Diagonal, LengthNegativeMode::Forbid)
-    , m_ry(PropertyID::Ry, LengthDirection::Diagonal, LengthNegativeMode::Forbid)
+    : svg_geometry_element(dom, element_id::ellipse)
+    , m_cx(property_id::Cx, length_direction::Horizontal, length_negative_mode::allow)
+    , m_cy(property_id::Cy, length_direction::vertical, length_negative_mode::allow)
+    , m_rx(property_id::Rx, length_direction::diagonal, length_negative_mode::forbid)
+    , m_ry(property_id::Ry, length_direction::diagonal, length_negative_mode::forbid)
 {
-    addProperty(m_cx);
-    addProperty(m_cy);
-    addProperty(m_rx);
-    addProperty(m_ry);
+    add_property(m_cx);
+    add_property(m_cy);
+    add_property(m_rx);
+    add_property(m_ry);
 }
 
-Rect svg_ellipse_element::updateShape(stb::outline& path)
+Rect svg_ellipse_element::update_shape(stb::outline& path)
 {
     LengthContext lengthContext(this);
-    auto rx = lengthContext.valueForLength(m_rx);
-    auto ry = lengthContext.valueForLength(m_ry);
+    auto rx = lengthContext.value_for_length(m_rx);
+    auto ry = lengthContext.value_for_length(m_ry);
     if(rx <= 0.f || ry <= 0.f) {
         return Rect::Empty;
     }
 
-    auto cx = lengthContext.valueForLength(m_cx);
-    auto cy = lengthContext.valueForLength(m_cy);
+    auto cx = lengthContext.value_for_length(m_cx);
+    auto cy = lengthContext.value_for_length(m_cy);
     path.add_ellipse(cx, cy, rx, ry);
     return Rect(cx - rx, cy - ry, rx + rx, ry + ry);
 }
 
 svg_circle_element::svg_circle_element(document* dom)
-    : svg_geometry_element(dom, ElementID::Circle)
-    , m_cx(PropertyID::Cx, LengthDirection::Horizontal, LengthNegativeMode::Allow)
-    , m_cy(PropertyID::Cy, LengthDirection::Vertical, LengthNegativeMode::Allow)
-    , m_r(PropertyID::R, LengthDirection::Diagonal, LengthNegativeMode::Forbid)
+    : svg_geometry_element(dom, element_id::Circle)
+    , m_cx(property_id::Cx, length_direction::Horizontal, length_negative_mode::allow)
+    , m_cy(property_id::Cy, length_direction::vertical, length_negative_mode::allow)
+    , m_r(property_id::R, length_direction::diagonal, length_negative_mode::forbid)
 {
-    addProperty(m_cx);
-    addProperty(m_cy);
-    addProperty(m_r);
+    add_property(m_cx);
+    add_property(m_cy);
+    add_property(m_r);
 }
 
-Rect svg_circle_element::updateShape(stb::outline& path)
+Rect svg_circle_element::update_shape(stb::outline& path)
 {
     LengthContext lengthContext(this);
-    auto r = lengthContext.valueForLength(m_r);
+    auto r = lengthContext.value_for_length(m_r);
     if(r <= 0.f) {
         return Rect::Empty;
     }
 
-    auto cx = lengthContext.valueForLength(m_cx);
-    auto cy = lengthContext.valueForLength(m_cy);
+    auto cx = lengthContext.value_for_length(m_cx);
+    auto cy = lengthContext.value_for_length(m_cy);
     path.add_ellipse(cx, cy, r, r);
     return Rect(cx - r, cy - r, r + r, r + r);
 }
 
-svg_poly_element::svg_poly_element(document* dom, ElementID id)
+svg_poly_element::svg_poly_element(document* dom, element_id id)
     : svg_geometry_element(dom, id)
-    , m_points(PropertyID::Points)
+    , m_points(property_id::Points)
 {
-    addProperty(m_points);
+    add_property(m_points);
 }
 
-Rect svg_poly_element::updateShape(stb::outline& path)
+Rect svg_poly_element::update_shape(stb::outline& path)
 {
     const auto& points = m_points.values();
     if(points.empty()) {
@@ -302,19 +302,19 @@ Rect svg_poly_element::updateShape(stb::outline& path)
         path.line_to(points[i].x, points[i].y);
     }
 
-    if(id() == ElementID::Polygon)
+    if(id() == element_id::polygon)
         path.close();
     return bounding_rect(path);
 }
 
 svg_path_element::svg_path_element(document* dom)
-    : svg_geometry_element(dom, ElementID::Path)
-    , m_d(PropertyID::D)
+    : svg_geometry_element(dom, element_id::Path)
+    , m_d(property_id::D)
 {
-    addProperty(m_d);
+    add_property(m_d);
 }
 
-Rect svg_path_element::updateShape(stb::outline& path)
+Rect svg_path_element::update_shape(stb::outline& path)
 {
     path = m_d.value();
     return bounding_rect(path);

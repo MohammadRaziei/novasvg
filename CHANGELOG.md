@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.11.5] - 2026-11-05
+
+### Fixed
+
+- **CSS attribute selectors on attributes novasvg has no property for.** `[data-k]`, `[data-k="1"]`,
+  `.a[data-k="1"]`, `rect[data-k="1"]` and chains like `[data-look="neo"][data-color-id="color-0"].node` (what
+  Mermaid 12.3 emits to color ER entities and other nodes) never matched, because the parser dropped every
+  attribute it has no `property_id` for. Such attributes are now kept on the element (and copied by `<use>`) and
+  matched by name. Not covered: attribute selectors against the HTML inside a `<foreignObject>`.
+
 ## [0.11.4] - 2026-10-30
 
 ### Added

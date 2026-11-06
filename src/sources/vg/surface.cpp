@@ -48,13 +48,13 @@ surface_t* surface_load_from_image_data(const void* data, int length)
 uint8_t* base64_decode(const char* data, int length, size_t* out_length)
 {
     // 0..63 = the sextet a character stands for; kWs = whitespace (skipped); kPad = '='; kBad = anything else.
-    enum : uint8_t { kWs = 0xFD, kPad = 0xFE, kBad = 0xFF };
+    enum : uint8_t { k_ws = 0xFD, k_pad = 0xFE, k_bad = 0xFF };
     static const struct Table {
         uint8_t v[256];
         Table()
         {
             for(int i = 0; i < 256; ++i)
-                v[i] = kBad;
+                v[i] = k_bad;
             for(int i = 0; i < 26; ++i) {
                 v['A' + i] = uint8_t(i);
                 v['a' + i] = uint8_t(26 + i);
@@ -63,9 +63,9 @@ uint8_t* base64_decode(const char* data, int length, size_t* out_length)
                 v['0' + i] = uint8_t(52 + i);
             v[uint8_t('+')] = 62;
             v[uint8_t('/')] = 63;
-            v[uint8_t('=')] = kPad;
+            v[uint8_t('=')] = k_pad;
             for(int c : {' ', '\t', '\n', '\r', '\f', '\v'})
-                v[c] = kWs;
+                v[c] = k_ws;
         }
     } table;
 
@@ -113,9 +113,9 @@ uint8_t* base64_decode(const char* data, int length, size_t* out_length)
                 bits -= 8;
                 output_data[didx++] = uint8_t(acc >> bits);
             }
-        } else if(v == kPad) {
+        } else if(v == k_pad) {
             ++pads;
-        } else if(v == kBad) {
+        } else if(v == k_bad) {
             goto cleanup;
         }
     }

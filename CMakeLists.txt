@@ -103,7 +103,8 @@ if(NOT NOVA_EMBED_DEFAULT_FONT)
 endif()
 novasvg_optimize(nova_vg)
 
-file(GLOB NOVA_SVG_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/*.cpp")
+file(GLOB NOVA_SVG_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/*.cpp"
+                                           "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/foreign_object/*.cpp")
 add_library(novasvg_core STATIC ${NOVA_SVG_SOURCES})
 set_target_properties(novasvg_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(novasvg_core PRIVATE NOVA_BUILDING_LIBRARY)

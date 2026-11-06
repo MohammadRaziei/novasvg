@@ -5,70 +5,70 @@
 namespace nova::svg {
 using namespace vg;
 
-PropertyID propertyid(std::string_view name)
+property_id propertyid(std::string_view name)
 {
     static const struct {
         std::string_view name;
-        PropertyID value;
+        property_id value;
     } table[] = {
-        {"class", PropertyID::Class},
-        {"clipPathUnits", PropertyID::ClipPathUnits},
-        {"cx", PropertyID::Cx},
-        {"cy", PropertyID::Cy},
-        {"d", PropertyID::D},
-        {"dx", PropertyID::Dx},
-        {"dy", PropertyID::Dy},
-        {"fx", PropertyID::Fx},
-        {"fy", PropertyID::Fy},
-        {"gradientTransform", PropertyID::GradientTransform},
-        {"gradientUnits", PropertyID::GradientUnits},
-        {"height", PropertyID::Height},
-        {"href", PropertyID::Href},
-        {"id", PropertyID::Id},
-        {"in", PropertyID::In},
-        {"in2", PropertyID::In2},
-        {"k1", PropertyID::K1},
-        {"k2", PropertyID::K2},
-        {"k3", PropertyID::K3},
-        {"k4", PropertyID::K4},
-        {"lengthAdjust", PropertyID::LengthAdjust},
-        {"markerHeight", PropertyID::MarkerHeight},
-        {"markerUnits", PropertyID::MarkerUnits},
-        {"markerWidth", PropertyID::MarkerWidth},
-        {"maskContentUnits", PropertyID::MaskContentUnits},
-        {"maskUnits", PropertyID::MaskUnits},
-        {"offset", PropertyID::Offset},
-        {"operator", PropertyID::Operator},
-        {"orient", PropertyID::Orient},
-        {"patternContentUnits", PropertyID::PatternContentUnits},
-        {"patternTransform", PropertyID::PatternTransform},
-        {"patternUnits", PropertyID::PatternUnits},
-        {"points", PropertyID::Points},
-        {"preserveAspectRatio", PropertyID::PreserveAspectRatio},
-        {"r", PropertyID::R},
-        {"refX", PropertyID::RefX},
-        {"refY", PropertyID::RefY},
-        {"requiredExtensions", PropertyID::RequiredExtensions},
-        {"result", PropertyID::Result},
-        {"rotate", PropertyID::Rotate},
-        {"rx", PropertyID::Rx},
-        {"ry", PropertyID::Ry},
-        {"spreadMethod", PropertyID::SpreadMethod},
-        {"stdDeviation", PropertyID::StdDeviation},
-        {"style", PropertyID::Style},
-        {"systemLanguage", PropertyID::SystemLanguage},
-        {"textLength", PropertyID::TextLength},
-        {"transform", PropertyID::Transform},
-        {"viewBox", PropertyID::ViewBox},
-        {"width", PropertyID::Width},
-        {"x", PropertyID::X},
-        {"x1", PropertyID::X1},
-        {"x2", PropertyID::X2},
-        {"xlink:href", PropertyID::Href},
-        {"xml:space", PropertyID::White_Space},
-        {"y", PropertyID::Y},
-        {"y1", PropertyID::Y1},
-        {"y2", PropertyID::Y2}
+        {"class", property_id::Class},
+        {"clipPathUnits", property_id::ClipPathUnits},
+        {"cx", property_id::Cx},
+        {"cy", property_id::Cy},
+        {"d", property_id::D},
+        {"dx", property_id::Dx},
+        {"dy", property_id::Dy},
+        {"fx", property_id::Fx},
+        {"fy", property_id::Fy},
+        {"gradientTransform", property_id::GradientTransform},
+        {"gradientUnits", property_id::GradientUnits},
+        {"height", property_id::Height},
+        {"href", property_id::Href},
+        {"id", property_id::Id},
+        {"in", property_id::In},
+        {"in2", property_id::in2},
+        {"k1", property_id::K1},
+        {"k2", property_id::K2},
+        {"k3", property_id::K3},
+        {"k4", property_id::K4},
+        {"lengthAdjust", property_id::LengthAdjust},
+        {"markerHeight", property_id::MarkerHeight},
+        {"markerUnits", property_id::MarkerUnits},
+        {"markerWidth", property_id::MarkerWidth},
+        {"maskContentUnits", property_id::MaskContentUnits},
+        {"maskUnits", property_id::MaskUnits},
+        {"offset", property_id::Offset},
+        {"operator", property_id::Operator},
+        {"orient", property_id::Orient},
+        {"patternContentUnits", property_id::PatternContentUnits},
+        {"patternTransform", property_id::PatternTransform},
+        {"patternUnits", property_id::PatternUnits},
+        {"points", property_id::Points},
+        {"preserveAspectRatio", property_id::PreserveAspectRatio},
+        {"r", property_id::R},
+        {"refX", property_id::RefX},
+        {"refY", property_id::RefY},
+        {"requiredExtensions", property_id::required_extensions},
+        {"result", property_id::Result},
+        {"rotate", property_id::Rotate},
+        {"rx", property_id::Rx},
+        {"ry", property_id::Ry},
+        {"spreadMethod", property_id::SpreadMethod},
+        {"stdDeviation", property_id::std_deviation},
+        {"style", property_id::Style},
+        {"systemLanguage", property_id::system_language},
+        {"textLength", property_id::TextLength},
+        {"transform", property_id::Transform},
+        {"viewBox", property_id::ViewBox},
+        {"width", property_id::Width},
+        {"x", property_id::X},
+        {"x1", property_id::X1},
+        {"x2", property_id::X2},
+        {"xlink:href", property_id::Href},
+        {"xml:space", property_id::White_Space},
+        {"y", property_id::Y},
+        {"y1", property_id::Y1},
+        {"y2", property_id::Y2}
     };
 
     auto it = std::lower_bound(table, std::end(table), name, [](const auto& item, const auto& name) { return item.name < name; });
@@ -77,68 +77,68 @@ PropertyID propertyid(std::string_view name)
     return it->value;
 }
 
-PropertyID csspropertyid(std::string_view name)
+property_id csspropertyid(std::string_view name)
 {
     static const struct {
         std::string_view name;
-        PropertyID value;
+        property_id value;
     } table[] = {
-        {"alignment-baseline", PropertyID::Alignment_Baseline},
-        {"background-color", PropertyID::Background_Color},
-        {"baseline-shift", PropertyID::Baseline_Shift},
-        {"clip-path", PropertyID::Clip_Path},
-        {"clip-rule", PropertyID::Clip_Rule},
-        {"color", PropertyID::Color},
-        {"direction", PropertyID::Direction},
-        {"display", PropertyID::Display},
-        {"dominant-baseline", PropertyID::Dominant_Baseline},
-        {"fill", PropertyID::Fill},
-        {"fill-opacity", PropertyID::Fill_Opacity},
-        {"fill-rule", PropertyID::Fill_Rule},
-        {"filter", PropertyID::Filter},
-        {"flood-color", PropertyID::Flood_Color},
-        {"flood-opacity", PropertyID::Flood_Opacity},
-        {"font-family", PropertyID::Font_Family},
-        {"font-size", PropertyID::Font_Size},
-        {"font-style", PropertyID::Font_Style},
-        {"font-weight", PropertyID::Font_Weight},
-        {"letter-spacing", PropertyID::Letter_Spacing},
-        {"marker-end", PropertyID::Marker_End},
-        {"marker-mid", PropertyID::Marker_Mid},
-        {"marker-start", PropertyID::Marker_Start},
-        {"mask", PropertyID::Mask},
-        {"mask-type", PropertyID::Mask_Type},
-        {"mix-blend-mode", PropertyID::Mix_Blend_Mode},
-        {"opacity", PropertyID::Opacity},
-        {"overflow", PropertyID::Overflow},
-        {"pointer-events", PropertyID::Pointer_Events},
-        {"stop-color", PropertyID::Stop_Color},
-        {"stop-opacity", PropertyID::Stop_Opacity},
-        {"stroke", PropertyID::Stroke},
-        {"stroke-dasharray", PropertyID::Stroke_Dasharray},
-        {"stroke-dashoffset", PropertyID::Stroke_Dashoffset},
-        {"stroke-linecap", PropertyID::Stroke_Linecap},
-        {"stroke-linejoin", PropertyID::Stroke_Linejoin},
-        {"stroke-miterlimit", PropertyID::Stroke_Miterlimit},
-        {"stroke-opacity", PropertyID::Stroke_Opacity},
-        {"stroke-width", PropertyID::Stroke_Width},
-        {"text-anchor", PropertyID::Text_Anchor},
-        {"text-orientation", PropertyID::Text_Orientation},
-        {"transform-box", PropertyID::Transform_Box},
-        {"transform-origin", PropertyID::Transform_Origin},
-        {"visibility", PropertyID::Visibility},
-        {"white-space", PropertyID::White_Space},
-        {"word-spacing", PropertyID::Word_Spacing},
-        {"writing-mode", PropertyID::Writing_Mode}
+        {"alignment-baseline", property_id::Alignment_Baseline},
+        {"background-color", property_id::Background_Color},
+        {"baseline-shift", property_id::Baseline_Shift},
+        {"clip-path", property_id::Clip_Path},
+        {"clip-rule", property_id::Clip_Rule},
+        {"color", property_id::Color},
+        {"direction", property_id::Direction},
+        {"display", property_id::Display},
+        {"dominant-baseline", property_id::Dominant_Baseline},
+        {"fill", property_id::Fill},
+        {"fill-opacity", property_id::Fill_Opacity},
+        {"fill-rule", property_id::Fill_Rule},
+        {"filter", property_id::Filter},
+        {"flood-color", property_id::Flood_Color},
+        {"flood-opacity", property_id::Flood_Opacity},
+        {"font-family", property_id::Font_Family},
+        {"font-size", property_id::Font_Size},
+        {"font-style", property_id::Font_Style},
+        {"font-weight", property_id::Font_Weight},
+        {"letter-spacing", property_id::Letter_Spacing},
+        {"marker-end", property_id::Marker_End},
+        {"marker-mid", property_id::Marker_Mid},
+        {"marker-start", property_id::Marker_Start},
+        {"mask", property_id::Mask},
+        {"mask-type", property_id::Mask_Type},
+        {"mix-blend-mode", property_id::Mix_Blend_Mode},
+        {"opacity", property_id::Opacity},
+        {"overflow", property_id::Overflow},
+        {"pointer-events", property_id::Pointer_Events},
+        {"stop-color", property_id::Stop_Color},
+        {"stop-opacity", property_id::Stop_Opacity},
+        {"stroke", property_id::Stroke},
+        {"stroke-dasharray", property_id::Stroke_Dasharray},
+        {"stroke-dashoffset", property_id::Stroke_Dashoffset},
+        {"stroke-linecap", property_id::Stroke_Linecap},
+        {"stroke-linejoin", property_id::Stroke_Linejoin},
+        {"stroke-miterlimit", property_id::Stroke_Miterlimit},
+        {"stroke-opacity", property_id::Stroke_Opacity},
+        {"stroke-width", property_id::Stroke_Width},
+        {"text-anchor", property_id::Text_Anchor},
+        {"text-orientation", property_id::Text_Orientation},
+        {"transform-box", property_id::transform_box},
+        {"transform-origin", property_id::transform_origin},
+        {"visibility", property_id::Visibility},
+        {"white-space", property_id::White_Space},
+        {"word-spacing", property_id::Word_Spacing},
+        {"writing-mode", property_id::Writing_Mode}
     };
 
     auto it = std::lower_bound(table, std::end(table), name, [](const auto& item, const auto& name) { return item.name < name; });
     if(it == std::end(table) || it->name != name)
-        return PropertyID::Unknown;
+        return property_id::unknown;
     return it->value;
 }
 
-std::optional<stb::color> parseColorValue(std::string_view& input, const svg_layout_state* state)
+std::optional<stb::color> parse_color_value(std::string_view& input, const svg_layout_state* state)
 {
     if(skipString(input, "currentColor")) {
         return state->color();
@@ -156,27 +156,27 @@ std::optional<stb::color> parseColorValue(std::string_view& input, const svg_lay
     return stb::color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff);
 }
 
-stb::color parseColor(std::string_view input, const svg_layout_state* state, const stb::color& defaultValue)
+stb::color parse_color(std::string_view input, const svg_layout_state* state, const stb::color& default_value)
 {
-    auto color = parseColorValue(input, state);
+    auto color = parse_color_value(input, state);
     if(!color || !input.empty())
-        color = defaultValue;
+        color = default_value;
     return color.value();
 }
 
-stb::color parseColorOrNone(std::string_view input, const svg_layout_state* state, const stb::color& defaultValue)
+stb::color parse_color_or_none(std::string_view input, const svg_layout_state* state, const stb::color& default_value)
 {
     if(input.compare("none") == 0)
         return stb::color::transparent();
-    return parseColor(input, state, defaultValue);
+    return parse_color(input, state, default_value);
 }
 
-bool parseUrlValue(std::string_view& input, std::string& value)
+bool parse_url_value(std::string_view& input, std::string& value)
 {
     if(!skipString(input, "url")
-        || !skipOptionalSpaces(input)
-        || !skipDelimiter(input, '(')
-        || !skipOptionalSpaces(input)) {
+        || !skip_optional_spaces(input)
+        || !skip_delimiter(input, '(')
+        || !skip_optional_spaces(input)) {
         return false;
     }
 
@@ -185,16 +185,16 @@ bool parseUrlValue(std::string_view& input, std::string& value)
     case '\"': {
         auto delim = input.front();
         input.remove_prefix(1);
-        skipOptionalSpaces(input);
-        if(!skipDelimiter(input, '#'))
+        skip_optional_spaces(input);
+        if(!skip_delimiter(input, '#'))
             return false;
         while(!input.empty() && input.front() != delim) {
             value += input.front();
             input.remove_prefix(1);
         }
 
-        skipOptionalSpaces(input);
-        if(!skipDelimiter(input, delim))
+        skip_optional_spaces(input);
+        if(!skip_delimiter(input, delim))
             return false;
         break;
     } case '#': {
@@ -209,324 +209,324 @@ bool parseUrlValue(std::string_view& input, std::string& value)
         return false;
     }
 
-    return skipOptionalSpaces(input) && skipDelimiter(input, ')');
+    return skip_optional_spaces(input) && skip_delimiter(input, ')');
 }
 
-std::string parseUrl(std::string_view input)
+std::string parse_url(std::string_view input)
 {
     std::string value;
-    if(!parseUrlValue(input, value) || !input.empty())
+    if(!parse_url_value(input, value) || !input.empty())
         value.clear();
     return value;
 }
 
-Paint parsePaint(std::string_view input, const svg_layout_state* state, const stb::color& defaultValue)
+Paint parse_paint(std::string_view input, const svg_layout_state* state, const stb::color& default_value)
 {
     std::string id;
-    if(!parseUrlValue(input, id))
-        return Paint(parseColorOrNone(input, state, defaultValue));
-    if(skipOptionalSpaces(input))
-        return Paint(id, parseColorOrNone(input, state, defaultValue));
+    if(!parse_url_value(input, id))
+        return Paint(parse_color_or_none(input, state, default_value));
+    if(skip_optional_spaces(input))
+        return Paint(id, parse_color_or_none(input, state, default_value));
     return Paint(id, stb::color::transparent());
 }
 
-float parseNumberOrPercentage(std::string_view input, bool allowPercentage, float defaultValue)
+float parse_number_or_percentage(std::string_view input, bool allow_percentage, float default_value)
 {
     float value;
     if(!parseNumber(input, value))
-        return defaultValue;
-    if(allowPercentage) {
-        if(skipDelimiter(input, '%'))
+        return default_value;
+    if(allow_percentage) {
+        if(skip_delimiter(input, '%'))
             value /= 100.f;
         value = std::clamp(value, 0.f, 1.f);
     }
 
     if(!input.empty())
-        return defaultValue;
+        return default_value;
     return value;
 }
 
-Length parseLength(std::string_view input, LengthNegativeMode mode, const Length& defaultValue)
+Length parse_length(std::string_view input, length_negative_mode mode, const Length& default_value)
 {
     Length value;
     if(!value.parse(input, mode))
-        value = defaultValue;
+        value = default_value;
     return value;
 }
 
-BaselineShift parseBaselineShift(std::string_view input)
+BaselineShift parse_baseline_shift(std::string_view input)
 {
     if(input.compare("baseline") == 0)
         return BaselineShift::Type::Baseline;
     if(input.compare("sub") == 0)
-        return BaselineShift::Type::Sub;
+        return BaselineShift::Type::sub;
     if(input.compare("super") == 0)
-        return BaselineShift::Type::Super;
-    return parseLength(input, LengthNegativeMode::Allow, Length(0.f, LengthUnits::None));
+        return BaselineShift::Type::super;
+    return parse_length(input, length_negative_mode::allow, Length(0.f, length_units::None));
 }
 
-LengthList parseDashArray(std::string_view input)
+length_list parse_dash_array(std::string_view input)
 {
     if(input.compare("none") == 0)
-        return LengthList();
-    LengthList values;
+        return length_list();
+    length_list values;
     do {
         size_t count = 0;
         while(count < input.length() && input[count] != ',' && !IS_WS(input[count]))
             ++count;
-        Length value(0, LengthUnits::None);
-        if(!value.parse(input.substr(0, count), LengthNegativeMode::Forbid))
-            return LengthList();
+        Length value(0, length_units::None);
+        if(!value.parse(input.substr(0, count), length_negative_mode::forbid))
+            return length_list();
         input.remove_prefix(count);
         values.push_back(std::move(value));
-    } while(skipOptionalSpacesOrComma(input));
+    } while(skip_optional_spaces_or_comma(input));
     return values;
 }
 
-Length parseLengthOrNormal(std::string_view input)
+Length parse_length_or_normal(std::string_view input)
 {
     if(input.compare("normal") == 0)
-        return Length(0, LengthUnits::None);
-    return parseLength(input, LengthNegativeMode::Allow, Length(0, LengthUnits::None));
+        return Length(0, length_units::None);
+    return parse_length(input, length_negative_mode::allow, Length(0, length_units::None));
 }
 
-float parseFontSize(std::string_view input, const svg_layout_state* state)
+float parse_font_size(std::string_view input, const svg_layout_state* state)
 {
-    auto length = parseLength(input, LengthNegativeMode::Forbid, Length(12, LengthUnits::None));
-    if(length.units() == LengthUnits::Percent)
+    auto length = parse_length(input, length_negative_mode::forbid, Length(12, length_units::None));
+    if(length.units() == length_units::percent)
         return length.value() * state->font_size() / 100.f;
-    if(length.units() == LengthUnits::Ex)
+    if(length.units() == length_units::ex)
         return length.value() * state->font_size() / 2.f;
-    if(length.units() == LengthUnits::Em)
+    if(length.units() == length_units::em)
         return length.value() * state->font_size();
     return length.value();
 }
 
-Display parseDisplay(std::string_view input)
+Display parse_display(std::string_view input)
 {
     static const svg_enumeration_entry<Display> entries[] = {
         {Display::Inline, "inline"},
         {Display::None, "none"}
     };
 
-    return parseEnumValue(input, entries, Display::Inline);
+    return parse_enum_value(input, entries, Display::Inline);
 }
 
-Visibility parseVisibility(std::string_view input)
+Visibility parse_visibility(std::string_view input)
 {
     static const svg_enumeration_entry<Visibility> entries[] = {
-        {Visibility::Visible, "visible"},
-        {Visibility::Hidden, "hidden"},
-        {Visibility::Collapse, "collapse"}
+        {Visibility::visible, "visible"},
+        {Visibility::hidden, "hidden"},
+        {Visibility::collapse, "collapse"}
     };
 
-    return parseEnumValue(input, entries, Visibility::Visible);
+    return parse_enum_value(input, entries, Visibility::visible);
 }
 
-Overflow parseOverflow(std::string_view input)
+Overflow parse_overflow(std::string_view input)
 {
     static const svg_enumeration_entry<Overflow> entries[] = {
-        {Overflow::Visible, "visible"},
-        {Overflow::Hidden, "hidden"}
+        {Overflow::visible, "visible"},
+        {Overflow::hidden, "hidden"}
     };
 
-    return parseEnumValue(input, entries, Overflow::Visible);
+    return parse_enum_value(input, entries, Overflow::visible);
 }
 
-PointerEvents parsePointerEvents(std::string_view input)
+PointerEvents parse_pointer_events(std::string_view input)
 {
     static const svg_enumeration_entry<PointerEvents> entries[] = {
         {PointerEvents::None,"none"},
         {PointerEvents::Auto,"auto"},
         {PointerEvents::Stroke,"stroke"},
         {PointerEvents::Fill,"fill"},
-        {PointerEvents::Painted,"painted"},
-        {PointerEvents::Visible,"visible"},
-        {PointerEvents::VisibleStroke,"visibleStroke"},
-        {PointerEvents::VisibleFill,"visibleFill"},
-        {PointerEvents::VisiblePainted,"visiblePainted"},
+        {PointerEvents::painted,"painted"},
+        {PointerEvents::visible,"visible"},
+        {PointerEvents::visible_stroke,"visibleStroke"},
+        {PointerEvents::visible_fill,"visibleFill"},
+        {PointerEvents::visible_painted,"visiblePainted"},
         {PointerEvents::BoundingBox,"bounding-box"},
         {PointerEvents::All,"all"},
     };
 
-    return parseEnumValue(input, entries, PointerEvents::Auto);
+    return parse_enum_value(input, entries, PointerEvents::Auto);
 }
 
-FontWeight parseFontWeight(std::string_view input)
+FontWeight parse_font_weight(std::string_view input)
 {
     static const svg_enumeration_entry<FontWeight> entries[] = {
-        {FontWeight::Normal, "normal"},
+        {FontWeight::normal, "normal"},
         {FontWeight::Bold, "bold"},
         {FontWeight::Bold, "bolder"},
-        {FontWeight::Normal, "lighter"},
-        {FontWeight::Normal, "100"},
-        {FontWeight::Normal, "200"},
-        {FontWeight::Normal, "300"},
-        {FontWeight::Normal, "400"},
-        {FontWeight::Normal, "500"},
+        {FontWeight::normal, "lighter"},
+        {FontWeight::normal, "100"},
+        {FontWeight::normal, "200"},
+        {FontWeight::normal, "300"},
+        {FontWeight::normal, "400"},
+        {FontWeight::normal, "500"},
         {FontWeight::Bold, "600"},
         {FontWeight::Bold, "700"},
         {FontWeight::Bold, "800"},
         {FontWeight::Bold, "900"}
     };
 
-    return parseEnumValue(input, entries, FontWeight::Normal);
+    return parse_enum_value(input, entries, FontWeight::normal);
 }
 
-FontStyle parseFontStyle(std::string_view input)
+FontStyle parse_font_style(std::string_view input)
 {
     static const svg_enumeration_entry<FontStyle> entries[] = {
-        {FontStyle::Normal, "normal"},
+        {FontStyle::normal, "normal"},
         {FontStyle::Italic, "italic"},
         {FontStyle::Italic, "oblique"}
     };
 
-    return parseEnumValue(input, entries, FontStyle::Normal);
+    return parse_enum_value(input, entries, FontStyle::normal);
 }
 
-AlignmentBaseline parseAlignmentBaseline(std::string_view input)
+AlignmentBaseline parse_alignment_baseline(std::string_view input)
 {
     static const svg_enumeration_entry<AlignmentBaseline> entries[] = {
         {AlignmentBaseline::Auto, "auto"},
         {AlignmentBaseline::Baseline, "baseline"},
-        {AlignmentBaseline::BeforeEdge, "before-edge"},
-        {AlignmentBaseline::TextBeforeEdge, "text-before-edge"},
-        {AlignmentBaseline::Middle, "middle"},
-        {AlignmentBaseline::Central, "central"},
-        {AlignmentBaseline::AfterEdge, "after-edge"},
-        {AlignmentBaseline::TextAfterEdge, "text-after-edge"},
-        {AlignmentBaseline::Ideographic, "ideographic"},
-        {AlignmentBaseline::Alphabetic, "alphabetic"},
-        {AlignmentBaseline::Hanging, "hanging"},
-        {AlignmentBaseline::Mathematical, "mathematical"}
+        {AlignmentBaseline::before_edge, "before-edge"},
+        {AlignmentBaseline::text_before_edge, "text-before-edge"},
+        {AlignmentBaseline::middle, "middle"},
+        {AlignmentBaseline::central, "central"},
+        {AlignmentBaseline::after_edge, "after-edge"},
+        {AlignmentBaseline::text_after_edge, "text-after-edge"},
+        {AlignmentBaseline::ideographic, "ideographic"},
+        {AlignmentBaseline::alphabetic, "alphabetic"},
+        {AlignmentBaseline::hanging, "hanging"},
+        {AlignmentBaseline::mathematical, "mathematical"}
     };
 
-    return parseEnumValue(input, entries, AlignmentBaseline::Auto);
+    return parse_enum_value(input, entries, AlignmentBaseline::Auto);
 }
 
-DominantBaseline parseDominantBaseline(std::string_view input)
+DominantBaseline parse_dominant_baseline(std::string_view input)
 {
     static const svg_enumeration_entry<DominantBaseline> entries[] = {
         {DominantBaseline::Auto, "auto"},
-        {DominantBaseline::UseScript, "use-script"},
-        {DominantBaseline::NoChange, "no-change"},
-        {DominantBaseline::ResetSize, "reset-size"},
-        {DominantBaseline::Ideographic, "ideographic"},
-        {DominantBaseline::Alphabetic, "alphabetic"},
-        {DominantBaseline::Hanging, "hanging"},
-        {DominantBaseline::Mathematical, "mathematical"},
-        {DominantBaseline::Central, "central"},
-        {DominantBaseline::Middle, "middle"},
-        {DominantBaseline::TextAfterEdge, "text-after-edge"},
-        {DominantBaseline::TextBeforeEdge, "text-before-edge"}
+        {DominantBaseline::use_script, "use-script"},
+        {DominantBaseline::no_change, "no-change"},
+        {DominantBaseline::reset_size, "reset-size"},
+        {DominantBaseline::ideographic, "ideographic"},
+        {DominantBaseline::alphabetic, "alphabetic"},
+        {DominantBaseline::hanging, "hanging"},
+        {DominantBaseline::mathematical, "mathematical"},
+        {DominantBaseline::central, "central"},
+        {DominantBaseline::middle, "middle"},
+        {DominantBaseline::text_after_edge, "text-after-edge"},
+        {DominantBaseline::text_before_edge, "text-before-edge"}
     };
 
-    return parseEnumValue(input, entries, DominantBaseline::Auto);
+    return parse_enum_value(input, entries, DominantBaseline::Auto);
 }
 
-Direction parseDirection(std::string_view input)
+Direction parse_direction(std::string_view input)
 {
     static const svg_enumeration_entry<Direction> entries[] = {
-        {Direction::Ltr, "ltr"},
-        {Direction::Rtl, "rtl"}
+        {Direction::ltr, "ltr"},
+        {Direction::rtl, "rtl"}
     };
 
-    return parseEnumValue(input, entries, Direction::Ltr);
+    return parse_enum_value(input, entries, Direction::ltr);
 }
 
-WritingMode parseWritingMode(std::string_view input)
+WritingMode parse_writing_mode(std::string_view input)
 {
     static const svg_enumeration_entry<WritingMode> entries[] = {
         {WritingMode::Horizontal, "horizontal-tb"},
-        {WritingMode::Vertical, "vertical-rl"},
-        {WritingMode::Vertical, "vertical-lr"},
+        {WritingMode::vertical, "vertical-rl"},
+        {WritingMode::vertical, "vertical-lr"},
         {WritingMode::Horizontal, "lr-tb"},
         {WritingMode::Horizontal, "lr"},
         {WritingMode::Horizontal, "rl-tb"},
         {WritingMode::Horizontal, "rl"},
-        {WritingMode::Vertical, "tb-rl"},
-        {WritingMode::Vertical, "tb"}
+        {WritingMode::vertical, "tb-rl"},
+        {WritingMode::vertical, "tb"}
     };
 
-    return parseEnumValue(input, entries, WritingMode::Horizontal);
+    return parse_enum_value(input, entries, WritingMode::Horizontal);
 }
 
-TextOrientation parseTextOrientation(std::string_view input)
+TextOrientation parse_text_orientation(std::string_view input)
 {
     static const svg_enumeration_entry<TextOrientation> entries[] = {
-        {TextOrientation::Mixed, "mixed"},
-        {TextOrientation::Upright, "upright"}
+        {TextOrientation::mixed, "mixed"},
+        {TextOrientation::upright, "upright"}
     };
 
-    return parseEnumValue(input, entries, TextOrientation::Mixed);
+    return parse_enum_value(input, entries, TextOrientation::mixed);
 }
 
-TextAnchor parseTextAnchor(std::string_view input)
+TextAnchor parse_text_anchor(std::string_view input)
 {
     static const svg_enumeration_entry<TextAnchor> entries[] = {
         {TextAnchor::Start, "start"},
-        {TextAnchor::Middle, "middle"},
+        {TextAnchor::middle, "middle"},
         {TextAnchor::End, "end"}
     };
 
-    return parseEnumValue(input, entries, TextAnchor::Start);
+    return parse_enum_value(input, entries, TextAnchor::Start);
 }
 
-WhiteSpace parseWhiteSpace(std::string_view input)
+WhiteSpace parse_white_space(std::string_view input)
 {
     static const svg_enumeration_entry<WhiteSpace> entries[] = {
         {WhiteSpace::Default, "default"},
-        {WhiteSpace::Preserve, "preserve"},
+        {WhiteSpace::preserve, "preserve"},
         {WhiteSpace::Default, "normal"},
         {WhiteSpace::Default, "nowrap"},
         {WhiteSpace::Default, "pre-line"},
-        {WhiteSpace::Preserve, "pre-wrap"},
-        {WhiteSpace::Preserve, "pre"}
+        {WhiteSpace::preserve, "pre-wrap"},
+        {WhiteSpace::preserve, "pre"}
     };
 
-    return parseEnumValue(input, entries, WhiteSpace::Default);
+    return parse_enum_value(input, entries, WhiteSpace::Default);
 }
 
-MixBlendMode parseMixBlendMode(std::string_view input)
+MixBlendMode parse_mix_blend_mode(std::string_view input)
 {
     static const svg_enumeration_entry<MixBlendMode> entries[] = {
-        {MixBlendMode::Normal, "normal"},
+        {MixBlendMode::normal, "normal"},
         {MixBlendMode::Multiply, "multiply"},
-        {MixBlendMode::Screen, "screen"},
-        {MixBlendMode::Darken, "darken"},
-        {MixBlendMode::Lighten, "lighten"},
-        {MixBlendMode::Difference, "difference"},
-        {MixBlendMode::Exclusion, "exclusion"}
+        {MixBlendMode::screen, "screen"},
+        {MixBlendMode::darken, "darken"},
+        {MixBlendMode::lighten, "lighten"},
+        {MixBlendMode::difference, "difference"},
+        {MixBlendMode::exclusion, "exclusion"}
     };
 
     // CSS keywords are ASCII case-insensitive
     std::string keyword;
     for(char ch : input)
         keyword.push_back(char(std::tolower(static_cast<unsigned char>(ch))));
-    return parseEnumValue(keyword, entries, MixBlendMode::Normal);
+    return parse_enum_value(keyword, entries, MixBlendMode::normal);
 }
 
-MaskType parseMaskType(std::string_view input)
+MaskType parse_mask_type(std::string_view input)
 {
     static const svg_enumeration_entry<MaskType> entries[] = {
-        {MaskType::Luminance, "luminance"},
+        {MaskType::luminance, "luminance"},
         {MaskType::Alpha, "alpha"}
     };
 
-    return parseEnumValue(input, entries, MaskType::Luminance);
+    return parse_enum_value(input, entries, MaskType::luminance);
 }
 
-FillRule parseFillRule(std::string_view input)
+FillRule parse_fill_rule(std::string_view input)
 {
     static const svg_enumeration_entry<FillRule> entries[] = {
         {FillRule::NonZero, "nonzero"},
         {FillRule::EvenOdd, "evenodd"}
     };
 
-    return parseEnumValue(input, entries, FillRule::NonZero);
+    return parse_enum_value(input, entries, FillRule::NonZero);
 }
 
-LineCap parseLineCap(std::string_view input)
+LineCap parse_line_cap(std::string_view input)
 {
     static const svg_enumeration_entry<LineCap> entries[] = {
         {LineCap::Butt, "butt"},
@@ -534,10 +534,10 @@ LineCap parseLineCap(std::string_view input)
         {LineCap::Square, "square"}
     };
 
-    return parseEnumValue(input, entries, LineCap::Butt);
+    return parse_enum_value(input, entries, LineCap::Butt);
 }
 
-LineJoin parseLineJoin(std::string_view input)
+LineJoin parse_line_join(std::string_view input)
 {
     static const svg_enumeration_entry<LineJoin> entries[] = {
         {LineJoin::Miter, "miter"},
@@ -545,54 +545,54 @@ LineJoin parseLineJoin(std::string_view input)
         {LineJoin::Bevel, "bevel"}
     };
 
-    return parseEnumValue(input, entries, LineJoin::Miter);
+    return parse_enum_value(input, entries, LineJoin::Miter);
 }
 
-ElementID elementid(std::string_view name)
+element_id elementid(std::string_view name)
 {
     static const struct {
         std::string_view name;
-        ElementID value;
+        element_id value;
     } table[] = {
-        {"a", ElementID::G},
-        {"circle", ElementID::Circle},
-        {"clipPath", ElementID::ClipPath},
-        {"defs", ElementID::Defs},
-        {"ellipse", ElementID::Ellipse},
-        {"feComposite", ElementID::FeComposite},
-        {"feDropShadow", ElementID::FeDropShadow},
-        {"feFlood", ElementID::FeFlood},
-        {"feGaussianBlur", ElementID::FeGaussianBlur},
-        {"feMerge", ElementID::FeMerge},
-        {"feMergeNode", ElementID::FeMergeNode},
-        {"feOffset", ElementID::FeOffset},
-        {"filter", ElementID::Filter},
-        {"foreignObject", ElementID::ForeignObject},
-        {"g", ElementID::G},
-        {"image", ElementID::Image},
-        {"line", ElementID::Line},
-        {"linearGradient", ElementID::LinearGradient},
-        {"marker", ElementID::Marker},
-        {"mask", ElementID::Mask},
-        {"path", ElementID::Path},
-        {"pattern", ElementID::Pattern},
-        {"polygon", ElementID::Polygon},
-        {"polyline", ElementID::Polyline},
-        {"radialGradient", ElementID::RadialGradient},
-        {"rect", ElementID::Rect},
-        {"stop", ElementID::Stop},
-        {"style", ElementID::Style},
-        {"svg", ElementID::Svg},
-        {"switch", ElementID::Switch},
-        {"symbol", ElementID::Symbol},
-        {"text", ElementID::Text},
-        {"tspan", ElementID::Tspan},
-        {"use", ElementID::Use}
+        {"a", element_id::G},
+        {"circle", element_id::Circle},
+        {"clipPath", element_id::ClipPath},
+        {"defs", element_id::Defs},
+        {"ellipse", element_id::ellipse},
+        {"feComposite", element_id::fe_composite},
+        {"feDropShadow", element_id::fe_drop_shadow},
+        {"feFlood", element_id::fe_flood},
+        {"feGaussianBlur", element_id::fe_gaussian_blur},
+        {"feMerge", element_id::fe_merge},
+        {"feMergeNode", element_id::fe_merge_node},
+        {"feOffset", element_id::fe_offset},
+        {"filter", element_id::Filter},
+        {"foreignObject", element_id::ForeignObject},
+        {"g", element_id::G},
+        {"image", element_id::Image},
+        {"line", element_id::Line},
+        {"linearGradient", element_id::linear_gradient},
+        {"marker", element_id::marker},
+        {"mask", element_id::Mask},
+        {"path", element_id::Path},
+        {"pattern", element_id::Pattern},
+        {"polygon", element_id::polygon},
+        {"polyline", element_id::polyline},
+        {"radialGradient", element_id::radial_gradient},
+        {"rect", element_id::Rect},
+        {"stop", element_id::Stop},
+        {"style", element_id::Style},
+        {"svg", element_id::Svg},
+        {"switch", element_id::Switch},
+        {"symbol", element_id::symbol},
+        {"text", element_id::Text},
+        {"tspan", element_id::tspan},
+        {"use", element_id::use}
     };
 
     auto it = std::lower_bound(table, std::end(table), name, [](const auto& item, const auto& name) { return item.name < name; });
     if(it == std::end(table) || it->name != name)
-        return ElementID::Unknown;
+        return element_id::unknown;
     return it->value;
 }
 

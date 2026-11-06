@@ -44,10 +44,10 @@ TEST_CASE("text is drawn although the machine has no fonts")
 
 TEST_CASE("the embedded font lays text out exactly like the full DejaVu Sans")
 {
-    REQUIRE(nova::vg::addFontFaceFromFile("Full Probe", false, false, NOVA_TEST_FONT_PATH));
+    REQUIRE(nova::vg::add_font_face_from_file("Full Probe", false, false, NOVA_TEST_FONT_PATH));
     auto* cache = nova::vg::fontFaceCache();
-    auto full = cache->getFontFace("Full Probe", false, false);
-    auto embedded = cache->getFontFace("sans-serif", false, false);
+    auto full = cache->get_font_face("Full Probe", false, false);
+    auto embedded = cache->get_font_face("sans-serif", false, false);
     REQUIRE(!full.is_null());
     REQUIRE(!embedded.is_null());
     CHECK(embedded.unitsPerEm() == full.unitsPerEm());
@@ -64,7 +64,7 @@ TEST_CASE("the embedded font lays text out exactly like the full DejaVu Sans")
         for(float size : {10.0f, 16.0f, 31.0f}) {
             CAPTURE(index);
             CAPTURE(size);
-            CHECK(nova::vg::Font(embedded, size).measureText(text) == nova::vg::Font(full, size).measureText(text));
+            CHECK(nova::vg::Font(embedded, size).measure_text(text) == nova::vg::Font(full, size).measure_text(text));
         }
     }
 }
@@ -87,23 +87,23 @@ TEST_CASE("bold and italic requests get the bold / oblique embedded faces, laid 
         {"DejaVuSans-BoldOblique.ttf", true, true},
     };
     auto* cache = nova::vg::fontFaceCache();
-    const auto regular = cache->getFontFace("sans-serif", false, false);
+    const auto regular = cache->get_font_face("sans-serif", false, false);
     REQUIRE(!regular.is_null());
     const std::u32string samples[] = {U"Hello World", U"AV To LT Ty Yo WA", U"fi fl ffi ffl office", U"The quick brown fox jumps over the lazy dog"};
 
     for(const auto& spec : faces) {
         CAPTURE(spec.file);
         const std::string family = std::string("Full ") + spec.file;
-        REQUIRE(nova::vg::addFontFaceFromFile(family.c_str(), spec.bold, spec.italic, (font_dir() + spec.file).c_str()));
-        const auto full = cache->getFontFace(family, spec.bold, spec.italic);
-        const auto embedded = cache->getFontFace("sans-serif", spec.bold, spec.italic);
+        REQUIRE(nova::vg::add_font_face_from_file(family.c_str(), spec.bold, spec.italic, (font_dir() + spec.file).c_str()));
+        const auto full = cache->get_font_face(family, spec.bold, spec.italic);
+        const auto embedded = cache->get_font_face("sans-serif", spec.bold, spec.italic);
         REQUIRE(!full.is_null());
         REQUIRE(!embedded.is_null());
         CHECK(embedded.get() != regular.get()); // not just the regular face under another request
         for(const auto& text : samples)
-            CHECK(nova::vg::Font(embedded, 16.f).measureText(text) == nova::vg::Font(full, 16.f).measureText(text));
+            CHECK(nova::vg::Font(embedded, 16.f).measure_text(text) == nova::vg::Font(full, 16.f).measure_text(text));
         // and it is a different design from the regular face (bold is wider, oblique has other advances)
-        CHECK(nova::vg::Font(embedded, 16.f).measureText(samples[3]) != nova::vg::Font(regular, 16.f).measureText(samples[3]));
+        CHECK(nova::vg::Font(embedded, 16.f).measure_text(samples[3]) != nova::vg::Font(regular, 16.f).measure_text(samples[3]));
     }
 }
 

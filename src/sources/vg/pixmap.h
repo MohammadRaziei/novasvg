@@ -127,7 +127,7 @@ public:
     /**
      * @brief Converts the bitmap pixel data from ARGB32 Premultiplied to RGBA Plain format in place.
      */
-    void convertToRGBA();
+    void convert_to_rgba();
 
     /**
      * @brief Checks if the bitmap is null.

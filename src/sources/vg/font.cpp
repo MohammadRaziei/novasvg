@@ -63,7 +63,7 @@ float FontFace::unitsPerEm() const
     return font_face_get_units_per_em(m_face);
 }
 
-float FontFace::ascentUnits() const
+float FontFace::ascent_units() const
 {
     if(is_null())
         return 0.f;
@@ -72,7 +72,7 @@ float FontFace::ascentUnits() const
     return ascent;
 }
 
-float FontFace::descentUnits() const
+float FontFace::descent_units() const
 {
     if(is_null())
         return 0.f;
@@ -81,7 +81,7 @@ float FontFace::descentUnits() const
     return descent;
 }
 
-float FontFace::advanceWidthUnits(char32_t codepoint) const
+float FontFace::advance_width_units(char32_t codepoint) const
 {
     if(is_null())
         return 0.f;
@@ -94,7 +94,7 @@ float FontFace::advanceWidthUnits(char32_t codepoint) const
     return advance;
 }
 
-float FontFace::kernAdvanceUnits(char32_t first, char32_t second) const
+float FontFace::kern_advance_units(char32_t first, char32_t second) const
 {
     if(is_null())
         return 0.f;
@@ -115,21 +115,21 @@ std::vector<char32_t> FontFace::codepoints() const
     return result;
 }
 
-bool FontFaceCache::addFontFace(const std::string& family, bool bold, bool italic, const FontFace& face)
+bool FontFaceCache::add_font_face(const std::string& family, bool bold, bool italic, const FontFace& face)
 {
     if(!face.is_null())
         font_face_cache_add(m_cache, family.data(), bold, italic, face.get());
     return !face.is_null();
 }
 
-FontFace FontFaceCache::getFontFaceLocal(const std::string& family, bool bold, bool italic) const
+FontFace FontFaceCache::get_font_face_local(const std::string& family, bool bold, bool italic) const
 {
     return FontFace(font_face_cache_get(m_cache, family.data(), bold, italic));
 }
 
-FontFace FontFaceCache::getFontFace(const std::string& family, bool bold, bool italic) const
+FontFace FontFaceCache::get_font_face(const std::string& family, bool bold, bool italic) const
 {
-    if(auto face = getFontFaceLocal(family, bold, italic); !face.is_null()) {
+    if(auto face = get_font_face_local(family, bold, italic); !face.is_null()) {
         return face;
     }
 
@@ -156,14 +156,14 @@ FontFace FontFaceCache::getFontFace(const std::string& family, bool bold, bool i
                 return face;
             // Not even the platform's stand-in is installed: use the embedded font
             // so text is still drawn (and drawn the same way) on a machine without fonts.
-            return embeddedFallbackFont(bold, italic);
+            return embedded_fallback_font(bold, italic);
         }
     }
 
     return FontFace();
 }
 
-FontFace FontFaceCache::getFontFaceForFamilyStack(const std::string& familyStack, bool bold, bool italic) const
+FontFace FontFaceCache::get_font_face_for_family_stack(const std::string& familyStack, bool bold, bool italic) const
 {
     // Metric-compatible stand-ins only: a substitute must lay text out the
     // same way as the font it replaces, so a name with no such stand-in
@@ -192,19 +192,19 @@ FontFace FontFaceCache::getFontFaceForFamilyStack(const std::string& familyStack
         input.remove_prefix(family.length());
         if(!input.empty() && input.front() == ',')
             input.remove_prefix(1);
-        stripLeadingAndTrailingSpaces(family);
+        strip_leading_and_trailing_spaces(family);
         if(!family.empty() && (family.front() == '\'' || family.front() == '"')) {
             auto quote = family.front();
             family.remove_prefix(1);
             if(!family.empty() && family.back() == quote)
                 family.remove_suffix(1);
-            stripLeadingAndTrailingSpaces(family);
+            strip_leading_and_trailing_spaces(family);
         }
         if(family.empty())
             continue;
 
         std::string name(family);
-        if(auto face = getFontFaceLocal(name, bold, italic); !face.is_null())
+        if(auto face = get_font_face_local(name, bold, italic); !face.is_null())
             return face;
 
         std::string lower(name);
@@ -217,17 +217,17 @@ FontFace FontFaceCache::getFontFaceForFamilyStack(const std::string& familyStack
                 ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
             if(lower != key)
                 continue;
-            if(auto face = getFontFaceLocal(alias.family, bold, italic); !face.is_null())
+            if(auto face = get_font_face_local(alias.family, bold, italic); !face.is_null())
                 return face;
             for(auto substitute = alias.substitutes; *substitute; ++substitute) {
-                if(auto face = getFontFaceLocal(*substitute, bold, italic); !face.is_null())
+                if(auto face = get_font_face_local(*substitute, bold, italic); !face.is_null())
                     return face;
             }
         }
 
         // Generic keywords ("sans-serif", ...). Anything else is not a
         // generic name, so this stays empty for it and the walk goes on.
-        if(auto face = getFontFace(lower, bold, italic); !face.is_null())
+        if(auto face = get_font_face(lower, bold, italic); !face.is_null())
             return face;
     }
 
@@ -252,11 +252,11 @@ Font::Font(const FontFace& face, float size)
     : m_face(face), m_size(size)
 {
     if(m_size > 0.f && !m_face.is_null()) {
-        font_face_get_metrics(m_face.get(), m_size, &m_ascent, &m_descent, &m_lineGap, nullptr);
+        font_face_get_metrics(m_face.get(), m_size, &m_ascent, &m_descent, &m_line_gap, nullptr);
     }
 }
 
-float Font::xHeight() const
+float Font::x_height() const
 {
     rect_t extents = {0};
     if(m_size > 0.f && !m_face.is_null())
@@ -264,16 +264,16 @@ float Font::xHeight() const
     return extents.h;
 }
 
-float Font::measureText(const std::u32string_view& text) const
+float Font::measure_text(const std::u32string_view& text) const
 {
     if(m_size > 0.f && !m_face.is_null())
         return font_face_text_extents(m_face.get(), m_size, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF32, nullptr);
     return 0;
 }
 
-std::vector<Font::GlyphBox> Font::glyphBoxes(const std::u32string_view& text) const
+std::vector<Font::glyph_box> Font::glyph_boxes(const std::u32string_view& text) const
 {
-    std::vector<GlyphBox> boxes;
+    std::vector<glyph_box> boxes;
     if(m_size <= 0.f || m_face.is_null())
         return boxes;
 
@@ -301,14 +301,14 @@ std::vector<Font::GlyphBox> Font::glyphBoxes(const std::u32string_view& text) co
     return boxes;
 }
 
-bool addFontFaceFromFile(const char* family, bool bold, bool italic, const char* filename)
+bool add_font_face_from_file(const char* family, bool bold, bool italic, const char* filename)
 {
-    return fontFaceCache()->addFontFace(family, bold, italic, FontFace(filename));
+    return fontFaceCache()->add_font_face(family, bold, italic, FontFace(filename));
 }
 
-bool addFontFaceFromData(const char* family, bool bold, bool italic, const void* data, size_t length, destroy_func_t destroy_func, void* closure)
+bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length, destroy_func_t destroy_func, void* closure)
 {
-    return fontFaceCache()->addFontFace(family, bold, italic, FontFace(data, length, destroy_func, closure));
+    return fontFaceCache()->add_font_face(family, bold, italic, FontFace(data, length, destroy_func, closure));
 }
 
 } // namespace nova::vg

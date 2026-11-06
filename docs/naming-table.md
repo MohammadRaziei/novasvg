@@ -27,3 +27,6 @@ Python names and CLI are unchanged (string literals were not touched).
 
 ## Variables renamed to free the type names
 `element` -> `el`, `node` -> `nd`, `document` -> `dom`. All `SVG*` identifiers became `svg_*` (`SVGPathElement` -> `svg_path_element`).
+
+## Internal identifiers
+Second pass (2026-11-06) applied to the engine and the svg layer: see [naming-table-internal.md](naming-table-internal.md) for what is left.

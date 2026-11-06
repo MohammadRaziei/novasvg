@@ -6,46 +6,46 @@ namespace nova::svg {
 using namespace vg;
 
 svg_marker_element::svg_marker_element(document* dom)
-    : svg_element(dom, ElementID::Marker)
+    : svg_element(dom, element_id::marker)
     , svg_fit_to_view_box(this)
-    , m_refX(PropertyID::RefX, LengthDirection::Horizontal, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
-    , m_refY(PropertyID::RefY, LengthDirection::Vertical, LengthNegativeMode::Allow, 0.f, LengthUnits::None)
-    , m_markerWidth(PropertyID::MarkerWidth, LengthDirection::Horizontal, LengthNegativeMode::Forbid, 3.f, LengthUnits::None)
-    , m_markerHeight(PropertyID::MarkerHeight, LengthDirection::Vertical, LengthNegativeMode::Forbid, 3.f, LengthUnits::None)
-    , m_markerUnits(PropertyID::MarkerUnits, MarkerUnits::StrokeWidth)
-    , m_orient(PropertyID::Orient)
+    , m_ref_x(property_id::RefX, length_direction::Horizontal, length_negative_mode::allow, 0.f, length_units::None)
+    , m_ref_y(property_id::RefY, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::None)
+    , m_marker_width(property_id::MarkerWidth, length_direction::Horizontal, length_negative_mode::forbid, 3.f, length_units::None)
+    , m_marker_height(property_id::MarkerHeight, length_direction::vertical, length_negative_mode::forbid, 3.f, length_units::None)
+    , m_marker_units(property_id::MarkerUnits, MarkerUnits::StrokeWidth)
+    , m_orient(property_id::Orient)
 {
-    addProperty(m_refX);
-    addProperty(m_refY);
-    addProperty(m_markerWidth);
-    addProperty(m_markerHeight);
-    addProperty(m_markerUnits);
-    addProperty(m_orient);
+    add_property(m_ref_x);
+    add_property(m_ref_y);
+    add_property(m_marker_width);
+    add_property(m_marker_height);
+    add_property(m_marker_units);
+    add_property(m_orient);
 }
 
-Point svg_marker_element::refPoint() const
-{
-    LengthContext lengthContext(this);
-    const Point refPoint = {
-        lengthContext.valueForLength(m_refX),
-        lengthContext.valueForLength(m_refY)
-    };
-
-    return refPoint;
-}
-
-Size svg_marker_element::markerSize() const
+Point svg_marker_element::ref_point() const
 {
     LengthContext lengthContext(this);
-    const Size markerSize = {
-        lengthContext.valueForLength(m_markerWidth),
-        lengthContext.valueForLength(m_markerHeight)
+    const Point ref_point = {
+        lengthContext.value_for_length(m_ref_x),
+        lengthContext.value_for_length(m_ref_y)
     };
 
-    return markerSize;
+    return ref_point;
 }
 
-Transform svg_marker_element::markerTransform(const Point& origin, float angle, float strokeWidth) const
+Size svg_marker_element::marker_size() const
+{
+    LengthContext lengthContext(this);
+    const Size marker_size = {
+        lengthContext.value_for_length(m_marker_width),
+        lengthContext.value_for_length(m_marker_height)
+    };
+
+    return marker_size;
+}
+
+Transform svg_marker_element::marker_transform(const Point& origin, float angle, float strokeWidth) const
 {
     auto transform = Transform::translated(origin.x, origin.y);
     if(m_orient.orientType() == svg_angle::OrientType::Angle) {
@@ -54,242 +54,242 @@ Transform svg_marker_element::markerTransform(const Point& origin, float angle, 
         transform.rotate(angle);
     }
 
-    auto viewTransform = viewBoxToViewTransform(markerSize());
-    auto refOrigin = viewTransform.mapPoint(refPoint());
-    if(m_markerUnits.value() == MarkerUnits::StrokeWidth)
+    auto view_transform = view_box_to_view_transform(marker_size());
+    auto ref_origin = view_transform.map_point(ref_point());
+    if(m_marker_units.value() == MarkerUnits::StrokeWidth)
         transform.scale(strokeWidth, strokeWidth);
-    transform.translate(-refOrigin.x, -refOrigin.y);
-    return transform * viewTransform;
+    transform.translate(-ref_origin.x, -ref_origin.y);
+    return transform * view_transform;
 }
 
-Rect svg_marker_element::markerBoundingBox(const Point& origin, float angle, float strokeWidth) const
+Rect svg_marker_element::marker_bounding_box(const Point& origin, float angle, float strokeWidth) const
 {
-    return markerTransform(origin, angle, strokeWidth).map_rect(paint_bounding_box());
+    return marker_transform(origin, angle, strokeWidth).map_rect(paint_bounding_box());
 }
 
-void svg_marker_element::renderMarker(svg_render_state& state, const Point& origin, float angle, float strokeWidth) const
+void svg_marker_element::render_marker(svg_render_state& state, const Point& origin, float angle, float strokeWidth) const
 {
-    if(state.hasCycleReference(this))
+    if(state.has_cycle_reference(this))
         return;
-    svg_blend_info blendInfo(this);
-    svg_render_state newState(this, state, markerTransform(origin, angle, strokeWidth));
-    newState.beginGroup(blendInfo);
-    if(isOverflowHidden())
-        newState->clip_rect(getClipRect(markerSize()), FillRule::NonZero, newState.currentTransform());
-    renderChildren(newState);
-    newState.endGroup(blendInfo);
+    svg_blend_info blend_info(this);
+    svg_render_state newState(this, state, marker_transform(origin, angle, strokeWidth));
+    newState.beginGroup(blend_info);
+    if(is_overflow_hidden())
+        newState->clip_rect(get_clip_rect(marker_size()), FillRule::NonZero, newState.current_transform());
+    render_children(newState);
+    newState.endGroup(blend_info);
 }
 
 Transform svg_marker_element::local_transform() const
 {
-    return viewBoxToViewTransform(markerSize());
+    return view_box_to_view_transform(marker_size());
 }
 
 svg_clip_path_element::svg_clip_path_element(document* dom)
-    : svg_graphics_element(dom, ElementID::ClipPath)
-    , m_clipPathUnits(PropertyID::ClipPathUnits, Units::UserSpaceOnUse)
+    : svg_graphics_element(dom, element_id::ClipPath)
+    , m_clip_path_units(property_id::ClipPathUnits, Units::user_space_on_use)
 {
-    addProperty(m_clipPathUnits);
+    add_property(m_clip_path_units);
 }
 
-Rect svg_clip_path_element::clipBoundingBox(const svg_element* el) const
+Rect svg_clip_path_element::clip_bounding_box(const svg_element* el) const
 {
-    auto clipBoundingBox = paint_bounding_box();
-    if(m_clipPathUnits.value() == Units::ObjectBoundingBox) {
-        auto bbox = el->fillBoundingBox();
-        clipBoundingBox.x = clipBoundingBox.x * bbox.w + bbox.x;
-        clipBoundingBox.y = clipBoundingBox.y * bbox.h + bbox.y;
-        clipBoundingBox.w = clipBoundingBox.w * bbox.w;
-        clipBoundingBox.h = clipBoundingBox.h * bbox.h;
+    auto clip_bounding_box = paint_bounding_box();
+    if(m_clip_path_units.value() == Units::object_bounding_box) {
+        auto bbox = el->fill_bounding_box();
+        clip_bounding_box.x = clip_bounding_box.x * bbox.w + bbox.x;
+        clip_bounding_box.y = clip_bounding_box.y * bbox.h + bbox.y;
+        clip_bounding_box.w = clip_bounding_box.w * bbox.w;
+        clip_bounding_box.h = clip_bounding_box.h * bbox.h;
     }
 
-    return local_transform().map_rect(clipBoundingBox);
+    return local_transform().map_rect(clip_bounding_box);
 }
 
-void svg_clip_path_element::applyClipMask(svg_render_state& state) const
+void svg_clip_path_element::apply_clip_mask(svg_render_state& state) const
 {
-    if(state.hasCycleReference(this))
+    if(state.has_cycle_reference(this))
         return;
-    auto maskImage = raster_canvas::create(state.currentTransform().map_rect(state.paint_bounding_box()));
-    auto currentTransform = state.currentTransform() * local_transform();
-    if(m_clipPathUnits.value() == Units::ObjectBoundingBox) {
-        auto bbox = state.fillBoundingBox();
-        currentTransform.translate(bbox.x, bbox.y);
-        currentTransform.scale(bbox.w, bbox.h);
+    auto mask_image = raster_canvas::create(state.current_transform().map_rect(state.paint_bounding_box()));
+    auto current_transform = state.current_transform() * local_transform();
+    if(m_clip_path_units.value() == Units::object_bounding_box) {
+        auto bbox = state.fill_bounding_box();
+        current_transform.translate(bbox.x, bbox.y);
+        current_transform.scale(bbox.w, bbox.h);
     }
 
-    svg_render_state newState(this, &state, currentTransform, svg_render_mode::Clipping, maskImage);
-    renderChildren(newState);
+    svg_render_state newState(this, &state, current_transform, svg_render_mode::Clipping, mask_image);
+    render_children(newState);
     if(clipper()) {
-        clipper()->applyClipMask(newState);
+        clipper()->apply_clip_mask(newState);
     }
 
-    state.raster()->blend_canvas(*maskImage, BlendMode::Dst_In, 1.f);
+    state.raster()->blend_canvas(*mask_image, BlendMode::dst_in, 1.f);
 }
 
-void svg_clip_path_element::applyClipPath(svg_render_state& state) const
+void svg_clip_path_element::apply_clip_path(svg_render_state& state) const
 {
-    auto currentTransform = state.currentTransform() * local_transform();
-    if(m_clipPathUnits.value() == Units::ObjectBoundingBox) {
-        auto bbox = state.fillBoundingBox();
-        currentTransform.translate(bbox.x, bbox.y);
-        currentTransform.scale(bbox.w, bbox.h);
+    auto current_transform = state.current_transform() * local_transform();
+    if(m_clip_path_units.value() == Units::object_bounding_box) {
+        auto bbox = state.fill_bounding_box();
+        current_transform.translate(bbox.x, bbox.y);
+        current_transform.scale(bbox.w, bbox.h);
     }
 
     for(const auto& child : children()) {
-        auto el = toSVGElement(child);
-        if(el == nullptr || el->isDisplayNone())
+        auto el = to_svg_element(child);
+        if(el == nullptr || el->is_display_none())
             continue;
-        Transform clipTransform(currentTransform);
-        auto shapeElement = toSVGGeometryElement(el);
-        if(shapeElement == nullptr) {
-            if(el->id() != ElementID::Use)
+        Transform clip_transform(current_transform);
+        auto shape_element = to_svg_geometry_element(el);
+        if(shape_element == nullptr) {
+            if(el->id() != element_id::use)
                 continue;
-            clipTransform.multiply(el->local_transform());
-            shapeElement = toSVGGeometryElement(el->firstChild());
+            clip_transform.multiply(el->local_transform());
+            shape_element = to_svg_geometry_element(el->firstChild());
         }
 
-        if(shapeElement == nullptr || !shapeElement->isRenderable())
+        if(shape_element == nullptr || !shape_element->is_renderable())
             continue;
-        state->clip_path(shapeElement->path(), shapeElement->clip_rule(), clipTransform * shapeElement->local_transform());
+        state->clip_path(shape_element->path(), shape_element->clip_rule(), clip_transform * shape_element->local_transform());
         return;
     }
 
-    state->clip_rect(Rect::Empty, FillRule::NonZero, Transform::Identity);
+    state->clip_rect(Rect::Empty, FillRule::NonZero, Transform::identity);
 }
 
-bool svg_clip_path_element::requiresMasking() const
+bool svg_clip_path_element::requires_masking() const
 {
     if(clipper())
         return true;
-    const svg_geometry_element* prevShapeElement = nullptr;
+    const svg_geometry_element* prev_shape_element = nullptr;
     for(const auto& child : children()) {
-        auto el = toSVGElement(child);
-        if(el == nullptr || el->isDisplayNone())
+        auto el = to_svg_element(child);
+        if(el == nullptr || el->is_display_none())
             continue;
-        auto shapeElement = toSVGGeometryElement(el);
-        if(shapeElement == nullptr) {
-            if(el->isTextPositioningElement())
+        auto shape_element = to_svg_geometry_element(el);
+        if(shape_element == nullptr) {
+            if(el->is_text_positioning_element())
                 return true;
-            if(el->id() != ElementID::Use)
+            if(el->id() != element_id::use)
                 continue;
             if(el->clipper())
                 return true;
-            shapeElement = toSVGGeometryElement(el->firstChild());
+            shape_element = to_svg_geometry_element(el->firstChild());
         }
 
-        if(shapeElement == nullptr || !shapeElement->isRenderable())
+        if(shape_element == nullptr || !shape_element->is_renderable())
             continue;
-        if(prevShapeElement || shapeElement->clipper())
+        if(prev_shape_element || shape_element->clipper())
             return true;
-        prevShapeElement = shapeElement;
+        prev_shape_element = shape_element;
     }
 
     return false;
 }
 
 svg_mask_element::svg_mask_element(document* dom)
-    : svg_element(dom, ElementID::Mask)
-    , m_x(PropertyID::X, LengthDirection::Horizontal, LengthNegativeMode::Allow, -10.f, LengthUnits::Percent)
-    , m_y(PropertyID::Y, LengthDirection::Vertical, LengthNegativeMode::Allow, -10.f, LengthUnits::Percent)
-    , m_width(PropertyID::Width, LengthDirection::Horizontal, LengthNegativeMode::Forbid, 120.f, LengthUnits::Percent)
-    , m_height(PropertyID::Height, LengthDirection::Vertical, LengthNegativeMode::Forbid, 120.f, LengthUnits::Percent)
-    , m_maskUnits(PropertyID::MaskUnits, Units::ObjectBoundingBox)
-    , m_maskContentUnits(PropertyID::MaskContentUnits, Units::UserSpaceOnUse)
+    : svg_element(dom, element_id::Mask)
+    , m_x(property_id::X, length_direction::Horizontal, length_negative_mode::allow, -10.f, length_units::percent)
+    , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow, -10.f, length_units::percent)
+    , m_width(property_id::Width, length_direction::Horizontal, length_negative_mode::forbid, 120.f, length_units::percent)
+    , m_height(property_id::Height, length_direction::vertical, length_negative_mode::forbid, 120.f, length_units::percent)
+    , m_mask_units(property_id::MaskUnits, Units::object_bounding_box)
+    , m_mask_content_units(property_id::MaskContentUnits, Units::user_space_on_use)
 {
-    addProperty(m_x);
-    addProperty(m_y);
-    addProperty(m_width);
-    addProperty(m_height);
-    addProperty(m_maskUnits);
-    addProperty(m_maskContentUnits);
+    add_property(m_x);
+    add_property(m_y);
+    add_property(m_width);
+    add_property(m_height);
+    add_property(m_mask_units);
+    add_property(m_mask_content_units);
 }
 
-Rect svg_mask_element::maskRect(const svg_element* el) const
+Rect svg_mask_element::mask_rect(const svg_element* el) const
 {
-    LengthContext lengthContext(this, m_maskUnits.value());
-    Rect maskRect = {
-        lengthContext.valueForLength(m_x),
-        lengthContext.valueForLength(m_y),
-        lengthContext.valueForLength(m_width),
-        lengthContext.valueForLength(m_height)
+    LengthContext lengthContext(this, m_mask_units.value());
+    Rect mask_rect = {
+        lengthContext.value_for_length(m_x),
+        lengthContext.value_for_length(m_y),
+        lengthContext.value_for_length(m_width),
+        lengthContext.value_for_length(m_height)
     };
 
-    if(m_maskUnits.value() == Units::ObjectBoundingBox) {
-        auto bbox = el->fillBoundingBox();
-        maskRect.x = maskRect.x * bbox.w + bbox.x;
-        maskRect.y = maskRect.y * bbox.h + bbox.y;
-        maskRect.w = maskRect.w * bbox.w;
-        maskRect.h = maskRect.h * bbox.h;
+    if(m_mask_units.value() == Units::object_bounding_box) {
+        auto bbox = el->fill_bounding_box();
+        mask_rect.x = mask_rect.x * bbox.w + bbox.x;
+        mask_rect.y = mask_rect.y * bbox.h + bbox.y;
+        mask_rect.w = mask_rect.w * bbox.w;
+        mask_rect.h = mask_rect.h * bbox.h;
     }
 
-    return maskRect;
+    return mask_rect;
 }
 
-Rect svg_mask_element::maskBoundingBox(const svg_element* el) const
+Rect svg_mask_element::mask_bounding_box(const svg_element* el) const
 {
-    auto maskBoundingBox = paint_bounding_box();
-    if(m_maskContentUnits.value() == Units::ObjectBoundingBox) {
-        auto bbox = el->fillBoundingBox();
-        maskBoundingBox.x = maskBoundingBox.x * bbox.w + bbox.x;
-        maskBoundingBox.y = maskBoundingBox.y * bbox.h + bbox.y;
-        maskBoundingBox.w = maskBoundingBox.w * bbox.w;
-        maskBoundingBox.h = maskBoundingBox.h * bbox.h;
+    auto mask_bounding_box = paint_bounding_box();
+    if(m_mask_content_units.value() == Units::object_bounding_box) {
+        auto bbox = el->fill_bounding_box();
+        mask_bounding_box.x = mask_bounding_box.x * bbox.w + bbox.x;
+        mask_bounding_box.y = mask_bounding_box.y * bbox.h + bbox.y;
+        mask_bounding_box.w = mask_bounding_box.w * bbox.w;
+        mask_bounding_box.h = mask_bounding_box.h * bbox.h;
     }
 
-    return maskBoundingBox.intersected(maskRect(el));
+    return mask_bounding_box.intersected(mask_rect(el));
 }
 
-void svg_mask_element::applyMask(svg_render_state& state) const
+void svg_mask_element::apply_mask(svg_render_state& state) const
 {
-    if(state.hasCycleReference(this))
+    if(state.has_cycle_reference(this))
         return;
-    auto maskImage = raster_canvas::create(state.currentTransform().map_rect(state.paint_bounding_box()));
-    maskImage->clip_rect(maskRect(state.el()), FillRule::NonZero, state.currentTransform());
+    auto mask_image = raster_canvas::create(state.current_transform().map_rect(state.paint_bounding_box()));
+    mask_image->clip_rect(mask_rect(state.el()), FillRule::NonZero, state.current_transform());
 
-    auto currentTransform = state.currentTransform();
-    if(m_maskContentUnits.value() == Units::ObjectBoundingBox) {
-        auto bbox = state.fillBoundingBox();
-        currentTransform.translate(bbox.x, bbox.y);
-        currentTransform.scale(bbox.w, bbox.h);
+    auto current_transform = state.current_transform();
+    if(m_mask_content_units.value() == Units::object_bounding_box) {
+        auto bbox = state.fill_bounding_box();
+        current_transform.translate(bbox.x, bbox.y);
+        current_transform.scale(bbox.w, bbox.h);
     }
 
-    svg_render_state newState(this, &state, currentTransform, svg_render_mode::Painting, maskImage);
-    renderChildren(newState);
+    svg_render_state newState(this, &state, current_transform, svg_render_mode::painting, mask_image);
+    render_children(newState);
     if(clipper())
-        clipper()->applyClipMask(newState);
+        clipper()->apply_clip_mask(newState);
     if(masker()) {
-        masker()->applyMask(newState);
+        masker()->apply_mask(newState);
     }
 
-    if(m_mask_type == MaskType::Luminance)
-        maskImage->convert_to_luminance_mask();
-    state.raster()->blend_canvas(*maskImage, BlendMode::Dst_In, 1.f);
+    if(m_mask_type == MaskType::luminance)
+        mask_image->convert_to_luminance_mask();
+    state.raster()->blend_canvas(*mask_image, BlendMode::dst_in, 1.f);
 }
 
 svg_filter_element::svg_filter_element(document* dom)
-    : svg_element(dom, ElementID::Filter)
+    : svg_element(dom, element_id::Filter)
 {
 }
 
-float svg_filter_element::pixelMargin() const
+float svg_filter_element::pixel_margin() const
 {
     float margin = 0.f;
     for(const auto& child : children()) {
-        auto el = toSVGElement(child);
+        auto el = to_svg_element(child);
         if(!el)
             continue;
-        if(el->id() == ElementID::FeGaussianBlur) {
-            auto sigma = parseFirstFloat(el->attribute(PropertyID::StdDeviation), 0.f);
+        if(el->id() == element_id::fe_gaussian_blur) {
+            auto sigma = parse_first_float(el->attribute(property_id::std_deviation), 0.f);
             margin = STB_MAX(margin, sigma * 3.f);
-        } else if(el->id() == ElementID::FeDropShadow) {
-            auto sigma = parseFirstFloat(el->attribute(PropertyID::StdDeviation), 2.f);
-            auto dx = parseFirstFloat(el->attribute(PropertyID::Dx), 2.f);
-            auto dy = parseFirstFloat(el->attribute(PropertyID::Dy), 2.f);
+        } else if(el->id() == element_id::fe_drop_shadow) {
+            auto sigma = parse_first_float(el->attribute(property_id::std_deviation), 2.f);
+            auto dx = parse_first_float(el->attribute(property_id::Dx), 2.f);
+            auto dy = parse_first_float(el->attribute(property_id::Dy), 2.f);
             margin = STB_MAX(margin, sigma * 3.f + STB_MAX(std::abs(dx), std::abs(dy)));
-        } else if(el->id() == ElementID::FeOffset) {
-            auto dx = parseFirstFloat(el->attribute(PropertyID::Dx), 0.f);
-            auto dy = parseFirstFloat(el->attribute(PropertyID::Dy), 0.f);
+        } else if(el->id() == element_id::fe_offset) {
+            auto dx = parse_first_float(el->attribute(property_id::Dx), 0.f);
+            auto dy = parse_first_float(el->attribute(property_id::Dy), 0.f);
             margin = STB_MAX(margin, STB_MAX(std::abs(dx), std::abs(dy)));
         }
         // feFlood/feComposite/feMerge don't themselves need extra margin;
@@ -300,26 +300,26 @@ float svg_filter_element::pixelMargin() const
     return margin;
 }
 
-void svg_filter_element::applyFilter(svg_render_state& state, float scale) const
+void svg_filter_element::apply_filter(svg_render_state& state, float scale) const
 {
     svg_filter_context context(state.raster(), scale);
     for(const auto& child : children()) {
-        auto el = toSVGElement(child);
+        auto el = to_svg_element(child);
         if(!el)
             continue;
-        auto output = el->applyFilterPrimitive(context);
+        auto output = el->apply_filter_primitive(context);
         if(!output)
             continue; // not a primitive (e.g. a stray feMergeNode outside feMerge)
-        context.setResult(el->attribute(PropertyID::Result), std::move(output));
+        context.set_result(el->attribute(property_id::Result), std::move(output));
     }
 
-    state.raster()->copy_pixels_from(*context.lastResult());
+    state.raster()->copy_pixels_from(*context.last_result());
 }
 
-void svg_mask_element::layoutElement(const svg_layout_state& state)
+void svg_mask_element::layout_element(const svg_layout_state& state)
 {
     m_mask_type = state.mask_type();
-    svg_element::layoutElement(state);
+    svg_element::layout_element(state);
 }
 
 } // namespace nova::svg

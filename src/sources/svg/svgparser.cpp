@@ -5,9 +5,9 @@
 namespace nova::svg {
 using namespace vg;
 
-bool RuleData::match(const svg_element* el) const
+bool rule_data::match(const svg_element* el) const
 {
-    return matchSelector(m_selector, el);
+    return match_selector(m_selector, el);
 }
 
 } // namespace nova::svg

@@ -2,12 +2,12 @@
 
 // switch conditional processing and the geometry element cast.
 
-#include "svg_foreign_object_text.h"
+#include "svg_css_utils.h"
 
 namespace nova::svg {
 using namespace vg; // the drawing layer (nova::vg)
 
-inline bool switchChildPasses(const svg_element* child)
+inline bool switch_child_passes(const svg_element* child)
 {
     auto trim = [](std::string_view v) {
         while(!v.empty() && std::isspace(static_cast<unsigned char>(v.front())))
@@ -16,8 +16,8 @@ inline bool switchChildPasses(const svg_element* child)
             v.remove_suffix(1);
         return v;
     };
-    if(child->has_attribute(PropertyID::RequiredExtensions)) {
-        std::string_view value = trim(child->attribute(PropertyID::RequiredExtensions));
+    if(child->has_attribute(property_id::required_extensions)) {
+        std::string_view value = trim(child->attribute(property_id::required_extensions));
         bool supported = false;
         size_t pos = 0;
         while(pos < value.size() && !supported) {
@@ -32,8 +32,8 @@ inline bool switchChildPasses(const svg_element* child)
         if(!supported)
             return false;
     }
-    if(child->has_attribute(PropertyID::SystemLanguage)) {
-        std::string_view value = child->attribute(PropertyID::SystemLanguage);
+    if(child->has_attribute(property_id::system_language)) {
+        std::string_view value = child->attribute(property_id::system_language);
         bool matches = false;
         size_t pos = 0;
         while(pos <= value.size() && !matches) {
@@ -53,9 +53,9 @@ inline bool switchChildPasses(const svg_element* child)
     return true;
 }
 
-inline const svg_geometry_element* toSVGGeometryElement(const svg_node* nd)
+inline const svg_geometry_element* to_svg_geometry_element(const svg_node* nd)
 {
-    if(nd && nd->isGeometryElement())
+    if(nd && nd->is_geometry_element())
         return static_cast<const svg_geometry_element*>(nd);
     return nullptr;
 }

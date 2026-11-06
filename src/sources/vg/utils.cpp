@@ -145,16 +145,16 @@ bool skip_ws_or_comma(const char** begin, const char* end, bool* has_comma)
 void skip_css_unit(const char** begin, const char* end, float* number)
 {
     const char* it = *begin;
-    const char* unitStart = it;
+    const char* unit_start = it;
     while(it < end && ((*it >= 'a' && *it <= 'z') || (*it >= 'A' && *it <= 'Z') || *it == '%'))
         ++it;
-    if(it == unitStart)
+    if(it == unit_start)
         return;
 
-    auto length = size_t(it - unitStart);
+    auto length = size_t(it - unit_start);
     auto matches = [&](const char* unit) {
-        auto unitLength = strlen(unit);
-        return length == unitLength && strncmp(unitStart, unit, unitLength) == 0;
+        auto unit_length = strlen(unit);
+        return length == unit_length && strncmp(unit_start, unit, unit_length) == 0;
     };
 
     if(matches("rad"))

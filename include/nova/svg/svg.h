@@ -37,7 +37,7 @@
 
 #define NOVA_VERSION_MAJOR 0
 #define NOVA_VERSION_MINOR 11
-#define NOVA_VERSION_PATCH 4
+#define NOVA_VERSION_PATCH 5
 
 #define NOVA_VERSION_ENCODE(major, minor, patch) (((major) * 10000) + ((minor) * 100) + ((patch) * 1))
 #define NOVA_VERSION NOVA_VERSION_ENCODE(NOVA_VERSION_MAJOR, NOVA_VERSION_MINOR, NOVA_VERSION_PATCH)
@@ -161,7 +161,7 @@ protected:
     friend class element;
 };
 
-using NodeList = std::vector<node>;
+using node_list = std::vector<node>;
 
 class NOVA_API text_node : public node {
 public:
@@ -282,7 +282,7 @@ public:
      * @brief Returns the child nodes of this nd.
      * @return A NodeList containing the child nodes.
      */
-    NodeList children() const;
+    node_list children() const;
 
 private:
     element(svg_element* el);
@@ -291,7 +291,7 @@ private:
     friend class document;
 };
 
-using ElementList = std::vector<element>;
+using element_list = std::vector<element>;
 
 class svg_root_element;
 
@@ -337,7 +337,7 @@ public:
      * @param content A string containing the CSS selector(s) to match elements.
      * @return A list of elements matching the selector(s).
      */
-    ElementList query_selector_all(const std::string& content) const;
+    element_list query_selector_all(const std::string& content) const;
 
     /**
      * @brief Returns the intrinsic width of the dom in pixels.
@@ -455,7 +455,7 @@ private:
     document& operator=(const document&) = delete;
     svg_root_element* root_element(bool layout_if_needed = false) const;
     bool parse(const char* data, size_t length);
-    std::unique_ptr<svg_root_element> m_rootElement;
+    std::unique_ptr<svg_root_element> m_root_element;
     friend class svg_uri_reference;
     friend class svg_node;
 };

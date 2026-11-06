@@ -25,8 +25,8 @@ using namespace vg; // the drawing layer (nova::vg)
 
 
 // ---- svgproperty ----
-enum class PropertyID : uint8_t {
-    Unknown = 0,
+enum class property_id : uint8_t {
+    unknown = 0,
     Alignment_Baseline,
     Background_Color,
     Baseline_Shift,
@@ -61,7 +61,7 @@ enum class PropertyID : uint8_t {
     Href,
     Id,
     In,
-    In2,
+    in2,
     K1,
     K2,
     K3,
@@ -93,13 +93,13 @@ enum class PropertyID : uint8_t {
     R,
     RefX,
     RefY,
-    RequiredExtensions,
+    required_extensions,
     Result,
     Rotate,
     Rx,
     Ry,
     SpreadMethod,
-    StdDeviation,
+    std_deviation,
     Stop_Color,
     Stop_Opacity,
     Stroke,
@@ -111,13 +111,13 @@ enum class PropertyID : uint8_t {
     Stroke_Opacity,
     Stroke_Width,
     Style,
-    SystemLanguage,
+    system_language,
     Text_Anchor,
     Text_Orientation,
     TextLength,
     Transform,
-    Transform_Box,
-    Transform_Origin,
+    transform_box,
+    transform_origin,
     ViewBox,
     Visibility,
     White_Space,
@@ -132,28 +132,28 @@ enum class PropertyID : uint8_t {
     Y2
 };
 
-PropertyID propertyid(std::string_view name);
-PropertyID csspropertyid(std::string_view name);
+property_id propertyid(std::string_view name);
+property_id csspropertyid(std::string_view name);
 
 class svg_element;
 
 class svg_property {
 public:
-    svg_property(PropertyID id);
+    svg_property(property_id id);
     virtual ~svg_property() = default;
-    PropertyID id() const { return m_id; }
+    property_id id() const { return m_id; }
 
     virtual bool parse(std::string_view input) = 0;
 
 private:
     svg_property(const svg_property&) = delete;
     svg_property& operator=(const svg_property&) = delete;
-    PropertyID m_id;
+    property_id m_id;
 };
 
 class svg_string final : public svg_property {
 public:
-    explicit svg_string(PropertyID id)
+    explicit svg_string(property_id id)
         : svg_property(id)
     {}
 
@@ -187,27 +187,27 @@ enum class Display : uint8_t {
 };
 
 enum class Visibility : uint8_t {
-    Visible,
-    Hidden,
-    Collapse
+    visible,
+    hidden,
+    collapse
 };
 
 enum class Overflow : uint8_t {
-    Visible,
-    Hidden
+    visible,
+    hidden
 };
 
 // CSS mix-blend-mode. Normal = ordinary painting. Of the other keywords the separable modes below are
 // supported; overlay, color-dodge, color-burn, hard-light, soft-light and the non-separable ones (hue,
 // saturation, color, luminosity) are not yet and paint as Normal, like a value this library doesn't know.
 enum class MixBlendMode : uint8_t {
-    Normal,
+    normal,
     Multiply,
-    Screen,
-    Darken,
-    Lighten,
-    Difference,
-    Exclusion
+    screen,
+    darken,
+    lighten,
+    difference,
+    exclusion
 };
 
 enum class PointerEvents : uint8_t {
@@ -215,99 +215,99 @@ enum class PointerEvents : uint8_t {
     Auto,
     Stroke,
     Fill,
-    Painted,
-    Visible,
-    VisibleStroke,
-    VisibleFill,
-    VisiblePainted,
+    painted,
+    visible,
+    visible_stroke,
+    visible_fill,
+    visible_painted,
     BoundingBox,
     All
 };
 
 enum class FontStyle : uint8_t {
-    Normal,
+    normal,
     Italic
 };
 
 enum class FontWeight : uint8_t {
-    Normal,
+    normal,
     Bold
 };
 
 enum class AlignmentBaseline : uint8_t {
     Auto,
     Baseline,
-    BeforeEdge,
-    TextBeforeEdge,
-    Middle,
-    Central,
-    AfterEdge,
-    TextAfterEdge,
-    Ideographic,
-    Alphabetic,
-    Hanging,
-    Mathematical
+    before_edge,
+    text_before_edge,
+    middle,
+    central,
+    after_edge,
+    text_after_edge,
+    ideographic,
+    alphabetic,
+    hanging,
+    mathematical
 };
 
 enum class DominantBaseline : uint8_t {
     Auto,
-    UseScript,
-    NoChange,
-    ResetSize,
-    Ideographic,
-    Alphabetic,
-    Hanging,
-    Mathematical,
-    Central,
-    Middle,
-    TextAfterEdge,
-    TextBeforeEdge
+    use_script,
+    no_change,
+    reset_size,
+    ideographic,
+    alphabetic,
+    hanging,
+    mathematical,
+    central,
+    middle,
+    text_after_edge,
+    text_before_edge
 };
 
 enum class TextAnchor : uint8_t {
     Start,
-    Middle,
+    middle,
     End
 };
 
 enum class WhiteSpace : uint8_t {
     Default,
-    Preserve
+    preserve
 };
 
 enum class WritingMode : uint8_t {
     Horizontal,
-    Vertical
+    vertical
 };
 
 enum class TextOrientation : uint8_t {
-    Mixed,
-    Upright
+    mixed,
+    upright
 };
 
 enum class Direction : uint8_t {
-    Ltr,
-    Rtl
+    ltr,
+    rtl
 };
 
 enum class MaskType : uint8_t {
-    Luminance,
+    luminance,
     Alpha
 };
 
 enum class Units : uint8_t {
-    UserSpaceOnUse,
-    ObjectBoundingBox
+    user_space_on_use,
+    object_bounding_box
 };
 
 enum class MarkerUnits : uint8_t {
     StrokeWidth,
-    UserSpaceOnUse
+    user_space_on_use
 };
 
 enum class LengthAdjust : uint8_t {
     Spacing,
-    SpacingAndGlyphs
+    spacing_and_glyphs
 };
 
 template<typename Enum>
@@ -316,7 +316,7 @@ using svg_enumeration_entry = std::pair<Enum, std::string_view>;
 template<typename Enum>
 class svg_enumeration final : public svg_property {
 public:
-    explicit svg_enumeration(PropertyID id, Enum value)
+    explicit svg_enumeration(property_id id, Enum value)
         : svg_property(id)
         , m_value(value)
     {}
@@ -326,7 +326,7 @@ public:
 
 private:
     template<unsigned int N>
-    bool parseEnum(std::string_view input, const svg_enumeration_entry<Enum>(&entries)[N]);
+    bool parse_enum(std::string_view input, const svg_enumeration_entry<Enum>(&entries)[N]);
     Enum m_value;
 };
 
@@ -334,123 +334,123 @@ class svg_angle final : public svg_property {
 public:
     enum class OrientType {
         Auto,
-        AutoStartReverse,
+        auto_start_reverse,
         Angle
     };
 
-    explicit svg_angle(PropertyID id)
+    explicit svg_angle(property_id id)
         : svg_property(id)
     {}
 
     float value() const { return m_value; }
-    OrientType orientType() const { return m_orientType; }
+    OrientType orientType() const { return m_orient_type; }
     bool parse(std::string_view input) final;
 
 private:
     float m_value = 0;
-    OrientType m_orientType = OrientType::Angle;
+    OrientType m_orient_type = OrientType::Angle;
 };
 
-enum class LengthUnits : uint8_t {
+enum class length_units : uint8_t {
     None,
-    Percent,
+    percent,
     Px,
-    Em,
-    Ex
+    em,
+    ex
 };
 
-enum class LengthDirection : uint8_t {
+enum class length_direction : uint8_t {
     Horizontal,
-    Vertical,
-    Diagonal
+    vertical,
+    diagonal
 };
 
-enum class LengthNegativeMode : uint8_t {
-    Allow,
-    Forbid
+enum class length_negative_mode : uint8_t {
+    allow,
+    forbid
 };
 
 class Length {
 public:
     Length() = default;
-    Length(float value, LengthUnits units)
+    Length(float value, length_units units)
         : m_value(value), m_units(units)
     {}
 
     float value() const { return m_value; }
-    LengthUnits units() const { return m_units; }
+    length_units units() const { return m_units; }
 
-    bool parse(std::string_view input, LengthNegativeMode mode);
+    bool parse(std::string_view input, length_negative_mode mode);
 
 private:
     float m_value = 0.f;
-    LengthUnits m_units = LengthUnits::None;
+    length_units m_units = length_units::None;
 };
 
 class svg_length final : public svg_property {
 public:
-    svg_length(PropertyID id, LengthDirection direction, LengthNegativeMode negativeMode, float value = 0, LengthUnits units = LengthUnits::None)
+    svg_length(property_id id, length_direction direction, length_negative_mode negative_mode, float value = 0, length_units units = length_units::None)
         : svg_property(id)
         , m_direction(direction)
-        , m_negativeMode(negativeMode)
+        , m_negative_mode(negative_mode)
         , m_value(value, units)
     {}
 
-    bool isPercent() const { return m_value.units() == LengthUnits::Percent; }
+    bool is_percent() const { return m_value.units() == length_units::percent; }
 
-    LengthDirection direction() const { return m_direction; }
-    LengthNegativeMode negativeMode() const { return m_negativeMode; }
+    length_direction direction() const { return m_direction; }
+    length_negative_mode negative_mode() const { return m_negative_mode; }
     const Length& value() const { return m_value; }
     bool parse(std::string_view input) final;
 
 private:
-    const LengthDirection m_direction;
-    const LengthNegativeMode m_negativeMode;
+    const length_direction m_direction;
+    const length_negative_mode m_negative_mode;
     Length m_value;
 };
 
 class LengthContext {
 public:
-    LengthContext(const svg_element* el, Units units = Units::UserSpaceOnUse)
+    LengthContext(const svg_element* el, Units units = Units::user_space_on_use)
         : m_element(el), m_units(units)
     {}
 
-    float valueForLength(const Length& length, LengthDirection direction) const;
-    float valueForLength(const svg_length& length) const { return valueForLength(length.value(), length.direction()); }
+    float value_for_length(const Length& length, length_direction direction) const;
+    float value_for_length(const svg_length& length) const { return value_for_length(length.value(), length.direction()); }
 
 private:
-    float viewportDimension(LengthDirection direction) const;
+    float viewport_dimension(length_direction direction) const;
     const svg_element* m_element;
     const Units m_units;
 };
 
-using LengthList = std::vector<Length>;
+using length_list = std::vector<Length>;
 
 class svg_length_list final : public svg_property {
 public:
-    svg_length_list(PropertyID id, LengthDirection direction, LengthNegativeMode negativeMode)
+    svg_length_list(property_id id, length_direction direction, length_negative_mode negative_mode)
         : svg_property(id)
         , m_direction(direction)
-        , m_negativeMode(negativeMode)
+        , m_negative_mode(negative_mode)
     {}
 
-    LengthDirection direction() const { return m_direction; }
-    LengthNegativeMode negativeMode() const { return m_negativeMode; }
-    const LengthList& values() const { return m_values; }
+    length_direction direction() const { return m_direction; }
+    length_negative_mode negative_mode() const { return m_negative_mode; }
+    const length_list& values() const { return m_values; }
     bool parse(std::string_view input) final;
 
 private:
-    const LengthDirection m_direction;
-    const LengthNegativeMode m_negativeMode;
-    LengthList m_values;
+    const length_direction m_direction;
+    const length_negative_mode m_negative_mode;
+    length_list m_values;
 };
 
 class BaselineShift {
 public:
     enum class Type {
         Baseline,
-        Sub,
-        Super,
+        sub,
+        super,
         Length
     };
 
@@ -468,7 +468,7 @@ private:
 
 class svg_number : public svg_property {
 public:
-    svg_number(PropertyID id, float value)
+    svg_number(property_id id, float value)
         : svg_property(id)
         , m_value(value)
     {}
@@ -482,7 +482,7 @@ private:
 
 class svg_number_percentage final : public svg_property {
 public:
-    svg_number_percentage(PropertyID id, float value)
+    svg_number_percentage(property_id id, float value)
         : svg_property(id)
         , m_value(value)
     {}
@@ -494,24 +494,24 @@ private:
     float m_value;
 };
 
-using NumberList = std::vector<float>;
+using number_list = std::vector<float>;
 
 class svg_number_list final : public svg_property {
 public:
-    explicit svg_number_list(PropertyID id)
+    explicit svg_number_list(property_id id)
         : svg_property(id)
     {}
 
-    const NumberList& values() const { return m_values; }
+    const number_list& values() const { return m_values; }
     bool parse(std::string_view input) final;
 
 private:
-    NumberList m_values;
+    number_list m_values;
 };
 
 class svg_path final : public svg_property {
 public:
-    explicit svg_path(PropertyID id)
+    explicit svg_path(property_id id)
         : svg_property(id)
     {}
 
@@ -524,7 +524,7 @@ private:
 
 class svg_point final : public svg_property {
 public:
-   explicit svg_point(PropertyID id)
+   explicit svg_point(property_id id)
         : svg_property(id)
     {}
 
@@ -535,26 +535,26 @@ private:
     Point m_value;
 };
 
-using PointList = std::vector<Point>;
+using point_list = std::vector<Point>;
 
 class svg_point_list final : public svg_property {
 public:
-    explicit svg_point_list(PropertyID id)
+    explicit svg_point_list(property_id id)
         : svg_property(id)
     {}
 
-    const PointList& values() const { return m_values; }
+    const point_list& values() const { return m_values; }
     bool parse(std::string_view input) final;
 
 private:
-    PointList m_values;
+    point_list m_values;
 };
 
 class svg_rect final : public svg_property {
 public:
-    explicit svg_rect(PropertyID id)
+    explicit svg_rect(property_id id)
         : svg_property(id)
-        , m_value(Rect::Invalid)
+        , m_value(Rect::invalid)
     {}
 
     const Rect& value() const { return m_value; }
@@ -566,7 +566,7 @@ private:
 
 class svg_transform final : public svg_property {
 public:
-    explicit svg_transform(PropertyID id)
+    explicit svg_transform(property_id id)
         : svg_property(id)
     {}
 
@@ -577,9 +577,9 @@ private:
     Transform m_value;
 };
 
-enum class TransformBoxType : uint8_t {
+enum class transform_box_type : uint8_t {
     ViewBox,
-    FillBox
+    fill_box
 };
 
 // CSS `transform-box`. Only distinguishes fill-box (and content-box, treated
@@ -588,16 +588,16 @@ enum class TransformBoxType : uint8_t {
 // used for (resolving `transform-origin`'s reference box).
 class svg_transform_box final : public svg_property {
 public:
-    explicit svg_transform_box(PropertyID id)
+    explicit svg_transform_box(property_id id)
         : svg_property(id)
     {}
 
-    TransformBoxType value() const { return m_value; }
+    transform_box_type value() const { return m_value; }
     bool specified() const { return m_specified; }
     bool parse(std::string_view input) final;
 
 private:
-    TransformBoxType m_value = TransformBoxType::ViewBox;
+    transform_box_type m_value = transform_box_type::ViewBox;
     bool m_specified = false;
 };
 
@@ -608,15 +608,15 @@ private:
 // full CSS <length-percentage> grammar.
 class svg_transform_origin final : public svg_property {
 public:
-    explicit svg_transform_origin(PropertyID id)
+    explicit svg_transform_origin(property_id id)
         : svg_property(id)
     {}
 
     bool specified() const { return m_specified; }
     Point resolve(const Rect& box) const
     {
-        auto ox = m_xIsPercent ? box.x + box.w * m_x : box.x + m_x;
-        auto oy = m_yIsPercent ? box.y + box.h * m_y : box.y + m_y;
+        auto ox = m_x_is_percent ? box.x + box.w * m_x : box.x + m_x;
+        auto oy = m_y_is_percent ? box.y + box.h * m_y : box.y + m_y;
         return Point(ox, oy);
     }
     bool parse(std::string_view input) final;
@@ -624,8 +624,8 @@ public:
 private:
     float m_x = 0.5f;
     float m_y = 0.5f;
-    bool m_xIsPercent = true;
-    bool m_yIsPercent = true;
+    bool m_x_is_percent = true;
+    bool m_y_is_percent = true;
     bool m_specified = false;
 };
 
@@ -633,37 +633,37 @@ class svg_preserve_aspect_ratio final : public svg_property {
 public:
     enum class AlignType {
         None,
-        xMinYMin,
-        xMidYMin,
-        xMaxYMin,
-        xMinYMid,
-        xMidYMid,
-        xMaxYMid,
-        xMinYMax,
-        xMidYMax,
-        xMaxYMax
+        x_min_y_min,
+        x_mid_y_min,
+        x_max_y_min,
+        x_min_y_mid,
+        x_mid_y_mid,
+        x_max_y_mid,
+        x_min_y_max,
+        x_mid_y_max,
+        x_max_y_max
     };
 
     enum class MeetOrSlice {
-        Meet,
-        Slice
+        meet,
+        slice
     };
 
-    explicit svg_preserve_aspect_ratio(PropertyID id)
+    explicit svg_preserve_aspect_ratio(property_id id)
         : svg_property(id)
     {}
 
-    AlignType alignType() const { return m_alignType; }
-    MeetOrSlice meetOrSlice() const { return m_meetOrSlice; }
+    AlignType alignType() const { return m_align_type; }
+    MeetOrSlice meetOrSlice() const { return m_meet_or_slice; }
     bool parse(std::string_view input) final;
 
-    Rect getClipRect(const Rect& viewBoxRect, const Size& viewportSize) const;
-    Transform getTransform(const Rect& viewBoxRect, const Size& viewportSize) const;
-    void transformRect(Rect& dstRect, Rect& srcRect) const;
+    Rect get_clip_rect(const Rect& view_box_rect, const Size& viewport_size) const;
+    Transform get_transform(const Rect& view_box_rect, const Size& viewport_size) const;
+    void transform_rect(Rect& dstRect, Rect& srcRect) const;
 
 private:
-    AlignType m_alignType = AlignType::xMidYMid;
-    MeetOrSlice m_meetOrSlice = MeetOrSlice::Meet;
+    AlignType m_align_type = AlignType::x_mid_y_mid;
+    MeetOrSlice m_meet_or_slice = MeetOrSlice::meet;
 };
 
 } // namespace nova::svg

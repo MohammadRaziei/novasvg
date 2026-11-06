@@ -15,7 +15,7 @@ stb::logging::logger& pdf_log() { static auto& l = stb::logging::get_logger("nov
 
 namespace {
 
-constexpr float kPxToPt = 0.75f;
+constexpr float k_px_to_pt = 0.75f;
 
 std::string num(float v)
 {
@@ -73,7 +73,7 @@ pdf_canvas::pdf_canvas(float width, float height)
 {
     m_paints.emplace_back();
     // y points down in novasvg; one cm at the top of the page turns PDF space into that.
-    matrix_t base = {kPxToPt, 0, 0, -kPxToPt, 0, m_height * kPxToPt};
+    matrix_t base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
     m_content += matrix_str(base) + " cm\n";
 }
 
@@ -105,11 +105,11 @@ static const char* pdf_blend_name(BlendMode mode)
 {
     switch(mode) {
     case BlendMode::Multiply: return "Multiply";
-    case BlendMode::Screen: return "Screen";
-    case BlendMode::Darken: return "Darken";
-    case BlendMode::Lighten: return "Lighten";
-    case BlendMode::Difference: return "Difference";
-    case BlendMode::Exclusion: return "Exclusion";
+    case BlendMode::screen: return "Screen";
+    case BlendMode::darken: return "Darken";
+    case BlendMode::lighten: return "Lighten";
+    case BlendMode::difference: return "Difference";
+    case BlendMode::exclusion: return "Exclusion";
     default: return "Normal";
     }
 }
@@ -147,7 +147,7 @@ namespace {
 void warn_gradient_limits(SpreadMethod spread, const GradientStops& stops)
 {
     static std::atomic<bool> spread_said{false}, alpha_said{false};
-    if(spread != SpreadMethod::Pad && !spread_said.exchange(true))
+    if(spread != SpreadMethod::pad && !spread_said.exchange(true))
         pdf_log().warning("gradient spreadMethod reflect/repeat is written as pad in PDF output");
     if(!alpha_said.load()) {
         for(const auto& s : stops) {
@@ -235,7 +235,7 @@ int pdf_canvas::shading_pattern(const matrix_t& transform)
     }
 
     // The pattern matrix maps pattern space to the *default page space*, not to the current CTM.
-    matrix_t base = {kPxToPt, 0, 0, -kPxToPt, 0, m_height * kPxToPt};
+    matrix_t base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
     matrix_t m = then(then(p.matrix, transform), base);
     int obj = add_object("<< /Type /Pattern /PatternType 2 /Shading " + shading + " /Matrix [" + matrix_str(m) + "] >>");
     std::string name = "P" + std::to_string(m_patterns.size());
@@ -470,7 +470,7 @@ void pdf_canvas::draw_image(const pixmap& image, const Rect& dst, const Rect& sr
     int object = add_image(image, &w, &h);
     if(object == 0)
         return;
-    place_image(object, w, h, dst, src, &transform.matrix(), 1.f, BlendMode::Src_Over);
+    place_image(object, w, h, dst, src, &transform.matrix(), 1.f, BlendMode::src_over);
 }
 
 void pdf_canvas::draw_raster_group(const pixmap& image, const Rect& dst, BlendMode blend_mode, float opacity)
@@ -506,7 +506,7 @@ void pdf_canvas::set_tiled_image(const pixmap& tile, const Transform& transform,
 int pdf_canvas::tiling_pattern(const matrix_t& transform)
 {
     const paint& p = m_paints.back();
-    matrix_t base = {kPxToPt, 0, 0, -kPxToPt, 0, m_height * kPxToPt};
+    matrix_t base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
     matrix_t m = then(then(p.matrix, transform), base);
     const std::string w = std::to_string(p.tile_w), h = std::to_string(p.tile_h);
     // Tile space is y-down like the bitmap: the image's top row sits at y = 0.
@@ -602,7 +602,7 @@ std::vector<uint8_t> pdf_canvas::data() const
     }
 
     const int pages_id = int(objects.size()) + 2; // page = +1, pages = +2
-    const int page = add("<< /Type /Page /Parent " + std::to_string(pages_id) + " 0 R /MediaBox [0 0 " + num(m_width * kPxToPt) + " " + num(m_height * kPxToPt)
+    const int page = add("<< /Type /Page /Parent " + std::to_string(pages_id) + " 0 R /MediaBox [0 0 " + num(m_width * k_px_to_pt) + " " + num(m_height * k_px_to_pt)
         + "] /Contents " + std::to_string(contents) + " 0 R /Resources " + resources
         + " /Group << /S /Transparency /CS /DeviceRGB >> >>");
     const int pages = add("<< /Type /Pages /Kids [" + std::to_string(page) + " 0 R] /Count 1 >>");

@@ -44,9 +44,9 @@ enum class FillRule : uint8_t {
 };
 
 enum class SpreadMethod : uint8_t {
-    Pad = NOVA_SPREAD_METHOD_PAD,
-    Reflect = NOVA_SPREAD_METHOD_REFLECT,
-    Repeat = NOVA_SPREAD_METHOD_REPEAT
+    pad = NOVA_SPREAD_METHOD_PAD,
+    reflect = NOVA_SPREAD_METHOD_REFLECT,
+    repeat = NOVA_SPREAD_METHOD_REPEAT
 };
 
 // `stb::color` now lives in color.h (a single merged class covering both
@@ -118,8 +118,8 @@ public:
     constexpr void scale(float s) { scale(s, s); }
 
     constexpr bool empty() const { return w <= 0.f || h <= 0.f; }
-    constexpr bool isZero() const { return w <= 0.f && h <= 0.f; }
-    constexpr bool isValid() const { return w >= 0.f && h >= 0.f; }
+    constexpr bool is_zero() const { return w <= 0.f && h <= 0.f; }
+    constexpr bool is_valid() const { return w >= 0.f && h >= 0.f; }
 
 public:
     float w{0};
@@ -192,12 +192,12 @@ public:
     constexpr float bottom() const { return y + h; }
 
     constexpr bool empty() const { return w <= 0.f || h <= 0.f; }
-    constexpr bool isZero() const { return w <= 0.f && h <= 0.f; }
-    constexpr bool isValid() const { return w >= 0.f && h >= 0.f; }
+    constexpr bool is_zero() const { return w <= 0.f && h <= 0.f; }
+    constexpr bool is_valid() const { return w >= 0.f && h >= 0.f; }
 
     static const Rect Empty;
-    static const Rect Invalid;
-    static const Rect Infinite;
+    static const Rect invalid;
+    static const Rect infinite;
 
 public:
     float x{0};
@@ -208,9 +208,9 @@ public:
 
 constexpr Rect Rect::intersected(const Rect& rect) const
 {
-    if(!rect.isValid())
+    if(!rect.is_valid())
         return *this;
-    if(!isValid())
+    if(!is_valid())
         return rect;
     auto l = STB_MAX(x, rect.x);
     auto t = STB_MAX(y, rect.y);
@@ -223,9 +223,9 @@ constexpr Rect Rect::intersected(const Rect& rect) const
 
 constexpr Rect Rect::united(const Rect& rect) const
 {
-    if(!rect.isValid())
+    if(!rect.is_valid())
         return *this;
-    if(!isValid())
+    if(!is_valid())
         return rect;
     auto l = STB_MIN(x, rect.x);
     auto t = STB_MIN(y, rect.y);
@@ -264,22 +264,22 @@ public:
     Transform& shear(float shx, float shy);
 
     Transform& post_multiply(const Transform& transform);
-    Transform& postTranslate(float tx, float ty);
-    Transform& postScale(float sx, float sy);
-    Transform& postRotate(float angle, float cx = 0.f, float cy = 0.f);
-    Transform& postShear(float shx, float shy);
+    Transform& post_translate(float tx, float ty);
+    Transform& post_scale(float sx, float sy);
+    Transform& post_rotate(float angle, float cx = 0.f, float cy = 0.f);
+    Transform& post_shear(float shx, float shy);
 
     Transform inverse() const;
     Transform& invert();
 
     void reset();
 
-    Point mapPoint(float x, float y) const;
-    Point mapPoint(const Point& point) const;
+    Point map_point(float x, float y) const;
+    Point map_point(const Point& point) const;
     Rect map_rect(const Rect& rect) const;
 
-    float xScale() const;
-    float yScale() const;
+    float x_scale() const;
+    float y_scale() const;
 
     const matrix_t& matrix() const { return m_matrix; }
     matrix_t& matrix() { return m_matrix; }
@@ -291,7 +291,7 @@ public:
     static Transform rotated(float angle, float cx, float cy);
     static Transform sheared(float shx, float shy);
 
-    static const Transform Identity;
+    static const Transform identity;
 
 private:
     matrix_t m_matrix;
@@ -334,55 +334,55 @@ private:
 
 namespace nova::vg {
 
-enum class TextureType {
+enum class texture_type {
     Plain = NOVA_TEXTURE_TYPE_PLAIN,
     Tiled = NOVA_TEXTURE_TYPE_TILED
 };
 
 enum class BlendMode {
     Src = NOVA_OPERATOR_SRC,
-    Src_Over = NOVA_OPERATOR_SRC_OVER,
-    Dst_In = NOVA_OPERATOR_DST_IN,
-    Dst_Out = NOVA_OPERATOR_DST_OUT,
+    src_over = NOVA_OPERATOR_SRC_OVER,
+    dst_in = NOVA_OPERATOR_DST_IN,
+    dst_out = NOVA_OPERATOR_DST_OUT,
     Multiply = NOVA_OPERATOR_MULTIPLY,
-    Screen = NOVA_OPERATOR_SCREEN,
-    Darken = NOVA_OPERATOR_DARKEN,
-    Lighten = NOVA_OPERATOR_LIGHTEN,
-    Difference = NOVA_OPERATOR_DIFFERENCE,
-    Exclusion = NOVA_OPERATOR_EXCLUSION
+    screen = NOVA_OPERATOR_SCREEN,
+    darken = NOVA_OPERATOR_DARKEN,
+    lighten = NOVA_OPERATOR_LIGHTEN,
+    difference = NOVA_OPERATOR_DIFFERENCE,
+    exclusion = NOVA_OPERATOR_EXCLUSION
 };
 
 using DashArray = std::vector<float>;
 
 class StrokeData {
 public:
-    explicit StrokeData(float lineWidth = 1.f) : m_lineWidth(lineWidth) {}
+    explicit StrokeData(float lineWidth = 1.f) : m_line_width(lineWidth) {}
 
-    void setLineWidth(float lineWidth) { m_lineWidth = lineWidth; }
-    float lineWidth() const { return m_lineWidth; }
+    void set_line_width(float lineWidth) { m_line_width = lineWidth; }
+    float lineWidth() const { return m_line_width; }
 
-    void setMiterLimit(float miterLimit) { m_miterLimit = miterLimit; }
-    float miterLimit() const { return m_miterLimit; }
+    void set_miter_limit(float miterLimit) { m_miter_limit = miterLimit; }
+    float miterLimit() const { return m_miter_limit; }
 
-    void setDashOffset(float dashOffset) { m_dashOffset = dashOffset; }
-    float dashOffset() const { return m_dashOffset; }
+    void set_dash_offset(float dashOffset) { m_dash_offset = dashOffset; }
+    float dashOffset() const { return m_dash_offset; }
 
-    void setDashArray(DashArray dashArray) { m_dashArray = std::move(dashArray); }
-    const DashArray& dashArray() const { return m_dashArray; }
+    void set_dash_array(DashArray dashArray) { m_dash_array = std::move(dashArray); }
+    const DashArray& dashArray() const { return m_dash_array; }
 
-    void setLineCap(LineCap lineCap) { m_lineCap = lineCap; }
-    LineCap lineCap() const { return m_lineCap; }
+    void set_line_cap(LineCap lineCap) { m_line_cap = lineCap; }
+    LineCap lineCap() const { return m_line_cap; }
 
-    void setLineJoin(LineJoin lineJoin) { m_lineJoin = lineJoin; }
-    LineJoin lineJoin() const { return m_lineJoin; }
+    void set_line_join(LineJoin lineJoin) { m_line_join = lineJoin; }
+    LineJoin lineJoin() const { return m_line_join; }
 
 private:
-    float m_lineWidth;
-    float m_miterLimit{4.f};
-    float m_dashOffset{0.f};
-    LineCap m_lineCap{LineCap::Butt};
-    LineJoin m_lineJoin{LineJoin::Miter};
-    DashArray m_dashArray;
+    float m_line_width;
+    float m_miter_limit{4.f};
+    float m_dash_offset{0.f};
+    LineCap m_line_cap{LineCap::Butt};
+    LineJoin m_line_join{LineJoin::Miter};
+    DashArray m_dash_array;
 };
 
 using GradientStop = gradient_stop_t;
@@ -430,7 +430,7 @@ public:
     void set_color(float r, float g, float b, float a) override;
     void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform) override;
     void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform) override;
-    void set_texture(const raster_canvas& source, TextureType type, float opacity, const Transform& transform);
+    void set_texture(const raster_canvas& source, texture_type type, float opacity, const Transform& transform);
 
     void fill_path(const stb::outline& path, FillRule fillRule, const Transform& transform) override;
     void stroke_path(const stb::outline& path, const StrokeData& strokeData, const Transform& transform) override;
@@ -454,7 +454,7 @@ public:
     // uses, and O(w*h) instead of O(w*h*kernel). Upgrade path: replace the
     // naive per-pixel box blur loop with a moving-sum/summed-area version
     // if profiling ever shows this mattering for very large canvases.
-    void box_blur(float stdDeviationX, float stdDeviationY);
+    void box_blur(float std_deviation_x, float std_deviation_y);
 
     // Composites `this` (already blurred, tinted to floodColor/floodOpacity
     // by the caller) as a drop shadow: offsets by (dx, dy) and draws
@@ -475,7 +475,7 @@ public:
 
     // Porter-Duff compositing operators needed by feComposite/feMerge.
     // (arithmetic is intentionally not offered -- see svg_fe_composite_element)
-    enum class porter_duff { Over, In, Out, Atop, Xor };
+    enum class porter_duff { Over, In, Out, atop, Xor };
     void composite_with(const raster_canvas& src, porter_duff mode);
     void composite_over(const raster_canvas& src) ;
 
@@ -523,15 +523,15 @@ private:
 // stb::color::black()/White/Transparent are defined once, in color.h.
 
 NOVA_INLINE const Rect Rect::Empty(0, 0, 0, 0);
-NOVA_INLINE const Rect Rect::Invalid(0, 0, -1, -1);
-NOVA_INLINE const Rect Rect::Infinite(-FLT_MAX / 2.f, -FLT_MAX / 2.f, FLT_MAX, FLT_MAX);
+NOVA_INLINE const Rect Rect::invalid(0, 0, -1, -1);
+NOVA_INLINE const Rect Rect::infinite(-FLT_MAX / 2.f, -FLT_MAX / 2.f, FLT_MAX, FLT_MAX);
 
 // Rect::Rect(const Box&) is defined in novasvg.h, right after Box itself --
 // Box belongs to the svg/document layer, not here, so this file (which
 // stays usable without that layer) only declares the conversion, it
 // doesn't define it.
 
-NOVA_INLINE const Transform Transform::Identity(1, 0, 0, 1, 0, 0);
+NOVA_INLINE const Transform Transform::identity(1, 0, 0, 1, 0, 0);
 
 
 
@@ -623,7 +623,7 @@ NOVA_INLINE const Transform Transform::Identity(1, 0, 0, 1, 0, 0);
 // not depend on the radius. The sums are exact integers, and each is converted back with the same
 // `uint32_t(float(sum) * (1 / (2*radius+1)))` as a window summed from scratch would be, so the output is
 // identical to the straightforward version.
-static void boxBlurPass(unsigned char* data, int width, int height, int stride, int radius, bool horizontal)
+static void box_blur_pass(unsigned char* data, int width, int height, int stride, int radius, bool horizontal)
 {
     if(radius <= 0 || width <= 0 || height <= 0)
         return;
@@ -711,7 +711,7 @@ static void boxBlurPass(unsigned char* data, int width, int height, int stride, 
 // of 2d+1) doubles the effective blur: for stdDeviation=4 that's an
 // effective sigma of ~8.5 instead of 4, visibly wider/softer than every
 // other engine's render of the same filter.
-static int gaussianRadiusForSigma(float sigma)
+static int gaussian_radius_for_sigma(float sigma)
 {
     if(sigma <= 0.f)
         return 0;

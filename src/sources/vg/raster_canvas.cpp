@@ -55,22 +55,22 @@ Transform& Transform::post_multiply(const Transform& transform)
     return (*this = transform * *this);
 }
 
-Transform& Transform::postTranslate(float tx, float ty)
+Transform& Transform::post_translate(float tx, float ty)
 {
     return post_multiply(translated(tx, ty));
 }
 
-Transform& Transform::postScale(float sx, float sy)
+Transform& Transform::post_scale(float sx, float sy)
 {
     return post_multiply(scaled(sx, sy));
 }
 
-Transform& Transform::postRotate(float angle, float cx, float cy)
+Transform& Transform::post_rotate(float angle, float cx, float cy)
 {
     return post_multiply(rotated(angle, cx, cy));
 }
 
-Transform& Transform::postShear(float shx, float shy)
+Transform& Transform::post_shear(float shx, float shy)
 {
     return post_multiply(sheared(shx, shy));
 }
@@ -93,21 +93,21 @@ void Transform::reset()
     matrix_init_identity(&m_matrix);
 }
 
-Point Transform::mapPoint(float x, float y) const
+Point Transform::map_point(float x, float y) const
 {
     matrix_map(&m_matrix, x, y, &x, &y);
     return Point(x, y);
 }
 
-Point Transform::mapPoint(const Point& point) const
+Point Transform::map_point(const Point& point) const
 {
-    return mapPoint(point.x, point.y);
+    return map_point(point.x, point.y);
 }
 
 Rect Transform::map_rect(const Rect& rect) const
 {
-    if(!rect.isValid()) {
-        return Rect::Invalid;
+    if(!rect.is_valid()) {
+        return Rect::invalid;
     }
 
     rect_t result = {rect.x, rect.y, rect.w, rect.h};
@@ -115,12 +115,12 @@ Rect Transform::map_rect(const Rect& rect) const
     return result;
 }
 
-float Transform::xScale() const
+float Transform::x_scale() const
 {
     return std::sqrt(m_matrix.a * m_matrix.a + m_matrix.b * m_matrix.b);
 }
 
-float Transform::yScale() const
+float Transform::y_scale() const
 {
     return std::sqrt(m_matrix.c * m_matrix.c + m_matrix.d * m_matrix.d);
 }
@@ -183,8 +183,8 @@ std::shared_ptr<raster_canvas> raster_canvas::create(const pixmap& bitmap)
 
 std::shared_ptr<raster_canvas> raster_canvas::create(float x, float y, float width, float height)
 {
-    constexpr int kMaxSize = 1 << 15;
-    if(width <= 0 || height <= 0 || width >= kMaxSize || height >= kMaxSize)
+    constexpr int k_max_size = 1 << 15;
+    if(width <= 0 || height <= 0 || width >= k_max_size || height >= k_max_size)
         return std::shared_ptr<raster_canvas>(new raster_canvas(0, 0, 1, 1));
     auto l = static_cast<int>(std::floor(x));
     auto t = static_cast<int>(std::floor(y));
@@ -218,7 +218,7 @@ void raster_canvas::set_radial_gradient(float cx, float cy, float r, float fx, f
     canvas_set_radial_gradient(m_canvas, cx, cy, r, fx, fy, 0.f, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform.matrix());
 }
 
-void raster_canvas::set_texture(const raster_canvas& source, TextureType type, float opacity, const Transform& transform)
+void raster_canvas::set_texture(const raster_canvas& source, texture_type type, float opacity, const Transform& transform)
 {
     canvas_set_texture(m_canvas, source.surface(), static_cast<texture_type_t>(type), opacity, &transform.matrix());
 }
@@ -292,9 +292,9 @@ void raster_canvas::clip_rect(const Rect& rect, FillRule clipRule, const Transfo
 
 void raster_canvas::draw_image(const pixmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform)
 {
-    auto xScale = dstRect.w / srcRect.w;
-    auto yScale = dstRect.h / srcRect.h;
-    matrix_t matrix = { xScale, 0, 0, yScale, -srcRect.x * xScale, -srcRect.y * yScale };
+    auto x_scale = dstRect.w / srcRect.w;
+    auto y_scale = dstRect.h / srcRect.h;
+    matrix_t matrix = { x_scale, 0, 0, y_scale, -srcRect.x * x_scale, -srcRect.y * y_scale };
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform.matrix());
     canvas_translate(m_canvas, dstRect.x, dstRect.y);
@@ -359,18 +359,18 @@ void raster_canvas::convert_to_luminance_mask()
     }
 }
 
-void raster_canvas::box_blur(float stdDeviationX, float stdDeviationY)
+void raster_canvas::box_blur(float std_deviation_x, float std_deviation_y)
 {
     auto width = surface_get_width(m_surface);
     auto height = surface_get_height(m_surface);
     auto stride = surface_get_stride(m_surface);
     auto data = surface_get_data(m_surface);
 
-    auto rx = gaussianRadiusForSigma(stdDeviationX);
-    auto ry = gaussianRadiusForSigma(stdDeviationY);
+    auto rx = gaussian_radius_for_sigma(std_deviation_x);
+    auto ry = gaussian_radius_for_sigma(std_deviation_y);
     for(int pass = 0; pass < 3; ++pass) {
-        if(rx > 0) boxBlurPass(data, width, height, stride, rx, true);
-        if(ry > 0) boxBlurPass(data, width, height, stride, ry, false);
+        if(rx > 0) box_blur_pass(data, width, height, stride, rx, true);
+        if(ry > 0) box_blur_pass(data, width, height, stride, ry, false);
     }
 }
 
@@ -400,8 +400,8 @@ void raster_canvas::tint_to_flood_color(const stb::color& floodColor, float floo
     for(int y = 0; y < height; ++y) {
         auto* pixels = reinterpret_cast<uint32_t*>(data + stride * y);
         for(int x = 0; x < width; ++x) {
-            auto srcAlpha = (pixels[x] >> 24) & 0xFF;
-            auto alpha = uint32_t(srcAlpha * floodOpacity);
+            auto src_alpha = (pixels[x] >> 24) & 0xFF;
+            auto alpha = uint32_t(src_alpha * floodOpacity);
             // premultiplied: scale color channels by (alpha / 255)
             pixels[x] = (alpha << 24) | (((r * alpha) / 255) << 16) | (((g * alpha) / 255) << 8) | ((b * alpha) / 255);
         }
@@ -445,37 +445,37 @@ void raster_canvas::composite_with(const raster_canvas& src, porter_duff mode)
     auto stride = surface_get_stride(m_surface);
     auto data = surface_get_data(m_surface);
 
-    auto sWidth = surface_get_width(src.m_surface);
-    auto sHeight = surface_get_height(src.m_surface);
-    auto sStride = surface_get_stride(src.m_surface);
-    auto sData = surface_get_data(src.m_surface);
+    auto s_width = surface_get_width(src.m_surface);
+    auto s_height = surface_get_height(src.m_surface);
+    auto s_stride = surface_get_stride(src.m_surface);
+    auto s_data = surface_get_data(src.m_surface);
 
-    for(int y = 0; y < height && y < sHeight; ++y) {
+    for(int y = 0; y < height && y < s_height; ++y) {
         auto* dst = reinterpret_cast<uint32_t*>(data + y * stride);
-        auto* srcRow = reinterpret_cast<uint32_t*>(sData + y * sStride);
-        for(int x = 0; x < width && x < sWidth; ++x) {
-            auto s = srcRow[x];
+        auto* src_row = reinterpret_cast<uint32_t*>(s_data + y * s_stride);
+        for(int x = 0; x < width && x < s_width; ++x) {
+            auto s = src_row[x];
             auto d = dst[x];
-            auto sA = (s >> 24) & 0xFF;
-            auto dA = (d >> 24) & 0xFF;
+            auto s_a = (s >> 24) & 0xFF;
+            auto d_a = (d >> 24) & 0xFF;
 
             // Porter-Duff coefficients (premultiplied): result = s*Fs + d*Fd
             int Fs, Fd;
             switch(mode) {
-            case porter_duff::In:   Fs = dA;       Fd = 0;             break;
-            case porter_duff::Out:  Fs = 255 - dA; Fd = 0;             break;
-            case porter_duff::Atop: Fs = dA;       Fd = 255 - sA;      break;
-            case porter_duff::Xor:  Fs = 255 - dA; Fd = 255 - sA;      break;
-            case porter_duff::Over: default:       Fs = 255;          Fd = 255 - sA; break;
+            case porter_duff::In:   Fs = d_a;       Fd = 0;             break;
+            case porter_duff::Out:  Fs = 255 - d_a; Fd = 0;             break;
+            case porter_duff::atop: Fs = d_a;       Fd = 255 - s_a;      break;
+            case porter_duff::Xor:  Fs = 255 - d_a; Fd = 255 - s_a;      break;
+            case porter_duff::Over: default:       Fs = 255;          Fd = 255 - s_a; break;
             }
 
             auto sr = (s >> 16) & 0xFF, sg = (s >> 8) & 0xFF, sb = s & 0xFF;
             auto dr = (d >> 16) & 0xFF, dg = (d >> 8) & 0xFF, db = d & 0xFF;
-            auto outA = STB_MIN(255, int(sA * Fs + dA * Fd) / 255);
-            auto outR = STB_MIN(255, int(sr * Fs + dr * Fd) / 255);
-            auto outG = STB_MIN(255, int(sg * Fs + dg * Fd) / 255);
-            auto outB = STB_MIN(255, int(sb * Fs + db * Fd) / 255);
-            dst[x] = (uint32_t(outA) << 24) | (uint32_t(outR) << 16) | (uint32_t(outG) << 8) | uint32_t(outB);
+            auto out_a = STB_MIN(255, int(s_a * Fs + d_a * Fd) / 255);
+            auto out_r = STB_MIN(255, int(sr * Fs + dr * Fd) / 255);
+            auto out_g = STB_MIN(255, int(sg * Fs + dg * Fd) / 255);
+            auto out_b = STB_MIN(255, int(sb * Fs + db * Fd) / 255);
+            dst[x] = (uint32_t(out_a) << 24) | (uint32_t(out_r) << 16) | (uint32_t(out_g) << 8) | uint32_t(out_b);
         }
     }
 }
@@ -492,10 +492,10 @@ void raster_canvas::composite_arithmetic(const raster_canvas& src, float k1, flo
     auto stride = surface_get_stride(m_surface);
     auto data = surface_get_data(m_surface);
 
-    auto sWidth = surface_get_width(src.m_surface);
-    auto sHeight = surface_get_height(src.m_surface);
-    auto sStride = surface_get_stride(src.m_surface);
-    auto sData = surface_get_data(src.m_surface);
+    auto s_width = surface_get_width(src.m_surface);
+    auto s_height = surface_get_height(src.m_surface);
+    auto s_stride = surface_get_stride(src.m_surface);
+    auto s_data = surface_get_data(src.m_surface);
 
     auto solve = [&](int i1, int i2) -> int {
         auto f1 = float(i1) / 255.f;
@@ -506,15 +506,15 @@ void raster_canvas::composite_arithmetic(const raster_canvas& src, float k1, flo
 
     for(int y = 0; y < height; ++y) {
         auto* dst = reinterpret_cast<uint32_t*>(data + y * stride);
-        auto* srcRow = y < sHeight ? reinterpret_cast<uint32_t*>(sData + y * sStride) : nullptr;
+        auto* src_row = y < s_height ? reinterpret_cast<uint32_t*>(s_data + y * s_stride) : nullptr;
         for(int x = 0; x < width; ++x) {
-            auto s = (srcRow && x < sWidth) ? srcRow[x] : 0u;
+            auto s = (src_row && x < s_width) ? src_row[x] : 0u;
             auto d = dst[x];
-            auto outA = solve((s >> 24) & 0xFF, (d >> 24) & 0xFF);
-            auto outR = solve((s >> 16) & 0xFF, (d >> 16) & 0xFF);
-            auto outG = solve((s >> 8) & 0xFF, (d >> 8) & 0xFF);
-            auto outB = solve(s & 0xFF, d & 0xFF);
-            dst[x] = (uint32_t(outA) << 24) | (uint32_t(outR) << 16) | (uint32_t(outG) << 8) | uint32_t(outB);
+            auto out_a = solve((s >> 24) & 0xFF, (d >> 24) & 0xFF);
+            auto out_r = solve((s >> 16) & 0xFF, (d >> 16) & 0xFF);
+            auto out_g = solve((s >> 8) & 0xFF, (d >> 8) & 0xFF);
+            auto out_b = solve(s & 0xFF, d & 0xFF);
+            dst[x] = (uint32_t(out_a) << 24) | (uint32_t(out_r) << 16) | (uint32_t(out_g) << 8) | uint32_t(out_b);
         }
     }
 }

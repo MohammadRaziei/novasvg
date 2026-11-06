@@ -13,64 +13,64 @@ constexpr bool IS_WS(int cc) { return cc == ' ' || cc == '\t' || cc == '\n' || c
 constexpr bool IS_CSS_STARTNAMECHAR(int c) { return IS_ALPHA(c) || c == '_' || c == '-'; }
 constexpr bool IS_CSS_NAMECHAR(int c) { return IS_CSS_STARTNAMECHAR(c) || IS_NUM(c); }
 
-constexpr void stripLeadingSpaces(std::string_view& input)
+constexpr void strip_leading_spaces(std::string_view& input)
 {
     while(!input.empty() && IS_WS(input.front())) {
         input.remove_prefix(1);
     }
 }
 
-constexpr void stripTrailingSpaces(std::string_view& input)
+constexpr void strip_trailing_spaces(std::string_view& input)
 {
     while(!input.empty() && IS_WS(input.back())) {
         input.remove_suffix(1);
     }
 }
 
-constexpr void stripLeadingAndTrailingSpaces(std::string_view& input)
+constexpr void strip_leading_and_trailing_spaces(std::string_view& input)
 {
-    stripLeadingSpaces(input);
-    stripTrailingSpaces(input);
+    strip_leading_spaces(input);
+    strip_trailing_spaces(input);
 }
 
-constexpr bool skipOptionalSpaces(std::string_view& input)
+constexpr bool skip_optional_spaces(std::string_view& input)
 {
     while(!input.empty() && IS_WS(input.front()))
         input.remove_prefix(1);
     return !input.empty();
 }
 
-constexpr bool skipOptionalSpacesOrDelimiter(std::string_view& input, char delimiter)
+constexpr bool skip_optional_spaces_or_delimiter(std::string_view& input, char delimiter)
 {
     if(!input.empty() && !IS_WS(input.front()) && delimiter != input.front())
         return false;
-    if(skipOptionalSpaces(input)) {
+    if(skip_optional_spaces(input)) {
         if(delimiter == input.front()) {
             input.remove_prefix(1);
-            skipOptionalSpaces(input);
+            skip_optional_spaces(input);
         }
     }
 
     return !input.empty();
 }
 
-constexpr bool skipOptionalSpacesOrComma(std::string_view& input)
+constexpr bool skip_optional_spaces_or_comma(std::string_view& input)
 {
-    return skipOptionalSpacesOrDelimiter(input, ',');
+    return skip_optional_spaces_or_delimiter(input, ',');
 }
 
-constexpr bool skipDelimiterAndOptionalSpaces(std::string_view& input, char delimiter)
+constexpr bool skip_delimiter_and_optional_spaces(std::string_view& input, char delimiter)
 {
     if(!input.empty() && input.front() == delimiter) {
         input.remove_prefix(1);
-        skipOptionalSpaces(input);
+        skip_optional_spaces(input);
         return true;
     }
 
     return false;
 }
 
-constexpr bool skipDelimiter(std::string_view& input, char delimiter)
+constexpr bool skip_delimiter(std::string_view& input, char delimiter)
 {
     if(!input.empty() && input.front() == delimiter) {
         input.remove_prefix(1);
@@ -90,7 +90,7 @@ constexpr bool skipString(std::string_view& input, std::string_view value)
     return false;
 }
 
-constexpr bool isIntegralDigit(char ch, int base)
+constexpr bool is_integral_digit(char ch, int base)
 {
     if(IS_NUM(ch))
         return ch - '0' < base;
@@ -99,7 +99,7 @@ constexpr bool isIntegralDigit(char ch, int base)
     return false;
 }
 
-constexpr int toIntegralDigit(char ch)
+constexpr int to_integral_digit(char ch)
 {
     if(IS_NUM(ch))
         return ch - '0';
@@ -109,35 +109,35 @@ constexpr int toIntegralDigit(char ch)
 }
 
 template<typename T>
-inline bool parseInteger(std::string_view& input, T& integer, int base = 10)
+inline bool parse_integer(std::string_view& input, T& integer, int base = 10)
 {
     constexpr bool isSigned = std::numeric_limits<T>::is_signed;
-    constexpr T intMax = std::numeric_limits<T>::max();
-    const T maxMultiplier = intMax / static_cast<T>(base);
+    constexpr T int_max = std::numeric_limits<T>::max();
+    const T max_multiplier = int_max / static_cast<T>(base);
 
     T value = 0;
-    bool isNegative = false;
+    bool is_negative = false;
 
     if(!input.empty() && input.front() == '+') {
         input.remove_prefix(1);
     } else if(!input.empty() && isSigned && input.front() == '-') {
         input.remove_prefix(1);
-        isNegative = true;
+        is_negative = true;
     }
 
-    if(input.empty() || !isIntegralDigit(input.front(), base))
+    if(input.empty() || !is_integral_digit(input.front(), base))
         return false;
     do {
-        const int digitValue = toIntegralDigit(input.front());
-        if(value > maxMultiplier || (value == maxMultiplier && static_cast<T>(digitValue) > (intMax % static_cast<T>(base)) + isNegative))
+        const int digit_value = to_integral_digit(input.front());
+        if(value > max_multiplier || (value == max_multiplier && static_cast<T>(digit_value) > (int_max % static_cast<T>(base)) + is_negative))
             return false;
-        value = static_cast<T>(base) * value + static_cast<T>(digitValue);
+        value = static_cast<T>(base) * value + static_cast<T>(digit_value);
         input.remove_prefix(1);
-    } while(!input.empty() && isIntegralDigit(input.front(), base));
+    } while(!input.empty() && is_integral_digit(input.front(), base));
 
-    using SignedType = typename std::make_signed<T>::type;
-    if(isNegative)
-        integer = -static_cast<SignedType>(value);
+    using signed_type = typename std::make_signed<T>::type;
+    if(is_negative)
+        integer = -static_cast<signed_type>(value);
     else
         integer = value;
     return true;
@@ -146,7 +146,7 @@ inline bool parseInteger(std::string_view& input, T& integer, int base = 10)
 template<typename T>
 inline bool parseNumber(std::string_view& input, T& number)
 {
-    constexpr T maxValue = std::numeric_limits<T>::max();
+    constexpr T max_value = std::numeric_limits<T>::max();
     T integer = 0;
     T fraction = 0;
     int exponent = 0;
@@ -204,7 +204,7 @@ inline bool parseNumber(std::string_view& input, T& number)
     number = sign * (integer + fraction);
     if(exponent)
         number *= static_cast<T>(std::pow(10.0, expsign * exponent));
-    return number >= -maxValue && number <= maxValue;
+    return number >= -max_value && number <= max_value;
 }
 
 } // namespace nova::vg

@@ -19,6 +19,7 @@
 #include "vg/canvas.h" // Transform, Path, ...
 #include "vg/font.h"
 #include "svg/svgelement.h" // private: foreignObject text measurement
+#include "svg/foreign_object/html_text.h"
 #include "bitmap_interop.hpp"
 #include <filesystem>
 
@@ -125,7 +126,7 @@ NB_MODULE(novasvg_py, m) {
 
     // --- Bind Static Utility Functions ---
     m.def("version_string", &nova::svg::version_string, "Get the library version as a string (e.g., '0.1.0').");
-    m.def("add_font_face_from_file", &nova::vg::addFontFaceFromFile, 
+    m.def("add_font_face_from_file", &nova::vg::add_font_face_from_file, 
           "family"_a, "bold"_a, "italic"_a, "filename"_a,
           "Add a font face from a file to the cache.");
     
@@ -150,7 +151,7 @@ NB_MODULE(novasvg_py, m) {
                if(copy == nullptr)
                    return false;
                std::memcpy(copy, data.data(), data.size());
-               return nova::vg::addFontFaceFromData(family, bold, italic, copy, data.size(),
+               return nova::vg::add_font_face_from_data(family, bold, italic, copy, data.size(),
                                                      [](void* p) { std::free(p); }, copy);
           },
           "family"_a, "bold"_a, "italic"_a, "data"_a,
@@ -183,18 +184,18 @@ NB_MODULE(novasvg_py, m) {
              "descent_units() to build a complete, size-independent advance table -- "
              "e.g. to hand text-measurement data to a JS engine that can't call back "
              "into Python per string (mermaidx's v8_engine does exactly this).")
-        .def_prop_ro("ascent_units", &nova::vg::FontFace::ascentUnits, "Ascent in raw font design units (unscaled).")
-        .def_prop_ro("descent_units", &nova::vg::FontFace::descentUnits, "Descent in raw font design units (unscaled).")
+        .def_prop_ro("ascent_units", &nova::vg::FontFace::ascent_units, "Ascent in raw font design units (unscaled).")
+        .def_prop_ro("descent_units", &nova::vg::FontFace::descent_units, "Descent in raw font design units (unscaled).")
         .def("advance_width_units", [](const nova::vg::FontFace& face, uint32_t codepoint) {
-            return face.advanceWidthUnits(static_cast<char32_t>(codepoint));
+            return face.advance_width_units(static_cast<char32_t>(codepoint));
         }, "codepoint"_a, "Advance width of a single Unicode codepoint, in raw font design units (unscaled).")
         .def("kern_advance_units", [](const nova::vg::FontFace& face, uint32_t first, uint32_t second) {
-            return face.kernAdvanceUnits(static_cast<char32_t>(first), static_cast<char32_t>(second));
+            return face.kern_advance_units(static_cast<char32_t>(first), static_cast<char32_t>(second));
         }, "first"_a, "second"_a,
            "Kerning adjustment between two consecutive codepoints, in raw font design units "
            "(unscaled) -- see FontFace::kernAdvanceUnits() in font.h for why this is a per-pair "
            "query rather than a bulk table like codepoints().")
-        .def_prop_ro("notdef_advance_width_units", &nova::vg::FontFace::notdefAdvanceWidthUnits,
+        .def_prop_ro("notdef_advance_width_units", &nova::vg::FontFace::notdef_advance_width_units,
              "The advance width used for any codepoint outside this font's cmap "
              "(glyph id 0, the \".notdef\" glyph) -- what advance_width_units() itself "
              "already falls back to for such a codepoint.")
@@ -209,13 +210,13 @@ NB_MODULE(novasvg_py, m) {
            "for exactly which cmap formats are covered -- virtually every real-world font).");
 
     m.def("get_font_face", [](const std::string& family, bool bold, bool italic) {
-        return nova::vg::fontFaceCache()->getFontFace(family, bold, italic);
+        return nova::vg::fontFaceCache()->get_font_face(family, bold, italic);
     }, "family"_a, "bold"_a = false, "italic"_a = false,
        "Look up a font face previously registered via add_font_face_from_file/_data "
        "(falling back to novasvg's built-in generic-family table, e.g. \"sans-serif\").");
 
     m.def("get_font_face_for_family_stack", [](const std::string& family_stack, bool bold, bool italic) {
-        return nova::vg::fontFaceCache()->getFontFaceForFamilyStack(family_stack, bold, italic);
+        return nova::vg::fontFaceCache()->get_font_face_for_family_stack(family_stack, bold, italic);
     }, "family_stack"_a, "bold"_a = false, "italic"_a = false,
        "Resolve a CSS-style comma-separated font-family stack (e.g. "
        "'\"trebuchet ms\", verdana, arial, sans-serif') name by name: a face registered or "
@@ -231,7 +232,7 @@ NB_MODULE(novasvg_py, m) {
         .def_prop_ro("descent", &nova::vg::Font::descent, "Descent in pixels (typically negative), at this font's size.")
         .def_prop_ro("height", &nova::vg::Font::height, "ascent - descent.")
         .def_prop_ro("line_gap", &nova::vg::Font::lineGap, "Recommended extra spacing between lines, in pixels.")
-        .def_prop_ro("x_height", &nova::vg::Font::xHeight, "Height of a lowercase 'x' glyph, in pixels.")
+        .def_prop_ro("x_height", &nova::vg::Font::x_height, "Height of a lowercase 'x' glyph, in pixels.")
         .def_prop_ro("size", &nova::vg::Font::size, "The pixel size this font was constructed with.")
         .def_prop_ro("face", &nova::vg::Font::face, nb::rv_policy::reference_internal, "The underlying FontFace.")
         .def("is_null", &nova::vg::Font::is_null, "Check if the font is null/invalid.")
@@ -242,16 +243,16 @@ NB_MODULE(novasvg_py, m) {
             // layout path (see svg_text_fragments_builder), so route through the
             // identical utf8ToU32() conversion for byte-for-byte consistency
             // with what novasvg will actually paint.
-            auto u32text = nova::vg::utf8ToU32(text);
-            return font.measureText(u32text);
+            auto u32text = nova::vg::utf8_to_u32(text);
+            return font.measure_text(u32text);
         }, "text"_a, "Measure the advance width of a UTF-8 string, in pixels, at this font's size.");
 
     // nb::class_<Font> chain above ends with measure_text; attach glyph_boxes to it.
     m.attr("Font").attr("glyph_boxes") = nb::cpp_function(
         [](const nova::vg::Font& font, const std::string& text) {
             nb::list out;
-            for(const auto& box : font.glyphBoxes(nova::vg::utf8ToU32(text)))
-                out.append(nb::make_tuple(box.pen, box.inkLeft, box.inkRight, box.inkTop, box.inkBottom));
+            for(const auto& box : font.glyph_boxes(nova::vg::utf8_to_u32(text)))
+                out.append(nb::make_tuple(box.pen, box.ink_left, box.ink_right, box.ink_top, box.ink_bottom));
             return out;
         }, nb::is_method(), "text"_a,
         "Per-glyph (pen_x, ink_left, ink_right, ink_top, ink_bottom) in pixels (top/bottom relative to the baseline, y down) for every glyph that has an outline "
@@ -259,31 +260,31 @@ NB_MODULE(novasvg_py, m) {
 
     m.def("measure_foreign_object", [](const std::string& html, const nova::vg::Font& font, std::optional<float> max_width,
                                        std::optional<std::string> family, bool bold, bool italic) {
-        nova::svg::ForeignObjectMetrics metrics;
+        nova::svg::foreign_object_metrics metrics;
         if(!family) {
-            metrics = nova::svg::measureForeignObjectContent(html, font, max_width.value_or(-1.f));
+            metrics = nova::svg::measure_foreign_object_content(html, font, max_width.value_or(-1.f));
         } else {
             // The same faces ForeignObjectSimple::render() paints with (svg_foreign_object_element::fontsFor()):
             // `font` is the base style, every other bold/italic variant comes from the family.
-            const unsigned char base = (unsigned char)((bold ? nova::svg::ForeignObjectFonts::Bold : 0)
-                                                       | (italic ? nova::svg::ForeignObjectFonts::Italic : 0));
-            nova::svg::ForeignObjectFonts fonts;
+            const unsigned char base = (unsigned char)((bold ? nova::svg::foreign_object_fonts::Bold : 0)
+                                                       | (italic ? nova::svg::foreign_object_fonts::Italic : 0));
+            nova::svg::foreign_object_fonts fonts;
             for(unsigned style = 0; style < 4; ++style) {
                 if(style == base) {
                     fonts.face[style] = font;
                     continue;
                 }
-                auto variant = nova::svg::makeFont(*family, font.size(), (style & nova::svg::ForeignObjectFonts::Bold) != 0,
-                                                 (style & nova::svg::ForeignObjectFonts::Italic) != 0);
+                auto variant = nova::svg::make_font(*family, font.size(), (style & nova::svg::foreign_object_fonts::Bold) != 0,
+                                                 (style & nova::svg::foreign_object_fonts::Italic) != 0);
                 fonts.face[style] = variant.is_null() ? font : variant;
             }
-            metrics = nova::svg::measureForeignObjectContent(html, fonts, max_width.value_or(-1.f), base);
+            metrics = nova::svg::measure_foreign_object_content(html, fonts, max_width.value_or(-1.f), base);
         }
         nb::dict result;
         result["height"] = metrics.height;
         result["width"] = metrics.width;
-        result["line_count"] = metrics.lineCount;
-        result["line_height"] = metrics.lineHeight;
+        result["line_count"] = metrics.line_count;
+        result["line_height"] = metrics.line_height;
         return result;
     }, "html"_a, "font"_a, "max_width"_a = nb::none(), "family"_a = nb::none(), "bold"_a = false, "italic"_a = false,
        "Height/width (and line count/line-height) novasvg will use when painting <foreignObject> "
@@ -390,7 +391,7 @@ NB_MODULE(novasvg_py, m) {
         .def("clear", [](nova::vg::pixmap& bitmap, uint32_t value) {
             bitmap.clear(stb::color::from_value(value));
         }, "value"_a, "Clear the bitmap with a packed 0xRRGGBBAA value.")
-        .def("convert_to_rgba", &nova::vg::pixmap::convertToRGBA, "Convert pixel data in place from ARGB32 Premultiplied to RGBA Plain. Only needed to hand the raw "
+        .def("convert_to_rgba", &nova::vg::pixmap::convert_to_rgba, "Convert pixel data in place from ARGB32 Premultiplied to RGBA Plain. Only needed to hand the raw "
              "buffer to something else (e.g. numpy consumers wanting straight RGBA); NOT before "
              "write_to_*/to_*/write, which convert internally -- doing both converts twice.")
         // The encoders below all take the pixmap as it comes out of

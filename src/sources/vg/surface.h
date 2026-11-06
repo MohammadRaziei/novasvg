@@ -24,8 +24,8 @@ namespace vg {
 
 static surface_t* surface_create_uninitialized(int width, int height)
 {
-    static const int kMaxSize = 1 << 15;
-    if(width <= 0 || height <= 0 || width >= kMaxSize || height >= kMaxSize)
+    static const int k_max_size = 1 << 15;
+    if(width <= 0 || height <= 0 || width >= k_max_size || height >= k_max_size)
         return NULL;
     const size_t size = width * height * 4;
     surface_t* surface = static_cast<surface_t*>(malloc(size + sizeof(surface_t)));

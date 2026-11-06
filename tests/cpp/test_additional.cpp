@@ -46,7 +46,7 @@ TEST_CASE("Bitmap advanced operations") {
     CHECK(bitmap.stride() == stride);
     
     // Test convertToRGBA
-    bitmap.convertToRGBA();
+    bitmap.convert_to_rgba();
     
     // The straight-alpha image made from a bitmap encodes without trouble
     {
@@ -116,11 +116,11 @@ TEST_CASE("TextNode operations") {
     REQUIRE(dom != nullptr);
     
     // Get text el
-    auto textElement = dom->element_by_id("text1");
-    REQUIRE_FALSE(textElement.is_null());
+    auto text_element = dom->element_by_id("text1");
+    REQUIRE_FALSE(text_element.is_null());
     
     // Get children (should contain text nd)
-    auto children = textElement.children();
+    auto children = text_element.children();
     CHECK(children.size() >= 1);
     
     // Find text nd

@@ -19,9 +19,9 @@ namespace vg {
 typedef LONG ref_count_t;
 
 #define novasvg_init_reference(ob) ((ob)->ref_count = 1)
-#define novasvg_increment_reference(ob) (void)(ob && InterlockedIncrement(&(ob)->ref_count))
-#define novasvg_destroy_reference(ob) (ob && InterlockedDecrement(&(ob)->ref_count) == 0)
-#define novasvg_get_reference_count(ob) ((ob) ? InterlockedCompareExchange((LONG*)&(ob)->ref_count, 0, 0) : 0)
+#define novasvg_increment_reference(ob) (void)(ob && interlocked_increment(&(ob)->ref_count))
+#define novasvg_destroy_reference(ob) (ob && interlocked_decrement(&(ob)->ref_count) == 0)
+#define novasvg_get_reference_count(ob) ((ob) ? interlocked_compare_exchange((LONG*)&(ob)->ref_count, 0, 0) : 0)
 
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_ATOMICS__)
 

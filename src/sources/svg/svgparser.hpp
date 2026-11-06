@@ -12,7 +12,7 @@ namespace nova::svg {
 struct SimpleSelector;
 
 using Selector = std::vector<SimpleSelector>;
-using SelectorList = std::vector<Selector>;
+using selector_list = std::vector<Selector>;
 
 struct AttributeSelector {
     enum class MatchType {
@@ -20,83 +20,84 @@ struct AttributeSelector {
         Equals,
         Contains,
         Includes,
-        StartsWith,
-        EndsWith,
-        DashEquals
+        starts_with,
+        ends_with,
+        dash_equals
     };
 
     MatchType matchType{MatchType::None};
-    PropertyID id{PropertyID::Unknown};
+    property_id id{property_id::unknown};
+    std::string name; // the attribute's name, used when `id` is unknown (`data-*` & co)
     std::string value;
 };
 
 struct PseudoClassSelector {
     enum class Type {
-        Unknown,
+        unknown,
         Empty,
         Root,
-        Is,
+        is,
         Not,
         FirstChild,
         LastChild,
-        OnlyChild,
-        FirstOfType,
-        LastOfType,
-        OnlyOfType,
-        NthChild,
-        NthLastChild,
-        NthOfType,
-        NthLastOfType
+        only_child,
+        first_of_type,
+        last_of_type,
+        only_of_type,
+        nth_child,
+        nth_last_child,
+        nth_of_type,
+        nth_last_of_type
     };
 
-    Type type{Type::Unknown};
-    int nthA{0}; // An+B formula of the :nth-*() pseudo-classes
-    int nthB{0};
-    SelectorList subSelectors;
+    Type type{Type::unknown};
+    int nth_a{0}; // An+B formula of the :nth-*() pseudo-classes
+    int nth_b{0};
+    selector_list sub_selectors;
 };
 
 struct SimpleSelector {
     enum class Combinator {
         None,
-        Descendant,
+        descendant,
         Child,
-        DirectAdjacent,
-        InDirectAdjacent
+        direct_adjacent,
+        in_direct_adjacent
     };
 
     explicit SimpleSelector(Combinator combinator) : combinator(combinator) {}
 
-    Combinator combinator{Combinator::Descendant};
-    ElementID id{ElementID::Star};
+    Combinator combinator{Combinator::descendant};
+    element_id id{element_id::star};
     std::string tag; // lower-case tag name as written; empty for `*`. For matching HTML (no ElementID for it)
-    std::vector<AttributeSelector> attributeSelectors;
-    std::vector<PseudoClassSelector> pseudoClassSelectors;
+    std::vector<AttributeSelector> attribute_selectors;
+    std::vector<PseudoClassSelector> pseudo_class_selectors;
 };
 
 struct Declaration {
     int specificity;
-    PropertyID id; // Unknown for a property no svg el has (only the HTML in a foreignObject reads those)
+    property_id id; // Unknown for a property no svg el has (only the HTML in a foreignObject reads those)
     std::string value;
     std::string name; // lower-case property name as written (a custom property's, `--x`, keeps its case)
 };
 
-using DeclarationList = std::vector<Declaration>;
+using declaration_list = std::vector<Declaration>;
 
 struct Rule {
-    SelectorList selectors;
-    DeclarationList declarations;
+    selector_list selectors;
+    declaration_list declarations;
 };
 
-class RuleData {
+class rule_data {
 public:
-    RuleData(const Selector& selector, const DeclarationList& declarations, size_t specificity, size_t position)
+    rule_data(const Selector& selector, const declaration_list& declarations, size_t specificity, size_t position)
         : m_selector(selector), m_declarations(declarations), m_specificity(specificity), m_position(position)
     {}
 
-    bool isLessThan(const RuleData& rule) const { return std::tie(m_specificity, m_position) < std::tie(rule.m_specificity, rule.m_position); }
+    bool is_less_than(const rule_data& rule) const { return std::tie(m_specificity, m_position) < std::tie(rule.m_specificity, rule.m_position); }
 
     const Selector& selector() const { return m_selector; }
-    const DeclarationList& declarations() const { return m_declarations; }
+    const declaration_list& declarations() const { return m_declarations; }
     size_t specificity() const { return m_specificity; }
     size_t position() const { return m_position; }
 
@@ -104,14 +105,14 @@ public:
 
 private:
     Selector m_selector;
-    DeclarationList m_declarations;
+    declaration_list m_declarations;
     size_t m_specificity;
     size_t m_position;
 };
 
-inline bool operator<(const RuleData& a, const RuleData& b) { return a.isLessThan(b); }
+inline bool operator<(const rule_data& a, const rule_data& b) { return a.is_less_than(b); }
 
-using RuleDataList = std::vector<RuleData>;
+using rule_data_list = std::vector<rule_data>;
 
 NOVA_INLINE constexpr bool equals(std::string_view value, std::string_view subvalue)
 {
@@ -129,7 +130,7 @@ NOVA_INLINE constexpr bool includes(std::string_view value, std::string_view sub
         return false;
     std::string_view input(value);
     while(!input.empty()) {
-        skipOptionalSpaces(input);
+        skip_optional_spaces(input);
         std::string_view start(input);
         while(!input.empty() && !IS_WS(input.front()))
             input.remove_prefix(1);
@@ -162,7 +163,7 @@ NOVA_INLINE constexpr bool dashequals(std::string_view value, std::string_view s
     return false;
 }
 
-static bool matchAttributeValue(const AttributeSelector& selector, std::string_view value)
+static bool match_attribute_value(const AttributeSelector& selector, std::string_view value)
 {
     if(selector.matchType == AttributeSelector::MatchType::None)
         return !value.empty();
@@ -172,32 +173,41 @@ static bool matchAttributeValue(const AttributeSelector& selector, std::string_v
         return contains(value, selector.value);
     if(selector.matchType == AttributeSelector::MatchType::Includes)
         return includes(value, selector.value);
-    if(selector.matchType == AttributeSelector::MatchType::StartsWith)
+    if(selector.matchType == AttributeSelector::MatchType::starts_with)
         return startswith(value, selector.value);
-    if(selector.matchType == AttributeSelector::MatchType::EndsWith)
+    if(selector.matchType == AttributeSelector::MatchType::ends_with)
         return endswith(value, selector.value);
-    if(selector.matchType == AttributeSelector::MatchType::DashEquals)
+    if(selector.matchType == AttributeSelector::MatchType::dash_equals)
         return dashequals(value, selector.value);
     return false;
 }
 
-static bool matchAttributeSelector(const AttributeSelector& selector, const svg_element* el)
+static bool match_attribute_selector(const AttributeSelector& selector, const svg_element* el)
 {
-    return matchAttributeValue(selector, el->attribute(selector.id));
+    if(selector.id == property_id::unknown) {
+        const auto* value = el->find_custom_attribute(selector.name);
+        if(value == nullptr)
+            return false;
+        if(selector.matchType == AttributeSelector::MatchType::None)
+            return true; // `[attr]` matches an attribute that is there, even an empty one
+        return match_attribute_value(selector, *value);
+    }
+
+    return match_attribute_value(selector, el->attribute(selector.id));
 }
 
-static bool matchSimpleSelector(const SimpleSelector& selector, const svg_element* el);
+static bool match_simple_selector(const SimpleSelector& selector, const svg_element* el);
 
-static bool matchPseudoClassSelector(const PseudoClassSelector& selector, const svg_element* el)
+static bool match_pseudo_class_selector(const PseudoClassSelector& selector, const svg_element* el)
 {
     if(selector.type == PseudoClassSelector::Type::Empty)
         return el->children().empty();
     if(selector.type == PseudoClassSelector::Type::Root)
-        return el->isRootElement();
-    if(selector.type == PseudoClassSelector::Type::Is) {
-        for(const auto& subSelector : selector.subSelectors) {
-            for(const auto& simpleSelector : subSelector) {
-                if(!matchSimpleSelector(simpleSelector, el)) {
+        return el->is_root_element();
+    if(selector.type == PseudoClassSelector::Type::is) {
+        for(const auto& sub_selector : selector.sub_selectors) {
+            for(const auto& simpleSelector : sub_selector) {
+                if(!match_simple_selector(simpleSelector, el)) {
                     return false;
                 }
             }
@@ -207,9 +217,9 @@ static bool matchPseudoClassSelector(const PseudoClassSelector& selector, const 
     }
 
     if(selector.type == PseudoClassSelector::Type::Not) {
-        for(const auto& subSelector : selector.subSelectors) {
-            for(const auto& simpleSelector : subSelector) {
-                if(matchSimpleSelector(simpleSelector, el)) {
+        for(const auto& sub_selector : selector.sub_selectors) {
+            for(const auto& simpleSelector : sub_selector) {
+                if(match_simple_selector(simpleSelector, el)) {
                     return false;
                 }
             }
@@ -219,52 +229,52 @@ static bool matchPseudoClassSelector(const PseudoClassSelector& selector, const 
     }
 
     if(selector.type == PseudoClassSelector::Type::FirstChild)
-        return !el->previousElement();
+        return !el->previous_element();
     if(selector.type == PseudoClassSelector::Type::LastChild)
-        return !el->nextElement();
-    if(selector.type == PseudoClassSelector::Type::OnlyChild)
-        return !(el->previousElement() || el->nextElement());
-    if(selector.type == PseudoClassSelector::Type::FirstOfType) {
-        auto sibling = el->previousElement();
+        return !el->next_element();
+    if(selector.type == PseudoClassSelector::Type::only_child)
+        return !(el->previous_element() || el->next_element());
+    if(selector.type == PseudoClassSelector::Type::first_of_type) {
+        auto sibling = el->previous_element();
         while(sibling) {
             if(sibling->id() == el->id())
                 return false;
-            sibling = sibling->previousElement();
+            sibling = sibling->previous_element();
         }
 
         return true;
     }
 
-    if(selector.type == PseudoClassSelector::Type::LastOfType) {
-        auto sibling = el->nextElement();
+    if(selector.type == PseudoClassSelector::Type::last_of_type) {
+        auto sibling = el->next_element();
         while(sibling) {
             if(sibling->id() == el->id())
                 return false;
-            sibling = sibling->nextElement();
+            sibling = sibling->next_element();
         }
 
         return true;
     }
 
-    if(selector.type == PseudoClassSelector::Type::NthChild
-        || selector.type == PseudoClassSelector::Type::NthLastChild
-        || selector.type == PseudoClassSelector::Type::NthOfType
-        || selector.type == PseudoClassSelector::Type::NthLastOfType) {
-        const bool fromEnd = selector.type == PseudoClassSelector::Type::NthLastChild
-            || selector.type == PseudoClassSelector::Type::NthLastOfType;
-        const bool ofType = selector.type == PseudoClassSelector::Type::NthOfType
-            || selector.type == PseudoClassSelector::Type::NthLastOfType;
+    if(selector.type == PseudoClassSelector::Type::nth_child
+        || selector.type == PseudoClassSelector::Type::nth_last_child
+        || selector.type == PseudoClassSelector::Type::nth_of_type
+        || selector.type == PseudoClassSelector::Type::nth_last_of_type) {
+        const bool from_end = selector.type == PseudoClassSelector::Type::nth_last_child
+            || selector.type == PseudoClassSelector::Type::nth_last_of_type;
+        const bool of_type = selector.type == PseudoClassSelector::Type::nth_of_type
+            || selector.type == PseudoClassSelector::Type::nth_last_of_type;
         long position = 1;
-        auto sibling = fromEnd ? el->nextElement() : el->previousElement();
+        auto sibling = from_end ? el->next_element() : el->previous_element();
         while(sibling) {
-            if(!ofType || sibling->id() == el->id())
+            if(!of_type || sibling->id() == el->id())
                 ++position;
-            sibling = fromEnd ? sibling->nextElement() : sibling->previousElement();
+            sibling = from_end ? sibling->next_element() : sibling->previous_element();
         }
 
         // is there an n >= 0 with a*n + b == position ?
-        const long a = selector.nthA;
-        const long diff = position - selector.nthB;
+        const long a = selector.nth_a;
+        const long diff = position - selector.nth_b;
         if(a == 0)
             return diff == 0;
         return diff % a == 0 && diff / a >= 0;
@@ -273,18 +283,18 @@ static bool matchPseudoClassSelector(const PseudoClassSelector& selector, const 
     return false;
 }
 
-static bool matchSimpleSelector(const SimpleSelector& selector, const svg_element* el)
+static bool match_simple_selector(const SimpleSelector& selector, const svg_element* el)
 {
-    if(selector.id != ElementID::Star && selector.id != el->id())
+    if(selector.id != element_id::star && selector.id != el->id())
         return false;
-    for(const auto& sel : selector.attributeSelectors) {
-        if(!matchAttributeSelector(sel, el)) {
+    for(const auto& sel : selector.attribute_selectors) {
+        if(!match_attribute_selector(sel, el)) {
             return false;
         }
     }
 
-    for(const auto& sel : selector.pseudoClassSelectors) {
-        if(!matchPseudoClassSelector(sel, el)) {
+    for(const auto& sel : selector.pseudo_class_selectors) {
+        if(!match_pseudo_class_selector(sel, el)) {
             return false;
         }
     }
@@ -292,13 +302,13 @@ static bool matchSimpleSelector(const SimpleSelector& selector, const svg_elemen
     return true;
 }
 
-static bool matchSelector(const Selector& selector, const svg_element* el)
+static bool match_selector(const Selector& selector, const svg_element* el)
 {
     if(selector.empty())
         return false;
     auto it = selector.rbegin();
     auto end = selector.rend();
-    if(!matchSimpleSelector(*it, el)) {
+    if(!match_simple_selector(*it, el)) {
         return false;
     }
 
@@ -308,12 +318,12 @@ static bool matchSelector(const Selector& selector, const svg_element* el)
     while(it != end) {
         switch(combinator) {
         case SimpleSelector::Combinator::Child:
-        case SimpleSelector::Combinator::Descendant:
+        case SimpleSelector::Combinator::descendant:
             el = el->parent_element();
             break;
-        case SimpleSelector::Combinator::DirectAdjacent:
-        case SimpleSelector::Combinator::InDirectAdjacent:
-            el = el->previousElement();
+        case SimpleSelector::Combinator::direct_adjacent:
+        case SimpleSelector::Combinator::in_direct_adjacent:
+            el = el->previous_element();
             break;
         case SimpleSelector::Combinator::None:
             assert(false);
@@ -321,11 +331,11 @@ static bool matchSelector(const Selector& selector, const svg_element* el)
 
         if(el == nullptr)
             return false;
-        if(matchSimpleSelector(*it, el)) {
+        if(match_simple_selector(*it, el)) {
             combinator = it->combinator;
             ++it;
-        } else if(combinator != SimpleSelector::Combinator::Descendant
-            && combinator != SimpleSelector::Combinator::InDirectAdjacent) {
+        } else if(combinator != SimpleSelector::Combinator::descendant
+            && combinator != SimpleSelector::Combinator::in_direct_adjacent) {
             return false;
         }
     }
@@ -334,7 +344,7 @@ static bool matchSelector(const Selector& selector, const svg_element* el)
 }
 
 
-inline bool readCSSIdentifier(std::string_view& input, std::string& output)
+inline bool read_css_identifier(std::string_view& input, std::string& output)
 {
     if(input.empty() || !IS_CSS_STARTNAMECHAR(input.front()))
         return false;
@@ -346,12 +356,12 @@ inline bool readCSSIdentifier(std::string_view& input, std::string& output)
     return true;
 }
 
-static bool parseTagSelector(std::string_view& input, SimpleSelector& simpleSelector)
+static bool parse_tag_selector(std::string_view& input, SimpleSelector& simpleSelector)
 {
     std::string name;
-    if(skipDelimiter(input, '*'))
-        simpleSelector.id = ElementID::Star;
-    else if(readCSSIdentifier(input, name)) {
+    if(skip_delimiter(input, '*'))
+        simpleSelector.id = element_id::star;
+    else if(read_css_identifier(input, name)) {
         simpleSelector.id = elementid(name);
         for(auto& ch : name)
             ch = char(std::tolower(static_cast<unsigned char>(ch)));
@@ -362,52 +372,53 @@ static bool parseTagSelector(std::string_view& input, SimpleSelector& simpleSele
     return true;
 }
 
-static bool parseIdSelector(std::string_view& input, SimpleSelector& simpleSelector)
+static bool parse_id_selector(std::string_view& input, SimpleSelector& simpleSelector)
 {
     AttributeSelector a;
-    a.id = PropertyID::Id;
+    a.id = property_id::Id;
     a.matchType = AttributeSelector::MatchType::Equals;
-    if(!readCSSIdentifier(input, a.value))
+    if(!read_css_identifier(input, a.value))
         return false;
-    simpleSelector.attributeSelectors.push_back(std::move(a));
+    simpleSelector.attribute_selectors.push_back(std::move(a));
     return true;
 }
 
-static bool parseClassSelector(std::string_view& input, SimpleSelector& simpleSelector)
+static bool parse_class_selector(std::string_view& input, SimpleSelector& simpleSelector)
 {
     AttributeSelector a;
-    a.id = PropertyID::Class;
+    a.id = property_id::Class;
     a.matchType = AttributeSelector::MatchType::Includes;
-    if(!readCSSIdentifier(input, a.value))
+    if(!read_css_identifier(input, a.value))
         return false;
-    simpleSelector.attributeSelectors.push_back(std::move(a));
+    simpleSelector.attribute_selectors.push_back(std::move(a));
     return true;
 }
 
-static bool parseAttributeSelector(std::string_view& input, SimpleSelector& simpleSelector)
+static bool parse_attribute_selector(std::string_view& input, SimpleSelector& simpleSelector)
 {
     std::string name;
-    skipOptionalSpaces(input);
-    if(!readCSSIdentifier(input, name))
+    skip_optional_spaces(input);
+    if(!read_css_identifier(input, name))
         return false;
     AttributeSelector a;
     a.id = propertyid(name);
+    a.name = name;
     a.matchType = AttributeSelector::MatchType::None;
-    if(skipDelimiter(input, '='))
+    if(skip_delimiter(input, '='))
         a.matchType = AttributeSelector::MatchType::Equals;
     else if(skipString(input, "*="))
         a.matchType = AttributeSelector::MatchType::Contains;
     else if(skipString(input, "~="))
         a.matchType = AttributeSelector::MatchType::Includes;
     else if(skipString(input, "^="))
-        a.matchType = AttributeSelector::MatchType::StartsWith;
+        a.matchType = AttributeSelector::MatchType::starts_with;
     else if(skipString(input, "$="))
-        a.matchType = AttributeSelector::MatchType::EndsWith;
+        a.matchType = AttributeSelector::MatchType::ends_with;
     else if(skipString(input, "|="))
-        a.matchType = AttributeSelector::MatchType::DashEquals;
+        a.matchType = AttributeSelector::MatchType::dash_equals;
     if(a.matchType != AttributeSelector::MatchType::None) {
-        skipOptionalSpaces(input);
-        if(!readCSSIdentifier(input, a.value)) {
+        skip_optional_spaces(input);
+        if(!read_css_identifier(input, a.value)) {
             if(input.empty() || !(input.front() == '\"' || input.front() == '\''))
                 return false;
             auto quote = input.front();
@@ -420,17 +431,17 @@ static bool parseAttributeSelector(std::string_view& input, SimpleSelector& simp
         }
     }
 
-    skipOptionalSpaces(input);
-    if(!skipDelimiter(input, ']'))
+    skip_optional_spaces(input);
+    if(!skip_delimiter(input, ']'))
         return false;
-    simpleSelector.attributeSelectors.push_back(std::move(a));
+    simpleSelector.attribute_selectors.push_back(std::move(a));
     return true;
 }
 
-static bool parseSelectors(std::string_view& input, SelectorList& selectors);
+static bool parse_selectors(std::string_view& input, selector_list& selectors);
 
 // Parses the `An+B` micro-syntax of :nth-child() & co: `odd`, `even`, `3`, `2n`, `-n+3`, `2n + 1`...
-static bool parseNthFormula(std::string_view text, int& a, int& b)
+static bool parse_nth_formula(std::string_view text, int& a, int& b)
 {
     std::string f;
     for(char ch : text) {
@@ -452,7 +463,7 @@ static bool parseNthFormula(std::string_view text, int& a, int& b)
         return true;
     }
 
-    auto parseInt = [](const std::string& t, int& out) {
+    auto parse_int = [](const std::string& t, int& out) {
         size_t i = 0;
         bool negative = false;
         if(i < t.size() && (t[i] == '+' || t[i] == '-'))
@@ -473,31 +484,31 @@ static bool parseNthFormula(std::string_view text, int& a, int& b)
     auto n = f.find('n');
     if(n == std::string::npos) {
         a = 0;
-        return parseInt(f, b);
+        return parse_int(f, b);
     }
 
-    auto aPart = f.substr(0, n);
-    auto bPart = f.substr(n + 1);
-    if(aPart.empty() || aPart == "+")
+    auto a_part = f.substr(0, n);
+    auto b_part = f.substr(n + 1);
+    if(a_part.empty() || a_part == "+")
         a = 1;
-    else if(aPart == "-")
+    else if(a_part == "-")
         a = -1;
-    else if(!parseInt(aPart, a))
+    else if(!parse_int(a_part, a))
         return false;
-    if(bPart.empty()) {
+    if(b_part.empty()) {
         b = 0;
         return true;
     }
 
-    if(bPart[0] != '+' && bPart[0] != '-')
+    if(b_part[0] != '+' && b_part[0] != '-')
         return false;
-    return parseInt(bPart, b);
+    return parse_int(b_part, b);
 }
 
-static bool parsePseudoClassSelector(std::string_view& input, SimpleSelector& simpleSelector)
+static bool parse_pseudo_class_selector(std::string_view& input, SimpleSelector& simpleSelector)
 {
     std::string name;
-    if(!readCSSIdentifier(input, name))
+    if(!read_css_identifier(input, name))
         return false;
     PseudoClassSelector selector;
     if(name.compare("empty") == 0)
@@ -511,65 +522,65 @@ static bool parsePseudoClassSelector(std::string_view& input, SimpleSelector& si
     else if(name.compare("last-child") == 0)
         selector.type = PseudoClassSelector::Type::LastChild;
     else if(name.compare("only-child") == 0)
-        selector.type = PseudoClassSelector::Type::OnlyChild;
+        selector.type = PseudoClassSelector::Type::only_child;
     else if(name.compare("first-of-type") == 0)
-        selector.type = PseudoClassSelector::Type::FirstOfType;
+        selector.type = PseudoClassSelector::Type::first_of_type;
     else if(name.compare("last-of-type") == 0)
-        selector.type = PseudoClassSelector::Type::LastOfType;
+        selector.type = PseudoClassSelector::Type::last_of_type;
     else if(name.compare("only-of-type") == 0)
-        selector.type = PseudoClassSelector::Type::OnlyOfType;
+        selector.type = PseudoClassSelector::Type::only_of_type;
     else if(name.compare("nth-child") == 0)
-        selector.type = PseudoClassSelector::Type::NthChild;
+        selector.type = PseudoClassSelector::Type::nth_child;
     else if(name.compare("nth-last-child") == 0)
-        selector.type = PseudoClassSelector::Type::NthLastChild;
+        selector.type = PseudoClassSelector::Type::nth_last_child;
     else if(name.compare("nth-of-type") == 0)
-        selector.type = PseudoClassSelector::Type::NthOfType;
+        selector.type = PseudoClassSelector::Type::nth_of_type;
     else if(name.compare("nth-last-of-type") == 0)
-        selector.type = PseudoClassSelector::Type::NthLastOfType;
-    if(selector.type == PseudoClassSelector::Type::NthChild
-        || selector.type == PseudoClassSelector::Type::NthLastChild
-        || selector.type == PseudoClassSelector::Type::NthOfType
-        || selector.type == PseudoClassSelector::Type::NthLastOfType) {
-        skipOptionalSpaces(input);
-        if(!skipDelimiter(input, '('))
+        selector.type = PseudoClassSelector::Type::nth_last_of_type;
+    if(selector.type == PseudoClassSelector::Type::nth_child
+        || selector.type == PseudoClassSelector::Type::nth_last_child
+        || selector.type == PseudoClassSelector::Type::nth_of_type
+        || selector.type == PseudoClassSelector::Type::nth_last_of_type) {
+        skip_optional_spaces(input);
+        if(!skip_delimiter(input, '('))
             return false;
         auto close = input.find(')');
         if(close == std::string_view::npos)
             return false;
-        if(!parseNthFormula(input.substr(0, close), selector.nthA, selector.nthB))
+        if(!parse_nth_formula(input.substr(0, close), selector.nth_a, selector.nth_b))
             return false;
         input.remove_prefix(close + 1);
     }
 
-    if(selector.type == PseudoClassSelector::Type::Is || selector.type == PseudoClassSelector::Type::Not) {
-        skipOptionalSpaces(input);
-        if(!skipDelimiter(input, '('))
+    if(selector.type == PseudoClassSelector::Type::is || selector.type == PseudoClassSelector::Type::Not) {
+        skip_optional_spaces(input);
+        if(!skip_delimiter(input, '('))
             return false;
-        skipOptionalSpaces(input);
-        if(!parseSelectors(input, selector.subSelectors))
+        skip_optional_spaces(input);
+        if(!parse_selectors(input, selector.sub_selectors))
             return false;
-        skipOptionalSpaces(input);
-        if(!skipDelimiter(input, ')')) {
+        skip_optional_spaces(input);
+        if(!skip_delimiter(input, ')')) {
             return false;
         }
     }
 
-    simpleSelector.pseudoClassSelectors.push_back(std::move(selector));
+    simpleSelector.pseudo_class_selectors.push_back(std::move(selector));
     return true;
 }
 
-static bool parseSimpleSelector(std::string_view& input, SimpleSelector& simpleSelector, bool& failed)
+static bool parse_simple_selector(std::string_view& input, SimpleSelector& simpleSelector, bool& failed)
 {
-    auto consumed = parseTagSelector(input, simpleSelector);
+    auto consumed = parse_tag_selector(input, simpleSelector);
     do {
-        if(skipDelimiter(input, '#'))
-            failed = !parseIdSelector(input, simpleSelector);
-        else if(skipDelimiter(input, '.'))
-            failed = !parseClassSelector(input, simpleSelector);
-        else if(skipDelimiter(input, '['))
-            failed = !parseAttributeSelector(input, simpleSelector);
-        else if(skipDelimiter(input, ':'))
-            failed = !parsePseudoClassSelector(input, simpleSelector);
+        if(skip_delimiter(input, '#'))
+            failed = !parse_id_selector(input, simpleSelector);
+        else if(skip_delimiter(input, '.'))
+            failed = !parse_class_selector(input, simpleSelector);
+        else if(skip_delimiter(input, '['))
+            failed = !parse_attribute_selector(input, simpleSelector);
+        else if(skip_delimiter(input, ':'))
+            failed = !parse_pseudo_class_selector(input, simpleSelector);
         else
             break;
         consumed = true;
@@ -577,109 +588,109 @@ static bool parseSimpleSelector(std::string_view& input, SimpleSelector& simpleS
     return consumed && !failed;
 }
 
-static bool parseCombinator(std::string_view& input, SimpleSelector::Combinator& combinator)
+static bool parse_combinator(std::string_view& input, SimpleSelector::Combinator& combinator)
 {
     combinator = SimpleSelector::Combinator::None;
     while(!input.empty() && IS_WS(input.front())) {
-        combinator = SimpleSelector::Combinator::Descendant;
+        combinator = SimpleSelector::Combinator::descendant;
         input.remove_prefix(1);
     }
 
-    if(skipDelimiterAndOptionalSpaces(input, '>'))
+    if(skip_delimiter_and_optional_spaces(input, '>'))
         combinator = SimpleSelector::Combinator::Child;
-    else if(skipDelimiterAndOptionalSpaces(input, '+'))
-        combinator = SimpleSelector::Combinator::DirectAdjacent;
-    else if(skipDelimiterAndOptionalSpaces(input, '~'))
-        combinator = SimpleSelector::Combinator::InDirectAdjacent;
+    else if(skip_delimiter_and_optional_spaces(input, '+'))
+        combinator = SimpleSelector::Combinator::direct_adjacent;
+    else if(skip_delimiter_and_optional_spaces(input, '~'))
+        combinator = SimpleSelector::Combinator::in_direct_adjacent;
     return combinator != SimpleSelector::Combinator::None;
 }
 
-static bool parseSelector(std::string_view& input, Selector& selector)
+static bool parse_selector(std::string_view& input, Selector& selector)
 {
     auto combinator = SimpleSelector::Combinator::None;
     do {
         bool failed = false;
         SimpleSelector simpleSelector(combinator);
-        if(!parseSimpleSelector(input, simpleSelector, failed))
-            return !failed && (combinator == SimpleSelector::Combinator::Descendant);
+        if(!parse_simple_selector(input, simpleSelector, failed))
+            return !failed && (combinator == SimpleSelector::Combinator::descendant);
         selector.push_back(std::move(simpleSelector));
-    } while(parseCombinator(input, combinator));
+    } while(parse_combinator(input, combinator));
     return true;
 }
 
-static bool parseSelectors(std::string_view& input, SelectorList& selectors)
+static bool parse_selectors(std::string_view& input, selector_list& selectors)
 {
     do {
         Selector selector;
-        if(!parseSelector(input, selector))
+        if(!parse_selector(input, selector))
             return false;
         selectors.push_back(std::move(selector));
-    } while(skipDelimiterAndOptionalSpaces(input, ','));
+    } while(skip_delimiter_and_optional_spaces(input, ','));
     return true;
 }
 
-inline bool isCustomPropertyName(std::string_view name)
+inline bool is_custom_property_name(std::string_view name)
 {
     return name.size() > 2 && name[0] == '-' && name[1] == '-';
 }
 
-static bool parseDeclarations(std::string_view& input, DeclarationList& declarations)
+static bool parse_declarations(std::string_view& input, declaration_list& declarations)
 {
-    if(!skipDelimiter(input, '{'))
+    if(!skip_delimiter(input, '{'))
         return false;
-    skipOptionalSpaces(input);
+    skip_optional_spaces(input);
     do {
         std::string name;
-        if(!readCSSIdentifier(input, name))
+        if(!read_css_identifier(input, name))
             return false;
-        skipOptionalSpaces(input);
-        if(!skipDelimiter(input, ':'))
+        skip_optional_spaces(input);
+        if(!skip_delimiter(input, ':'))
             return false;
-        skipOptionalSpaces(input);
+        skip_optional_spaces(input);
         std::string_view value(input);
         while(!input.empty() && !(input.front() == '!' || input.front() == ';' || input.front() == '}'))
             input.remove_prefix(1);
         value.remove_suffix(input.length());
-        stripTrailingSpaces(value);
+        strip_trailing_spaces(value);
 
         Declaration declaration;
-        declaration.specificity = Specificity::Stylesheet;
+        declaration.specificity = Specificity::stylesheet;
         declaration.id = propertyid(name);
         declaration.value.assign(value);
-        const bool custom = isCustomPropertyName(name);
+        const bool custom = is_custom_property_name(name);
         if(!custom) {
             for(auto& ch : name)
                 ch = char(std::tolower(static_cast<unsigned char>(ch)));
         }
         declaration.name = name;
-        if(skipDelimiter(input, '!')) {
-            skipOptionalSpaces(input);
+        if(skip_delimiter(input, '!')) {
+            skip_optional_spaces(input);
             if(!skipString(input, "important"))
                 return false;
-            declaration.specificity = Specificity::StylesheetImportant;
+            declaration.specificity = Specificity::stylesheet_important;
         }
 
         // `background-color` is no svg property, but the HTML inside a foreignObject paints it; a custom
         // property (`--x`) is none either, but `var(--x)` in the values of the elements below reads it
-        if(declaration.id != PropertyID::Unknown || custom || declaration.name == "background-color")
+        if(declaration.id != property_id::unknown || custom || declaration.name == "background-color")
             declarations.push_back(std::move(declaration));
-        skipOptionalSpacesOrDelimiter(input, ';');
+        skip_optional_spaces_or_delimiter(input, ';');
     } while(!input.empty() && input.front() != '}');
-    return skipDelimiter(input, '}');
+    return skip_delimiter(input, '}');
 }
 
-static bool parseRule(std::string_view& input, Rule& rule)
+static bool parse_rule(std::string_view& input, Rule& rule)
 {
-    if(!parseSelectors(input, rule.selectors))
+    if(!parse_selectors(input, rule.selectors))
         return false;
-    return parseDeclarations(input, rule.declarations);
+    return parse_declarations(input, rule.declarations);
 }
 
 // Splits a `src:` value on its *top-level* commas (each a
 // `url(...)` optionally followed by `format(...)`) -- paren-depth-aware
 // so a comma inside url()/format() (none occur in valid CSS, but
 // malformed input shouldn't split incorrectly) doesn't split the list.
-static std::vector<std::string_view> splitTopLevelCommas(std::string_view value)
+static std::vector<std::string_view> split_top_level_commas(std::string_view value)
 {
     std::vector<std::string_view> parts;
     size_t start = 0;
@@ -700,9 +711,9 @@ static std::vector<std::string_view> splitTopLevelCommas(std::string_view value)
     return parts;
 }
 
-static std::string_view stripQuotes(std::string_view value)
+static std::string_view strip_quotes(std::string_view value)
 {
-    stripLeadingAndTrailingSpaces(value);
+    strip_leading_and_trailing_spaces(value);
     if(!value.empty() && (value.front() == '\'' || value.front() == '"')) {
         auto quote = value.front();
         value.remove_prefix(1);
@@ -716,13 +727,13 @@ static std::string_view stripQuotes(std::string_view value)
 // FontFace; a null face when the payload is malformed or isn't raw SFNT
 // (e.g. WOFF/WOFF2). Shared by `@font-face` data URIs and the embedded
 // fallback font.
-static FontFace fontFaceFromBase64(std::string_view payload)
+static FontFace font_face_from_base64(std::string_view payload)
 {
-    size_t decodedLength = 0;
-    auto* decoded = base64_decode(payload.data(), int(payload.size()), &decodedLength);
+    size_t decoded_length = 0;
+    auto* decoded = base64_decode(payload.data(), int(payload.size()), &decoded_length);
     if(decoded == nullptr)
         return FontFace();
-    return FontFace(decoded, decodedLength, [](void* closure) { free(closure); }, decoded);
+    return FontFace(decoded, decoded_length, [](void* closure) { free(closure); }, decoded);
 }
 
 // Loads an `@font-face` rule's embedded font (a `src: url(data:...)`
@@ -741,87 +752,87 @@ static FontFace fontFaceFromBase64(std::string_view payload)
 // each in turn and keeps the first one that actually parses as valid
 // SFNT, exactly matching how real `@font-face` `src` fallback lists are
 // meant to be read (most-preferred format first, older formats after).
-static void parseFontFaceRule(std::string_view block)
+static void parse_font_face_rule(std::string_view block)
 {
-    auto familyValue = findRawDeclarationValue(block, "font-family");
-    if(!familyValue)
+    auto family_value = find_raw_declaration_value(block, "font-family");
+    if(!family_value)
         return;
-    auto family = stripQuotes(*familyValue);
+    auto family = strip_quotes(*family_value);
     if(family.empty())
         return;
 
-    auto srcValue = findRawDeclarationValue(block, "src");
-    if(!srcValue)
+    auto src_value = find_raw_declaration_value(block, "src");
+    if(!src_value)
         return;
 
     // The src value is where the megabytes are (the font itself, base64). font-weight/font-style are never
     // inside it, so look for them in what lies before and after it.
-    const auto srcOffset = size_t(srcValue->data() - block.data());
-    const auto before = block.substr(0, srcOffset);
-    const auto after = block.substr(srcOffset + srcValue->size());
-    auto findOutsideSrc = [&](std::string_view property) {
-        auto value = findRawDeclarationValue(before, property);
-        return value ? value : findRawDeclarationValue(after, property);
+    const auto src_offset = size_t(src_value->data() - block.data());
+    const auto before = block.substr(0, src_offset);
+    const auto after = block.substr(src_offset + src_value->size());
+    auto find_outside_src = [&](std::string_view property) {
+        auto value = find_raw_declaration_value(before, property);
+        return value ? value : find_raw_declaration_value(after, property);
     };
 
     auto bold = false;
-    if(auto weightValue = findOutsideSrc("font-weight")) {
-        std::string weight(*weightValue);
+    if(auto weight_value = find_outside_src("font-weight")) {
+        std::string weight(*weight_value);
         for(auto& ch : weight)
             ch = char(std::tolower(static_cast<unsigned char>(ch)));
         bold = weight.find("bold") != std::string::npos || std::strtof(weight.c_str(), nullptr) >= 600.f;
     }
 
     auto italic = false;
-    if(auto styleValue = findOutsideSrc("font-style")) {
-        std::string style(*styleValue);
+    if(auto style_value = find_outside_src("font-style")) {
+        std::string style(*style_value);
         for(auto& ch : style)
             ch = char(std::tolower(static_cast<unsigned char>(ch)));
         italic = style.find("italic") != std::string::npos || style.find("oblique") != std::string::npos;
     }
 
-    for(auto alternative : splitTopLevelCommas(*srcValue)) {
-        auto urlPos = alternative.find("url(");
-        if(urlPos == std::string_view::npos)
+    for(auto alternative : split_top_level_commas(*src_value)) {
+        auto url_pos = alternative.find("url(");
+        if(url_pos == std::string_view::npos)
             continue;
-        auto contentStart = urlPos + 4;
-        auto closeParen = alternative.find(')', contentStart);
-        if(closeParen == std::string_view::npos)
+        auto content_start = url_pos + 4;
+        auto close_paren = alternative.find(')', content_start);
+        if(close_paren == std::string_view::npos)
             continue;
-        auto url = stripQuotes(alternative.substr(contentStart, closeParen - contentStart));
+        auto url = strip_quotes(alternative.substr(content_start, close_paren - content_start));
 
         if(url.compare(0, 5, "data:") != 0)
             continue; // not embedded -- out of scope, see comment above
-        auto base64Pos = url.find("base64,");
-        if(base64Pos == std::string_view::npos)
+        auto base64_pos = url.find("base64,");
+        if(base64_pos == std::string_view::npos)
             continue;
-        auto payload = url.substr(base64Pos + 7);
+        auto payload = url.substr(base64_pos + 7);
 
-        auto face = fontFaceFromBase64(payload);
+        auto face = font_face_from_base64(payload);
         if(face.is_null())
             continue; // malformed, or not raw SFNT (e.g. still WOFF/WOFF2) -- try the next alternative
 
-        fontFaceCache()->addFontFace(std::string(family), bold, italic, face);
+        fontFaceCache()->add_font_face(std::string(family), bold, italic, face);
         return; // first successfully-loaded alternative wins
     }
 }
 
-static RuleDataList parseStyleSheet(std::string_view input)
+static rule_data_list parse_style_sheet(std::string_view input)
 {
-    RuleDataList rules;
+    rule_data_list rules;
     while(!input.empty()) {
-        skipOptionalSpaces(input);
-        if(skipDelimiter(input, '@')) {
-            std::string atKeyword;
-            readCSSIdentifier(input, atKeyword);
-            for(auto& ch : atKeyword)
+        skip_optional_spaces(input);
+        if(skip_delimiter(input, '@')) {
+            std::string at_keyword;
+            read_css_identifier(input, at_keyword);
+            for(auto& ch : at_keyword)
                 ch = char(std::tolower(static_cast<unsigned char>(ch)));
 
-            if(atKeyword == "font-face") {
-                skipOptionalSpaces(input);
-                if(skipDelimiter(input, '{')) {
+            if(at_keyword == "font-face") {
+                skip_optional_spaces(input);
+                if(skip_delimiter(input, '{')) {
                     int depth = 1;
-                    size_t blockLength = 0;
+                    size_t block_length = 0;
                     auto block = input;
                     // An embedded font makes this block hundreds of kilobytes, with no brace inside it but the
                     // last: look for that one with memchr, and only walk character by character if a `{`
@@ -829,19 +840,19 @@ static RuleDataList parseStyleSheet(std::string_view input)
                     if(auto* close = static_cast<const char*>(std::memchr(input.data(), '}', input.size()))) {
                         const size_t n = size_t(close - input.data());
                         if(std::memchr(input.data(), '{', n) == nullptr) {
-                            blockLength = n + 1;
+                            block_length = n + 1;
                             depth = 0;
                         }
                     }
 
-                    while(blockLength < input.size() && depth > 0) {
-                        auto ch = input[blockLength];
+                    while(block_length < input.size() && depth > 0) {
+                        auto ch = input[block_length];
                         if(ch == '{') ++depth;
                         else if(ch == '}') --depth;
-                        ++blockLength;
+                        ++block_length;
                     }
-                    parseFontFaceRule(block.substr(0, depth == 0 ? blockLength - 1 : blockLength));
-                    input.remove_prefix(blockLength);
+                    parse_font_face_rule(block.substr(0, depth == 0 ? block_length - 1 : block_length));
+                    input.remove_prefix(block_length);
                 }
                 continue;
             }
@@ -864,23 +875,23 @@ static RuleDataList parseStyleSheet(std::string_view input)
         }
 
         Rule rule;
-        const auto ruleStart = input;
-        if(!parseRule(input, rule)) {
+        const auto rule_start = input;
+        if(!parse_rule(input, rule)) {
             // Invalid or unsupported rule: drop only this rule (CSS error recovery) and carry on with the
             // next one, instead of discarding the rest of the stylesheet.
-            input = ruleStart;
+            input = rule_start;
             int depth = 0;
-            bool inBlock = false;
+            bool in_block = false;
             while(!input.empty()) {
                 auto ch = input.front();
                 input.remove_prefix(1);
                 if(ch == '{') {
                     ++depth;
-                    inBlock = true;
+                    in_block = true;
                 } else if(ch == '}' && depth > 0) {
                     if(--depth == 0)
                         break;
-                } else if(ch == ';' && !inBlock) {
+                } else if(ch == ';' && !in_block) {
                     break;
                 }
             }
@@ -891,11 +902,11 @@ static RuleDataList parseStyleSheet(std::string_view input)
         for(const auto& selector : rule.selectors) {
             size_t specificity = 0;
             for(const auto& simpleSelector : selector) {
-                specificity += (simpleSelector.id == ElementID::Star) ? 0x0 : 0x1;
-                for(const auto& attributeSelector : simpleSelector.attributeSelectors) {
-                    specificity += (attributeSelector.id == PropertyID::Id) ? 0x10000 : 0x100;
+                specificity += (simpleSelector.id == element_id::star) ? 0x0 : 0x1;
+                for(const auto& attributeSelector : simpleSelector.attribute_selectors) {
+                    specificity += (attributeSelector.id == property_id::Id) ? 0x10000 : 0x100;
                 }
-                for(const auto& pseudoClassSelector : simpleSelector.pseudoClassSelectors) {
+                for(const auto& pseudoClassSelector : simpleSelector.pseudo_class_selectors) {
                     specificity += 0x100;
                 }
             }
@@ -907,13 +918,13 @@ static RuleDataList parseStyleSheet(std::string_view input)
     return rules;
 }
 
-static SelectorList parseQuerySelectors(std::string_view input)
+static selector_list parse_query_selectors(std::string_view input)
 {
-    SelectorList selectors;
-    stripLeadingAndTrailingSpaces(input);
-    if(!parseSelectors(input, selectors)
+    selector_list selectors;
+    strip_leading_and_trailing_spaces(input);
+    if(!parse_selectors(input, selectors)
         || !input.empty()) {
-        return SelectorList();
+        return selector_list();
     }
 
     return selectors;
@@ -922,15 +933,15 @@ static SelectorList parseQuerySelectors(std::string_view input)
 // Removes a trailing `!important` (any case, any spacing around the bang) from a declaration value and
 // reports whether there was one. `fill:#f9f !important` is the colour #f9f, flagged important -- it is
 // not a colour called "#f9f !important".
-inline bool stripImportantFlag(std::string& value)
+inline bool strip_important_flag(std::string& value)
 {
     auto bang = value.rfind('!');
     if(bang == std::string::npos)
         return false;
     std::string_view flag(value);
     flag.remove_prefix(bang + 1);
-    skipOptionalSpaces(flag);
-    stripTrailingSpaces(flag);
+    skip_optional_spaces(flag);
+    strip_trailing_spaces(flag);
     if(flag.size() != 9)
         return false;
     for(size_t i = 0; i < flag.size(); ++i) {
@@ -944,13 +955,13 @@ inline bool stripImportantFlag(std::string& value)
     return true;
 }
 
-inline void parseInlineStyle(std::string_view input, svg_element* el)
+inline void parse_inline_style(std::string_view input, svg_element* el)
 {
     std::string name;
-    skipOptionalSpaces(input);
-    while(readCSSIdentifier(input, name)) {
-        skipOptionalSpaces(input);
-        if(!skipDelimiter(input, ':'))
+    skip_optional_spaces(input);
+    while(read_css_identifier(input, name)) {
+        skip_optional_spaces(input);
+        if(!skip_delimiter(input, ':'))
             return;
         std::string value;
         while(!input.empty() && input.front() != ';') {
@@ -958,23 +969,23 @@ inline void parseInlineStyle(std::string_view input, svg_element* el)
             input.remove_prefix(1);
         }
 
-        if(isCustomPropertyName(name)) {
-            const bool important = stripImportantFlag(value);
-            el->setCustomProperty(important ? Specificity::InlineImportant : Specificity::InlineStyle, name, value);
-            skipOptionalSpacesOrDelimiter(input, ';');
+        if(is_custom_property_name(name)) {
+            const bool important = strip_important_flag(value);
+            el->set_custom_property(important ? Specificity::inline_important : Specificity::InlineStyle, name, value);
+            skip_optional_spaces_or_delimiter(input, ';');
             continue;
         }
 
         auto id = csspropertyid(name);
-        if(id != PropertyID::Unknown) {
-            const bool important = stripImportantFlag(value);
-            el->set_attribute(important ? Specificity::InlineImportant : Specificity::InlineStyle, id, value);
+        if(id != property_id::unknown) {
+            const bool important = strip_important_flag(value);
+            el->set_attribute(important ? Specificity::inline_important : Specificity::InlineStyle, id, value);
         }
-        skipOptionalSpacesOrDelimiter(input, ';');
+        skip_optional_spaces_or_delimiter(input, ';');
     }
 }
 
-inline void removeStyleComments(std::string& value)
+inline void remove_style_comments(std::string& value)
 {
     auto start = value.find("/*");
     while(start != std::string::npos) {
@@ -984,7 +995,7 @@ inline void removeStyleComments(std::string& value)
     }
 }
 
-inline bool decodeText(std::string_view input, std::string& output)
+inline bool decode_text(std::string_view input, std::string& output)
 {
     output.clear();
     while(!input.empty()) {
@@ -999,12 +1010,12 @@ inline bool decodeText(std::string_view input, std::string& output)
         output.append(input.data(), amp);
         input.remove_prefix(amp + 1);
 
-        if(skipDelimiter(input, '#')) {
+        if(skip_delimiter(input, '#')) {
             int base = 10;
-            if(skipDelimiter(input, 'x'))
+            if(skip_delimiter(input, 'x'))
                 base = 16;
             unsigned int cp;
-            if(!parseInteger(input, cp, base))
+            if(!parse_integer(input, cp, base))
                 return false;
             char c[5] = {0, 0, 0, 0, 0};
             if(cp < 0x80) {
@@ -1050,7 +1061,7 @@ inline bool decodeText(std::string_view input, std::string& output)
             }
         }
 
-        if(!skipDelimiter(input, ';')) {
+        if(!skip_delimiter(input, ';')) {
             return false;
         }
     }
@@ -1061,7 +1072,7 @@ inline bool decodeText(std::string_view input, std::string& output)
 constexpr bool IS_STARTNAMECHAR(int c) { return IS_ALPHA(c) ||  c == '_' || c == ':'; }
 constexpr bool IS_NAMECHAR(int c) { return IS_STARTNAMECHAR(c) || IS_NUM(c) || c == '-' || c == '.'; }
 
-inline bool readIdentifier(std::string_view& input, std::string& output)
+inline bool read_identifier(std::string_view& input, std::string& output)
 {
     if(input.empty() || !IS_STARTNAMECHAR(input.front()))
         return false;
@@ -1086,16 +1097,16 @@ inline bool readIdentifier(std::string_view& input, std::string& output)
 // above it -- and the very same selector matcher the svg elements use walks that chain.
 // ---------------------------------------------------------------------------------------------------
 
-struct HtmlNode {
+struct html_node {
     std::string tag; // lower case
     std::string id;
-    std::string className;
+    std::string class_name;
     std::string style; // the style="" attribute, verbatim
     int parent{-1};    // index in the nd list; -1 = a direct child of the foreignObject
-    bool hasText{false}; // has non-blank text of its own
+    bool has_text{false}; // has non-blank text of its own
 };
 
-static bool isVoidHtmlTag(const std::string& tag)
+static bool is_void_html_tag(const std::string& tag)
 {
     static constexpr std::string_view names[] = {"area", "base", "br", "col", "embed", "hr", "img",
                                                  "input", "link", "meta", "source", "track", "wbr"};
@@ -1107,7 +1118,7 @@ static bool isVoidHtmlTag(const std::string& tag)
     return false;
 }
 
-static std::string lowerCase(std::string_view text)
+static std::string lower_case(std::string_view text)
 {
     std::string out(text);
     for(auto& ch : out)
@@ -1117,9 +1128,9 @@ static std::string lowerCase(std::string_view text)
 
 // The opening/closing tags of a piece of HTML as a flat list in dom order, each with the index of
 // the el it sits in. Only what the cascade needs is read: tag name, id, class, style.
-static std::vector<HtmlNode> parseHtmlNodes(std::string_view html)
+static std::vector<html_node> parse_html_nodes(std::string_view html)
 {
-    std::vector<HtmlNode> nodes;
+    std::vector<html_node> nodes;
     std::vector<int> open;
     size_t pos = 0;
     while(pos < html.size()) {
@@ -1128,7 +1139,7 @@ static std::vector<HtmlNode> parseHtmlNodes(std::string_view html)
         if(!open.empty()) {
             for(char ch : text) {
                 if(!IS_WS(ch)) {
-                    nodes[open.back()].hasText = true;
+                    nodes[open.back()].has_text = true;
                     break;
                 }
             }
@@ -1165,7 +1176,7 @@ static std::vector<HtmlNode> parseHtmlNodes(std::string_view html)
             size_t n = 0;
             while(n < inside.size() && !IS_WS(inside[n]))
                 ++n;
-            auto name = lowerCase(inside.substr(0, n));
+            auto name = lower_case(inside.substr(0, n));
             for(size_t i = open.size(); i-- > 0;) {
                 if(nodes[open[i]].tag == name) {
                     open.resize(i);
@@ -1176,34 +1187,34 @@ static std::vector<HtmlNode> parseHtmlNodes(std::string_view html)
             continue;
         }
 
-        HtmlNode nd;
+        html_node nd;
         size_t n = 0;
         while(n < inside.size() && !IS_WS(inside[n]) && inside[n] != '/')
             ++n;
-        nd.tag = lowerCase(inside.substr(0, n));
+        nd.tag = lower_case(inside.substr(0, n));
         inside.remove_prefix(n);
-        bool selfClosing = false;
+        bool self_closing = false;
         while(!inside.empty()) {
-            skipOptionalSpaces(inside);
+            skip_optional_spaces(inside);
             if(inside.empty())
                 break;
             if(inside.front() == '/') {
-                selfClosing = true;
+                self_closing = true;
                 inside.remove_prefix(1);
                 continue;
             }
 
-            selfClosing = false;
+            self_closing = false;
             size_t m = 0;
             while(m < inside.size() && !IS_WS(inside[m]) && inside[m] != '=' && inside[m] != '/')
                 ++m;
-            auto name = lowerCase(inside.substr(0, m));
+            auto name = lower_case(inside.substr(0, m));
             inside.remove_prefix(m);
-            skipOptionalSpaces(inside);
+            skip_optional_spaces(inside);
             std::string value;
             if(!inside.empty() && inside.front() == '=') {
                 inside.remove_prefix(1);
-                skipOptionalSpaces(inside);
+                skip_optional_spaces(inside);
                 if(!inside.empty() && (inside.front() == '"' || inside.front() == '\'')) {
                     auto q = inside.front();
                     inside.remove_prefix(1);
@@ -1220,7 +1231,7 @@ static std::vector<HtmlNode> parseHtmlNodes(std::string_view html)
             }
 
             if(name == "class")
-                nd.className = value;
+                nd.class_name = value;
             else if(name == "id")
                 nd.id = value;
             else if(name == "style")
@@ -1229,7 +1240,7 @@ static std::vector<HtmlNode> parseHtmlNodes(std::string_view html)
 
         nd.parent = open.empty() ? -1 : open.back();
         nodes.push_back(std::move(nd));
-        if(!selfClosing && !isVoidHtmlTag(nodes.back().tag))
+        if(!self_closing && !is_void_html_tag(nodes.back().tag))
             open.push_back(int(nodes.size()) - 1);
     }
 
@@ -1237,27 +1248,27 @@ static std::vector<HtmlNode> parseHtmlNodes(std::string_view html)
 }
 
 // A step along the ancestor chain: an HTML nd, or -- once the HTML runs out -- an svg el.
-struct StyleNode {
-    const HtmlNode* html{nullptr};
+struct style_node {
+    const html_node* html{nullptr};
     const svg_element* svg{nullptr};
     explicit operator bool() const { return html || svg; }
 };
 
-static bool matchHtmlSimpleSelector(const SimpleSelector& selector, const HtmlNode& nd)
+static bool match_html_simple_selector(const SimpleSelector& selector, const html_node& nd)
 {
-    if(selector.id != ElementID::Star && (selector.tag.empty() || selector.tag != nd.tag))
+    if(selector.id != element_id::star && (selector.tag.empty() || selector.tag != nd.tag))
         return false;
-    if(!selector.pseudoClassSelectors.empty())
+    if(!selector.pseudo_class_selectors.empty())
         return false; // :first-child, :not(...) & co are not modelled for HTML
-    for(const auto& attribute : selector.attributeSelectors) {
+    for(const auto& attribute : selector.attribute_selectors) {
         std::string_view value;
-        if(attribute.id == PropertyID::Class)
-            value = nd.className;
-        else if(attribute.id == PropertyID::Id)
+        if(attribute.id == property_id::Class)
+            value = nd.class_name;
+        else if(attribute.id == property_id::Id)
             value = nd.id;
-        else if(attribute.id == PropertyID::Style)
+        else if(attribute.id == property_id::Style)
             value = nd.style;
-        if(!matchAttributeValue(attribute, value))
+        if(!match_attribute_value(attribute, value))
             return false;
     }
 
@@ -1267,24 +1278,24 @@ static bool matchHtmlSimpleSelector(const SimpleSelector& selector, const HtmlNo
 // matchSelector() for an HTML nd: the rightmost compound must match the nd, the ones before it its
 // ancestors -- HTML elements first, then `owner` (the foreignObject) and the svg elements above it.
 // Sibling combinators (+ ~) are not modelled for HTML, so a selector using one never matches.
-static bool matchHtmlSelector(const Selector& selector, const std::vector<HtmlNode>& nodes, int index, const svg_element* owner)
+static bool match_html_selector(const Selector& selector, const std::vector<html_node>& nodes, int index, const svg_element* owner)
 {
     if(selector.empty())
         return false;
-    auto parentOf = [&](const StyleNode& nd) {
+    auto parent_of = [&](const style_node& nd) {
         if(nd.html) {
             if(nd.html->parent >= 0)
-                return StyleNode{&nodes[nd.html->parent], nullptr};
-            return StyleNode{nullptr, owner};
+                return style_node{&nodes[nd.html->parent], nullptr};
+            return style_node{nullptr, owner};
         }
 
-        return StyleNode{nullptr, nd.svg->parent_element()};
+        return style_node{nullptr, nd.svg->parent_element()};
     };
-    auto matches = [](const SimpleSelector& simple, const StyleNode& nd) {
-        return nd.html ? matchHtmlSimpleSelector(simple, *nd.html) : matchSimpleSelector(simple, nd.svg);
+    auto matches = [](const SimpleSelector& simple, const style_node& nd) {
+        return nd.html ? match_html_simple_selector(simple, *nd.html) : match_simple_selector(simple, nd.svg);
     };
 
-    StyleNode nd{&nodes[index], nullptr};
+    style_node nd{&nodes[index], nullptr};
     auto it = selector.rbegin();
     auto end = selector.rend();
     if(!matches(*it, nd))
@@ -1292,15 +1303,15 @@ static bool matchHtmlSelector(const Selector& selector, const std::vector<HtmlNo
     auto combinator = it->combinator;
     ++it;
     while(it != end) {
-        if(combinator != SimpleSelector::Combinator::Child && combinator != SimpleSelector::Combinator::Descendant)
+        if(combinator != SimpleSelector::Combinator::Child && combinator != SimpleSelector::Combinator::descendant)
             return false;
-        nd = parentOf(nd);
+        nd = parent_of(nd);
         if(!nd)
             return false;
         if(matches(*it, nd)) {
             combinator = it->combinator;
             ++it;
-        } else if(combinator != SimpleSelector::Combinator::Descendant) {
+        } else if(combinator != SimpleSelector::Combinator::descendant) {
             return false;
         }
     }
@@ -1309,7 +1320,7 @@ static bool matchHtmlSelector(const Selector& selector, const std::vector<HtmlNo
 }
 
 // The declaration of one property that currently wins, by cascade priority (a later one wins a tie).
-struct CascadedValue {
+struct cascaded_value {
     int specificity{-1};
     std::string value;
     void offer(int priority, const std::string& candidate)
@@ -1322,7 +1333,7 @@ struct CascadedValue {
 };
 
 // Offers every `color` / `background-color` declaration of a style="" attribute.
-static void offerInlineStyle(std::string_view style, CascadedValue& color, CascadedValue& background)
+static void offer_inline_style(std::string_view style, cascaded_value& color, cascaded_value& background)
 {
     while(!style.empty()) {
         auto end = style.find(';');
@@ -1331,13 +1342,13 @@ static void offerInlineStyle(std::string_view style, CascadedValue& color, Casca
         auto colon = declaration.find(':');
         if(colon == std::string_view::npos)
             continue;
-        auto nameText = declaration.substr(0, colon);
-        stripLeadingAndTrailingSpaces(nameText);
-        auto name = lowerCase(nameText);
+        auto name_text = declaration.substr(0, colon);
+        strip_leading_and_trailing_spaces(name_text);
+        auto name = lower_case(name_text);
         std::string value(declaration.substr(colon + 1));
-        const int priority = stripImportantFlag(value) ? Specificity::InlineImportant : Specificity::InlineStyle;
+        const int priority = strip_important_flag(value) ? Specificity::inline_important : Specificity::InlineStyle;
         std::string_view trimmed(value);
-        stripLeadingAndTrailingSpaces(trimmed);
+        strip_leading_and_trailing_spaces(trimmed);
         if(name == "color")
             color.offer(priority, std::string(trimmed));
         else if(name == "background-color")
@@ -1356,10 +1367,10 @@ static void offerInlineStyle(std::string_view style, CascadedValue& color, Casca
 //    labels have an opaque box on an inner <span> stacked over a translucent one on the outer <div>, and
 //    the opaque one is what shows -- so the last el in dom order that has a visible box wins,
 //    like paint order (later/nested elements paint over earlier ones). `transparent` is no box.
-static void resolveForeignObjectStyle(svg_foreign_object_element* foreignObject, const RuleDataList& rules)
+static void resolve_foreign_object_style(svg_foreign_object_element* foreignObject, const rule_data_list& rules)
 {
-    const auto nodes = parseHtmlNodes(foreignObject->rawContent());
-    std::vector<const RuleData*> relevant;
+    const auto nodes = parse_html_nodes(foreignObject->raw_content());
+    std::vector<const rule_data*> relevant;
     for(const auto& rule : rules) {
         for(const auto& declaration : rule.declarations()) {
             if(declaration.name == "color" || declaration.name == "background-color") {
@@ -1369,13 +1380,13 @@ static void resolveForeignObjectStyle(svg_foreign_object_element* foreignObject,
         }
     }
 
-    std::vector<std::optional<stb::color>> colorOf(nodes.size());
-    std::optional<stb::color> textColor, textColorOfLastNode, background;
-    bool anyText = false;
+    std::vector<std::optional<stb::color>> color_of(nodes.size());
+    std::optional<stb::color> text_color, text_color_of_last_node, background;
+    bool any_text = false;
     for(size_t i = 0; i < nodes.size(); ++i) {
-        CascadedValue color, box;
+        cascaded_value color, box;
         for(const auto* rule : relevant) {
-            if(!matchHtmlSelector(rule->selector(), nodes, int(i), foreignObject))
+            if(!match_html_selector(rule->selector(), nodes, int(i), foreignObject))
                 continue;
             for(const auto& declaration : rule->declarations()) {
                 if(declaration.name == "color")
@@ -1385,35 +1396,35 @@ static void resolveForeignObjectStyle(svg_foreign_object_element* foreignObject,
             }
         }
 
-        offerInlineStyle(nodes[i].style, color, box);
+        offer_inline_style(nodes[i].style, color, box);
 
         std::optional<stb::color> declared;
         if(color.specificity >= 0)
-            declared = parseCssColor(color.value);
-        colorOf[i] = declared ? declared : (nodes[i].parent >= 0 ? colorOf[nodes[i].parent] : std::nullopt);
-        textColorOfLastNode = colorOf[i];
-        if(nodes[i].hasText) {
-            textColor = colorOf[i];
-            anyText = true;
+            declared = parse_css_color(color.value);
+        color_of[i] = declared ? declared : (nodes[i].parent >= 0 ? color_of[nodes[i].parent] : std::nullopt);
+        text_color_of_last_node = color_of[i];
+        if(nodes[i].has_text) {
+            text_color = color_of[i];
+            any_text = true;
         }
 
         if(box.specificity >= 0) {
-            if(auto fill = parseCssColor(box.value); fill && is_visible(*fill))
+            if(auto fill = parse_css_color(box.value); fill && is_visible(*fill))
                 background = fill;
         }
     }
 
-    foreignObject->setHtmlStyle(anyText ? textColor : textColorOfLastNode, background);
+    foreignObject->set_html_style(any_text ? text_color : text_color_of_last_node, background);
 }
 
 // One RuleDataList out of several stylesheets applied one after another, each parsed on its own (a rule
 // the parser can't read ends only its own sheet) and numbered on from the sheets before it, so a later
 // sheet wins a tie. Sorted the way apply_style_sheet() sorts.
-static RuleDataList parseStyleSheets(const std::vector<std::string>& sheets)
+static rule_data_list parse_style_sheets(const std::vector<std::string>& sheets)
 {
-    RuleDataList all;
+    rule_data_list all;
     for(const auto& sheet : sheets) {
-        for(auto& rule : parseStyleSheet(sheet))
+        for(auto& rule : parse_style_sheet(sheet))
             all.emplace_back(rule.selector(), rule.declarations(), rule.specificity(), all.size());
     }
 
@@ -1427,31 +1438,31 @@ static RuleDataList parseStyleSheets(const std::vector<std::string>& sheets)
 // rules filed under its own tag, under each of its own classes, and the unfiled ones -- which are the only
 // rules that could match it. The index only prunes; each candidate still goes through RuleData::match(), and
 // candidates are visited in rule order, so the result is the same as trying every rule.
-class RuleIndex {
+class rule_index {
 public:
-    explicit RuleIndex(const RuleDataList& rules) : m_byTag(256)
+    explicit rule_index(const rule_data_list& rules) : m_by_tag(256)
     {
         for(size_t i = 0; i < rules.size(); ++i) {
             const auto& selector = rules[i].selector();
             if(selector.empty())
                 continue; // can never match
             const auto& last = selector.back();
-            if(last.id != ElementID::Star) {
-                m_byTag[size_t(last.id)].push_back(uint32_t(i));
+            if(last.id != element_id::star) {
+                m_by_tag[size_t(last.id)].push_back(uint32_t(i));
                 continue;
             }
 
-            const std::string* className = nullptr;
-            for(const auto& attribute : last.attributeSelectors) {
-                if(attribute.id == PropertyID::Class && attribute.matchType == AttributeSelector::MatchType::Includes
+            const std::string* class_name = nullptr;
+            for(const auto& attribute : last.attribute_selectors) {
+                if(attribute.id == property_id::Class && attribute.matchType == AttributeSelector::MatchType::Includes
                     && !attribute.value.empty()) {
-                    className = &attribute.value;
+                    class_name = &attribute.value;
                     break;
                 }
             }
 
-            if(className)
-                m_byClass[*className].push_back(uint32_t(i));
+            if(class_name)
+                m_by_class[*class_name].push_back(uint32_t(i));
             else
                 m_other.push_back(uint32_t(i));
         }
@@ -1461,19 +1472,19 @@ public:
     void candidates(const svg_element* el, std::vector<uint32_t>& out) const
     {
         out.clear();
-        const auto& tagged = m_byTag[size_t(el->id())];
+        const auto& tagged = m_by_tag[size_t(el->id())];
         out.insert(out.end(), tagged.begin(), tagged.end());
         out.insert(out.end(), m_other.begin(), m_other.end());
-        if(!m_byClass.empty()) {
-            std::string_view classes(el->attribute(PropertyID::Class));
+        if(!m_by_class.empty()) {
+            std::string_view classes(el->attribute(property_id::Class));
             while(!classes.empty()) {
-                skipOptionalSpaces(classes);
+                skip_optional_spaces(classes);
                 size_t n = 0;
                 while(n < classes.size() && !IS_WS(classes[n]))
                     ++n;
                 if(n > 0) {
-                    auto it = m_byClass.find(std::string(classes.substr(0, n)));
-                    if(it != m_byClass.end())
+                    auto it = m_by_class.find(std::string(classes.substr(0, n)));
+                    if(it != m_by_class.end())
                         out.insert(out.end(), it->second.begin(), it->second.end());
                 }
                 classes.remove_prefix(n);
@@ -1485,8 +1496,8 @@ public:
     }
 
 private:
-    std::vector<std::vector<uint32_t>> m_byTag;
-    std::unordered_map<std::string, std::vector<uint32_t>> m_byClass;
+    std::vector<std::vector<uint32_t>> m_by_tag;
+    std::unordered_map<std::string, std::vector<uint32_t>> m_by_class;
     std::vector<uint32_t> m_other;
 };
 

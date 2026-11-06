@@ -16,14 +16,14 @@ class svg_fit_to_view_box {
 public:
     svg_fit_to_view_box(svg_element* el);
 
-    const svg_rect& viewBox() const { return m_viewBox; }
-    const svg_preserve_aspect_ratio& preserveAspectRatio() const { return m_preserveAspectRatio; }
-    Transform viewBoxToViewTransform(const Size& viewportSize) const;
-    Rect getClipRect(const Size& viewportSize) const;
+    const svg_rect& viewBox() const { return m_view_box; }
+    const svg_preserve_aspect_ratio& preserveAspectRatio() const { return m_preserve_aspect_ratio; }
+    Transform view_box_to_view_transform(const Size& viewport_size) const;
+    Rect get_clip_rect(const Size& viewport_size) const;
 
 private:
-    svg_rect m_viewBox;
-    svg_preserve_aspect_ratio m_preserveAspectRatio;
+    svg_rect m_view_box;
+    svg_preserve_aspect_ratio m_preserve_aspect_ratio;
 };
 
 class svg_uri_reference {
@@ -31,8 +31,8 @@ public:
     svg_uri_reference(svg_element* el);
 
     const svg_string& href() const { return m_href; }
-    const std::string& hrefString() const { return m_href.value(); }
-    svg_element* getTargetElement(const document* dom) const;
+    const std::string& href_string() const { return m_href.value(); }
+    svg_element* get_target_element(const document* dom) const;
 
 private:
     svg_string m_href;
@@ -45,13 +45,13 @@ public:
         : m_element(el), m_color(color), m_opacity(opacity)
     {}
 
-    bool isRenderable() const { return m_opacity > 0.f && (m_element || m_color.a() > 0); }
+    bool is_renderable() const { return m_opacity > 0.f && (m_element || m_color.a() > 0); }
 
     const svg_paint_element* el() const { return m_element; }
     const stb::color& color() const { return  m_color; }
     float opacity() const { return m_opacity; }
 
-    bool applyPaint(svg_render_state& state) const;
+    bool apply_paint(svg_render_state& state) const;
 
 private:
     const svg_paint_element* m_element = nullptr;
@@ -61,20 +61,20 @@ private:
 
 class svg_graphics_element : public svg_element {
 public:
-    svg_graphics_element(document* dom, ElementID id);
+    svg_graphics_element(document* dom, element_id id);
 
-    bool isGraphicsElement() const final { return true; }
+    bool is_graphics_element() const final { return true; }
 
     const svg_transform& transform() const { return m_transform; }
     Transform local_transform() const override;
 
-    svg_paint_server getPaintServer(const Paint& paint, float opacity) const;
-    StrokeData getStrokeData(const svg_layout_state& state) const;
+    svg_paint_server get_paint_server(const Paint& paint, float opacity) const;
+    StrokeData get_stroke_data(const svg_layout_state& state) const;
 
 private:
     svg_transform m_transform;
-    svg_transform_origin m_transformOrigin;
-    svg_transform_box m_transformBox;
+    svg_transform_origin m_transform_origin;
+    svg_transform_box m_transform_box;
 };
 
 class svg_svg_element : public svg_graphics_element, public svg_fit_to_view_box {
@@ -100,16 +100,16 @@ class svg_root_element final : public svg_svg_element {
 public:
     svg_root_element(document* dom);
 
-    float intrinsic_width() const { return m_intrinsicWidth; }
-    float intrinsic_height() const { return m_intrinsicHeight; }
+    float intrinsic_width() const { return m_intrinsic_width; }
+    float intrinsic_height() const { return m_intrinsic_height; }
 
-    void setNeedsLayout() { m_intrinsicWidth = -1.f; }
-    bool needsLayout() const { return m_intrinsicWidth == -1.f; }
+    void set_needs_layout() { m_intrinsic_width = -1.f; }
+    bool needs_layout() const { return m_intrinsic_width == -1.f; }
 
     svg_root_element* layout_if_needed();
 
     svg_element* element_by_id(std::string_view id) const;
-    void addElementById(const std::string& id, svg_element* el);
+    void add_element_by_id(const std::string& id, svg_element* el);
     void layout(svg_layout_state& state) final;
 
     void force_layout();
@@ -118,14 +118,14 @@ public:
     // passed to document::apply_style_sheet() -- kept verbatim and in order. The HTML inside a
     // <foreignObject> sits outside the svg el tree and so never goes through the resolver that sets
     // svg presentation properties; it is styled from these (see resolveForeignObjectStyle()).
-    const std::vector<std::string>& styleSheets() const { return m_styleSheets; }
-    void addStyleSheet(std::string text) { m_styleSheets.push_back(std::move(text)); }
+    const std::vector<std::string>& style_sheets() const { return m_style_sheets; }
+    void add_style_sheet(std::string text) { m_style_sheets.push_back(std::move(text)); }
 
 private:
-    std::map<std::string, svg_element*, std::less<>> m_idCache;
-    float m_intrinsicWidth{-1.f};
-    float m_intrinsicHeight{-1.f};
-    std::vector<std::string> m_styleSheets;
+    std::map<std::string, svg_element*, std::less<>> m_id_cache;
+    float m_intrinsic_width{-1.f};
+    float m_intrinsic_height{-1.f};
+    std::vector<std::string> m_style_sheets;
 };
 
 class svg_use_element final : public svg_graphics_element, public svg_uri_reference {
@@ -142,7 +142,7 @@ public:
     void build() final;
 
 private:
-    std::unique_ptr<svg_element> cloneTargetElement(svg_element* targetElement);
+    std::unique_ptr<svg_element> clone_target_element(svg_element* target_element);
     svg_length m_x;
     svg_length m_y;
     svg_length m_width;
@@ -157,20 +157,20 @@ public:
     const svg_length& y() const { return m_y; }
     const svg_length& width() const { return m_width; }
     const svg_length& height() const { return m_height; }
-    const svg_preserve_aspect_ratio& preserveAspectRatio() const { return m_preserveAspectRatio; }
+    const svg_preserve_aspect_ratio& preserveAspectRatio() const { return m_preserve_aspect_ratio; }
     const pixmap& image() const { return m_image; }
 
-    Rect fillBoundingBox() const final;
-    Rect strokeBoundingBox() const final;
+    Rect fill_bounding_box() const final;
+    Rect stroke_bounding_box() const final;
     void render(svg_render_state& state) const final;
-    void parseAttribute(PropertyID id, const std::string& value) final;
+    void parse_attribute(property_id id, const std::string& value) final;
 
 private:
     svg_length m_x;
     svg_length m_y;
     svg_length m_width;
     svg_length m_height;
-    svg_preserve_aspect_ratio m_preserveAspectRatio;
+    svg_preserve_aspect_ratio m_preserve_aspect_ratio;
     pixmap m_image;
 };
 
@@ -193,18 +193,18 @@ class svg_foreign_object_element;
  * interface and call svg_foreign_object_element::setRenderer() (or replace
  * ForeignObjectSimple::instance() below) to swap it in.
  */
-class ForeignObjectRenderer {
+class foreign_object_renderer {
 public:
-    virtual ~ForeignObjectRenderer() = default;
+    virtual ~foreign_object_renderer() = default;
     virtual void render(const svg_foreign_object_element* el, svg_render_state& state) const = 0;
 };
 
 /**
  * @brief Default ForeignObjectRenderer: tag-stripped plain text, centered.
  */
-class ForeignObjectSimple final : public ForeignObjectRenderer {
+class foreign_object_simple final : public foreign_object_renderer {
 public:
-    static ForeignObjectSimple* instance();
+    static foreign_object_simple* instance();
 
     void render(const svg_foreign_object_element* el, svg_render_state& state) const final;
 };
@@ -219,7 +219,7 @@ public:
  * @font-face) provides -- there is no synthetic emboldening or slanting: with no bold face
  * installed, bold text simply renders in the regular face, as it does for <text>.
  */
-struct ForeignObjectFonts {
+struct foreign_object_fonts {
     static constexpr unsigned char Bold = 1;
     static constexpr unsigned char Italic = 2;
 
@@ -239,10 +239,10 @@ public:
     const svg_paint_server& fill() const { return m_fill; }
 
     /// Bold/italic bits (ForeignObjectFonts::Bold/Italic) the el itself inherits, i.e. the style of font().
-    unsigned char baseFontStyle() const { return m_baseFontStyle; }
+    unsigned char base_font_style() const { return m_base_font_style; }
     /// font() plus the variants named by `usedStyles` (a bit mask: bit n set = style n is needed). Nothing
     /// is looked up for styles that are not in the mask, so unstyled text costs nothing extra.
-    ForeignObjectFonts fontsFor(unsigned usedStyles) const;
+    foreign_object_fonts fonts_for(unsigned used_styles) const;
 
     /**
      * @brief Raw markup captured between <foreignObject ...> and
@@ -250,28 +250,28 @@ public:
      * exactly as it appeared in the source -- untouched, unparsed. What a
      * ForeignObjectRenderer does with it is entirely up to that renderer.
      */
-    const std::string& rawContent() const { return m_rawContent; }
-    void setRawContent(std::string content) { m_rawContent = std::move(content); }
+    const std::string& raw_content() const { return m_raw_content; }
+    void set_raw_content(std::string content) { m_raw_content = std::move(content); }
 
-    ForeignObjectRenderer* renderer() const { return m_renderer; }
-    void setRenderer(ForeignObjectRenderer* renderer) { m_renderer = renderer; }
+    foreign_object_renderer* renderer() const { return m_renderer; }
+    void set_renderer(foreign_object_renderer* renderer) { m_renderer = renderer; }
 
     /**
      * The text colour and the box colour the dom's CSS gives this el's HTML, worked out when a
      * stylesheet is applied (see resolveForeignObjectStyle()). Unset = nothing in the CSS asked for one
      * (text is then black, and no box is painted).
      */
-    const std::optional<stb::color>& htmlTextColor() const { return m_htmlTextColor; }
-    const std::optional<stb::color>& htmlBackgroundColor() const { return m_htmlBackgroundColor; }
-    void setHtmlStyle(std::optional<stb::color> text, std::optional<stb::color> background)
+    const std::optional<stb::color>& html_text_color() const { return m_html_text_color; }
+    const std::optional<stb::color>& html_background_color() const { return m_html_background_color; }
+    void set_html_style(std::optional<stb::color> text, std::optional<stb::color> background)
     {
-        m_htmlTextColor = text;
-        m_htmlBackgroundColor = background;
+        m_html_text_color = text;
+        m_html_background_color = background;
     }
 
-    Rect fillBoundingBox() const final;
-    Rect strokeBoundingBox() const final;
-    void layoutElement(const svg_layout_state& state) final;
+    Rect fill_bounding_box() const final;
+    Rect stroke_bounding_box() const final;
+    void layout_element(const svg_layout_state& state) final;
     void render(svg_render_state& state) const final;
 
 private:
@@ -281,12 +281,12 @@ private:
     svg_length m_height;
     Font m_font;
     std::string m_fontFamily;
-    unsigned char m_baseFontStyle = 0;
+    unsigned char m_base_font_style = 0;
     svg_paint_server m_fill;
-    std::string m_rawContent;
-    ForeignObjectRenderer* m_renderer = nullptr;
-    std::optional<stb::color> m_htmlTextColor;
-    std::optional<stb::color> m_htmlBackgroundColor;
+    std::string m_raw_content;
+    foreign_object_renderer* m_renderer = nullptr;
+    std::optional<stb::color> m_html_text_color;
+    std::optional<stb::color> m_html_background_color;
 };
 
 class svg_symbol_element final : public svg_graphics_element, public svg_fit_to_view_box {
@@ -314,7 +314,7 @@ public:
     void render(svg_render_state& state) const final;
 
 private:
-    const svg_element* selectedChild() const;
+    const svg_element* selected_child() const;
 };
 
 class svg_defs_element final : public svg_graphics_element {
@@ -326,28 +326,28 @@ class svg_marker_element final : public svg_element, public svg_fit_to_view_box 
 public:
     svg_marker_element(document* dom);
 
-    const svg_length& refX() const { return m_refX; }
-    const svg_length& refY() const { return m_refY; }
-    const svg_length& markerWidth() const { return m_markerWidth; }
-    const svg_length& markerHeight() const { return m_markerHeight; }
-    const svg_enumeration<MarkerUnits>& markerUnits() const { return m_markerUnits; }
+    const svg_length& refX() const { return m_ref_x; }
+    const svg_length& refY() const { return m_ref_y; }
+    const svg_length& markerWidth() const { return m_marker_width; }
+    const svg_length& markerHeight() const { return m_marker_height; }
+    const svg_enumeration<MarkerUnits>& markerUnits() const { return m_marker_units; }
     const svg_angle& orient() const { return m_orient; }
 
-    Point refPoint() const;
-    Size markerSize() const;
+    Point ref_point() const;
+    Size marker_size() const;
 
-    Transform markerTransform(const Point& origin, float angle, float strokeWidth) const;
-    Rect markerBoundingBox(const Point& origin, float angle, float strokeWidth) const;
-    void renderMarker(svg_render_state& state, const Point& origin, float angle, float strokeWidth) const;
+    Transform marker_transform(const Point& origin, float angle, float strokeWidth) const;
+    Rect marker_bounding_box(const Point& origin, float angle, float strokeWidth) const;
+    void render_marker(svg_render_state& state, const Point& origin, float angle, float strokeWidth) const;
 
     Transform local_transform() const final;
 
 private:
-    svg_length m_refX;
-    svg_length m_refY;
-    svg_length m_markerWidth;
-    svg_length m_markerHeight;
-    svg_enumeration<MarkerUnits> m_markerUnits;
+    svg_length m_ref_x;
+    svg_length m_ref_y;
+    svg_length m_marker_width;
+    svg_length m_marker_height;
+    svg_enumeration<MarkerUnits> m_marker_units;
     svg_angle m_orient;
 };
 
@@ -355,16 +355,16 @@ class svg_clip_path_element final : public svg_graphics_element {
 public:
     svg_clip_path_element(document* dom);
 
-    const svg_enumeration<Units>& clipPathUnits() const { return m_clipPathUnits; }
-    Rect clipBoundingBox(const svg_element* el) const;
+    const svg_enumeration<Units>& clipPathUnits() const { return m_clip_path_units; }
+    Rect clip_bounding_box(const svg_element* el) const;
 
-    void applyClipMask(svg_render_state& state) const;
-    void applyClipPath(svg_render_state& state) const;
+    void apply_clip_mask(svg_render_state& state) const;
+    void apply_clip_path(svg_render_state& state) const;
 
-    bool requiresMasking() const;
+    bool requires_masking() const;
 
 private:
-    svg_enumeration<Units> m_clipPathUnits;
+    svg_enumeration<Units> m_clip_path_units;
 };
 
 class svg_mask_element final : public svg_element {
@@ -375,23 +375,23 @@ public:
     const svg_length& y() const { return m_y; }
     const svg_length& width() const { return m_width; }
     const svg_length& height() const { return m_height; }
-    const svg_enumeration<Units>& maskUnits() const { return m_maskUnits; }
-    const svg_enumeration<Units>& maskContentUnits() const { return m_maskContentUnits; }
+    const svg_enumeration<Units>& maskUnits() const { return m_mask_units; }
+    const svg_enumeration<Units>& maskContentUnits() const { return m_mask_content_units; }
 
-    Rect maskRect(const svg_element* el) const;
-    Rect maskBoundingBox(const svg_element* el) const;
-    void applyMask(svg_render_state& state) const;
+    Rect mask_rect(const svg_element* el) const;
+    Rect mask_bounding_box(const svg_element* el) const;
+    void apply_mask(svg_render_state& state) const;
 
-    void layoutElement(const svg_layout_state& state) final;
+    void layout_element(const svg_layout_state& state) final;
 
 private:
     svg_length m_x;
     svg_length m_y;
     svg_length m_width;
     svg_length m_height;
-    svg_enumeration<Units> m_maskUnits;
-    svg_enumeration<Units> m_maskContentUnits;
-    MaskType m_mask_type = MaskType::Luminance;
+    svg_enumeration<Units> m_mask_units;
+    svg_enumeration<Units> m_mask_content_units;
+    MaskType m_mask_type = MaskType::luminance;
 };
 
 // ---- svgfilterelement ----
@@ -403,7 +403,7 @@ private:
 // it asks each child to compute its own output and threads the result
 // through. Adding a new primitive later means adding one small class, not
 // touching the executor.
-static float parseFirstFloat(std::string_view input, float fallback)
+static float parse_first_float(std::string_view input, float fallback)
 {
     if(input.empty())
         return fallback;
@@ -412,8 +412,8 @@ static float parseFirstFloat(std::string_view input, float fallback)
 
 class svg_filter_context {
 public:
-    svg_filter_context(const std::shared_ptr<raster_canvas>& sourceGraphic, float scale)
-        : m_sourceGraphic(sourceGraphic), m_lastResult(sourceGraphic), m_scale(scale)
+    svg_filter_context(const std::shared_ptr<raster_canvas>& source_graphic, float scale)
+        : m_source_graphic(source_graphic), m_last_result(source_graphic), m_scale(scale)
     {}
 
     float scale() const { return m_scale; }
@@ -422,14 +422,14 @@ public:
     // every primitive's output shares this geometry (ponytail: real UAs
     // allow per-primitive filter regions; one shared region for the whole
     // chain is a deliberate simplification, see checklist.md).
-    std::shared_ptr<raster_canvas> newCanvas() const
+    std::shared_ptr<raster_canvas> new_canvas() const
     {
-        return raster_canvas::create(float(m_sourceGraphic->x()), float(m_sourceGraphic->y()), float(m_sourceGraphic->width()), float(m_sourceGraphic->height()));
+        return raster_canvas::create(float(m_source_graphic->x()), float(m_source_graphic->y()), float(m_source_graphic->width()), float(m_source_graphic->height()));
     }
 
-    std::shared_ptr<raster_canvas> cloneCanvas(const raster_canvas& source) const
+    std::shared_ptr<raster_canvas> clone_canvas(const raster_canvas& source) const
     {
-        auto canvas = newCanvas();
+        auto canvas = new_canvas();
         canvas->composite_over(source);
         return canvas;
     }
@@ -441,49 +441,49 @@ public:
     // primitive, falling back to the implicit chain if the name is
     // unresolvable (spec says this is undefined behavior; failing soft
     // beats crashing).
-    std::shared_ptr<raster_canvas> resolveInput(std::string_view in) const
+    std::shared_ptr<raster_canvas> resolve_input(std::string_view in) const
     {
         if(in.empty())
-            return m_lastResult;
+            return m_last_result;
         if(in == "SourceGraphic")
-            return m_sourceGraphic;
+            return m_source_graphic;
         if(in == "SourceAlpha") {
-            auto alpha = cloneCanvas(*m_sourceGraphic);
+            auto alpha = clone_canvas(*m_source_graphic);
             alpha->tint_to_flood_color(stb::color(0, 0, 0), 1.f);
             return alpha;
         }
-        auto it = m_namedResults.find(std::string(in));
-        if(it != m_namedResults.end())
+        auto it = m_named_results.find(std::string(in));
+        if(it != m_named_results.end())
             return it->second;
-        return m_lastResult;
+        return m_last_result;
     }
 
     // Records a primitive's output as the new implicit chain head, and
     // additionally under `name` if it declared `result=`.
-    void setResult(std::string_view name, std::shared_ptr<raster_canvas> canvas)
+    void set_result(std::string_view name, std::shared_ptr<raster_canvas> canvas)
     {
         if(!name.empty())
-            m_namedResults.emplace(std::string(name), canvas);
-        m_lastResult = std::move(canvas);
+            m_named_results.emplace(std::string(name), canvas);
+        m_last_result = std::move(canvas);
     }
 
-    const std::shared_ptr<raster_canvas>& lastResult() const { return m_lastResult; }
+    const std::shared_ptr<raster_canvas>& last_result() const { return m_last_result; }
 
 private:
-    std::shared_ptr<raster_canvas> m_sourceGraphic;
-    std::shared_ptr<raster_canvas> m_lastResult;
-    std::unordered_map<std::string, std::shared_ptr<raster_canvas>> m_namedResults;
+    std::shared_ptr<raster_canvas> m_source_graphic;
+    std::shared_ptr<raster_canvas> m_last_result;
+    std::unordered_map<std::string, std::shared_ptr<raster_canvas>> m_named_results;
     float m_scale;
 };
 
 class svg_fe_gaussian_blur_element final : public svg_element {
 public:
-    svg_fe_gaussian_blur_element(document* dom) : svg_element(dom, ElementID::FeGaussianBlur) {}
+    svg_fe_gaussian_blur_element(document* dom) : svg_element(dom, element_id::fe_gaussian_blur) {}
 
-    std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
+    std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
-        auto sigma = parseFirstFloat(attribute(PropertyID::StdDeviation), 0.f) * context.scale();
-        auto output = context.cloneCanvas(*context.resolveInput(attribute(PropertyID::In)));
+        auto sigma = parse_first_float(attribute(property_id::std_deviation), 0.f) * context.scale();
+        auto output = context.clone_canvas(*context.resolve_input(attribute(property_id::In)));
         output->box_blur(sigma, sigma);
         return output;
     }
@@ -491,13 +491,13 @@ public:
 
 class svg_fe_offset_element final : public svg_element {
 public:
-    svg_fe_offset_element(document* dom) : svg_element(dom, ElementID::FeOffset) {}
+    svg_fe_offset_element(document* dom) : svg_element(dom, element_id::fe_offset) {}
 
-    std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
+    std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
-        auto dx = parseFirstFloat(attribute(PropertyID::Dx), 0.f) * context.scale();
-        auto dy = parseFirstFloat(attribute(PropertyID::Dy), 0.f) * context.scale();
-        auto output = context.cloneCanvas(*context.resolveInput(attribute(PropertyID::In)));
+        auto dx = parse_first_float(attribute(property_id::Dx), 0.f) * context.scale();
+        auto dy = parse_first_float(attribute(property_id::Dy), 0.f) * context.scale();
+        auto output = context.clone_canvas(*context.resolve_input(attribute(property_id::In)));
         output->shift(dx, dy);
         return output;
     }
@@ -505,15 +505,15 @@ public:
 
 class svg_fe_flood_element final : public svg_element {
 public:
-    svg_fe_flood_element(document* dom) : svg_element(dom, ElementID::FeFlood) {}
+    svg_fe_flood_element(document* dom) : svg_element(dom, element_id::fe_flood) {}
 
-    std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
+    std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
-        auto floodColorAttr = attribute(PropertyID::Flood_Color);
-        stb::color floodColor = floodColorAttr.empty() ? stb::color(0, 0, 0) : stb::color(floodColorAttr);
-        auto floodOpacity = parseFirstFloat(attribute(PropertyID::Flood_Opacity), 1.f);
+        auto flood_color_attr = attribute(property_id::Flood_Color);
+        stb::color floodColor = flood_color_attr.empty() ? stb::color(0, 0, 0) : stb::color(flood_color_attr);
+        auto floodOpacity = parse_first_float(attribute(property_id::Flood_Opacity), 1.f);
 
-        auto output = context.newCanvas();
+        auto output = context.new_canvas();
         output->fill_opaque_white();
         output->tint_to_flood_color(floodColor, floodOpacity);
         return output;
@@ -522,15 +522,15 @@ public:
 
 class svg_fe_merge_element final : public svg_element {
 public:
-    svg_fe_merge_element(document* dom) : svg_element(dom, ElementID::FeMerge) {}
+    svg_fe_merge_element(document* dom) : svg_element(dom, element_id::fe_merge) {}
 
-    std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
+    std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
-        auto output = context.newCanvas();
+        auto output = context.new_canvas();
         for(const auto& child : children()) {
-            auto el = toSVGElement(child);
-            if(el && el->id() == ElementID::FeMergeNode)
-                output->composite_over(*context.resolveInput(el->attribute(PropertyID::In)));
+            auto el = to_svg_element(child);
+            if(el && el->id() == element_id::fe_merge_node)
+                output->composite_over(*context.resolve_input(el->attribute(property_id::In)));
         }
 
         return output;
@@ -539,20 +539,20 @@ public:
 
 class svg_fe_composite_element final : public svg_element {
 public:
-    svg_fe_composite_element(document* dom) : svg_element(dom, ElementID::FeComposite) {}
+    svg_fe_composite_element(document* dom) : svg_element(dom, element_id::fe_composite) {}
 
-    std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
+    std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
-        auto input = context.resolveInput(attribute(PropertyID::In));
-        auto input2 = context.resolveInput(attribute(PropertyID::In2));
-        auto output = context.cloneCanvas(*input2);
+        auto input = context.resolve_input(attribute(property_id::In));
+        auto input2 = context.resolve_input(attribute(property_id::in2));
+        auto output = context.clone_canvas(*input2);
 
-        auto op = attribute(PropertyID::Operator);
+        auto op = attribute(property_id::Operator);
         if(op == "arithmetic") {
-            auto k1 = parseFirstFloat(attribute(PropertyID::K1), 0.f);
-            auto k2 = parseFirstFloat(attribute(PropertyID::K2), 0.f);
-            auto k3 = parseFirstFloat(attribute(PropertyID::K3), 0.f);
-            auto k4 = parseFirstFloat(attribute(PropertyID::K4), 0.f);
+            auto k1 = parse_first_float(attribute(property_id::K1), 0.f);
+            auto k2 = parse_first_float(attribute(property_id::K2), 0.f);
+            auto k3 = parse_first_float(attribute(property_id::K3), 0.f);
+            auto k4 = parse_first_float(attribute(property_id::K4), 0.f);
             output->composite_arithmetic(*input, k1, k2, k3, k4);
             return output;
         }
@@ -560,7 +560,7 @@ public:
         auto mode = raster_canvas::porter_duff::Over;
         if(op == "in") mode = raster_canvas::porter_duff::In;
         else if(op == "out") mode = raster_canvas::porter_duff::Out;
-        else if(op == "atop") mode = raster_canvas::porter_duff::Atop;
+        else if(op == "atop") mode = raster_canvas::porter_duff::atop;
         else if(op == "xor") mode = raster_canvas::porter_duff::Xor;
 
         output->composite_with(*input, mode);
@@ -570,19 +570,19 @@ public:
 
 class svg_fe_drop_shadow_element final : public svg_element {
 public:
-    svg_fe_drop_shadow_element(document* dom) : svg_element(dom, ElementID::FeDropShadow) {}
+    svg_fe_drop_shadow_element(document* dom) : svg_element(dom, element_id::fe_drop_shadow) {}
 
-    std::shared_ptr<raster_canvas> applyFilterPrimitive(svg_filter_context& context) const final
+    std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
-        auto sigma = parseFirstFloat(attribute(PropertyID::StdDeviation), 2.f) * context.scale();
-        auto dx = parseFirstFloat(attribute(PropertyID::Dx), 2.f) * context.scale();
-        auto dy = parseFirstFloat(attribute(PropertyID::Dy), 2.f) * context.scale();
-        auto floodColorAttr = attribute(PropertyID::Flood_Color);
-        stb::color floodColor = floodColorAttr.empty() ? stb::color(0, 0, 0) : stb::color(floodColorAttr);
-        auto floodOpacity = parseFirstFloat(attribute(PropertyID::Flood_Opacity), 1.f);
+        auto sigma = parse_first_float(attribute(property_id::std_deviation), 2.f) * context.scale();
+        auto dx = parse_first_float(attribute(property_id::Dx), 2.f) * context.scale();
+        auto dy = parse_first_float(attribute(property_id::Dy), 2.f) * context.scale();
+        auto flood_color_attr = attribute(property_id::Flood_Color);
+        stb::color floodColor = flood_color_attr.empty() ? stb::color(0, 0, 0) : stb::color(flood_color_attr);
+        auto floodOpacity = parse_first_float(attribute(property_id::Flood_Opacity), 1.f);
 
-        auto input = context.resolveInput(attribute(PropertyID::In));
-        auto shadow = context.cloneCanvas(*input);
+        auto input = context.resolve_input(attribute(property_id::In));
+        auto shadow = context.clone_canvas(*input);
         shadow->tint_to_flood_color(floodColor, floodOpacity);
         shadow->box_blur(sigma, sigma);
         shadow->shift(dx, dy);
@@ -598,13 +598,13 @@ public:
     // Extra space (in the *filtered el's own* user-space units,
     // unscaled) the offscreen buffer needs so blur/shadow spread doesn't
     // get clipped at the el's plain bounding box.
-    float pixelMargin() const;
+    float pixel_margin() const;
 
     // Runs every child primitive in dom order, threading each
     // result through svg_filter_context, then writes the final result back
     // into `state`'s current (already-rendered) canvas. `scale` converts
     // user-space stdDeviation/dx/dy to device pixels.
-    void applyFilter(svg_render_state& state, float scale) const;
+    void apply_filter(svg_render_state& state, float scale) const;
 };
 
 // ---- svgrenderstate ----

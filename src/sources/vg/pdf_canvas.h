@@ -72,7 +72,7 @@ private:
         int tile_w = 0, tile_h = 0;
         float r = 0, g = 0, b = 0, a = 1;
         float p[6] = {0, 0, 0, 0, 0, 0}; // linear: x1 y1 x2 y2; radial: cx cy r fx fy
-        SpreadMethod spread = SpreadMethod::Pad;
+        SpreadMethod spread = SpreadMethod::pad;
         GradientStops stops;
         matrix_t matrix = {1, 0, 0, 1, 0, 0};
     };
@@ -89,7 +89,7 @@ private:
     void emit_path(const stb::outline& path, const matrix_t* transform);
     void emit_rect_path(const Rect& rect, const matrix_t* transform);
     void emit_text_path(const std::u32string_view& text, const Font& font, const Point& origin, const matrix_t* transform);
-    std::string alpha_state(float alpha, BlendMode blend_mode = BlendMode::Src_Over);
+    std::string alpha_state(float alpha, BlendMode blend_mode = BlendMode::src_over);
     int shading_pattern(const matrix_t& transform);
     int tiling_pattern(const matrix_t& transform);
     // Adds `image` as an Image XObject (Flate RGB, plus an SMask when it has alpha). Returns its object number.

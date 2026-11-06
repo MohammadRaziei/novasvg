@@ -3,6 +3,7 @@
 #include <vg/canvas.h>
 #include <vg/font.h>
 #include "svg/svgelement.h" // private header: this test exercises the HTML scanner directly
+#include "svg/foreign_object/html_text.h"
 
 // Bold / italic runs inside <foreignObject>: the HTML scanner (no fonts needed).
 using namespace nova::svg;
@@ -12,7 +13,7 @@ namespace {
 std::string describe(std::string_view html, unsigned char base = 0)
 {
     std::string out;
-    for(const auto& s : foreignObjectStyledText(html, base)) {
+    for(const auto& s : foreign_object_styled_text(html, base)) {
         std::string t = s.text;
         for(auto& c : t) if(c == '\n') c = '|';
         out += "[" + t + ":" + char('0' + s.style) + "]";
@@ -52,12 +53,12 @@ TEST_CASE("foreignObject style: inherited base style")
 
 TEST_CASE("foreignObject style: inline tags never split a word, other tags still do")
 {
-    CHECK(foreignObjectPlainText("un<b>believ</b>able") == "unbelievable");
-    CHECK(foreignObjectPlainText("a<span>b</span>c") == "abc");
-    CHECK(foreignObjectPlainText("Hello<br/><b>world!</b>") == "Hello\nworld!");
-    CHECK(foreignObjectPlainText("a</td><td>b") == "a b");   // glued words were a real past bug
-    CHECK(foreignObjectPlainText("<b>a </b> b") == "a b");   // whitespace collapses across runs
-    CHECK(foreignObjectPlainText("<b/>x") == "x");           // self-closing does not open
+    CHECK(foreign_object_plain_text("un<b>believ</b>able") == "unbelievable");
+    CHECK(foreign_object_plain_text("a<span>b</span>c") == "abc");
+    CHECK(foreign_object_plain_text("Hello<br/><b>world!</b>") == "Hello\nworld!");
+    CHECK(foreign_object_plain_text("a</td><td>b") == "a b");   // glued words were a real past bug
+    CHECK(foreign_object_plain_text("<b>a </b> b") == "a b");   // whitespace collapses across runs
+    CHECK(foreign_object_plain_text("<b/>x") == "x");           // self-closing does not open
 }
 
 TEST_CASE("foreignObject style: mismatched and unclosed tags")
