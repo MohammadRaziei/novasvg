@@ -8,6 +8,28 @@
 namespace nova::svg {
 using namespace vg;
 
+inline bool strip_important_flag(std::string& value)
+{
+    auto bang = value.rfind('!');
+    if(bang == std::string::npos)
+        return false;
+    std::string_view flag(value);
+    flag.remove_prefix(bang + 1);
+    skip_optional_spaces(flag);
+    strip_trailing_spaces(flag);
+    if(flag.size() != 9)
+        return false;
+    for(size_t i = 0; i < flag.size(); ++i) {
+        if(std::tolower(static_cast<unsigned char>(flag[i])) != "important"[i])
+            return false;
+    }
+
+    value.erase(bang);
+    while(!value.empty() && IS_WS(value.back()))
+        value.pop_back();
+    return true;
+}
+
 namespace {
 
 inline std::u32string utf8_to_u32(const std::string& text)

@@ -14,7 +14,7 @@ decision; each records the context, the options that were weighed, what was chos
 | [0007](0007-refactor-in-verified-steps.md) | Refactor in verified steps, gated by tests and a pixel-level golden diff | Accepted |
 | [0008](0008-gfx-canvas-interface-and-layout.md) | Abstract `canvas` with a pixel backend and a PDF backend; `gfx/` layout | Accepted; steps A, C, F (parts 1 and 2) done |
 | [0009](0009-namespaces-nova-svg-and-nova-vg.md) | Namespaces `nova::svg` and `nova::vg`; the drawing layer is a library of its own | Accepted (direction), not implemented |
-| [0010](0010-foreign-object-extension.md) | foreignObject is an extension (public renderer interface, painter, per-document registration), not part of the core | Proposed |
+| [0010](0010-foreign-object-extension.md) | foreignObject is an extension (public renderer interface, painter, per-document registration), not part of the core | Accepted, implemented |
 
 The step numbers refer to [`REFACTOR_CHECKLIST.md`](../../REFACTOR_CHECKLIST.md) at the repository root.
 

@@ -174,61 +174,15 @@ private:
     pixmap m_image;
 };
 
-class svg_foreign_object_element;
-
-/**
- * @brief Renders the (HTML-ish) content captured inside a <foreignObject>.
- *
- * This is an extension point on purpose: ForeignObjectSimple below only
- * understands a small, deliberately shallow slice of HTML5 -- it strips
- * every tag (div/span/p/i/b/...) and just draws the remaining plain text
- * centered in the foreignObject's box, using the font/fill already
- * inherited through the normal svg/CSS cascade. That's enough to cover
- * what tools like Mermaid actually emit (a single short, non-wrapping,
- * centered text run per foreignObject), without pretending to be a real
- * HTML/CSS layout engine.
- *
- * A more complete renderer (e.g. one backed by litehtml) can be hooked in
- * later without touching svg_foreign_object_element itself: implement this
- * interface and call svg_foreign_object_element::setRenderer() (or replace
- * ForeignObjectSimple::instance() below) to swap it in.
- */
-class foreign_object_renderer {
-public:
-    virtual ~foreign_object_renderer() = default;
-    virtual void render(const svg_foreign_object_element* el, svg_render_state& state) const = 0;
-};
-
-/**
- * @brief Default ForeignObjectRenderer: tag-stripped plain text, centered.
- */
-class foreign_object_simple final : public foreign_object_renderer {
-public:
-    static foreign_object_simple* instance();
-
-    void render(const svg_foreign_object_element* el, svg_render_state& state) const final;
-};
-
-/**
- * @brief The faces a <foreignObject> can paint with: its own font plus the bold / italic variants
- * of it that <b>, <strong>, <i>, <em> and inline `font-weight` / `font-style` ask for.
- *
- * Indexed by style bits (bit 0 = bold, bit 1 = italic), so `get(Bold | Italic)` is the bold italic
- * face. Variants nothing asked for may stay null. Each one is looked up exactly like svg <text>
- * looks up its font for the same weight/style, so the result is whatever faces the machine (or an
- * @font-face) provides -- there is no synthetic emboldening or slanting: with no bold face
- * installed, bold text simply renders in the regular face, as it does for <text>.
- */
-struct foreign_object_fonts {
-    static constexpr unsigned char Bold = 1;
-    static constexpr unsigned char Italic = 2;
-
-    Font face[4];
-    const Font& get(unsigned char style) const { return face[style & 3]; }
-};
-
+// A <foreignObject>: a box and a piece of markup. What the markup means is the business of the document's
+// foreign_object_renderer (nova/svg/foreign_object.h, ADR-0010); this element knows only the box, the font it
+// inherits and what the renderer prepared from the CSS.
 class svg_foreign_object_element final : public svg_graphics_element {
 public:
+    // Bold/italic bits of font_style(); also the index into the faces a renderer asks for.
+    static constexpr unsigned char style_bold = 1;
+    static constexpr unsigned char style_italic = 2;
+
     svg_foreign_object_element(document* dom);
 
     const svg_length& x() const { return m_x; }
@@ -236,38 +190,19 @@ public:
     const svg_length& width() const { return m_width; }
     const svg_length& height() const { return m_height; }
     const Font& font() const { return m_font; }
+    const std::string& font_family() const { return m_fontFamily; }
     const svg_paint_server& fill() const { return m_fill; }
 
-    /// Bold/italic bits (ForeignObjectFonts::Bold/Italic) the el itself inherits, i.e. the style of font().
+    /// style_bold / style_italic bits the element itself inherits, i.e. the style of font().
     unsigned char base_font_style() const { return m_base_font_style; }
-    /// font() plus the variants named by `usedStyles` (a bit mask: bit n set = style n is needed). Nothing
-    /// is looked up for styles that are not in the mask, so unstyled text costs nothing extra.
-    foreign_object_fonts fonts_for(unsigned used_styles) const;
 
-    /**
-     * @brief Raw markup captured between <foreignObject ...> and
-     * </foreignObject> (whatever HTML/XML the dom embedded there),
-     * exactly as it appeared in the source -- untouched, unparsed. What a
-     * ForeignObjectRenderer does with it is entirely up to that renderer.
-     */
+    /// The markup between <foreignObject ...> and </foreignObject>, exactly as it appeared in the source.
     const std::string& raw_content() const { return m_raw_content; }
     void set_raw_content(std::string content) { m_raw_content = std::move(content); }
 
-    foreign_object_renderer* renderer() const { return m_renderer; }
-    void set_renderer(foreign_object_renderer* renderer) { m_renderer = renderer; }
-
-    /**
-     * The text colour and the box colour the dom's CSS gives this el's HTML, worked out when a
-     * stylesheet is applied (see resolveForeignObjectStyle()). Unset = nothing in the CSS asked for one
-     * (text is then black, and no box is painted).
-     */
-    const std::optional<stb::color>& html_text_color() const { return m_html_text_color; }
-    const std::optional<stb::color>& html_background_color() const { return m_html_background_color; }
-    void set_html_style(std::optional<stb::color> text, std::optional<stb::color> background)
-    {
-        m_html_text_color = text;
-        m_html_background_color = background;
-    }
+    /// What the document's renderer worked out from the CSS (foreign_object_renderer::prepare()).
+    const std::shared_ptr<void>& prepared() const { return m_prepared; }
+    void set_prepared(std::shared_ptr<void> prepared) { m_prepared = std::move(prepared); }
 
     Rect fill_bounding_box() const final;
     Rect stroke_bounding_box() const final;
@@ -284,9 +219,7 @@ private:
     unsigned char m_base_font_style = 0;
     svg_paint_server m_fill;
     std::string m_raw_content;
-    foreign_object_renderer* m_renderer = nullptr;
-    std::optional<stb::color> m_html_text_color;
-    std::optional<stb::color> m_html_background_color;
+    std::shared_ptr<void> m_prepared;
 };
 
 class svg_symbol_element final : public svg_graphics_element, public svg_fit_to_view_box {

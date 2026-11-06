@@ -1,57 +1,73 @@
-#include "vg/pixmap.h"
-#include "vg/pdf_canvas.h"
-#include "svg/svgelement.h"
+// The built-in foreignObject renderer: the HTML inside is drawn as styled plain text, centered in the box.
+// It is written against nova/svg/foreign_object.h only (context, painter, css_query), like any other
+// renderer would be (ADR-0010).
+
+#include "nova/svg/foreign_object.h"
+
+#include "html_style.h"
 #include "html_text.h"
 
 namespace nova::svg {
 using namespace vg;
 
-foreign_object_simple* foreign_object_simple::instance()
+namespace {
+
+// Only understands a small, deliberately shallow slice of HTML5: it strips every tag (div/span/p/i/b/...) and
+// draws the remaining text, with bold and italic runs, centered in the foreignObject's box, using the font
+// inherited through the normal svg/CSS cascade. That covers what tools like Mermaid emit, without pretending
+// to be a real HTML/CSS layout engine.
+class foreign_object_simple final : public foreign_object_renderer {
+public:
+    std::shared_ptr<void> prepare(std::string_view markup, const css_query& css) const override
+    {
+        return std::make_shared<html_style>(resolve_html_style(markup, css));
+    }
+
+    void render(const foreign_object_context& context, foreign_object_painter& painter) const override;
+
+    std::optional<foreign_object_size> measure(const foreign_object_context& context, const foreign_object_painter& painter,
+                                               float max_width) const override;
+};
+
+unsigned char style_bits(const foreign_object_font& font)
 {
-    static foreign_object_simple s_instance;
-    return &s_instance;
+    return (unsigned char)((font.bold ? foreign_object_fonts::Bold : 0) | (font.italic ? foreign_object_fonts::Italic : 0));
 }
 
-void foreign_object_simple::render(const svg_foreign_object_element* el, svg_render_state& state) const
+void foreign_object_simple::render(const foreign_object_context& context, foreign_object_painter& painter) const
 {
-    auto segments = foreign_object_styled_text(el->raw_content(), el->base_font_style());
+    const auto base_style = style_bits(context.font);
+    auto segments = foreign_object_styled_text(std::string(context.markup), base_style);
     if(segments.empty())
         return;
 
-    const auto& font = el->font();
+    const auto fonts = foreign_object_fonts::of(context.font, painter);
+    const auto& font = fonts.get(base_style);
     if(font.is_null())
         return;
 
-    // One face per style that actually occurs (just font() for unstyled text, nothing else is looked up).
-    const auto fonts = el->fonts_for(foreign_object_styles_used(segments));
-
-    auto box = el->fill_bounding_box();
+    const auto& box = context.box;
     // A browser wraps HTML text at its box's edge unless CSS says nowrap/pre.
-    auto lines = layout_foreign_object_text(segments, fonts, foreign_object_allows_wrap(el->raw_content()) ? box.w : 0.f);
+    auto lines = layout_foreign_object_text(segments, fonts, foreign_object_allows_wrap(std::string(context.markup)) ? box.w : 0.f);
 
-    // Real line-height from the HTML's own `line-height:` (mermaid's
-    // content usually says 1.5) when present and parseable; falls back
-    // to a 1.2x default (roughly a browser's own "normal") otherwise --
-    // e.g. for %/em values or "normal" itself, which aren't handled.
-    auto line_height = foreign_object_line_height(el->raw_content(), font.size()).value_or(font.height() * 1.2f);
+    // Real line-height from the HTML's own `line-height:` (mermaid's content usually says 1.5) when present and
+    // parseable; falls back to a 1.2x default (roughly a browser's own "normal") otherwise -- e.g. for %/em
+    // values or "normal" itself, which aren't handled.
+    auto line_height = foreign_object_line_height(std::string(context.markup), font.size()).value_or(font.height() * 1.2f);
     auto total_height = line_height * float(lines.size());
     auto top_y = box.y + (box.h - total_height) / 2.f;
 
-    if(auto backgroundColor = el->html_background_color()) {
-        state->set_color(*backgroundColor);
-        stb::outline background_path;
-        background_path.add_rect(box.x, box.y, box.w, box.h);
-        state->fill_path(background_path, FillRule::NonZero, state.current_transform());
-    }
-
-    state->set_color(el->html_text_color().value_or(stb::color(0, 0, 0)));
+    const auto* style = static_cast<const html_style*>(context.prepared);
+    if(style != nullptr && style->background_color)
+        painter.fill_rect(box, *style->background_color);
+    const stb::color text_color = (style != nullptr && style->text_color) ? *style->text_color : stb::color(0, 0, 0);
 
     for(size_t i = 0; i < lines.size(); ++i) {
         const auto& line = lines[i];
         auto lineWidth = measure_foreign_object_line(line, fonts);
 
-        // A line is as tall as its tallest face (bold or italic can differ a little from the regular one);
-        // a line of one style, the usual case, is simply that style's face.
+        // A line is as tall as its tallest face (bold or italic can differ a little from the regular one); a line
+        // of one style, the usual case, is simply that style's face.
         float ascent = font.ascent();
         float font_height = font.height();
         if(!line.empty()) {
@@ -63,47 +79,60 @@ void foreign_object_simple::render(const svg_foreign_object_element* el, svg_ren
             }
         }
 
-        // A real Trebuchet-MS-metrics render always fits each wrapped
-        // line with room to spare -- so overflow here only ever means
-        // OUR substitute font is wider than the one mermaid measured
-        // with (this environment lacks Trebuchet MS). There's no
-        // reliable way to know how much wider without the real font, so
-        // rather than truncating (tried before, still didn't match a
-        // real Chromium render) we condense that one line horizontally.
+        // A real Trebuchet-MS-metrics render always fits each wrapped line with room to spare -- so overflow here
+        // only ever means OUR substitute font is wider than the one mermaid measured with (this environment lacks
+        // Trebuchet MS). There's no reliable way to know how much wider without the real font, so rather than
+        // truncating (tried before, still didn't match a real Chromium render) we condense that one line
+        // horizontally.
         float scale = 1.f;
         if(lineWidth > box.w && lineWidth > 0.f)
             scale = box.w / lineWidth;
 
-        Point origin(
-            box.x + (box.w - lineWidth * scale) / 2.f,
-            // Baseline for this line = top of the text block + however
-            // many line-heights precede it + half the leading (the extra
-            // space line-height adds beyond the font's own ascent+descent,
-            // split evenly above and below -- standard CSS line-box
-            // behavior) + this font's ascent. Without the half-leading
-            // term, text sits noticeably above center (font.height() is
-            // usually well under a 1.5x line-height, so the omitted term
-            // isn't a rounding-sized error).
-            top_y + float(i) * line_height + (line_height - font_height) / 2.f + ascent
-        );
+        const float origin_x = box.x + (box.w - lineWidth * scale) / 2.f;
+        // Baseline for this line = top of the text block + however many line-heights precede it + half the leading
+        // (the extra space line-height adds beyond the font's own ascent+descent, split evenly above and below --
+        // standard CSS line-box behavior) + this font's ascent. Without the half-leading term, text sits noticeably
+        // above center (font.height() is usually well under a 1.5x line-height, so the omitted term isn't a
+        // rounding-sized error).
+        const float baseline = top_y + float(i) * line_height + (line_height - font_height) / 2.f + ascent;
 
-        auto text_transform = state.current_transform();
-        if(scale < 1.f) {
-            // Condense horizontally about the line's own left edge so it
-            // still lands at `origin`; only x is scaled, so glyph height
-            // (and therefore this line's vertical position) is untouched.
-            text_transform = text_transform * Transform::translated(origin.x, 0.f) * Transform::scaled(scale, 1.f) * Transform::translated(-origin.x, 0.f);
-        }
+        // Condensed about the line's own left edge so it still lands at `origin_x`; only x is scaled, so glyph
+        // height (and therefore this line's vertical position) is untouched.
+        text_squeeze squeeze;
+        if(scale < 1.f)
+            squeeze = {scale, origin_x};
 
         // The runs of the line side by side on the one baseline, each in its own face.
-        float x = origin.x;
+        float x = origin_x;
         for(const auto& run : line) {
             const std::u32string_view run_view(run.text);
-            const auto& run_font = fonts.get(run.style);
-            state->fill_text(run_view, run_font, Point(x, origin.y), text_transform);
-            x += run_font.measure_text(run_view);
+            const auto& run_face = fonts.get(run.style);
+            painter.fill_text(run_view, run_face.spec, x, baseline, text_color, squeeze);
+            x += run_face.measure_text(run_view);
         }
     }
+}
+
+std::optional<foreign_object_size> foreign_object_simple::measure(const foreign_object_context& context,
+                                                                  const foreign_object_painter& painter, float max_width) const
+{
+    const auto base_style = style_bits(context.font);
+    const auto fonts = foreign_object_fonts::of(context.font, painter);
+    const auto metrics = measure_foreign_object_content(context.markup, fonts, max_width, base_style);
+    foreign_object_size size;
+    size.width = metrics.width;
+    size.height = metrics.height;
+    size.line_count = metrics.line_count;
+    size.line_height = metrics.line_height;
+    return size;
+}
+
+} // namespace
+
+std::shared_ptr<foreign_object_renderer> default_foreign_object_renderer()
+{
+    static const std::shared_ptr<foreign_object_renderer> renderer = std::make_shared<foreign_object_simple>();
+    return renderer;
 }
 
 } // namespace nova::svg

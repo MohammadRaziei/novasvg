@@ -1,6 +1,6 @@
 # ADR-0010: foreignObject is an extension, not part of the core
 
-Status: proposed (design only, no code changed yet)
+Status: implemented (steps 1 to 5; step 6, Python, done through `element_painter`)
 
 ## Problem
 Today the core knows HTML. What is already an extension point is `foreign_object_renderer`, but it is private: it takes `svg_foreign_object_element*` and `svg_render_state&`, so nobody outside the tree can write one. Concretely:
@@ -76,3 +76,16 @@ A renderer must be callable concurrently from `const` methods (documented).
 ## Open
 - `font_metrics` and `foreign_object_size` fields: only what the simple renderer and `measure_foreign_object` use today (ascent, height, width, height).
 - Whether `device_scale` should account for a transform with skew (proposal: the larger axis scale).
+
+## As built (2026-11-06)
+- `include/nova/svg/foreign_object.h` is the public interface. Differences from the sketch above, all deliberate:
+  - `css_query::declared()` takes a `std::vector<html_tag>` (C++17 has no `std::span`) and returns a `css_declaration {value, specificity}`, so a renderer can combine rule declarations with its own `style=""` the way a cascade does. `html_tag` also carries the `style` attribute, because `[style]` selectors match on it.
+  - `foreign_object_renderer` has a third hook, `prepare(markup, css)`, called once per foreignObject after the style sheets are applied and again by `set_foreign_object_renderer()`. Its result comes back in `foreign_object_context::prepared`. That is how the simple renderer keeps its resolved colours off the element.
+  - `context.node` and `context.fill` are not there: the simple renderer needs neither, and a public DOM pointer can be added when a renderer asks for it.
+  - `text_squeeze` on `fill_text` exists because the simple renderer condenses an over-wide line about its own left edge.
+- `document::set_foreign_object_renderer()` / `foreign_object_renderer_ptr()`; a document starts with `default_foreign_object_renderer()`.
+- The element lost `html_*_color`, `set_html_style`, `fonts_for`, `renderer()` and `set_renderer()`; it has `prepared()`.
+- The HTML (`html_text.h`, `html_style.cpp`, `simple.cpp`) is in `src/sources/svg/foreign_object/` and includes only the public header and the CSS helpers (`svg_css_utils.h`). `svgparser.hpp` keeps the selector matcher, which `rule_css_query` (in `novasvg.cpp`) wraps.
+- `NOVA_FOREIGN_OBJECT_SIMPLE=OFF` swaps `simple.cpp` + `html_style.cpp` for `none.cpp`.
+- Python's `measure_foreign_object` calls `renderer->measure()` with an `element_painter` that has no canvas.
+- Gate: golden 67 images at tolerance 0 (49 of them mermaid or foreignObject), C++ tests 90 cases, embedded-font test 71 assertions.

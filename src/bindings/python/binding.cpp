@@ -19,7 +19,7 @@
 #include "vg/canvas.h" // Transform, Path, ...
 #include "vg/font.h"
 #include "svg/svgelement.h" // private: foreignObject text measurement
-#include "svg/foreign_object/html_text.h"
+#include "svg/svg_foreign_object_host.h"
 #include "bitmap_interop.hpp"
 #include <filesystem>
 
@@ -260,26 +260,24 @@ NB_MODULE(novasvg_py, m) {
 
     m.def("measure_foreign_object", [](const std::string& html, const nova::vg::Font& font, std::optional<float> max_width,
                                        std::optional<std::string> family, bool bold, bool italic) {
-        nova::svg::foreign_object_metrics metrics;
-        if(!family) {
-            metrics = nova::svg::measure_foreign_object_content(html, font, max_width.value_or(-1.f));
-        } else {
-            // The same faces ForeignObjectSimple::render() paints with (svg_foreign_object_element::fontsFor()):
-            // `font` is the base style, every other bold/italic variant comes from the family.
-            const unsigned char base = (unsigned char)((bold ? nova::svg::foreign_object_fonts::Bold : 0)
-                                                       | (italic ? nova::svg::foreign_object_fonts::Italic : 0));
-            nova::svg::foreign_object_fonts fonts;
-            for(unsigned style = 0; style < 4; ++style) {
-                if(style == base) {
-                    fonts.face[style] = font;
-                    continue;
-                }
-                auto variant = nova::svg::make_font(*family, font.size(), (style & nova::svg::foreign_object_fonts::Bold) != 0,
-                                                 (style & nova::svg::foreign_object_fonts::Italic) != 0);
-                fonts.face[style] = variant.is_null() ? font : variant;
-            }
-            metrics = nova::svg::measure_foreign_object_content(html, fonts, max_width.value_or(-1.f), base);
-        }
+        auto renderer = nova::svg::default_foreign_object_renderer();
+        if(!renderer)
+            throw std::runtime_error("novasvg was built without the simple foreignObject renderer");
+        // With `family` the other bold/italic faces come from that family, as when painting (element_painter);
+        // `font` is the face of the base style. Without it every run is measured with `font` alone.
+        const unsigned char base = (unsigned char)((bold ? nova::svg::svg_foreign_object_element::style_bold : 0)
+                                                   | (italic ? nova::svg::svg_foreign_object_element::style_italic : 0));
+        nova::svg::element_painter painter(font, family.value_or(std::string()), base, nullptr, family.has_value());
+        nova::svg::foreign_object_context context;
+        context.markup = html;
+        context.font.family = family.value_or(std::string());
+        context.font.size = font.size();
+        context.font.bold = bold;
+        context.font.italic = italic;
+        nova::svg::foreign_object_size size;
+        if(auto measured = renderer->measure(context, painter, max_width.value_or(-1.f)))
+            size = *measured;
+        nova::svg::foreign_object_size& metrics = size;
         nb::dict result;
         result["height"] = metrics.height;
         result["width"] = metrics.width;

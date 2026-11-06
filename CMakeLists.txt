@@ -103,8 +103,18 @@ if(NOT NOVA_EMBED_DEFAULT_FONT)
 endif()
 novasvg_optimize(nova_vg)
 
-file(GLOB NOVA_SVG_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/*.cpp"
-                                           "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/foreign_object/*.cpp")
+# The HTML renderer for <foreignObject> (ADR-0010). OFF: the core has no HTML code at all, a document starts
+# without a foreignObject renderer and skips those elements unless set_foreign_object_renderer() gives it one.
+option(NOVA_FOREIGN_OBJECT_SIMPLE "Build the built-in simple HTML renderer for <foreignObject>" ON)
+file(GLOB NOVA_SVG_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/*.cpp")
+if(NOVA_FOREIGN_OBJECT_SIMPLE)
+    file(GLOB NOVA_FOREIGN_OBJECT_SOURCES CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/foreign_object/html_style.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/foreign_object/simple.cpp")
+else()
+    set(NOVA_FOREIGN_OBJECT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/foreign_object/none.cpp")
+endif()
+list(APPEND NOVA_SVG_SOURCES ${NOVA_FOREIGN_OBJECT_SOURCES})
 add_library(novasvg_core STATIC ${NOVA_SVG_SOURCES})
 set_target_properties(novasvg_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(novasvg_core PRIVATE NOVA_BUILDING_LIBRARY)

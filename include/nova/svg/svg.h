@@ -51,6 +51,7 @@
 #include <stb/outline.hpp>
 
 #include "../vg/geometry.h"
+#include "foreign_object.h"
 
 namespace nova::vg {
 class pixmap;  // @internal: the premultiplied-ARGB32 render target; the public pixel type is stb::image
@@ -449,6 +450,16 @@ public:
     document& operator=(document&&);
     ~document();
 
+    /**
+     * @brief Sets the renderer that draws this document's <foreignObject> elements (see foreign_object.h).
+     *
+     * The default is the built-in simple HTML renderer. A null renderer skips every foreignObject.
+     */
+    void set_foreign_object_renderer(std::shared_ptr<foreign_object_renderer> renderer);
+
+    /// The renderer in use (null: foreignObject elements are skipped).
+    std::shared_ptr<foreign_object_renderer> foreign_object_renderer_ptr() const { return m_foreign_object_renderer; }
+
 private:
     document();
     document(const document&) = delete;
@@ -456,6 +467,7 @@ private:
     svg_root_element* root_element(bool layout_if_needed = false) const;
     bool parse(const char* data, size_t length);
     std::unique_ptr<svg_root_element> m_root_element;
+    std::shared_ptr<foreign_object_renderer> m_foreign_object_renderer = default_foreign_object_renderer();
     friend class svg_uri_reference;
     friend class svg_node;
 };

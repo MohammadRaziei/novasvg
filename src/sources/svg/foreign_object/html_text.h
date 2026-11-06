@@ -4,9 +4,47 @@
 // renderer (foreign_object/simple.cpp); the core does not include it (ADR-0010).
 
 #include "../svg_css_utils.h"
+#include "nova/svg/foreign_object.h"
 
 namespace nova::svg {
 using namespace vg; // the drawing layer (nova::vg)
+
+/// One face as the renderer sees it: a font spec, measured through the painter.
+struct foreign_object_face {
+    const foreign_object_painter* painter = nullptr;
+    foreign_object_font spec;
+
+    /// No usable face (the machine has no font at all): text in it is not drawn.
+    bool is_null() const { return painter == nullptr || painter->metrics(spec).height <= 0.f; }
+    float size() const { return spec.size; }
+    float ascent() const { return painter->metrics(spec).ascent; }
+    float height() const { return painter->metrics(spec).height; }
+    float measure_text(std::u32string_view text) const { return painter->measure_text(text, spec); }
+};
+
+/// The faces a <foreignObject> can paint with: the inherited one plus the bold / italic variants that <b>,
+/// <strong>, <i>, <em> and inline `font-weight` / `font-style` ask for. Indexed by style bits (bit 0 bold,
+/// bit 1 italic). What a variant looks like is up to the painter.
+struct foreign_object_fonts {
+    static constexpr unsigned char Bold = 1;
+    static constexpr unsigned char Italic = 2;
+
+    foreign_object_face face[4];
+    const foreign_object_face& get(unsigned char style) const { return face[style & 3]; }
+
+    static foreign_object_fonts of(const foreign_object_font& base, const foreign_object_painter& painter)
+    {
+        foreign_object_fonts fonts;
+        for(unsigned style = 0; style < 4; ++style) {
+            fonts.face[style].painter = &painter;
+            fonts.face[style].spec = base;
+            fonts.face[style].spec.bold = (style & Bold) != 0;
+            fonts.face[style].spec.italic = (style & Italic) != 0;
+        }
+
+        return fonts;
+    }
+};
 
 // ---------------------------------------------------------------
 // svg_foreign_object_element / ForeignObjectSimple
@@ -407,7 +445,7 @@ inline std::optional<float> foreign_object_declared_width(std::string_view raw_h
 // across the space counts, like a browser's shaping) still fits. A single
 // word wider than maxWidth stays alone on an overflowing line -- CSS never
 // breaks inside a word by default; render() condenses that one line.
-inline void wrap_foreign_object_paragraph(const std::u32string& paragraph, const Font& font, float maxWidth, std::vector<std::u32string>& lines)
+inline void wrap_foreign_object_paragraph(const std::u32string& paragraph, const foreign_object_face& font, float maxWidth, std::vector<std::u32string>& lines)
 {
     // Browsers lay out in 1/64px units, so "fits" tolerates that much slack.
     const float limit = maxWidth + 1.f / 128.f;
@@ -449,7 +487,7 @@ inline void wrap_foreign_object_paragraph(const std::u32string& paragraph, const
 // mermaid's nowrap labels want. With a positive maxWidth each paragraph is
 // additionally greedy word-wrapped to it, using the same Font::measureText()
 // the paint path uses.
-inline std::vector<std::u32string> wrap_foreign_object_text(const std::string& text, const Font* font = nullptr, float maxWidth = 0.f)
+inline std::vector<std::u32string> wrap_foreign_object_text(const std::string& text, const foreign_object_face* font = nullptr, float maxWidth = 0.f)
 {
     std::vector<std::u32string> lines;
     const bool soft_wrap = font != nullptr && !font->is_null() && maxWidth > 0.f;
@@ -722,22 +760,6 @@ inline foreign_object_metrics measure_foreign_object_segments(std::string_view r
 inline foreign_object_metrics measure_foreign_object_content(std::string_view raw_html, const foreign_object_fonts& fonts, float maxWidth = -1.f, unsigned char base_style = 0)
 {
     return measure_foreign_object_segments(raw_html, foreign_object_styled_text(raw_html, base_style), fonts, base_style, maxWidth);
-}
-
-/**
- * @brief measureForeignObjectContent() with a single face: every style is measured with `font`, i.e. as
- * if the text had no bold or italic in it. Line breaks and heights are unaffected by bold or italic;
- * only the widths of styled stretches can differ from what painting produces, by however much the real
- * bold/italic faces differ from `font`. Use the ForeignObjectFonts overload when that matters.
- */
-inline foreign_object_metrics measure_foreign_object_content(std::string_view raw_html, const Font& font, float maxWidth = -1.f)
-{
-    auto segments = foreign_object_styled_text(raw_html);
-    for(auto& segment : segments)
-        segment.style = 0; // one face for everything: measured exactly like plain text
-    foreign_object_fonts fonts;
-    fonts.face[0] = font;
-    return measure_foreign_object_segments(raw_html, segments, fonts, 0, maxWidth);
 }
 
 // svg conditional processing for one switch child. `requiredExtensions` must be non-empty

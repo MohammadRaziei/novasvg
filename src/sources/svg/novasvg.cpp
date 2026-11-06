@@ -485,6 +485,72 @@ document::~document() = default;
 
 } // namespace nova::svg
 
+namespace nova::svg {
+using namespace vg;
+
+// ---- foreignObject: the document's CSS, as a renderer may ask for it --------------------------------
+
+namespace {
+
+// css_query over the document's sorted rules, for the markup inside one foreignObject.
+class rule_css_query final : public css_query {
+public:
+    rule_css_query(const rule_data_list& rules, const svg_element* owner) : m_rules(rules), m_owner(owner) {}
+
+    std::optional<css_declaration> declared(const std::vector<html_tag>& tags, int index, std::string_view property) const override
+    {
+        if(index < 0 || size_t(index) >= tags.size())
+            return std::nullopt;
+        std::vector<html_node> nodes(tags.size());
+        for(size_t i = 0; i < tags.size(); ++i) {
+            nodes[i].tag = tags[i].tag;
+            nodes[i].id = tags[i].id;
+            nodes[i].class_name = tags[i].class_names;
+            nodes[i].style = tags[i].style;
+            nodes[i].parent = tags[i].parent;
+        }
+
+        std::optional<css_declaration> best;
+        for(const auto& rule : m_rules) {
+            const std::string* wanted = nullptr;
+            for(const auto& declaration : rule.declarations()) {
+                if(declaration.name == property)
+                    wanted = &declaration.name;
+            }
+
+            if(wanted == nullptr || !match_html_selector(rule.selector(), nodes, index, m_owner))
+                continue;
+            for(const auto& declaration : rule.declarations()) {
+                if(declaration.name != property)
+                    continue;
+                if(!best || declaration.specificity >= best->specificity)
+                    best = css_declaration{declaration.value, declaration.specificity};
+            }
+        }
+
+        return best;
+    }
+
+private:
+    const rule_data_list& m_rules;
+    const svg_element* m_owner;
+};
+
+void prepare_foreign_object(svg_foreign_object_element* el, const foreign_object_renderer* renderer, const rule_data_list& rules)
+{
+    if(renderer == nullptr) {
+        el->set_prepared(nullptr);
+        return;
+    }
+
+    rule_css_query css(rules, el);
+    el->set_prepared(renderer->prepare(el->raw_content(), css));
+}
+
+} // namespace
+
+} // namespace nova::svg
+
 // ---- definitions of public-class members that used to sit in svgelement.h / svgparser.hpp ----
 namespace nova::svg {
 using namespace vg;
@@ -764,7 +830,27 @@ void document::apply_style_sheet(const std::string& content)
             have_html_rules = true;
         }
 
-        resolve_foreign_object_style(static_cast<svg_foreign_object_element*>(el), html_rules);
+        prepare_foreign_object(static_cast<svg_foreign_object_element*>(el), m_foreign_object_renderer.get(), html_rules);
+    });
+}
+
+void document::set_foreign_object_renderer(std::shared_ptr<foreign_object_renderer> renderer)
+{
+    m_foreign_object_renderer = std::move(renderer);
+    if(!m_root_element)
+        return;
+    // What a renderer prepared belongs to that renderer: ask the new one, from every sheet applied so far.
+    rule_data_list rules;
+    bool have_rules = false;
+    m_root_element->transverse([&](svg_element* el) {
+        if(el->id() != element_id::ForeignObject)
+            return;
+        if(!have_rules) {
+            rules = parse_style_sheets(m_root_element->style_sheets());
+            have_rules = true;
+        }
+
+        prepare_foreign_object(static_cast<svg_foreign_object_element*>(el), m_foreign_object_renderer.get(), rules);
     });
 }
 
