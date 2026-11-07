@@ -1,5 +1,30 @@
 ## [Unreleased]
 
+### Changed
+
+- **The library is split into `nova::svg` and `nova::vg`.** `nova::vg` is the drawing layer (canvas, `pixmap`, fonts,
+  PDF output) and `nova::svg` the SVG engine on top of it; the headers live under `include/nova/`. foreignObject
+  rendering is an extension (ADR-0010).
+- **STL-like naming.** Types, functions, members and enumerators are `snake_case`; keywords used as names get a
+  trailing underscore (`auto_`, `class_`, ...). A variable, member or parameter that has the name of a type gets a
+  trailing underscore as well (`fill_rule_`, `selector_()`), and `rect::Empty` is `rect::empty_rect`.
+- **`Bitmap` is `vg::pixmap`; the public image type is `stb::image`** (ADR-0003). Fonts and image codecs come from
+  libstb (ADR-0005, ADR-0006).
+
+### Removed
+
+- **The C API `path_t`** (`path.cpp`, `path.h`, about 900 lines) and the bridges to it. The canvas builds and the
+  rasterizer takes an `stb::outline` directly; SVG path data, arcs and the rounded-rect/ellipse shapes live in
+  `outline_util.cpp` (same geometry as before: the 67 golden images are bit-identical).
+- The single-header build and the vendored stb sources.
+
+### Internal
+
+- `nova::utils` (`src/sources/utils/text.h`): `is_space`, `trim`, `ltrim`, `rtrim`, `to_lower`, shared by the svg and
+  vg layers instead of per-function lambdas.
+- Private C struct tags no longer share a name with a class (`font_face_impl`, `font_face_cache_impl`); a clash made
+  `delete face` recurse into the class destructor.
+
 ## [0.11.5] - 2026-11-05
 
 ### Fixed

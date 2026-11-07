@@ -379,25 +379,25 @@ float font_face_get_kern_advance(font_face_t* face, float size_, codepoint_t ch1
 
 static void glyph_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
 {
-    path_t* path_ = (path_t*)(closure);
+    stb::outline* path_ = static_cast<stb::outline*>(closure);
     switch(command) {
     case NOVA_PATH_COMMAND_MOVE_TO:
-        path_move_to(path_, points[0].x, points[0].y);
+        path_->move_to(points[0].x, points[0].y);
         break;
     case NOVA_PATH_COMMAND_LINE_TO:
-        path_line_to(path_, points[0].x, points[0].y);
+        path_->line_to(points[0].x, points[0].y);
         break;
     case NOVA_PATH_COMMAND_CUBIC_TO:
-        path_cubic_to(path_, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
+        path_->cubic_to(points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
         break;
     case NOVA_PATH_COMMAND_CLOSE:
         assert(false);
     }
 }
 
-float font_face_get_glyph_path(font_face_t* face, float size_, float x, float y, codepoint_t codepoint, path_t* path_)
+float font_face_get_glyph_path(font_face_t* face, float size_, float x, float y, codepoint_t codepoint, stb::outline& path_)
 {
-    return font_face_traverse_glyph_path(face, size_, x, y, codepoint, glyph_traverse_func, path_);
+    return font_face_traverse_glyph_path(face, size_, x, y, codepoint, glyph_traverse_func, &path_);
 }
 
 float font_face_traverse_glyph_path(font_face_t* face, float size_, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure)

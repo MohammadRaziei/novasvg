@@ -1,6 +1,7 @@
 // The CSS side of the simple HTML renderer: which `color` the text ends up with and which `background-color`
 // box sits behind it. The markup is parsed here; the document's style sheets are asked through css_query.
 
+#include "utils/text.h"
 #include "html_style.h"
 
 #include "../svg_css_utils.h"
@@ -35,7 +36,7 @@ static std::string lower_case(std::string_view text)
 {
     std::string out(text);
     for(auto& ch : out)
-        ch = char(std::tolower(static_cast<unsigned char>(ch)));
+        ch = utils::to_lower(ch);
     return out;
 }
 

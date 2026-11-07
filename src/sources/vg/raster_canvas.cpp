@@ -166,14 +166,6 @@ transform transform::translated(float tx, float ty)
 }
 
 namespace {
-struct path_guard {
-    explicit path_guard(path_t* p) : m_path(p) {}
-    ~path_guard() { path_destroy(m_path); }
-    path_guard(const path_guard&) = delete;
-    path_guard& operator=(const path_guard&) = delete;
-    path_t* get() const { return m_path; }
-    path_t* m_path;
-};
 } // namespace
 
 std::shared_ptr<raster_canvas> raster_canvas::create(const pixmap& bitmap)
@@ -229,8 +221,7 @@ void raster_canvas::fill_path(const stb::outline& path_, fill_rule fill_rule_, c
     canvas_transform(m_canvas, &transform_.matrix());
     canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(fill_rule_));
     canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
-    path_guard guard(to_path_t(path_));
-    canvas_fill_path(m_canvas, guard.get());
+        canvas_fill_path(m_canvas, path_);
 }
 
 void raster_canvas::stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_)
@@ -244,8 +235,7 @@ void raster_canvas::stroke_path(const stb::outline& path_, const stroke_data& st
     canvas_set_dash_offset(m_canvas, stroke_data_.dash_offset());
     canvas_set_dash_array(m_canvas, stroke_data_.dashArray().data(), stroke_data_.dashArray().size());
     canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
-    path_guard guard(to_path_t(path_));
-    canvas_stroke_path(m_canvas, guard.get());
+        canvas_stroke_path(m_canvas, path_);
 }
 
 void raster_canvas::fill_text(const std::u32string_view& text, const font& font_, const point& origin, const transform& transform_)
@@ -278,8 +268,7 @@ void raster_canvas::clip_path(const stb::outline& path_, fill_rule clip_rule, co
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform_.matrix());
     canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(clip_rule));
-    path_guard guard(to_path_t(path_));
-    canvas_clip_path(m_canvas, guard.get());
+        canvas_clip_path(m_canvas, path_);
 }
 
 void raster_canvas::clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_)

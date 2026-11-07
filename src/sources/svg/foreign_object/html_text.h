@@ -3,6 +3,7 @@
 // The HTML subset a <foreignObject> understands: parser, wrapping, measuring. Part of the built-in simple
 // renderer (foreign_object/simple.cpp); the core does not include it (ADR-0010).
 
+#include "utils/text.h"
 #include "../svg_css_utils.h"
 #include "nova/svg/foreign_object.h"
 
@@ -50,7 +51,6 @@ struct foreign_object_fonts {
 // svg_foreign_object_element / ForeignObjectSimple
 // ---------------------------------------------------------------
 
-namespace {
 
 
 inline std::optional<std::string_view> html_attribute(std::string_view tag, std::string_view name)
@@ -114,18 +114,18 @@ inline std::string_view foreign_object_style_attribute(std::string_view attribut
 {
     size_t pos = 0;
     while(pos < attributes.size()) {
-        while(pos < attributes.size() && (std::isspace(static_cast<unsigned char>(attributes[pos])) || attributes[pos] == '/'))
+        while(pos < attributes.size() && (utils::is_space(attributes[pos]) || attributes[pos] == '/'))
             ++pos;
         auto name_start = pos;
-        while(pos < attributes.size() && !std::isspace(static_cast<unsigned char>(attributes[pos])) && attributes[pos] != '=' && attributes[pos] != '/')
+        while(pos < attributes.size() && !utils::is_space(attributes[pos]) && attributes[pos] != '=' && attributes[pos] != '/')
             ++pos;
         auto name = attributes.substr(name_start, pos - name_start);
-        while(pos < attributes.size() && std::isspace(static_cast<unsigned char>(attributes[pos])))
+        while(pos < attributes.size() && utils::is_space(attributes[pos]))
             ++pos;
         std::string_view value;
         if(pos < attributes.size() && attributes[pos] == '=') {
             ++pos;
-            while(pos < attributes.size() && std::isspace(static_cast<unsigned char>(attributes[pos])))
+            while(pos < attributes.size() && utils::is_space(attributes[pos]))
                 ++pos;
             if(pos < attributes.size() && (attributes[pos] == '"' || attributes[pos] == '\'')) {
                 auto quote = attributes[pos++];
@@ -134,7 +134,7 @@ inline std::string_view foreign_object_style_attribute(std::string_view attribut
                 pos = end == std::string_view::npos ? attributes.size() : end + 1;
             } else {
                 auto value_start = pos;
-                while(pos < attributes.size() && !std::isspace(static_cast<unsigned char>(attributes[pos])))
+                while(pos < attributes.size() && !utils::is_space(attributes[pos]))
                     ++pos;
                 value = attributes.substr(value_start, pos - value_start);
             }
@@ -151,13 +151,10 @@ inline std::string foreign_object_declaration(std::string_view block, std::strin
     auto value = find_declaration_value(block, property);
     if(!value)
         return {};
-    std::string result;
-    for(char c : *value)
-        result += char(std::tolower(static_cast<unsigned char>(c)));
+    std::string result = utils::to_lower(*value);
     if(auto bang = result.find('!'); bang != std::string::npos)
         result.erase(bang);
-    while(!result.empty() && std::isspace(static_cast<unsigned char>(result.back())))
-        result.pop_back();
+    result = std::string(utils::rtrim(result));
     return result;
 }
 
@@ -245,7 +242,7 @@ inline std::vector<foreign_object_segment> foreign_object_styled_text(std::strin
                 ++name_length;
             std::string name(rest.substr(0, name_length));
             for(auto& ch : name)
-                ch = char(std::tolower(static_cast<unsigned char>(ch)));
+                ch = utils::to_lower(ch);
 
             // Every tag boundary is a word boundary (a space), so "Hello<br/>world" and "a</td><td>b"
             // never glue together; block tags force a line break instead; and the tags that sit inside
@@ -677,7 +674,6 @@ inline unsigned foreign_object_styles_used(const std::vector<foreign_object_segm
     return used;
 }
 
-} // namespace
 
 /**
  * @brief Metrics for how ForeignObjectSimple::render() will lay out and

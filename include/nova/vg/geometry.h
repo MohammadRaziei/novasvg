@@ -10,8 +10,6 @@
 
 namespace nova::vg {
 
-class rect;
-
 /**
  * @brief Represents a 2D axis-aligned bounding box.
  */
@@ -30,11 +28,6 @@ public:
      * @param h The height of the box.
      */
     box(float x, float y, float w, float h);
-
-    /**
-     * @internal
-     */
-    box(const rect& rect_);
 
     /**
      * @brief Transforms the box using the specified matrix.

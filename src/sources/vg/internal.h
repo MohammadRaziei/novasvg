@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stb/outline.hpp>
+
 #ifndef NOVA_PRIVATE_H
 #define NOVA_PRIVATE_H
 
@@ -55,19 +57,6 @@ struct surface {
     float height;
     int stride;
     unsigned char* data;
-};
-
-struct path {
-    ref_count_t ref_count;
-    int num_points;
-    int num_contours;
-    int num_curves;
-    point_t start_point;
-    struct {
-        path_element_t* data;
-        int size_;
-        int capacity;
-    } elements;
 };
 
 typedef enum {
@@ -168,7 +157,7 @@ typedef struct state {
 struct canvas_context {
     ref_count_t ref_count;
     surface_t* surface;
-    path_t* path_;
+    stb::outline* path_;
     state_t* state;
     state_t* freed_state;
     font_face_cache_t* face_cache;
@@ -186,7 +175,11 @@ bool span_buffer_contains(const span_buffer_t* span_buffer, float x, float y);
 void span_buffer_extents(span_buffer_t* span_buffer, rect_t* extents);
 void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, const span_buffer_t* b);
 
-void rasterize(span_buffer_t* span_buffer, const path_t* path_, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data_, fill_rule_t winding);
+void arc_to_radians(stb::outline& path_, float rx, float ry, float angle, bool large_arc, bool sweep, float x, float y);
+void add_rect_path(stb::outline& path_, float x, float y, float w, float h);
+void add_round_rect_path(stb::outline& path_, float x, float y, float w, float h, float rx, float ry);
+void add_ellipse_path(stb::outline& path_, float cx, float cy, float rx, float ry);
+void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data_, fill_rule_t winding);
 void blend(canvas_t* canvas, const span_buffer_t* span_buffer);
 void memfill32(unsigned int* dest, int length_, unsigned int value);
 

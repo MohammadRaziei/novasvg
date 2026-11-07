@@ -30,7 +30,6 @@ inline bool strip_important_flag(std::string& value)
     return true;
 }
 
-namespace {
 
 inline std::u32string utf8_to_u32(const std::string& text)
 {
@@ -192,6 +191,5 @@ inline std::optional<numeric_declaration> parse_numeric_declaration(std::string_
     return numeric_declaration{number, std::string_view(unit) == "px"};
 }
 
-} // namespace
 
 } // namespace nova::svg

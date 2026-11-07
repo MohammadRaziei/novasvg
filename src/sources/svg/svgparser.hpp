@@ -1,3 +1,4 @@
+#include "utils/text.h"
 #include <cassert>
 #include <exception>
 #include <unordered_map>
@@ -364,7 +365,7 @@ static bool parse_tag_selector(std::string_view& input, SimpleSelector& simpleSe
     else if(read_css_identifier(input, name)) {
         simpleSelector.id = elementid(name);
         for(auto& ch : name)
-            ch = char(std::tolower(static_cast<unsigned char>(ch)));
+            ch = utils::to_lower(ch);
         simpleSelector.tag = name;
     } else {
         return false;
@@ -446,7 +447,7 @@ static bool parse_nth_formula(std::string_view text, int& a, int& b)
     std::string f;
     for(char ch : text) {
         if(!IS_WS(ch))
-            f.push_back(char(std::tolower(static_cast<unsigned char>(ch))));
+            f.push_back(utils::to_lower(ch));
     }
 
     if(f.empty())
@@ -660,7 +661,7 @@ static bool parse_declarations(std::string_view& input, declaration_list& declar
         const bool custom = is_custom_property_name(name);
         if(!custom) {
             for(auto& ch : name)
-                ch = char(std::tolower(static_cast<unsigned char>(ch)));
+                ch = utils::to_lower(ch);
         }
         declaration_.name = name;
         if(skip_delimiter(input, '!')) {
@@ -779,7 +780,7 @@ static void parse_font_face_rule(std::string_view block)
     if(auto weight_value = find_outside_src("font-weight")) {
         std::string weight(*weight_value);
         for(auto& ch : weight)
-            ch = char(std::tolower(static_cast<unsigned char>(ch)));
+            ch = utils::to_lower(ch);
         bold = weight.find("bold") != std::string::npos || std::strtof(weight.c_str(), nullptr) >= 600.f;
     }
 
@@ -787,7 +788,7 @@ static void parse_font_face_rule(std::string_view block)
     if(auto style_value = find_outside_src("font-style")) {
         std::string style(*style_value);
         for(auto& ch : style)
-            ch = char(std::tolower(static_cast<unsigned char>(ch)));
+            ch = utils::to_lower(ch);
         italic = style.find("italic") != std::string::npos || style.find("oblique") != std::string::npos;
     }
 
@@ -826,7 +827,7 @@ static rule_data_list parse_style_sheet(std::string_view input)
             std::string at_keyword;
             read_css_identifier(input, at_keyword);
             for(auto& ch : at_keyword)
-                ch = char(std::tolower(static_cast<unsigned char>(ch)));
+                ch = utils::to_lower(ch);
 
             if(at_keyword == "font-face") {
                 skip_optional_spaces(input);

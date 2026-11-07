@@ -36,8 +36,6 @@ TEST_CASE("attribute selectors match attributes novasvg has no property for")
     CHECK(matched("[data-k~=\"b\"] rect", "<g data-k=\"a b c\">"));
     CHECK(matched("[data-k|=\"a\"] rect", "<g data-k=\"a-b\">"));
     CHECK(matched("rect[data-k=\"1\"]", "", true));
-    CHECK(matched("#s [data-look=\"neo\"][data-color-id=\"color-0\"].node rect",
-                  "<g class=\"node\" data-look=\"neo\" data-color-id=\"color-0\">") == false); // no id="s" on the svg here
 }
 
 TEST_CASE("attribute selectors do not match when the attribute or value is missing")
@@ -46,6 +44,8 @@ TEST_CASE("attribute selectors do not match when the attribute or value is missi
     CHECK_FALSE(matched("[data-k=\"2\"] rect", "<g data-k=\"1\">"));
     CHECK_FALSE(matched("[data-k=\"1\"][data-j=\"2\"] rect", "<g data-k=\"1\">"));
     CHECK_FALSE(matched("[data-k^=\"b\"] rect", "<g data-k=\"abc\">"));
+    CHECK_FALSE(matched("#s [data-look=\"neo\"][data-color-id=\"color-0\"].node rect",
+                        "<g class=\"node\" data-look=\"neo\" data-color-id=\"color-0\">")); // no id="s" on the svg here
 }
 
 TEST_CASE("custom attributes are copied by <use>")

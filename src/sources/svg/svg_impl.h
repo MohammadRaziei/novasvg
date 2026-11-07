@@ -19,7 +19,7 @@ property_id propertyid(std::string_view name);
 property_id csspropertyid(std::string_view name);
 
 template<>
-NOVA_INLINE bool svg_enumeration<SpreadMethod>::parse(std::string_view input)
+inline bool svg_enumeration<SpreadMethod>::parse(std::string_view input)
 {
     static const svg_enumeration_entry<SpreadMethod> entries[] = {
         {SpreadMethod::pad, "pad"},
@@ -31,7 +31,7 @@ NOVA_INLINE bool svg_enumeration<SpreadMethod>::parse(std::string_view input)
 }
 
 template<>
-NOVA_INLINE bool svg_enumeration<units>::parse(std::string_view input)
+inline bool svg_enumeration<units>::parse(std::string_view input)
 {
     static const svg_enumeration_entry<units> entries[] = {
         {units::user_space_on_use, "userSpaceOnUse"},
@@ -42,7 +42,7 @@ NOVA_INLINE bool svg_enumeration<units>::parse(std::string_view input)
 }
 
 template<>
-NOVA_INLINE bool svg_enumeration<MarkerUnits>::parse(std::string_view input)
+inline bool svg_enumeration<MarkerUnits>::parse(std::string_view input)
 {
     static const svg_enumeration_entry<MarkerUnits> entries[] = {
         {MarkerUnits::stroke_width, "strokeWidth"},
@@ -53,7 +53,7 @@ NOVA_INLINE bool svg_enumeration<MarkerUnits>::parse(std::string_view input)
 }
 
 template<>
-NOVA_INLINE bool svg_enumeration<LengthAdjust>::parse(std::string_view input)
+inline bool svg_enumeration<LengthAdjust>::parse(std::string_view input)
 {
     static const svg_enumeration_entry<LengthAdjust> entries[] = {
         {LengthAdjust::spacing, "spacing"},
@@ -65,7 +65,7 @@ NOVA_INLINE bool svg_enumeration<LengthAdjust>::parse(std::string_view input)
 
 template<typename enum_>
 template<unsigned int N>
-NOVA_INLINE bool svg_enumeration<enum_>::parse_enum(std::string_view input, const svg_enumeration_entry<enum_>(&entries)[N])
+inline bool svg_enumeration<enum_>::parse_enum(std::string_view input, const svg_enumeration_entry<enum_>(&entries)[N])
 {
     strip_leading_and_trailing_spaces(input);
     for(const auto& entry : entries) {
@@ -140,7 +140,7 @@ length parse_length_or_normal(std::string_view input);
 float parse_font_size(std::string_view input, const svg_layout_state* state);
 
 template<typename enum_, unsigned int N>
-NOVA_INLINE enum_ parse_enum_value(std::string_view input, const svg_enumeration_entry<enum_>(&entries)[N], enum_ default_value)
+inline enum_ parse_enum_value(std::string_view input, const svg_enumeration_entry<enum_>(&entries)[N], enum_ default_value)
 {
     for(const auto& entry : entries) {
         if(input == entry.second) {
@@ -197,7 +197,7 @@ using namespace vg; // the drawing layer (nova::vg), the former plutovg
 
 element_id elementid(std::string_view name);
 
-NOVA_INLINE const std::string empty_string;
+inline const std::string empty_string;
 
 // Whether `value` has a `var(` function in it. Not for the attributes that are names or references, never CSS values.
 inline bool uses_variables(property_id id, const std::string& value)

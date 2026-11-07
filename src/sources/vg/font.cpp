@@ -1,4 +1,5 @@
 // Definitions declared in src/sources/vg/font.h.
+#include "../utils/text.h"
 #include "font.h"
 #include "font_face.h"
 
@@ -209,12 +210,12 @@ font_face font_face_cache::get_font_face_for_family_stack(const std::string& fam
 
         std::string lower(name);
         for(auto& ch : lower)
-            ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+            ch = utils::to_lower(ch);
 
         for(const auto& alias : aliases) {
             std::string key(alias.family);
             for(auto& ch : key)
-                ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+                ch = utils::to_lower(ch);
             if(lower != key)
                 continue;
             if(auto face = get_font_face_local(alias.family, bold, italic); !face.is_null())

@@ -24,6 +24,7 @@
 #define NOVA_RENDER_H
 
 #include <stdbool.h>
+#include <stb/outline.hpp>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -279,11 +280,6 @@ NOVA_API void matrix_map_rect(const matrix_t* matrix, const rect_t* src, rect_t*
 NOVA_API bool matrix_parse(matrix_t* matrix, const char* data, int length_);
 
 /**
- * @brief Represents a 2D path for drawing operations.
- */
-typedef struct path path_t;
-
-/**
  * @brief Enumeration defining path commands.
  */
 typedef enum path_command {
@@ -292,337 +288,6 @@ typedef enum path_command {
     NOVA_PATH_COMMAND_CUBIC_TO, ///< Draws a cubic Bézier curve to a new point.
     NOVA_PATH_COMMAND_CLOSE ///< Closes the current path by drawing a line to the starting point.
 } path_command_t;
-
-/**
- * @brief Union representing a path el.
- *
- * A path el can be a command with a length or a coordinate point.
- * Each command type in the path el array is followed by a specific number of points:
- * - `NOVA_PATH_COMMAND_MOVE_TO`: 1 point
- * - `NOVA_PATH_COMMAND_LINE_TO`: 1 point
- * - `NOVA_PATH_COMMAND_CUBIC_TO`: 3 points
- * - `NOVA_PATH_COMMAND_CLOSE`: 1 point
- *
- * @example
- * const path_element_t* elements;
- * int count = path_get_elements(path, &elements);
- * for(int i = 0; i < count; i += elements[i].header.length) {
- *     path_command_t command = elements[i].header.command;
- *     switch(command) {
- *     case NOVA_PATH_COMMAND_MOVE_TO:
- *         printf("MoveTo: %g %g\n", elements[i + 1].point.x, elements[i + 1].point.y);
- *         break;
- *     case NOVA_PATH_COMMAND_LINE_TO:
- *         printf("LineTo: %g %g\n", elements[i + 1].point.x, elements[i + 1].point.y);
- *         break;
- *     case NOVA_PATH_COMMAND_CUBIC_TO:
- *         printf("CubicTo: %g %g %g %g %g %g\n",
- *                elements[i + 1].point.x, elements[i + 1].point.y,
- *                elements[i + 2].point.x, elements[i + 2].point.y,
- *                elements[i + 3].point.x, elements[i + 3].point.y);
- *         break;
- *     case NOVA_PATH_COMMAND_CLOSE:
- *         printf("Close: %g %g\n", elements[i + 1].point.x, elements[i + 1].point.y);
- *         break;
- *     }
- * }
- */
-typedef union path_element {
-    struct {
-        path_command_t command; ///< The path command.
-        int length_; ///< Number of elements including the header.
-    } header; ///< Header for path commands.
-    point_t point_; ///< A coordinate point in the path.
-} path_element_t;
-
-/**
- * @brief Iterator for traversing path elements in a path.
- */
-typedef struct path_iterator {
-    const path_element_t* elements; ///< Pointer to the array of path elements.
-    int size_; ///< Total number of elements in the array.
-    int index; ///< Current position in the array.
-} path_iterator_t;
-
-/**
- * @brief Initializes a path iterator for a given path.
- *
- * @param it The path iterator to initialize.
- * @param path The path to iterate over.
- */
-NOVA_API void path_iterator_init(path_iterator_t* it, const path_t* path_);
-
-/**
- * @brief Checks if there are more elements to iterate over.
- *
- * @param it The path iterator.
- * @return `true` if there are more elements; otherwise, `false`.
- */
-NOVA_API bool path_iterator_has_next(const path_iterator_t* it);
-
-/**
- * @brief Retrieves the current command and its associated points, then advances the iterator.
- *
- * @param it The path iterator.
- * @param points An array to store the points for the current command.
- * @return The path command for the current el.
- */
-NOVA_API path_command_t path_iterator_next(path_iterator_t* it, point_t points[3]);
-
-/**
- * @brief Creates a new path object.
- *
- * @return A pointer to the newly created path object.
- */
-NOVA_API path_t* path_create(void);
-
-/**
- * @brief Increases the reference count of a path object.
- *
- * @param path A pointer to a `path_t` object.
- * @return A pointer to the same `path_t` object.
- */
-NOVA_API path_t* path_reference(path_t* path_);
-
-/**
- * @brief Decreases the reference count of a path object.
- *
- * This function decrements the reference count of the given path object. If
- * the reference count reaches zero, the path object is destroyed and its
- * resources are freed.
- *
- * @param path A pointer to the `path_t` object.
- */
-NOVA_API void path_destroy(path_t* path_);
-
-/**
- * @brief Retrieves the reference count of a path object.
- *
- * @param path A pointer to a `path_t` object.
- * @return The current reference count of the path object.
- */
-NOVA_API int path_get_reference_count(const path_t* path_);
-
-/**
- * @brief Retrieves the elements of a path.
- *
- * Provides access to the array of path elements.
- *
- * @param path A pointer to a `path_t` object.
- * @param elements A pointer to a pointer that will be set to the array of path elements.
- * @return The number of elements in the path.
- */
-NOVA_API int path_get_elements(const path_t* path_, const path_element_t** elements);
-
-/**
- * @brief Moves the current point to a new position.
- *
- * This function moves the current point to the specified coordinates without
- * drawing a line. This is equivalent to the `M` command in svg path syntax.
- *
- * @param path A pointer to a `path_t` object.
- * @param x The x-coordinate of the new position.
- * @param y The y-coordinate of the new position.
- */
-NOVA_API void path_move_to(path_t* path_, float x, float y);
-
-/**
- * @brief Adds a straight line segment to the path.
- *
- * This function adds a straight line segment from the current point to the
- * specified coordinates. This is equivalent to the `L` command in svg path syntax.
- *
- * @param path A pointer to a `path_t` object.
- * @param x The x-coordinate of the end point of the line segment.
- * @param y The y-coordinate of the end point of the line segment.
- */
-NOVA_API void path_line_to(path_t* path_, float x, float y);
-
-/**
- * @brief Adds a quadratic Bézier curve to the path.
- *
- * This function adds a quadratic Bézier curve segment from the current point
- * to the specified end point, using the given control point. This is equivalent
- * to the `Q` command in svg path syntax.
- *
- * @param path A pointer to a `path_t` object.
- * @param x1 The x-coordinate of the control point.
- * @param y1 The y-coordinate of the control point.
- * @param x2 The x-coordinate of the end point of the curve.
- * @param y2 The y-coordinate of the end point of the curve.
- */
-NOVA_API void path_quad_to(path_t* path_, float x1, float y1, float x2, float y2);
-
-/**
- * @brief Adds a cubic Bézier curve to the path.
- *
- * This function adds a cubic Bézier curve segment from the current point
- * to the specified end point, using the given two control points. This is
- * equivalent to the `C` command in svg path syntax.
- *
- * @param path A pointer to a `path_t` object.
- * @param x1 The x-coordinate of the first control point.
- * @param y1 The y-coordinate of the first control point.
- * @param x2 The x-coordinate of the second control point.
- * @param y2 The y-coordinate of the second control point.
- * @param x3 The x-coordinate of the end point of the curve.
- * @param y3 The y-coordinate of the end point of the curve.
- */
-NOVA_API void path_cubic_to(path_t* path_, float x1, float y1, float x2, float y2, float x3, float y3);
-
-/**
- * @brief Adds an elliptical arc to the path.
- *
- * This function adds an elliptical arc segment from the current point to the
- * specified end point. The arc is defined by the radii, rotation angle, and
- * flags for large arc and sweep. This is equivalent to the `A` command in svg
- * path syntax.
- *
- * @param path A pointer to a `path_t` object.
- * @param rx The x-radius of the ellipse.
- * @param ry The y-radius of the ellipse.
- * @param angle The rotation angle of the ellipse in radians.
- * @param large_arc_flag If true, draw the large arc; otherwise, draw the small arc.
- * @param sweep_flag If true, draw the arc in the positive-angle direction; otherwise, in the negative-angle direction.
- * @param x The x-coordinate of the end point of the arc.
- * @param y The y-coordinate of the end point of the arc.
- */
-NOVA_API void path_arc_to(path_t* path_, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y);
-
-/**
- * @brief Closes the current sub-path.
- *
- * This function closes the current sub-path by drawing a straight line back to
- * the start point of the sub-path. This is equivalent to the `Z` command in svg
- * path syntax.
- *
- * @param path A pointer to a `path_t` object.
- */
-NOVA_API void path_close(path_t* path_);
-
-/**
- * @brief Retrieves the current point of the path.
- *
- * Gets the current point's coordinates in the path. This point is the last
- * position used or the point where the path was last moved to.
- *
- * @param path A pointer to a `path_t` object.
- * @param x The x-coordinate of the current point.
- * @param y The y-coordinate of the current point.
- */
-NOVA_API void path_get_current_point(const path_t* path_, float* x, float* y);
-
-/**
- * @brief Reserves space for path elements.
- *
- * Reserves space for a specified number of elements in the path. This helps optimize
- * memory allocation for future path operations.
- *
- * @param path A pointer to a `path_t` object.
- * @param count The number of path elements to reserve space for.
- */
-NOVA_API void path_reserve(path_t* path_, int count);
-
-/**
- * @brief Resets the path.
- *
- * Clears all path data, effectively resetting the `path_t` object to its initial state.
- *
- * @param path A pointer to a `path_t` object.
- */
-NOVA_API void path_reset(path_t* path_);
-
-/**
- * @brief Adds a rectangle to the path.
- *
- * Adds a rectangle defined by the top-left corner (x, y) and dimensions (w, h) to the path.
- *
- * @param path A pointer to a `path_t` object.
- * @param x The x-coordinate of the rectangle's top-left corner.
- * @param y The y-coordinate of the rectangle's top-left corner.
- * @param w The width of the rectangle.
- * @param h The height of the rectangle.
- */
-NOVA_API void path_add_rect(path_t* path_, float x, float y, float w, float h);
-
-/**
- * @brief Adds a rounded rectangle to the path.
- *
- * Adds a rounded rectangle defined by the top-left corner (x, y), dimensions (w, h),
- * and corner radii (rx, ry) to the path.
- *
- * @param path A pointer to a `path_t` object.
- * @param x The x-coordinate of the rectangle's top-left corner.
- * @param y The y-coordinate of the rectangle's top-left corner.
- * @param w The width of the rectangle.
- * @param h The height of the rectangle.
- * @param rx The x-radius of the rectangle's corners.
- * @param ry The y-radius of the rectangle's corners.
- */
-NOVA_API void path_add_round_rect(path_t* path_, float x, float y, float w, float h, float rx, float ry);
-
-/**
- * @brief Adds an ellipse to the path.
- *
- * Adds an ellipse defined by the center (cx, cy) and radii (rx, ry) to the path.
- *
- * @param path A pointer to a `path_t` object.
- * @param cx The x-coordinate of the ellipse's center.
- * @param cy The y-coordinate of the ellipse's center.
- * @param rx The x-radius of the ellipse.
- * @param ry The y-radius of the ellipse.
- */
-NOVA_API void path_add_ellipse(path_t* path_, float cx, float cy, float rx, float ry);
-
-/**
- * @brief Adds a circle to the path.
- *
- * Adds a circle defined by its center (cx, cy) and radius (r) to the path.
- *
- * @param path A pointer to a `path_t` object.
- * @param cx The x-coordinate of the circle's center.
- * @param cy The y-coordinate of the circle's center.
- * @param r The radius of the circle.
- */
-NOVA_API void path_add_circle(path_t* path_, float cx, float cy, float r);
-
-/**
- * @brief Adds an arc to the path.
- *
- * Adds an arc defined by the center (cx, cy), radius (r), start angle (a0), end angle (a1),
- * and direction (ccw) to the path.
- *
- * @param path A pointer to a `path_t` object.
- * @param cx The x-coordinate of the arc's center.
- * @param cy The y-coordinate of the arc's center.
- * @param r The radius of the arc.
- * @param a0 The start angle of the arc in radians.
- * @param a1 The end angle of the arc in radians.
- * @param ccw If true, the arc is drawn counter-clockwise; if false, clockwise.
- */
-NOVA_API void path_add_arc(path_t* path_, float cx, float cy, float r, float a0, float a1, bool ccw);
-
-/**
- * @brief Adds a sub-path to the path.
- *
- * Adds all elements from another path (`source`) to the current path, optionally
- * applying a transformation matrix.
- *
- * @param path A pointer to a `path_t` object.
- * @param source A pointer to the `path_t` object to copy elements from.
- * @param matrix A pointer to a `matrix_t` object, or `NULL` to apply no transformation.
- */
-NOVA_API void path_add_path(path_t* path_, const path_t* source, const matrix_t* matrix);
-
-/**
- * @brief Applies a transformation matrix to the path.
- *
- * Transforms the entire path using the provided transformation matrix.
- *
- * @param path A pointer to a `path_t` object.
- * @param matrix A pointer to a `matrix_t` object.
- */
-NOVA_API void path_transform(path_t* path_, const matrix_t* matrix);
 
 /**
  * @brief Callback function type for traversing a path.
@@ -635,91 +300,6 @@ NOVA_API void path_transform(path_t* path_, const matrix_t* matrix);
  * @param npoints The number of points in the array.
  */
 typedef void (*path_traverse_func_t)(void* closure, path_command_t command, const point_t* points, int npoints);
-
-/**
- * @brief Traverses the path and calls the callback for each el.
- *
- * @param path A pointer to a `path_t` object.
- * @param traverse_func The callback function to be called for each el of the path.
- * @param closure User-defined data passed to the callback.
- */
-NOVA_API void path_traverse(const path_t* path_, path_traverse_func_t traverse_func, void* closure);
-
-/**
- * @brief Traverses the path with Bézier curves flattened to line segments.
- *
- * @param path A pointer to a `path_t` object.
- * @param traverse_func The callback function to be called for each el of the path.
- * @param closure User-defined data passed to the callback.
- */
-NOVA_API void path_traverse_flatten(const path_t* path_, path_traverse_func_t traverse_func, void* closure);
-
-/**
- * @brief Traverses the path with a dashed pattern and calls the callback for each segment.
- *
- * @param path A pointer to a `path_t` object.
- * @param offset The starting offset into the dash pattern.
- * @param dashes An array of dash lengths.
- * @param ndashes The number of elements in the `dashes` array.
- * @param traverse_func The callback function to be called for each el of the path.
- * @param closure User-defined data passed to the callback.
- */
-NOVA_API void path_traverse_dashed(const path_t* path_, float offset, const float* dashes, int ndashes, path_traverse_func_t traverse_func, void* closure);
-
-/**
- * @brief Creates a copy of the path.
- *
- * @param path A pointer to the `path_t` object to clone.
- * @return A pointer to the newly created path clone.
- */
-NOVA_API path_t* path_clone(const path_t* path_);
-
-/**
- * @brief Creates a copy of the path with Bézier curves flattened to line segments.
- *
- * @param path A pointer to the `path_t` object to clone.
- * @return A pointer to the newly created path clone with flattened curves.
- */
-NOVA_API path_t* path_clone_flatten(const path_t* path_);
-
-/**
- * @brief Creates a copy of the path with a dashed pattern applied.
- *
- * @param path A pointer to the `path_t` object to clone.
- * @param offset The starting offset into the dash pattern.
- * @param dashes An array of dash lengths.
- * @param ndashes The number of elements in the `dashes` array.
- * @return A pointer to the newly created path clone with dashed pattern.
- */
-NOVA_API path_t* path_clone_dashed(const path_t* path_, float offset, const float* dashes, int ndashes);
-
-/**
- * @brief Computes the bounding box and total length of the path.
- *
- * @param path A pointer to a `path_t` object.
- * @param extents A pointer to a `rect_t` object to store the bounding box.
- * @param tight If `true`, computes a precise bounding box; otherwise, aligns to control points.
- * @return The total length of the path.
- */
-NOVA_API float path_extents(const path_t* path_, rect_t* extents, bool tight);
-
-/**
- * @brief Calculates the total length of the path.
- *
- * @param path A pointer to a `path_t` object.
- * @return The total length of the path.
- */
-NOVA_API float path_length(const path_t* path_);
-
-/**
- * @brief Parses svg path data into a `path_t` object.
- *
- * @param path A pointer to the `path_t` object to populate.
- * @param data The svg path data string.
- * @param length The length of `data`, or `-1` for null-terminated data.
- * @return `true` if successful; `false` otherwise.
- */
-NOVA_API bool path_parse(path_t* path_, const char* data, int length_);
 
 /**
  * @brief Text encodings used for converting text data to code points.
@@ -856,7 +436,7 @@ NOVA_API void font_face_get_glyph_metrics(font_face_t* face, float size_, codepo
  * @param path Pointer to a `path_t` object to store the glyph path.
  * @return The advance width of the glyph.
  */
-NOVA_API float font_face_get_glyph_path(font_face_t* face, float size_, float x, float y, codepoint_t codepoint, path_t* path_);
+NOVA_API float font_face_get_glyph_path(font_face_t* face, float size_, float x, float y, codepoint_t codepoint, stb::outline& path_);
 
 /**
  * @brief Traverses the path of a glyph and calls a callback for each path el.
@@ -2123,23 +1703,6 @@ NOVA_API void canvas_ellipse(canvas_t* canvas, float cx, float cy, float rx, flo
 NOVA_API void canvas_circle(canvas_t* canvas, float cx, float cy, float r);
 
 /**
- * @brief Adds an arc to the current path.
- *
- * Adds an arc centered at the specified coordinates, with a given radius,
- * starting and ending at the specified angles. The direction of the arc is
- * determined by `ccw`. This arc segment is added to the current path.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @param cx The x-coordinate of the arc's center.
- * @param cy The y-coordinate of the arc's center.
- * @param r The radius of the arc.
- * @param a0 The starting angle of the arc in radians.
- * @param a1 The ending angle of the arc in radians.
- * @param ccw If true, add the arc counter-clockwise; otherwise, clockwise.
- */
-NOVA_API void canvas_arc(canvas_t* canvas, float cx, float cy, float r, float a0, float a1, bool ccw);
-
-/**
  * @brief Adds a path to the current path.
  *
  * Appends the elements of the specified path to the current path.
@@ -2147,7 +1710,7 @@ NOVA_API void canvas_arc(canvas_t* canvas, float cx, float cy, float r, float a0
  * @param canvas A pointer to a `canvas_t` object.
  * @param path A pointer to the `path_t` object to be added.
  */
-NOVA_API void canvas_add_path(canvas_t* canvas, const path_t* path_);
+NOVA_API void canvas_add_path(canvas_t* canvas, const stb::outline& path_);
 
 /**
  * @brief Starts a new path on the canvas.
@@ -2178,16 +1741,6 @@ NOVA_API void canvas_close_path(canvas_t* canvas);
  * @param y The y-coordinate of the current point.
  */
 NOVA_API void canvas_get_current_point(const canvas_t* canvas, float* x, float* y);
-
-/**
- * @brief Gets the current path from the canvas.
- *
- * Retrieves the path object representing the sequence of path commands added to the canvas.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @return The current path.
- */
-NOVA_API path_t* canvas_get_path(const canvas_t* canvas);
 
 /**
  * @brief Tests whether a point lies within the current fill region.
@@ -2360,7 +1913,7 @@ NOVA_API void canvas_fill_rect(canvas_t* canvas, float x, float y, float w, floa
  * @param canvas A pointer to a `canvas_t` object.
  * @param path The `path_t` object.
  */
-NOVA_API void canvas_fill_path(canvas_t* canvas, const path_t* path_);
+NOVA_API void canvas_fill_path(canvas_t* canvas, const stb::outline& path_);
 
 /**
  * @brief Strokes a rectangle with the current stroke settings.
@@ -2381,7 +1934,7 @@ NOVA_API void canvas_stroke_rect(canvas_t* canvas, float x, float y, float w, fl
  * @param canvas A pointer to a `canvas_t` object.
  * @param path The `path_t` object.
  */
-NOVA_API void canvas_stroke_path(canvas_t* canvas, const path_t* path_);
+NOVA_API void canvas_stroke_path(canvas_t* canvas, const stb::outline& path_);
 
 /**
  * @brief Intersects the current clipping region with a rectangle according to the current fill rule.
@@ -2402,7 +1955,7 @@ NOVA_API void canvas_clip_rect(canvas_t* canvas, float x, float y, float w, floa
  * @param canvas A pointer to a `canvas_t` object.
  * @param path The `path_t` object.
  */
-NOVA_API void canvas_clip_path(canvas_t* canvas, const path_t* path_);
+NOVA_API void canvas_clip_path(canvas_t* canvas, const stb::outline& path_);
 
 /**
  * @brief Adds a glyph to the current path at the specified origin.

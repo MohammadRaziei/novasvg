@@ -1,3 +1,4 @@
+#include "utils/text.h"
 #include "vg/pixmap.h"
 #include "vg/pdf_canvas.h"
 #include "svgelement.h"
@@ -502,7 +503,7 @@ mix_blend_mode parse_mix_blend_mode(std::string_view input)
     // CSS keywords are ASCII case-insensitive
     std::string keyword;
     for(char ch : input)
-        keyword.push_back(char(std::tolower(static_cast<unsigned char>(ch))));
+        keyword.push_back(utils::to_lower(ch));
     return parse_enum_value(keyword, entries, mix_blend_mode::normal);
 }
 

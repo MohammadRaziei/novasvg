@@ -90,7 +90,7 @@ canvas_t* canvas_create(surface_t* surface)
     canvas_t* canvas = static_cast<canvas_t*>(malloc(sizeof(canvas_t)));
     novasvg_init_reference(canvas);
     canvas->surface = surface_reference(surface);
-    canvas->path_ = path_create();
+    canvas->path_ = new stb::outline;
     canvas->state = state_create();
     canvas->freed_state = NULL;
     canvas->face_cache = NULL;
@@ -125,7 +125,7 @@ void canvas_destroy(canvas_t* canvas)
         span_buffer_destroy(&canvas->fill_spans);
         span_buffer_destroy(&canvas->clip_spans);
         surface_destroy(canvas->surface);
-        path_destroy(canvas->path_);
+        delete canvas->path_;
         free(canvas);
     }
 }
@@ -435,88 +435,78 @@ void canvas_map_rect(const canvas_t* canvas, const rect_t* src, rect_t* dst)
 
 void canvas_move_to(canvas_t* canvas, float x, float y)
 {
-    path_move_to(canvas->path_, x, y);
+    canvas->path_->move_to(x, y);
 }
 
 void canvas_line_to(canvas_t* canvas, float x, float y)
 {
-    path_line_to(canvas->path_, x, y);
+    canvas->path_->line_to(x, y);
 }
 
 void canvas_quad_to(canvas_t* canvas, float x1, float y1, float x2, float y2)
 {
-    path_quad_to(canvas->path_, x1, y1, x2, y2);
+    canvas->path_->quad_to(x1, y1, x2, y2);
 }
 
 void canvas_cubic_to(canvas_t* canvas, float x1, float y1, float x2, float y2, float x3, float y3)
 {
-    path_cubic_to(canvas->path_, x1, y1, x2, y2, x3, y3);
+    canvas->path_->cubic_to(x1, y1, x2, y2, x3, y3);
 }
 
 void canvas_arc_to(canvas_t* canvas, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y)
 {
-    path_arc_to(canvas->path_, rx, ry, angle, large_arc_flag, sweep_flag, x, y);
+    arc_to_radians(*canvas->path_, rx, ry, angle, large_arc_flag, sweep_flag, x, y);
 }
 
 void canvas_rect(canvas_t* canvas, float x, float y, float w, float h)
 {
-    path_add_rect(canvas->path_, x, y, w, h);
+    add_rect_path(*canvas->path_, x, y, w, h);
 }
 
 void canvas_round_rect(canvas_t* canvas, float x, float y, float w, float h, float rx, float ry)
 {
-    path_add_round_rect(canvas->path_, x, y, w, h, rx, ry);
+    add_round_rect_path(*canvas->path_, x, y, w, h, rx, ry);
 }
 
 void canvas_ellipse(canvas_t* canvas, float cx, float cy, float rx, float ry)
 {
-    path_add_ellipse(canvas->path_, cx, cy, rx, ry);
+    add_ellipse_path(*canvas->path_, cx, cy, rx, ry);
 }
 
 void canvas_circle(canvas_t* canvas, float cx, float cy, float r)
 {
-    path_add_circle(canvas->path_, cx, cy, r);
+    add_ellipse_path(*canvas->path_, cx, cy, r, r);
 }
 
-void canvas_arc(canvas_t* canvas, float cx, float cy, float r, float a0, float a1, bool ccw)
+void canvas_add_path(canvas_t* canvas, const stb::outline& path_)
 {
-    path_add_arc(canvas->path_, cx, cy, r, a0, a1, ccw);
-}
-
-void canvas_add_path(canvas_t* canvas, const path_t* path_)
-{
-    path_add_path(canvas->path_, path_, NULL);
+    canvas->path_->add_outline(path_);
 }
 
 void canvas_new_path(canvas_t* canvas)
 {
-    path_reset(canvas->path_);
+    canvas->path_->clear();
 }
 
 void canvas_close_path(canvas_t* canvas)
 {
-    path_close(canvas->path_);
+    canvas->path_->close();
 }
 
 void canvas_get_current_point(const canvas_t* canvas, float* x, float* y)
 {
-    path_get_current_point(canvas->path_, x, y);
-}
-
-path_t* canvas_get_path(const canvas_t* canvas)
-{
-    return canvas->path_;
+    { const stb::point p = canvas->path_->current_point().value_or(stb::point{0.f, 0.f}); if(x) *x = p.x; if(y) *y = p.y; }
 }
 
 bool canvas_fill_contains(canvas_t* canvas, float x, float y)
 {
-    rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
     return span_buffer_contains(&canvas->fill_spans, x, y);
 }
 
 bool canvas_stroke_contains(canvas_t* canvas, float x, float y)
 {
-    rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
     return span_buffer_contains(&canvas->fill_spans, x, y);
 }
 
@@ -536,13 +526,13 @@ bool canvas_clip_contains(canvas_t* canvas, float x, float y)
 
 void canvas_fill_extents(canvas_t *canvas, rect_t* extents)
 {
-    rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
     span_buffer_extents(&canvas->fill_spans, extents);
 }
 
 void canvas_stroke_extents(canvas_t *canvas, rect_t* extents)
 {
-    rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, NULL, &canvas->state->stroke, NOVA_FILL_RULE_NON_ZERO);
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, &canvas->state->stroke, NOVA_FILL_RULE_NON_ZERO);
     span_buffer_extents(&canvas->fill_spans, extents);
 }
 
@@ -588,7 +578,7 @@ void canvas_paint(canvas_t* canvas)
 
 void canvas_fill_preserve(canvas_t* canvas)
 {
-    rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
     if(canvas->state->clipping) {
         span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
         blend(canvas, &canvas->clip_spans);
@@ -599,7 +589,7 @@ void canvas_fill_preserve(canvas_t* canvas)
 
 void canvas_stroke_preserve(canvas_t* canvas)
 {
-    rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, NOVA_FILL_RULE_NON_ZERO);
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, NOVA_FILL_RULE_NON_ZERO);
     if(canvas->state->clipping) {
         span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
         blend(canvas, &canvas->clip_spans);
@@ -611,11 +601,11 @@ void canvas_stroke_preserve(canvas_t* canvas)
 void canvas_clip_preserve(canvas_t* canvas)
 {
     if(canvas->state->clipping) {
-        rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
+        rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
         span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
         span_buffer_copy(&canvas->state->clip_spans, &canvas->clip_spans);
     } else {
-        rasterize(&canvas->state->clip_spans, canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
+        rasterize(&canvas->state->clip_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
         canvas->state->clipping = true;
     }
 }
@@ -627,7 +617,7 @@ void canvas_fill_rect(canvas_t* canvas, float x, float y, float w, float h)
     canvas_fill(canvas);
 }
 
-void canvas_fill_path(canvas_t* canvas, const path_t* path_)
+void canvas_fill_path(canvas_t* canvas, const stb::outline& path_)
 {
     canvas_new_path(canvas);
     canvas_add_path(canvas, path_);
@@ -641,7 +631,7 @@ void canvas_stroke_rect(canvas_t* canvas, float x, float y, float w, float h)
     canvas_stroke(canvas);
 }
 
-void canvas_stroke_path(canvas_t* canvas, const path_t* path_)
+void canvas_stroke_path(canvas_t* canvas, const stb::outline& path_)
 {
     canvas_new_path(canvas);
     canvas_add_path(canvas, path_);
@@ -655,7 +645,7 @@ void canvas_clip_rect(canvas_t* canvas, float x, float y, float w, float h)
     canvas_clip(canvas);
 }
 
-void canvas_clip_path(canvas_t* canvas, const path_t* path_)
+void canvas_clip_path(canvas_t* canvas, const stb::outline& path_)
 {
     canvas_new_path(canvas);
     canvas_add_path(canvas, path_);
@@ -666,7 +656,7 @@ float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x, float y
 {
     state_t* state = canvas->state;
     if(state->font_face_ && state->font_size > 0.f)
-        return font_face_get_glyph_path(state->font_face_, state->font_size, x, y, codepoint, canvas->path_);
+        return font_face_get_glyph_path(state->font_face_, state->font_size, x, y, codepoint, *canvas->path_);
     return 0.f;
 }
 
@@ -685,7 +675,7 @@ float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_enco
         codepoint = font_face_apply_ligature(state->font_face_, &it, codepoint);
         if(has_previous)
             advance_width += font_face_get_kern_advance(state->font_face_, state->font_size, previous, codepoint);
-        advance_width += font_face_get_glyph_path(state->font_face_, state->font_size, x + advance_width, y, codepoint, canvas->path_);
+        advance_width += font_face_get_glyph_path(state->font_face_, state->font_size, x + advance_width, y, codepoint, *canvas->path_);
         previous = codepoint;
         has_previous = true;
     }

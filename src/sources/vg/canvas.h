@@ -165,6 +165,7 @@ public:
     constexpr rect(float x, float y, float w, float h) : x(x), y(y), w(w), h(h) {}
 
     rect(const box& box_);
+    operator box() const;
 
     constexpr void move(float dx, float dy) { x += dx; y += dy; }
     constexpr void move(float d) { move(d, d); }
@@ -305,17 +306,18 @@ inline stb::matrix to_matrix(const transform& t) { return to_matrix(t.matrix());
 //   arc_to      the SVG elliptical arc, as cubics, from the outline's current point
 //   parse_path  SVG path data ("M 0 0 L ..."), replaces the content; partial data stays on error, as in SVG
 //   bounding_rect  the box of all points of the outline (what the svg layer calls the fill box)
-//   to_path_t   the C API's path_t (the rasterizer's input); the caller owns the result
 void arc_to(stb::outline& path_, float rx, float ry, float x_axis_rotation_deg, bool large_arc, bool sweep, float x, float y);
 bool parse_path(stb::outline& path_, const char* data, size_t length_);
+void arc_to_radians(stb::outline& path_, float rx, float ry, float angle, bool large_arc, bool sweep, float x, float y);
+void add_rect_path(stb::outline& path_, float x, float y, float w, float h);
+void add_round_rect_path(stb::outline& path_, float x, float y, float w, float h, float rx, float ry);
+void add_ellipse_path(stb::outline& path_, float cx, float cy, float rx, float ry);
 rect bounding_rect(const stb::outline& path_);
-path_t* to_path_t(const stb::outline& path_);
-stb::outline from_path_t(const path_t* path_);
 
 enum class segment_kind { move_to, line_to, cubic_to, close };
 
 // Walks an outline as move / line / cubic / close. A quadratic curve is raised to a cubic; `close` carries the
-// start point of its contour in points[0] (the C API's path_t did the same).
+// start point of its contour in points[0].
 class outline_walker {
 public:
     explicit outline_walker(const stb::outline& path_);
