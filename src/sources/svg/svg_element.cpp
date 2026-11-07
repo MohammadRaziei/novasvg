@@ -26,28 +26,28 @@ std::unique_ptr<svg_node> svg_text_node::clone(bool deep) const
 std::unique_ptr<svg_element> svg_element::create(document* dom, element_id id)
 {
     switch(id) {
-    case element_id::Svg:
+    case element_id::svg:
         return std::make_unique<svg_svg_element>(dom);
-    case element_id::Path:
+    case element_id::path:
         return std::make_unique<svg_path_element>(dom);
     case element_id::G:
         return std::make_unique<svg_g_element>(dom);
-    case element_id::Switch:
+    case element_id::switch_:
         return std::make_unique<svg_switch_element>(dom);
-    case element_id::Rect:
+    case element_id::rect:
         return std::make_unique<svg_rect_element>(dom);
-    case element_id::Circle:
+    case element_id::circle:
         return std::make_unique<svg_circle_element>(dom);
     case element_id::ellipse:
         return std::make_unique<svg_ellipse_element>(dom);
-    case element_id::Line:
+    case element_id::line:
         return std::make_unique<svg_line_element>(dom);
-    case element_id::Defs:
+    case element_id::defs:
         return std::make_unique<svg_defs_element>(dom);
     case element_id::polygon:
     case element_id::polyline:
         return std::make_unique<svg_poly_element>(dom, id);
-    case element_id::Stop:
+    case element_id::stop:
         return std::make_unique<svg_stop_element>(dom);
     case element_id::linear_gradient:
         return std::make_unique<svg_linear_gradient_element>(dom);
@@ -57,13 +57,13 @@ std::unique_ptr<svg_element> svg_element::create(document* dom, element_id id)
         return std::make_unique<svg_symbol_element>(dom);
     case element_id::use:
         return std::make_unique<svg_use_element>(dom);
-    case element_id::Pattern:
+    case element_id::pattern:
         return std::make_unique<svg_pattern_element>(dom);
-    case element_id::Mask:
+    case element_id::mask:
         return std::make_unique<svg_mask_element>(dom);
-    case element_id::ClipPath:
+    case element_id::clip_path:
         return std::make_unique<svg_clip_path_element>(dom);
-    case element_id::Filter:
+    case element_id::filter:
         return std::make_unique<svg_filter_element>(dom);
     case element_id::fe_gaussian_blur:
         return std::make_unique<svg_fe_gaussian_blur_element>(dom);
@@ -81,13 +81,13 @@ std::unique_ptr<svg_element> svg_element::create(document* dom, element_id id)
         return std::make_unique<svg_element>(dom, id);
     case element_id::marker:
         return std::make_unique<svg_marker_element>(dom);
-    case element_id::Image:
+    case element_id::image:
         return std::make_unique<svg_image_element>(dom);
     case element_id::ForeignObject:
         return std::make_unique<svg_foreign_object_element>(dom);
-    case element_id::Style:
+    case element_id::style:
         return std::make_unique<svg_style_element>(dom);
-    case element_id::Text:
+    case element_id::text:
         return std::make_unique<svg_text_element>(dom);
     case element_id::tspan:
         return std::make_unique<svg_t_span_element>(dom);
@@ -112,12 +112,12 @@ bool svg_element::has_attribute(std::string_view name) const
     return has_attribute(id);
 }
 
-const std::string& svg_element::attribute(std::string_view name) const
+const std::string& svg_element::attribute_(std::string_view name) const
 {
     auto id = propertyid(name);
     if(id == property_id::unknown)
         return empty_string;
-    return attribute(id);
+    return attribute_(id);
 }
 
 const std::string* svg_element::find_custom_attribute(const std::string& name) const
@@ -136,10 +136,10 @@ bool svg_element::set_attribute(std::string_view name, const std::string& value)
     auto id = propertyid(name);
     if(id == property_id::unknown)
         return false;
-    return set_attribute(Specificity::api, id, value);
+    return set_attribute(specificity::api, id, value);
 }
 
-const Attribute* svg_element::find_attribute(property_id id) const
+const attribute* svg_element::find_attribute(property_id id) const
 {
     for(const auto& attribute : m_attributes) {
         if(id == attribute.id()) {
@@ -161,7 +161,7 @@ bool svg_element::has_attribute(property_id id) const
     return false;
 }
 
-const std::string& svg_element::attribute(property_id id) const
+const std::string& svg_element::attribute_(property_id id) const
 {
     for(const auto& attribute : m_attributes) {
         if(id == attribute.id()) {
@@ -177,9 +177,9 @@ bool svg_element::set_attribute(int specificity, property_id id, const std::stri
     // A value with var() cannot be parsed before the custom properties it names are all known (a stylesheet
     // can come after the el): it is kept, and parsed by resolveVariables() when the dom is complete.
     const bool deferred = uses_variables(id, value);
-    for(auto& attribute : m_attributes) {
-        if(id == attribute.id()) {
-            if(specificity < attribute.specificity())
+    for(auto& attribute_ : m_attributes) {
+        if(id == attribute_.id()) {
+            if(specificity < attribute_.specificity())
                 return false;
             if(deferred)
                 m_variable_sources[id] = value;
@@ -187,7 +187,7 @@ bool svg_element::set_attribute(int specificity, property_id id, const std::stri
                 m_variable_sources.erase(id);
                 parse_attribute(id, value);
             }
-            attribute = Attribute(specificity, id, value);
+            attribute_ = attribute(specificity, id, value);
             return true;
         }
     }
@@ -232,9 +232,9 @@ void svg_element::resolve_variables()
         std::string resolved;
         if(!substitute_variables(source, this, resolved, 0))
             continue;
-        for(auto& attribute : m_attributes) {
-            if(attribute.id() == id) {
-                attribute = Attribute(attribute.specificity(), id, resolved);
+        for(auto& attribute_ : m_attributes) {
+            if(attribute_.id() == id) {
+                attribute_ = attribute(attribute_.specificity(), id, resolved);
                 break;
             }
         }
@@ -249,9 +249,9 @@ void svg_element::set_attributes(const attribute_list& attributes)
     }
 }
 
-bool svg_element::set_attribute(const Attribute& attribute)
+bool svg_element::set_attribute(const attribute& attribute_)
 {
-    return set_attribute(attribute.specificity(), attribute.id(), attribute.value());
+    return set_attribute(attribute_.specificity(), attribute_.id(), attribute_.value());
 }
 
 void svg_element::parse_attribute(property_id id, const std::string& value)
@@ -325,9 +325,9 @@ svg_node* svg_element::lastChild() const
     return &*m_children.back();
 }
 
-Rect svg_element::fill_bounding_box() const
+rect svg_element::fill_bounding_box() const
 {
-    auto fill_bounding_box = Rect::invalid;
+    auto fill_bounding_box = rect::invalid;
     for(const auto& child : m_children) {
         if(auto el = to_svg_element(child); el && !el->is_hidden_element()) {
             fill_bounding_box.unite(el->local_transform().map_rect(el->fill_bounding_box()));
@@ -335,13 +335,13 @@ Rect svg_element::fill_bounding_box() const
     }
 
     if(!fill_bounding_box.is_valid())
-        fill_bounding_box = Rect::Empty;
+        fill_bounding_box = rect::empty_rect;
     return fill_bounding_box;
 }
 
-Rect svg_element::stroke_bounding_box() const
+rect svg_element::stroke_bounding_box() const
 {
-    auto stroke_bounding_box = Rect::invalid;
+    auto stroke_bounding_box = rect::invalid;
     for(const auto& child : m_children) {
         if(auto el = to_svg_element(child); el && !el->is_hidden_element()) {
             stroke_bounding_box.unite(el->local_transform().map_rect(el->stroke_bounding_box()));
@@ -349,15 +349,15 @@ Rect svg_element::stroke_bounding_box() const
     }
 
     if(!stroke_bounding_box.is_valid())
-        stroke_bounding_box = Rect::Empty;
+        stroke_bounding_box = rect::empty_rect;
     return stroke_bounding_box;
 }
 
-Rect svg_element::paint_bounding_box() const
+rect svg_element::paint_bounding_box() const
 {
     if(m_paint_bounding_box.is_valid())
         return m_paint_bounding_box;
-    m_paint_bounding_box = Rect::Empty;
+    m_paint_bounding_box = rect::empty_rect;
     m_paint_bounding_box = stroke_bounding_box();
     assert(m_paint_bounding_box.is_valid());
     if(m_clipper) m_paint_bounding_box.intersect(m_clipper->clip_bounding_box(this));
@@ -376,7 +376,7 @@ svg_marker_element* svg_element::get_marker(std::string_view id) const
 svg_clip_path_element* svg_element::get_clipper(std::string_view id) const
 {
     auto el = root_element()->element_by_id(id);
-    if(el && el->id() == element_id::ClipPath)
+    if(el && el->id() == element_id::clip_path)
         return static_cast<svg_clip_path_element*>(el);
     return nullptr;
 }
@@ -384,7 +384,7 @@ svg_clip_path_element* svg_element::get_clipper(std::string_view id) const
 svg_mask_element* svg_element::get_masker(std::string_view id) const
 {
     auto el = root_element()->element_by_id(id);
-    if(el && el->id() == element_id::Mask)
+    if(el && el->id() == element_id::mask)
         return static_cast<svg_mask_element*>(el);
     return nullptr;
 }
@@ -392,7 +392,7 @@ svg_mask_element* svg_element::get_masker(std::string_view id) const
 svg_filter_element* svg_element::get_filter_element(std::string_view id) const
 {
     auto el = root_element()->element_by_id(id);
-    if(el && el->id() == element_id::Filter)
+    if(el && el->id() == element_id::filter)
         return static_cast<svg_filter_element*>(el);
     return nullptr;
 }
@@ -419,10 +419,10 @@ svg_element* svg_element::element_from_point(float x, float y)
     }
 
     if(is_pointable_element()) {
-        auto transform = local_transform();
+        auto transform_ = local_transform();
         for(auto parent = parent_element(); parent; parent = parent->parent_element())
-            transform.post_multiply(parent->local_transform());
-        auto bbox = transform.map_rect(paint_bounding_box());
+            transform_.post_multiply(parent->local_transform());
+        auto bbox = transform_.map_rect(paint_bounding_box());
         if(bbox.contains(x, y)) {
             return this;
         }
@@ -447,26 +447,26 @@ svg_property* svg_element::get_property(property_id id) const
     return nullptr;
 }
 
-Size svg_element::current_viewport_size() const
+size svg_element::current_viewport_size() const
 {
     auto parent = parent_element();
     if(parent == nullptr) {
         auto el = static_cast<const svg_svg_element*>(this);
         const auto& viewBox = el->viewBox();
         if(viewBox.value().is_valid())
-            return viewBox.value().size();
-        return Size(300, 150);
+            return viewBox.value().size_();
+        return size(300, 150);
     }
 
-    if(parent->id() == element_id::Svg) {
+    if(parent->id() == element_id::svg) {
         auto el = static_cast<const svg_svg_element*>(parent);
         const auto& viewBox = el->viewBox();
         if(viewBox.value().is_valid())
-            return viewBox.value().size();
+            return viewBox.value().size_();
         LengthContext lengthContext(el);
         auto width = lengthContext.value_for_length(el->width());
         auto height = lengthContext.value_for_length(el->height());
-        return Size(width, height);
+        return size(width, height);
     }
 
     return parent->current_viewport_size();
@@ -499,18 +499,18 @@ void svg_element::build()
 
 void svg_element::layout_element(const svg_layout_state& state)
 {
-    m_paint_bounding_box = Rect::invalid;
+    m_paint_bounding_box = rect::invalid;
     m_clipper = get_clipper(state.clip_path());
     m_masker = get_masker(state.mask());
     m_filter = get_filter_element(state.filter());
     m_opacity = state.opacity();
-    m_mix_blend_mode = state.mix_blend_mode();
+    m_mix_blend_mode = state.mix_blend_mode_();
 
     m_font_size = state.font_size();
-    m_display = state.display();
-    m_overflow = state.overflow();
-    m_visibility = state.visibility();
-    m_pointer_events = state.pointer_events();
+    m_display = state.display_();
+    m_overflow = state.overflow_();
+    m_visibility = state.visibility_();
+    m_pointer_events = state.pointer_events_();
 }
 
 void svg_element::layout_children(svg_layout_state& state)
@@ -524,9 +524,9 @@ void svg_element::layout_children(svg_layout_state& state)
 
 void svg_element::layout(svg_layout_state& state)
 {
-    svg_layout_state newState(state, this);
-    layout_element(newState);
-    layout_children(newState);
+    svg_layout_state new_state(state, this);
+    layout_element(new_state);
+    layout_children(new_state);
 }
 
 void svg_element::render_children(svg_render_state& state) const
@@ -547,12 +547,12 @@ bool svg_element::is_hidden_element() const
     if(is_display_none())
         return true;
     switch(m_id) {
-    case element_id::Defs:
+    case element_id::defs:
     case element_id::symbol:
     case element_id::marker:
-    case element_id::ClipPath:
-    case element_id::Mask:
-    case element_id::Filter:
+    case element_id::clip_path:
+    case element_id::mask:
+    case element_id::filter:
     case element_id::fe_gaussian_blur:
     case element_id::fe_drop_shadow:
     case element_id::fe_offset:
@@ -562,8 +562,8 @@ bool svg_element::is_hidden_element() const
     case element_id::fe_merge_node:
     case element_id::linear_gradient:
     case element_id::radial_gradient:
-    case element_id::Pattern:
-    case element_id::Stop:
+    case element_id::pattern:
+    case element_id::stop:
         return true;
     default:
         return false;
@@ -572,20 +572,20 @@ bool svg_element::is_hidden_element() const
 
 bool svg_element::is_pointable_element() const
 {
-    if(m_pointer_events != PointerEvents::None
-        && m_visibility != Visibility::hidden
-        && m_display != Display::None
+    if(m_pointer_events != pointer_events::none
+        && m_visibility != visibility::hidden
+        && m_display != display::none
         && m_opacity != 0.f) {
         switch(m_id) {
-        case element_id::Line:
-        case element_id::Rect:
+        case element_id::line:
+        case element_id::rect:
         case element_id::ellipse:
-        case element_id::Circle:
+        case element_id::circle:
         case element_id::polyline:
         case element_id::polygon:
-        case element_id::Path:
-        case element_id::Text:
-        case element_id::Image:
+        case element_id::path:
+        case element_id::text:
+        case element_id::image:
         case element_id::ForeignObject:
             return true;
         default:
@@ -597,7 +597,7 @@ bool svg_element::is_pointable_element() const
 }
 
 svg_style_element::svg_style_element(document* dom)
-    : svg_element(dom, element_id::Style)
+    : svg_element(dom, element_id::style)
 {
 }
 
@@ -609,24 +609,24 @@ svg_fit_to_view_box::svg_fit_to_view_box(svg_element* el)
     el->add_property(m_preserve_aspect_ratio);
 }
 
-Transform svg_fit_to_view_box::view_box_to_view_transform(const Size& viewport_size) const
+transform svg_fit_to_view_box::view_box_to_view_transform(const size& viewport_size) const
 {
     const auto& view_box_rect = m_view_box.value();
     if(view_box_rect.empty() || viewport_size.empty())
-        return Transform::identity;
+        return transform::identity;
     return m_preserve_aspect_ratio.get_transform(view_box_rect, viewport_size);
 }
 
-Rect svg_fit_to_view_box::get_clip_rect(const Size& viewport_size) const
+rect svg_fit_to_view_box::get_clip_rect(const size& viewport_size) const
 {
     const auto& view_box_rect = m_view_box.value();
     if(view_box_rect.empty() || viewport_size.empty())
-        return Rect(0, 0, viewport_size.w, viewport_size.h);
+        return rect(0, 0, viewport_size.w, viewport_size.h);
     return m_preserve_aspect_ratio.get_clip_rect(view_box_rect, viewport_size);
 }
 
 svg_uri_reference::svg_uri_reference(svg_element* el)
-    : m_href(property_id::Href)
+    : m_href(property_id::href)
 {
     el->add_property(m_href);
 }
@@ -650,7 +650,7 @@ bool svg_paint_server::apply_paint(svg_render_state& state) const
 
 svg_graphics_element::svg_graphics_element(document* dom, element_id id)
     : svg_element(dom, id)
-    , m_transform(property_id::Transform)
+    , m_transform(property_id::transform)
     , m_transform_origin(property_id::transform_origin)
     , m_transform_box(property_id::transform_box)
 {
@@ -659,7 +659,7 @@ svg_graphics_element::svg_graphics_element(document* dom, element_id id)
     add_property(m_transform_box);
 }
 
-Transform svg_graphics_element::local_transform() const
+transform svg_graphics_element::local_transform() const
 {
     // Only shift the pivot when transform-origin was actually specified --
     // matches legacy behavior (origin at the current user-space (0,0)) for
@@ -669,53 +669,53 @@ Transform svg_graphics_element::local_transform() const
     if(!m_transform_origin.specified())
         return m_transform.value();
 
-    Rect box;
+    rect box_;
     if(m_transform_box.specified() && m_transform_box.value() == transform_box_type::fill_box) {
-        box = fill_bounding_box();
+        box_ = fill_bounding_box();
     } else {
-        auto size = current_viewport_size();
-        box = Rect(0.f, 0.f, size.w, size.h);
+        auto size_ = current_viewport_size();
+        box_ = rect(0.f, 0.f, size_.w, size_.h);
     }
 
-    if(box.empty())
+    if(box_.empty())
         return m_transform.value();
 
-    auto origin = m_transform_origin.resolve(box);
-    return Transform::translated(origin.x, origin.y) * m_transform.value() * Transform::translated(-origin.x, -origin.y);
+    auto origin = m_transform_origin.resolve(box_);
+    return transform::translated(origin.x, origin.y) * m_transform.value() * transform::translated(-origin.x, -origin.y);
 }
 
-svg_paint_server svg_graphics_element::get_paint_server(const Paint& paint, float opacity) const
+svg_paint_server svg_graphics_element::get_paint_server(const paint& paint_, float opacity) const
 {
-    if(paint.isNone())
+    if(paint_.is_none())
         return svg_paint_server();
-    if(auto el = get_painter(paint.id()))
-        return svg_paint_server(el, paint.color(), opacity);
-    return svg_paint_server(nullptr, paint.color(), opacity);
+    if(auto el = get_painter(paint_.id()))
+        return svg_paint_server(el, paint_.color_(), opacity);
+    return svg_paint_server(nullptr, paint_.color_(), opacity);
 }
 
-StrokeData svg_graphics_element::get_stroke_data(const svg_layout_state& state) const
+stroke_data svg_graphics_element::get_stroke_data(const svg_layout_state& state) const
 {
     LengthContext lengthContext(this);
-    StrokeData strokeData(lengthContext.value_for_length(state.stroke_width(), length_direction::diagonal));
-    strokeData.set_miter_limit(state.stroke_miterlimit());
-    strokeData.set_line_cap(state.stroke_linecap());
-    strokeData.set_line_join(state.stroke_linejoin());
-    strokeData.set_dash_offset(lengthContext.value_for_length(state.stroke_dashoffset(), length_direction::diagonal));
+    stroke_data stroke_data_(lengthContext.value_for_length(state.stroke_width(), length_direction::diagonal));
+    stroke_data_.set_miter_limit(state.stroke_miterlimit());
+    stroke_data_.set_line_cap(state.stroke_linecap());
+    stroke_data_.set_line_join(state.stroke_linejoin());
+    stroke_data_.set_dash_offset(lengthContext.value_for_length(state.stroke_dashoffset(), length_direction::diagonal));
 
     DashArray dashArray;
     for(const auto& dash : state.stroke_dasharray())
         dashArray.push_back(lengthContext.value_for_length(dash, length_direction::diagonal));
-    strokeData.set_dash_array(std::move(dashArray));
-    return strokeData;
+    stroke_data_.set_dash_array(std::move(dashArray));
+    return stroke_data_;
 }
 
 svg_svg_element::svg_svg_element(document* dom)
-    : svg_graphics_element(dom, element_id::Svg)
+    : svg_graphics_element(dom, element_id::svg)
     , svg_fit_to_view_box(this)
-    , m_x(property_id::X, length_direction::Horizontal, length_negative_mode::allow, 0.f, length_units::None)
-    , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::None)
-    , m_width(property_id::Width, length_direction::Horizontal, length_negative_mode::forbid, 100.f, length_units::percent)
-    , m_height(property_id::Height, length_direction::vertical, length_negative_mode::forbid, 100.f, length_units::percent)
+    , m_x(property_id::X, length_direction::horizontal, length_negative_mode::allow, 0.f, length_units::none)
+    , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::none)
+    , m_width(property_id::width, length_direction::horizontal, length_negative_mode::forbid, 100.f, length_units::percent)
+    , m_height(property_id::height, length_direction::vertical, length_negative_mode::forbid, 100.f, length_units::percent)
 {
     add_property(m_x);
     add_property(m_y);
@@ -723,10 +723,10 @@ svg_svg_element::svg_svg_element(document* dom)
     add_property(m_height);
 }
 
-Transform svg_svg_element::local_transform() const
+transform svg_svg_element::local_transform() const
 {
     LengthContext lengthContext(this);
-    const Rect viewport_rect = {
+    const rect viewport_rect = {
         lengthContext.value_for_length(m_x),
         lengthContext.value_for_length(m_y),
         lengthContext.value_for_length(m_width),
@@ -734,8 +734,8 @@ Transform svg_svg_element::local_transform() const
     };
 
     if(is_root_element())
-        return view_box_to_view_transform(viewport_rect.size());
-    return svg_graphics_element::local_transform() * Transform::translated(viewport_rect.x, viewport_rect.y) * view_box_to_view_transform(viewport_rect.size());
+        return view_box_to_view_transform(viewport_rect.size_());
+    return svg_graphics_element::local_transform() * transform::translated(viewport_rect.x, viewport_rect.y) * view_box_to_view_transform(viewport_rect.size_());
 }
 
 void svg_svg_element::render(svg_render_state& state) const
@@ -743,7 +743,7 @@ void svg_svg_element::render(svg_render_state& state) const
     if(is_display_none())
         return;
     LengthContext lengthContext(this);
-    const Size viewport_size = {
+    const size viewport_size = {
         lengthContext.value_for_length(m_width),
         lengthContext.value_for_length(m_height)
     };
@@ -751,12 +751,12 @@ void svg_svg_element::render(svg_render_state& state) const
     if(viewport_size.empty())
         return;
     svg_blend_info blend_info(this);
-    svg_render_state newState(this, state, local_transform());
-    newState.beginGroup(blend_info);
+    svg_render_state new_state(this, state, local_transform());
+    new_state.begin_group(blend_info);
     if(is_overflow_hidden())
-        newState->clip_rect(get_clip_rect(viewport_size), FillRule::NonZero, newState.current_transform());
-    render_children(newState);
-    newState.endGroup(blend_info);
+        new_state->clip_rect(get_clip_rect(viewport_size), fill_rule::non_zero, new_state.current_transform());
+    render_children(new_state);
+    new_state.end_group(blend_info);
 }
 
 svg_root_element::svg_root_element(document* dom)
@@ -835,10 +835,10 @@ void svg_root_element::force_layout()
 svg_use_element::svg_use_element(document* dom)
     : svg_graphics_element(dom, element_id::use)
     , svg_uri_reference(this)
-    , m_x(property_id::X, length_direction::Horizontal, length_negative_mode::allow, 0.f, length_units::None)
-    , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::None)
-    , m_width(property_id::Width, length_direction::Horizontal, length_negative_mode::forbid, 100.f, length_units::percent)
-    , m_height(property_id::Height, length_direction::vertical, length_negative_mode::forbid, 100.f, length_units::percent)
+    , m_x(property_id::X, length_direction::horizontal, length_negative_mode::allow, 0.f, length_units::none)
+    , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::none)
+    , m_width(property_id::width, length_direction::horizontal, length_negative_mode::forbid, 100.f, length_units::percent)
+    , m_height(property_id::height, length_direction::vertical, length_negative_mode::forbid, 100.f, length_units::percent)
 {
     add_property(m_x);
     add_property(m_y);
@@ -846,15 +846,15 @@ svg_use_element::svg_use_element(document* dom)
     add_property(m_height);
 }
 
-Transform svg_use_element::local_transform() const
+transform svg_use_element::local_transform() const
 {
     LengthContext lengthContext(this);
-    const Point translation = {
+    const point translation = {
         lengthContext.value_for_length(m_x),
         lengthContext.value_for_length(m_y)
     };
 
-    return svg_graphics_element::local_transform() * Transform::translated(translation.x, translation.y);
+    return svg_graphics_element::local_transform() * transform::translated(translation.x, translation.y);
 }
 
 void svg_use_element::render(svg_render_state& state) const
@@ -862,10 +862,10 @@ void svg_use_element::render(svg_render_state& state) const
     if(is_display_none())
         return;
     svg_blend_info blend_info(this);
-    svg_render_state newState(this, state, local_transform());
-    newState.beginGroup(blend_info);
-    render_children(newState);
-    newState.endGroup(blend_info);
+    svg_render_state new_state(this, state, local_transform());
+    new_state.begin_group(blend_info);
+    render_children(new_state);
+    new_state.end_group(blend_info);
 }
 
 void svg_use_element::build()
@@ -883,25 +883,25 @@ std::unique_ptr<svg_element> svg_use_element::clone_target_element(svg_element* 
 {
     if(target_element == this || is_disallowed_element(target_element))
         return nullptr;
-    const auto& id_attr = target_element->attribute(property_id::Id);
+    const auto& id_attr = target_element->attribute_(property_id::id);
     auto parent = parent_element();
     while(parent) {
-        auto attribute = parent->find_attribute(property_id::Id);
-        if(attribute && id_attr == attribute->value())
+        auto attribute_ = parent->find_attribute(property_id::id);
+        if(attribute_ && id_attr == attribute_->value())
             return nullptr;
         parent = parent->parent_element();
     }
 
     auto tag_id = target_element->id();
     if(tag_id == element_id::symbol) {
-        tag_id = element_id::Svg;
+        tag_id = element_id::svg;
     }
 
     auto new_element = svg_element::create(dom(), tag_id);
     new_element->set_attributes(target_element->attributes());
-    if(new_element->id() == element_id::Svg) {
+    if(new_element->id() == element_id::svg) {
         for(const auto& attribute : attributes()) {
-            if(attribute.id() == property_id::Width || attribute.id() == property_id::Height) {
+            if(attribute.id() == property_id::width || attribute.id() == property_id::height) {
                 new_element->set_attribute(attribute);
             }
         }
@@ -928,14 +928,14 @@ void svg_g_element::render(svg_render_state& state) const
     if(is_display_none())
         return;
     svg_blend_info blend_info(this);
-    svg_render_state newState(this, state, local_transform());
-    newState.beginGroup(blend_info);
-    render_children(newState);
-    newState.endGroup(blend_info);
+    svg_render_state new_state(this, state, local_transform());
+    new_state.begin_group(blend_info);
+    render_children(new_state);
+    new_state.end_group(blend_info);
 }
 
 svg_switch_element::svg_switch_element(document* dom)
-    : svg_graphics_element(dom, element_id::Switch)
+    : svg_graphics_element(dom, element_id::switch_)
 {
 }
 
@@ -957,15 +957,15 @@ void svg_switch_element::render(svg_render_state& state) const
     if(is_display_none())
         return;
     svg_blend_info blend_info(this);
-    svg_render_state newState(this, state, local_transform());
-    newState.beginGroup(blend_info);
+    svg_render_state new_state(this, state, local_transform());
+    new_state.begin_group(blend_info);
     if(auto child = selected_child())
-        child->render(newState);
-    newState.endGroup(blend_info);
+        child->render(new_state);
+    new_state.end_group(blend_info);
 }
 
 svg_defs_element::svg_defs_element(document* dom)
-    : svg_graphics_element(dom, element_id::Defs)
+    : svg_graphics_element(dom, element_id::defs)
 {
 }
 

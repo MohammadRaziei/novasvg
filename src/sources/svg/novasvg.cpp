@@ -129,7 +129,7 @@ bool element::has_attribute(const std::string& name) const
 const std::string& element::attribute(const std::string& name) const
 {
     if(m_node)
-        return el()->attribute(name);
+        return el()->attribute_(name);
     return empty_string;
 }
 
@@ -149,7 +149,7 @@ void element::render(pixmap& bitmap, const stb::matrix& matrix) const
     el(true)->render(state);
 }
 
-pixmap element::render_to_pixmap(int width, int height, const stb::color& backgroundColor) const
+pixmap element::render_to_pixmap(int width, int height, const stb::color& background_color) const
 {
     if(m_node == nullptr)
         return pixmap();
@@ -170,7 +170,7 @@ pixmap element::render_to_pixmap(int width, int height, const stb::color& backgr
 
     stb::matrix matrix{x_scale, 0, 0, y_scale, -element_bounds.x * x_scale, -element_bounds.y * y_scale};
     pixmap bitmap(width, height);
-    if(backgroundColor.value()) bitmap.clear(backgroundColor);
+    if(background_color.value()) bitmap.clear(background_color);
     render(bitmap, matrix);
     return bitmap;
 }
@@ -188,9 +188,9 @@ void element::render(stb::image& image, const stb::matrix& matrix) const
         image.blend(over);
 }
 
-stb::image element::render_to_image(int width, int height, const stb::color& backgroundColor) const
+stb::image element::render_to_image(int width, int height, const stb::color& background_color) const
 {
-    return pixmap_release_to_image(render_to_pixmap(width, height, backgroundColor));
+    return pixmap_release_to_image(render_to_pixmap(width, height, background_color));
 }
 
 stb::matrix element::local_matrix() const
@@ -204,27 +204,27 @@ stb::matrix element::global_matrix() const
 {
     if(m_node == nullptr)
         return stb::matrix();
-    auto transform = el(true)->local_transform();
+    auto transform_ = el(true)->local_transform();
     for(auto parent = el()->parent_element(); parent; parent = parent->parent_element())
-        transform.post_multiply(parent->local_transform());
-    return to_matrix(transform);
+        transform_.post_multiply(parent->local_transform());
+    return to_matrix(transform_);
 }
 
-Box element::local_bounding_box() const
+box element::local_bounding_box() const
 {
     return bounding_box().transformed(local_matrix());
 }
 
-Box element::global_bounding_box() const
+box element::global_bounding_box() const
 {
     return bounding_box().transformed(global_matrix());
 }
 
-Box element::bounding_box() const
+box element::bounding_box() const
 {
     if(m_node)
         return el(true)->paint_bounding_box();
-    return Box();
+    return box();
 }
 
 node_list element::children() const
@@ -270,11 +270,11 @@ std::unique_ptr<document> document::load_data(const char* data)
     return load_data(data, std::strlen(data));
 }
 
-std::unique_ptr<document> document::load_data(const char* data, size_t length)
+std::unique_ptr<document> document::load_data(const char* data, size_t length_)
 {
     std::unique_ptr<document> dom(new document);
-    if(!dom->parse(data, length)) {
-        svg_log().error("cannot parse the document (%zu bytes)", length);
+    if(!dom->parse(data, length_)) {
+        svg_log().error("cannot parse the document (%zu bytes)", length_);
         return nullptr;
     }
     return dom;
@@ -290,7 +290,7 @@ float document::height() const
     return root_element(true)->intrinsic_height();
 }
 
-Box document::bounding_box() const
+box document::bounding_box() const
 {
     return root_element(true)->local_transform().map_rect(root_element()->paint_bounding_box());
 }
@@ -338,10 +338,10 @@ void document::render(pixmap& bitmap, const stb::matrix& matrix) const
     // (this runs after that clear) since that argument means "what to
     // show through transparent content", and content here isn't actually
     // transparent -- it explicitly asked for this color.
-    if(const auto& bg = root_element(true)->attribute(property_id::Background_Color); !bg.empty()) {
-        color_t color;
-        if(color_parse(&color, bg.data(), static_cast<int>(bg.length())) > 0) {
-            auto argb = color_to_argb32(&color);
+    if(const auto& bg = root_element(true)->attribute_(property_id::background_color); !bg.empty()) {
+        color_t color_;
+        if(color_parse(&color_, bg.data(), static_cast<int>(bg.length())) > 0) {
+            auto argb = color_to_argb32(&color_);
             // A fully transparent `background-color` (Mermaid emits `transparent`) paints nothing, so it must
             // not wipe the caller's `backgroundColor` argument -- that made every PNG come out transparent.
             // ponytail: a *semi*-transparent root color still replaces the argument instead of compositing
@@ -356,7 +356,7 @@ void document::render(pixmap& bitmap, const stb::matrix& matrix) const
     root_element(true)->render(state);
 }
 
-pixmap document::render_to_pixmap(int width, int height, const stb::color& backgroundColor) const
+pixmap document::render_to_pixmap(int width, int height, const stb::color& background_color) const
 {
     auto intrinsic_width = root_element(true)->intrinsic_width();
     auto intrinsic_height = root_element()->intrinsic_height();
@@ -376,7 +376,7 @@ pixmap document::render_to_pixmap(int width, int height, const stb::color& backg
 
     stb::matrix matrix{x_scale, 0, 0, y_scale, 0, 0};
     pixmap bitmap(width, height);
-    if(backgroundColor.value()) bitmap.clear(backgroundColor);
+    if(background_color.value()) bitmap.clear(background_color);
     render(bitmap, matrix);
     return bitmap;
 }
@@ -402,25 +402,25 @@ std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
         pixmap bitmap = render_to_pixmap(pixel_width, pixel_height);
         if(bitmap.is_null())
             return {};
-        pdf->draw_image(bitmap, Rect(0, 0, width, height), Rect(0, 0, float(pixel_width), float(pixel_height)), Transform());
+        pdf->draw_image(bitmap, rect(0, 0, width, height), rect(0, 0, float(pixel_width), float(pixel_height)), transform());
         return pdf->data();
     }
 
     // Same rule as render(pixmap&): a root `background-color` sits under everything.
-    if(const auto& bg = root_element(true)->attribute(property_id::Background_Color); !bg.empty()) {
-        color_t color;
-        if(color_parse(&color, bg.data(), static_cast<int>(bg.length())) > 0) {
-            auto argb = color_to_argb32(&color);
+    if(const auto& bg = root_element(true)->attribute_(property_id::background_color); !bg.empty()) {
+        color_t color_;
+        if(color_parse(&color_, bg.data(), static_cast<int>(bg.length())) > 0) {
+            auto argb = color_to_argb32(&color_);
             if((argb >> 24) & 0xff) {
                 stb::outline page;
                 page.add_rect(0, 0, width, height);
                 pdf->set_color(((argb >> 16) & 0xff) / 255.f, ((argb >> 8) & 0xff) / 255.f, (argb & 0xff) / 255.f, ((argb >> 24) & 0xff) / 255.f);
-                pdf->fill_path(page, FillRule::NonZero, Transform());
+                pdf->fill_path(page, fill_rule::non_zero, transform());
             }
         }
     }
 
-    svg_render_state state(nullptr, nullptr, Transform(), svg_render_mode::painting, pdf);
+    svg_render_state state(nullptr, nullptr, transform(), svg_render_mode::painting, pdf);
     root_element(true)->render(state);
     return pdf->data();
 }
@@ -450,9 +450,9 @@ void document::render(stb::image& image, const stb::matrix& matrix) const
         image.blend(over);
 }
 
-stb::image document::render_to_image(int width, int height, const stb::color& backgroundColor) const
+stb::image document::render_to_image(int width, int height, const stb::color& background_color) const
 {
-    return pixmap_release_to_image(render_to_pixmap(width, height, backgroundColor));
+    return pixmap_release_to_image(render_to_pixmap(width, height, background_color));
 }
 
 element document::element_from_point(float x, float y) const
@@ -518,7 +518,7 @@ public:
                     wanted = &declaration.name;
             }
 
-            if(wanted == nullptr || !match_html_selector(rule.selector(), nodes, index, m_owner))
+            if(wanted == nullptr || !match_html_selector(rule.selector_(), nodes, index, m_owner))
                 continue;
             for(const auto& declaration : rule.declarations()) {
                 if(declaration.name != property)
@@ -555,7 +555,7 @@ void prepare_foreign_object(svg_foreign_object_element* el, const foreign_object
 namespace nova::svg {
 using namespace vg;
 
-bool document::parse(const char* data, size_t length)
+bool document::parse(const char* data, size_t length_)
 {
     std::string buffer;
     std::string style_sheet;
@@ -564,7 +564,7 @@ bool document::parse(const char* data, size_t length)
     auto handle_text = [&](std::string_view text, bool in_cdata) {
         if(text.empty() || current_element == nullptr || ignoring > 0)
             return;
-        if(current_element->id() != element_id::Text && current_element->id() != element_id::tspan && current_element->id() != element_id::Style) {
+        if(current_element->id() != element_id::text && current_element->id() != element_id::tspan && current_element->id() != element_id::style) {
             return;
         }
 
@@ -574,7 +574,7 @@ bool document::parse(const char* data, size_t length)
             decode_text(text, buffer);
         }
 
-        if(current_element->id() == element_id::Style) {
+        if(current_element->id() == element_id::style) {
             remove_style_comments(buffer);
             style_sheet.append(buffer);
         } else {
@@ -584,8 +584,8 @@ bool document::parse(const char* data, size_t length)
         }
     };
 
-    std::string_view input(data, length);
-    if(length >= 3) {
+    std::string_view input(data, length_);
+    if(length_ >= 3) {
         auto buffer = (const uint8_t*)(data);
 
         const auto c1 = buffer[0];
@@ -620,7 +620,7 @@ bool document::parse(const char* data, size_t length)
         }
 
         if(skip_delimiter(input, '!')) {
-            if(skipString(input, "--")) {
+            if(skip_string(input, "--")) {
                 auto n = input.find("-->");
                 if(n == std::string_view::npos)
                     return false;
@@ -629,7 +629,7 @@ bool document::parse(const char* data, size_t length)
                 continue;
             }
 
-            if(skipString(input, "[CDATA[")) {
+            if(skip_string(input, "[CDATA[")) {
                 auto n = input.find("]]>");
                 if(n == std::string_view::npos)
                     return false;
@@ -638,7 +638,7 @@ bool document::parse(const char* data, size_t length)
                 continue;
             }
 
-            if(skipString(input, "DOCTYPE")) {
+            if(skip_string(input, "DOCTYPE")) {
                 while(!input.empty() && input.front() != '>') {
                     if(input.front() == '[') {
                         int depth = 1;
@@ -694,7 +694,7 @@ bool document::parse(const char* data, size_t length)
                 if(m_root_element && current_element == nullptr)
                     return false;
                 if(m_root_element == nullptr) {
-                    if(id != element_id::Svg)
+                    if(id != element_id::svg)
                         return false;
                     m_root_element = std::make_unique<svg_root_element>(this);
                     el = m_root_element.get();
@@ -724,13 +724,13 @@ bool document::parse(const char* data, size_t length)
                 id = propertyid(buffer);
             if(id != property_id::unknown) {
                 decode_text(input.substr(0, n), buffer);
-                if(id == property_id::Style) {
+                if(id == property_id::style) {
                     remove_style_comments(buffer);
                     parse_inline_style(buffer, el);
                 } else {
-                    if(id == property_id::Id)
+                    if(id == property_id::id)
                         m_root_element->add_element_by_id(buffer, el);
-                    el->set_attribute(Specificity::presentation_attribute, id, buffer);
+                    el->set_attribute(specificity::presentation_attribute, id, buffer);
                 }
             } else if(el != nullptr) {
                 // Not an attribute novasvg knows: keep it for CSS attribute selectors.

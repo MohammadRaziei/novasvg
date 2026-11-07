@@ -38,7 +38,7 @@ namespace vg {
 #define novasvg_array_init(array) \
     do { \
         (array).data = NULL; \
-        (array).size = 0; \
+        (array).size_ = 0; \
         (array).capacity = 0; \
     } while(0)
 
@@ -50,8 +50,8 @@ namespace vg {
 
 #define novasvg_array_ensure(array, count) \
     do { \
-        if((array).size + (count) > (array).capacity) { \
-            int capacity = (array).size + (count); \
+        if((array).size_ + (count) > (array).capacity) { \
+            int capacity = (array).size_ + (count); \
             int newcapacity = (array).capacity == 0 ? 8 : (array).capacity; \
             while(newcapacity < capacity) { newcapacity *= 2; } \
             (array).data = NOVA_ARRAY_CAST(array, realloc((array).data, newcapacity * sizeof((array).data[0]))); \
@@ -63,13 +63,13 @@ namespace vg {
     do { \
         if(newdata && count > 0) { \
             novasvg_array_ensure(array, count); \
-            memcpy((array).data + (array).size, newdata, (count) * sizeof((newdata)[0])); \
-            (array).size += count; \
+            memcpy((array).data + (array).size_, newdata, (count) * sizeof((newdata)[0])); \
+            (array).size_ += count; \
         } \
     } while(0)
 
-#define novasvg_array_append(array, other) novasvg_array_append_data(array, (other).data, (other).size)
-#define novasvg_array_clear(array) ((array).size = 0)
+#define novasvg_array_append(array, other) novasvg_array_append_data(array, (other).data, (other).size_)
+#define novasvg_array_clear(array) ((array).size_ = 0)
 #define novasvg_array_destroy(array) free((array).data)
 
 

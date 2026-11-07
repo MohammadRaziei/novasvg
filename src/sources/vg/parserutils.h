@@ -80,7 +80,7 @@ constexpr bool skip_delimiter(std::string_view& input, char delimiter)
     return false;
 }
 
-constexpr bool skipString(std::string_view& input, std::string_view value)
+constexpr bool skip_string(std::string_view& input, std::string_view value)
 {
     if(input.size() >= value.size() && value == input.substr(0, value.size())) {
         input.remove_prefix(value.size());
@@ -111,7 +111,7 @@ constexpr int to_integral_digit(char ch)
 template<typename T>
 inline bool parse_integer(std::string_view& input, T& integer, int base = 10)
 {
-    constexpr bool isSigned = std::numeric_limits<T>::is_signed;
+    constexpr bool is_signed = std::numeric_limits<T>::is_signed;
     constexpr T int_max = std::numeric_limits<T>::max();
     const T max_multiplier = int_max / static_cast<T>(base);
 
@@ -120,7 +120,7 @@ inline bool parse_integer(std::string_view& input, T& integer, int base = 10)
 
     if(!input.empty() && input.front() == '+') {
         input.remove_prefix(1);
-    } else if(!input.empty() && isSigned && input.front() == '-') {
+    } else if(!input.empty() && is_signed && input.front() == '-') {
         input.remove_prefix(1);
         is_negative = true;
     }
@@ -144,7 +144,7 @@ inline bool parse_integer(std::string_view& input, T& integer, int base = 10)
 }
 
 template<typename T>
-inline bool parseNumber(std::string_view& input, T& number)
+inline bool parse_number(std::string_view& input, T& number)
 {
     constexpr T max_value = std::numeric_limits<T>::max();
     T integer = 0;

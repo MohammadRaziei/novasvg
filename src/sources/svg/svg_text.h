@@ -37,9 +37,9 @@ using svg_text_position_list = std::vector<svg_text_position>;
 struct svg_text_fragment {
     explicit svg_text_fragment(const svg_text_positioning_element* el) : el(el) {}
     const svg_text_positioning_element* el;
-    Transform length_adjust_transform;
+    transform length_adjust_transform;
     size_t offset = 0;
-    size_t length = 0;
+    size_t length_ = 0;
     bool starts_new_text_chunk = false;
     float x = 0;
     float y = 0;
@@ -84,27 +84,27 @@ public:
     const svg_length& textLength() const { return m_text_length; }
     LengthAdjust lengthAdjust() const { return m_length_adjust.value(); }
 
-    const Font& font() const { return m_font; }
+    const font& font_() const { return m_font; }
     const svg_paint_server& fill() const { return m_fill; }
     const svg_paint_server& stroke() const { return m_stroke; }
 
-    bool is_vertical_writing_mode() const { return m_writing_mode == WritingMode::vertical; }
-    bool is_upright_text_orientation() const { return m_text_orientation == TextOrientation::upright; }
+    bool is_vertical_writing_mode() const { return m_writing_mode == writing_mode::vertical; }
+    bool is_upright_text_orientation() const { return m_text_orientation == text_orientation::upright; }
 
     float stroke_width() const { return m_stroke_width; }
     float letter_spacing() const { return m_letter_spacing; }
     float word_spacing() const { return m_word_spacing; }
     float baseline_offset() const { return m_baseline_offset; }
-    AlignmentBaseline alignment_baseline() const { return m_alignment_baseline; }
-    DominantBaseline dominant_baseline() const { return m_dominant_baseline; }
-    TextAnchor text_anchor() const { return m_text_anchor; }
-    WhiteSpace white_space() const { return m_white_space; }
-    Direction direction() const { return m_direction; }
+    alignment_baseline alignment_baseline_() const { return m_alignment_baseline; }
+    dominant_baseline dominant_baseline_() const { return m_dominant_baseline; }
+    text_anchor text_anchor_() const { return m_text_anchor; }
+    white_space white_space_() const { return m_white_space; }
+    direction direction_() const { return m_direction; }
 
     void layout_element(const svg_layout_state& state) override;
 
 private:
-    float convert_baseline_offset(const BaselineShift& baselineShift) const;
+    float convert_baseline_offset(const baseline_shift& baseline_shift_) const;
     svg_length_list m_x;
     svg_length_list m_y;
     svg_length_list m_dx;
@@ -114,7 +114,7 @@ private:
     svg_length m_text_length;
     svg_enumeration<LengthAdjust> m_length_adjust;
 
-    Font m_font;
+    font m_font;
     svg_paint_server m_fill;
     svg_paint_server m_stroke;
 
@@ -122,13 +122,13 @@ private:
     float m_letter_spacing = 0.f;
     float m_word_spacing = 0.f;
     float m_baseline_offset = 0.f;
-    AlignmentBaseline m_alignment_baseline = AlignmentBaseline::Auto;
-    DominantBaseline m_dominant_baseline = DominantBaseline::Auto;
-    TextAnchor m_text_anchor = TextAnchor::Start;
-    WhiteSpace m_white_space = WhiteSpace::Default;
-    WritingMode m_writing_mode = WritingMode::Horizontal;
-    TextOrientation m_text_orientation = TextOrientation::mixed;
-    Direction m_direction = Direction::ltr;
+    alignment_baseline m_alignment_baseline = alignment_baseline::auto_;
+    dominant_baseline m_dominant_baseline = dominant_baseline::auto_;
+    text_anchor m_text_anchor = text_anchor::start;
+    white_space m_white_space = white_space::default_;
+    writing_mode m_writing_mode = writing_mode::horizontal;
+    text_orientation m_text_orientation = text_orientation::mixed;
+    direction m_direction = direction::ltr;
 };
 
 class svg_t_span_element final : public svg_text_positioning_element {
@@ -140,14 +140,14 @@ class svg_text_element final : public svg_text_positioning_element {
 public:
     svg_text_element(document* dom);
 
-    Rect fill_bounding_box() const final { return bounding_box(false); }
-    Rect stroke_bounding_box() const final { return bounding_box(true); }
+    rect fill_bounding_box() const final { return bounding_box(false); }
+    rect stroke_bounding_box() const final { return bounding_box(true); }
 
     void layout(svg_layout_state& state) final;
     void render(svg_render_state& state) const final;
 
 private:
-    Rect bounding_box(bool include_stroke) const;
+    rect bounding_box(bool include_stroke) const;
     svg_text_fragment_list m_fragments;
     std::u32string m_text;
 };

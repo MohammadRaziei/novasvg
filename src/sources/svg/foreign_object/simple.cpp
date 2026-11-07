@@ -29,9 +29,9 @@ public:
                                                float max_width) const override;
 };
 
-unsigned char style_bits(const foreign_object_font& font)
+unsigned char style_bits(const foreign_object_font& font_)
 {
-    return (unsigned char)((font.bold ? foreign_object_fonts::Bold : 0) | (font.italic ? foreign_object_fonts::Italic : 0));
+    return (unsigned char)((font_.bold ? foreign_object_fonts::bold : 0) | (font_.italic ? foreign_object_fonts::italic : 0));
 }
 
 void foreign_object_simple::render(const foreign_object_context& context, foreign_object_painter& painter) const
@@ -42,34 +42,34 @@ void foreign_object_simple::render(const foreign_object_context& context, foreig
         return;
 
     const auto fonts = foreign_object_fonts::of(context.font, painter);
-    const auto& font = fonts.get(base_style);
-    if(font.is_null())
+    const auto& font_ = fonts.get(base_style);
+    if(font_.is_null())
         return;
 
-    const auto& box = context.box;
+    const auto& box_ = context.box;
     // A browser wraps HTML text at its box's edge unless CSS says nowrap/pre.
-    auto lines = layout_foreign_object_text(segments, fonts, foreign_object_allows_wrap(std::string(context.markup)) ? box.w : 0.f);
+    auto lines = layout_foreign_object_text(segments, fonts, foreign_object_allows_wrap(std::string(context.markup)) ? box_.w : 0.f);
 
     // Real line-height from the HTML's own `line-height:` (mermaid's content usually says 1.5) when present and
     // parseable; falls back to a 1.2x default (roughly a browser's own "normal") otherwise -- e.g. for %/em
     // values or "normal" itself, which aren't handled.
-    auto line_height = foreign_object_line_height(std::string(context.markup), font.size()).value_or(font.height() * 1.2f);
+    auto line_height = foreign_object_line_height(std::string(context.markup), font_.size_()).value_or(font_.height() * 1.2f);
     auto total_height = line_height * float(lines.size());
-    auto top_y = box.y + (box.h - total_height) / 2.f;
+    auto top_y = box_.y + (box_.h - total_height) / 2.f;
 
     const auto* style = static_cast<const html_style*>(context.prepared);
     if(style != nullptr && style->background_color)
-        painter.fill_rect(box, *style->background_color);
+        painter.fill_rect(box_, *style->background_color);
     const stb::color text_color = (style != nullptr && style->text_color) ? *style->text_color : stb::color(0, 0, 0);
 
     for(size_t i = 0; i < lines.size(); ++i) {
         const auto& line = lines[i];
-        auto lineWidth = measure_foreign_object_line(line, fonts);
+        auto line_width = measure_foreign_object_line(line, fonts);
 
         // A line is as tall as its tallest face (bold or italic can differ a little from the regular one); a line
         // of one style, the usual case, is simply that style's face.
-        float ascent = font.ascent();
-        float font_height = font.height();
+        float ascent = font_.ascent();
+        float font_height = font_.height();
         if(!line.empty()) {
             ascent = 0.f;
             font_height = 0.f;
@@ -85,10 +85,10 @@ void foreign_object_simple::render(const foreign_object_context& context, foreig
         // truncating (tried before, still didn't match a real Chromium render) we condense that one line
         // horizontally.
         float scale = 1.f;
-        if(lineWidth > box.w && lineWidth > 0.f)
-            scale = box.w / lineWidth;
+        if(line_width > box_.w && line_width > 0.f)
+            scale = box_.w / line_width;
 
-        const float origin_x = box.x + (box.w - lineWidth * scale) / 2.f;
+        const float origin_x = box_.x + (box_.w - line_width * scale) / 2.f;
         // Baseline for this line = top of the text block + however many line-heights precede it + half the leading
         // (the extra space line-height adds beyond the font's own ascent+descent, split evenly above and below --
         // standard CSS line-box behavior) + this font's ascent. Without the half-leading term, text sits noticeably
@@ -119,12 +119,12 @@ std::optional<foreign_object_size> foreign_object_simple::measure(const foreign_
     const auto base_style = style_bits(context.font);
     const auto fonts = foreign_object_fonts::of(context.font, painter);
     const auto metrics = measure_foreign_object_content(context.markup, fonts, max_width, base_style);
-    foreign_object_size size;
-    size.width = metrics.width;
-    size.height = metrics.height;
-    size.line_count = metrics.line_count;
-    size.line_height = metrics.line_height;
-    return size;
+    foreign_object_size size_;
+    size_.width = metrics.width;
+    size_.height = metrics.height;
+    size_.line_count = metrics.line_count;
+    size_.line_height = metrics.line_height;
+    return size_;
 }
 
 } // namespace

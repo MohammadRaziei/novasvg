@@ -93,7 +93,7 @@ TEST_CASE("Matrix advanced operations") {
 
 TEST_CASE("Box operations") {
     // Test Box constructor with parameters
-    nova::vg::Box box(10.0f, 20.0f, 30.0f, 40.0f);
+    nova::vg::box box(10.0f, 20.0f, 30.0f, 40.0f);
     CHECK(box.x == doctest::Approx(10.0f));
     CHECK(box.y == doctest::Approx(20.0f));
     CHECK(box.w == doctest::Approx(30.0f));

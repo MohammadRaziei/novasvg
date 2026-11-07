@@ -46,9 +46,9 @@ matrix_t then(const matrix_t& first, const matrix_t& second)
     return r;
 }
 
-Point apply(const matrix_t& m, float x, float y)
+point apply(const matrix_t& m, float x, float y)
 {
-    return Point(m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f);
+    return point(m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f);
 }
 
 std::string matrix_str(const matrix_t& m)
@@ -101,23 +101,23 @@ int pdf_canvas::add_stream(std::string dict, const std::string& bytes, bool comp
     return int(m_objects.size());
 }
 
-static const char* pdf_blend_name(BlendMode mode)
+static const char* pdf_blend_name(blend_mode mode)
 {
     switch(mode) {
-    case BlendMode::Multiply: return "Multiply";
-    case BlendMode::screen: return "Screen";
-    case BlendMode::darken: return "Darken";
-    case BlendMode::lighten: return "Lighten";
-    case BlendMode::difference: return "Difference";
-    case BlendMode::exclusion: return "Exclusion";
+    case blend_mode::multiply: return "Multiply";
+    case blend_mode::screen: return "Screen";
+    case blend_mode::darken: return "Darken";
+    case blend_mode::lighten: return "Lighten";
+    case blend_mode::difference: return "Difference";
+    case blend_mode::exclusion: return "Exclusion";
     default: return "Normal";
     }
 }
 
-std::string pdf_canvas::alpha_state(float alpha, BlendMode blend_mode)
+std::string pdf_canvas::alpha_state(float alpha, blend_mode blend_mode_)
 {
     std::string alpha_text = num(clamp01(alpha));
-    std::string blend = pdf_blend_name(blend_mode);
+    std::string blend = pdf_blend_name(blend_mode_);
     std::string key = alpha_text + "|" + blend;
     auto it = m_ext_gstates.find(key);
     if(it != m_ext_gstates.end())
@@ -127,9 +127,9 @@ std::string pdf_canvas::alpha_state(float alpha, BlendMode blend_mode)
     return name;
 }
 
-void pdf_canvas::set_color(const stb::color& color)
+void pdf_canvas::set_color(const stb::color& color_)
 {
-    set_color(red_f(color), green_f(color), blue_f(color), alpha_f(color));
+    set_color(red_f(color_), green_f(color_), blue_f(color_), alpha_f(color_));
 }
 
 void pdf_canvas::set_color(float r, float g, float b, float a)
@@ -151,7 +151,7 @@ void warn_gradient_limits(SpreadMethod spread, const GradientStops& stops)
         pdf_log().warning("gradient spreadMethod reflect/repeat is written as pad in PDF output");
     if(!alpha_said.load()) {
         for(const auto& s : stops) {
-            if(s.color.a < 1.f) {
+            if(s.color_.a < 1.f) {
                 if(!alpha_said.exchange(true))
                     pdf_log().warning("per-stop alpha of a gradient is ignored in PDF output");
                 break;
@@ -161,33 +161,33 @@ void warn_gradient_limits(SpreadMethod spread, const GradientStops& stops)
 }
 }  // namespace
 
-void pdf_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
+void pdf_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const transform& transform_)
 {
     paint& p = m_paints.back();
     p = paint();
-    p.type = paint::kind::linear;
+    p.type_ = paint::kind::linear;
     warn_gradient_limits(spread, stops);
     p.p[0] = x1; p.p[1] = y1; p.p[2] = x2; p.p[3] = y2;
     p.spread = spread;
     p.stops = stops;
-    p.matrix = transform.matrix();
+    p.matrix = transform_.matrix();
 }
 
-void pdf_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
+void pdf_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const transform& transform_)
 {
     paint& p = m_paints.back();
     p = paint();
-    p.type = paint::kind::radial;
+    p.type_ = paint::kind::radial;
     warn_gradient_limits(spread, stops);
     p.p[0] = cx; p.p[1] = cy; p.p[2] = r; p.p[3] = fx; p.p[4] = fy;
     p.spread = spread;
     p.stops = stops;
-    p.matrix = transform.matrix();
+    p.matrix = transform_.matrix();
 }
 
 // A shading pattern for the current gradient paint, drawn through `transform` (the matrix of the operation).
 // Returns the pattern's object number, or 0 when the gradient has no stops (nothing to paint).
-int pdf_canvas::shading_pattern(const matrix_t& transform)
+int pdf_canvas::shading_pattern(const matrix_t& transform_)
 {
     const paint& p = m_paints.back();
     if(p.stops.empty())
@@ -196,22 +196,22 @@ int pdf_canvas::shading_pattern(const matrix_t& transform)
     // Stops, extended to cover 0..1 so pad works through /Extend alone.
     std::vector<gradient_stop_t> stops = p.stops;
     if(stops.front().offset > 0.f)
-        stops.insert(stops.begin(), gradient_stop_t{0.f, stops.front().color});
+        stops.insert(stops.begin(), gradient_stop_t{0.f, stops.front().color_});
     if(stops.back().offset < 1.f)
-        stops.push_back(gradient_stop_t{1.f, stops.back().color});
+        stops.push_back(gradient_stop_t{1.f, stops.back().color_});
     for(size_t i = 1; i < stops.size(); ++i)
         if(stops[i].offset < stops[i - 1].offset)
             stops[i].offset = stops[i - 1].offset;
 
     std::string function;
     if(stops.size() == 2) {
-        function = "<< /FunctionType 2 /Domain [0 1] /N 1 /C0 [" + rgb_str(stops[0].color.r, stops[0].color.g, stops[0].color.b)
-            + "] /C1 [" + rgb_str(stops[1].color.r, stops[1].color.g, stops[1].color.b) + "] >>";
+        function = "<< /FunctionType 2 /Domain [0 1] /N 1 /C0 [" + rgb_str(stops[0].color_.r, stops[0].color_.g, stops[0].color_.b)
+            + "] /C1 [" + rgb_str(stops[1].color_.r, stops[1].color_.g, stops[1].color_.b) + "] >>";
     } else {
         std::string functions, bounds, encode;
         for(size_t i = 0; i + 1 < stops.size(); ++i) {
-            functions += "<< /FunctionType 2 /Domain [0 1] /N 1 /C0 [" + rgb_str(stops[i].color.r, stops[i].color.g, stops[i].color.b)
-                + "] /C1 [" + rgb_str(stops[i + 1].color.r, stops[i + 1].color.g, stops[i + 1].color.b) + "] >> ";
+            functions += "<< /FunctionType 2 /Domain [0 1] /N 1 /C0 [" + rgb_str(stops[i].color_.r, stops[i].color_.g, stops[i].color_.b)
+                + "] /C1 [" + rgb_str(stops[i + 1].color_.r, stops[i + 1].color_.g, stops[i + 1].color_.b) + "] >> ";
             encode += "0 1 ";
             if(i + 2 < stops.size()) {
                 float bound = stops[i + 1].offset;
@@ -225,7 +225,7 @@ int pdf_canvas::shading_pattern(const matrix_t& transform)
     }
 
     std::string shading;
-    if(p.type == paint::kind::linear) {
+    if(p.type_ == paint::kind::linear) {
         shading = "<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [" + num(p.p[0]) + " " + num(p.p[1]) + " " + num(p.p[2]) + " " + num(p.p[3])
             + "] /Function " + function + " /Extend [true true] >>";
     } else {
@@ -236,7 +236,7 @@ int pdf_canvas::shading_pattern(const matrix_t& transform)
 
     // The pattern matrix maps pattern space to the *default page space*, not to the current CTM.
     matrix_t base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
-    matrix_t m = then(then(p.matrix, transform), base);
+    matrix_t m = then(then(p.matrix, transform_), base);
     int obj = add_object("<< /Type /Pattern /PatternType 2 /Shading " + shading + " /Matrix [" + matrix_str(m) + "] >>");
     std::string name = "P" + std::to_string(m_patterns.size());
     m_patterns.emplace_back(name, obj);
@@ -245,24 +245,24 @@ int pdf_canvas::shading_pattern(const matrix_t& transform)
 
 // Selects the current paint as fill or stroke color in the content stream. `transform` is the operation's matrix
 // (only gradients need it). Returns false when there is nothing to paint.
-void pdf_canvas::begin_paint(bool stroke, const matrix_t& transform)
+void pdf_canvas::begin_paint(bool stroke, const matrix_t& transform_)
 {
     const paint& p = m_paints.back();
-    if(p.type == paint::kind::solid) {
+    if(p.type_ == paint::kind::solid) {
         m_content += "/" + alpha_state(p.a) + " gs\n";
         m_content += rgb_str(p.r, p.g, p.b) + (stroke ? " RG\n" : " rg\n");
         return;
     }
 
-    if(p.type == paint::kind::tiled) {
-        tiling_pattern(transform);
+    if(p.type_ == paint::kind::tiled) {
+        tiling_pattern(transform_);
         m_content += "/" + alpha_state(p.a) + " gs\n";
         m_content += stroke ? "/Pattern CS /" : "/Pattern cs /";
         m_content += m_patterns.back().first + (stroke ? " SCN\n" : " scn\n");
         return;
     }
 
-    if(shading_pattern(transform) == 0) {
+    if(shading_pattern(transform_) == 0) {
         m_content += "/" + alpha_state(0.f) + " gs\n";
         return;
     }
@@ -271,16 +271,16 @@ void pdf_canvas::begin_paint(bool stroke, const matrix_t& transform)
     m_content += m_patterns.back().first + (stroke ? " SCN\n" : " scn\n");
 }
 
-void pdf_canvas::emit_path(const stb::outline& path, const matrix_t* transform)
+void pdf_canvas::emit_path(const stb::outline& path_, const matrix_t* transform_)
 {
-    if(path.empty())
+    if(path_.empty())
         return;
-    auto pt = [&](const Point& p) {
-        Point q = transform ? apply(*transform, p.x, p.y) : p;
+    auto pt = [&](const point& p) {
+        point q = transform_ ? apply(*transform_, p.x, p.y) : p;
         return num(q.x) + " " + num(q.y);
     };
-    std::array<Point, 3> pts;
-    for(outline_walker it(path); !it.done(); it.next()) {
+    std::array<point, 3> pts;
+    for(outline_walker it(path_); !it.done(); it.next()) {
         switch(it.current_segment(pts)) {
         case segment_kind::move_to:
             m_content += pt(pts[0]) + " m\n";
@@ -298,28 +298,28 @@ void pdf_canvas::emit_path(const stb::outline& path, const matrix_t* transform)
     }
 }
 
-void pdf_canvas::emit_rect_path(const Rect& rect, const matrix_t* transform)
+void pdf_canvas::emit_rect_path(const rect& rect_, const matrix_t* transform_)
 {
-    stb::outline path;
-    path.add_rect(rect.x, rect.y, rect.w, rect.h);
-    emit_path(path, transform);
+    stb::outline path_;
+    path_.add_rect(rect_.x, rect_.y, rect_.w, rect_.h);
+    emit_path(path_, transform_);
 }
 
-void pdf_canvas::emit_text_path(const std::u32string_view& text, const Font& font, const Point& origin, const matrix_t* transform)
+void pdf_canvas::emit_text_path(const std::u32string_view& text, const font& font_, const point& origin, const matrix_t* transform_)
 {
-    font_face_t* face = font.face().get();
-    if(face == nullptr || font.size() <= 0.f)
+    font_face_t* face = font_.face().get();
+    if(face == nullptr || font_.size_() <= 0.f)
         return;
 
     struct sink {
         pdf_canvas* self;
-        const matrix_t* transform;
-    } s{this, transform};
+        const matrix_t* transform_;
+    } s{this, transform_};
 
     auto traverse = [](void* closure, path_command_t command, const point_t* points, int) {
         auto* s = static_cast<sink*>(closure);
         auto pt = [&](const point_t& p) {
-            Point q = s->transform ? apply(*s->transform, p.x, p.y) : Point(p.x, p.y);
+            point q = s->transform_ ? apply(*s->transform_, p.x, p.y) : point(p.x, p.y);
             return num(q.x) + " " + num(q.y);
         };
         switch(command) {
@@ -348,70 +348,70 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const Font& fon
         codepoint_t codepoint = text_iterator_next(&it);
         codepoint = font_face_apply_ligature(face, &it, codepoint);
         if(has_previous)
-            advance += font_face_get_kern_advance(face, font.size(), previous, codepoint);
-        advance += font_face_traverse_glyph_path(face, font.size(), origin.x + advance, origin.y, codepoint, traverse, &s);
+            advance += font_face_get_kern_advance(face, font_.size_(), previous, codepoint);
+        advance += font_face_traverse_glyph_path(face, font_.size_(), origin.x + advance, origin.y, codepoint, traverse, &s);
         previous = codepoint;
         has_previous = true;
     }
 }
 
-void pdf_canvas::fill_path(const stb::outline& path, FillRule fill_rule, const Transform& transform)
+void pdf_canvas::fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_)
 {
     m_content += "q\n";
-    begin_paint(false, transform.matrix());
-    emit_path(path, &transform.matrix());
-    m_content += fill_rule == FillRule::EvenOdd ? "f*\n" : "f\n";
+    begin_paint(false, transform_.matrix());
+    emit_path(path_, &transform_.matrix());
+    m_content += fill_rule_ == fill_rule::even_odd ? "f*\n" : "f\n";
     m_content += "Q\n";
 }
 
-void pdf_canvas::stroke_path(const stb::outline& path, const StrokeData& sd, const Transform& transform)
+void pdf_canvas::stroke_path(const stb::outline& path_, const stroke_data& sd, const transform& transform_)
 {
     m_content += "q\n";
-    begin_paint(true, transform.matrix());
+    begin_paint(true, transform_.matrix());
     // The path stays in its own space and goes through `cm`, so the line width scales with the matrix, anisotropically if need be.
-    m_content += matrix_str(transform.matrix()) + " cm\n";
-    m_content += num(sd.lineWidth()) + " w\n";
-    m_content += std::to_string(int(sd.lineCap())) + " J\n";
-    m_content += std::to_string(int(sd.lineJoin())) + " j\n";
-    m_content += num(sd.miterLimit() < 1.f ? 1.f : sd.miterLimit()) + " M\n";
+    m_content += matrix_str(transform_.matrix()) + " cm\n";
+    m_content += num(sd.line_width()) + " w\n";
+    m_content += std::to_string(int(sd.line_cap_())) + " J\n";
+    m_content += std::to_string(int(sd.line_join_())) + " j\n";
+    m_content += num(sd.miter_limit() < 1.f ? 1.f : sd.miter_limit()) + " M\n";
     if(!sd.dashArray().empty()) {
         m_content += "[";
         for(float d : sd.dashArray())
             m_content += num(d) + " ";
-        m_content += "] " + num(sd.dashOffset()) + " d\n";
+        m_content += "] " + num(sd.dash_offset()) + " d\n";
     }
-    emit_path(path, nullptr);
+    emit_path(path_, nullptr);
     m_content += "S\nQ\n";
 }
 
-void pdf_canvas::fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform)
+void pdf_canvas::fill_text(const std::u32string_view& text, const font& font_, const point& origin, const transform& transform_)
 {
     m_content += "q\n";
-    begin_paint(false, transform.matrix());
-    emit_text_path(text, font, origin, &transform.matrix());
+    begin_paint(false, transform_.matrix());
+    emit_text_path(text, font_, origin, &transform_.matrix());
     m_content += "f\nQ\n";
 }
 
-void pdf_canvas::stroke_text(const std::u32string_view& text, float stroke_width, const Font& font, const Point& origin, const Transform& transform)
+void pdf_canvas::stroke_text(const std::u32string_view& text, float stroke_width, const font& font_, const point& origin, const transform& transform_)
 {
     m_content += "q\n";
-    begin_paint(true, transform.matrix());
-    m_content += matrix_str(transform.matrix()) + " cm\n";
+    begin_paint(true, transform_.matrix());
+    m_content += matrix_str(transform_.matrix()) + " cm\n";
     m_content += num(stroke_width) + " w\n0 J\n0 j\n4 M\n";
-    emit_text_path(text, font, origin, nullptr);
+    emit_text_path(text, font_, origin, nullptr);
     m_content += "S\nQ\n";
 }
 
-void pdf_canvas::clip_path(const stb::outline& path, FillRule clip_rule, const Transform& transform)
+void pdf_canvas::clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_)
 {
-    emit_path(path, &transform.matrix());
-    m_content += clip_rule == FillRule::EvenOdd ? "W* n\n" : "W n\n";
+    emit_path(path_, &transform_.matrix());
+    m_content += clip_rule == fill_rule::even_odd ? "W* n\n" : "W n\n";
 }
 
-void pdf_canvas::clip_rect(const Rect& rect, FillRule clip_rule, const Transform& transform)
+void pdf_canvas::clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_)
 {
-    emit_rect_path(rect, &transform.matrix());
-    m_content += clip_rule == FillRule::EvenOdd ? "W* n\n" : "W n\n";
+    emit_rect_path(rect_, &transform_.matrix());
+    m_content += clip_rule == fill_rule::even_odd ? "W* n\n" : "W n\n";
 }
 
 int pdf_canvas::add_image(const pixmap& image, int* width, int* height)
@@ -424,13 +424,13 @@ int pdf_canvas::add_image(const pixmap& image, int* width, int* height)
     if(w <= 0 || h <= 0)
         return 0;
 
-    std::string color(size_t(w) * h * 3, '\0'), alpha(size_t(w) * h, '\0');
+    std::string color_(size_t(w) * h * 3, '\0'), alpha(size_t(w) * h, '\0');
     bool translucent = false;
     const uint8_t* px = rgba.data();
     for(size_t i = 0, n = size_t(w) * h; i < n; ++i) {
-        color[i * 3 + 0] = char(px[i * 4 + 0]);
-        color[i * 3 + 1] = char(px[i * 4 + 1]);
-        color[i * 3 + 2] = char(px[i * 4 + 2]);
+        color_[i * 3 + 0] = char(px[i * 4 + 0]);
+        color_[i * 3 + 1] = char(px[i * 4 + 1]);
+        color_[i * 3 + 2] = char(px[i * 4 + 2]);
         alpha[i] = char(px[i * 4 + 3]);
         translucent |= px[i * 4 + 3] != 255;
     }
@@ -442,11 +442,11 @@ int pdf_canvas::add_image(const pixmap& image, int* width, int* height)
             + " /ColorSpace /DeviceGray /BitsPerComponent 8 /Interpolate true", alpha, true);
         dict += " /SMask " + std::to_string(mask) + " 0 R";
     }
-    return add_stream(dict, color, true);
+    return add_stream(dict, color_, true);
 }
 
 // The whole image (w x h px) scaled so that `src` (in image pixels) lands on `dst`, clipped to `dst`.
-void pdf_canvas::place_image(int object, int w, int h, const Rect& dst, const Rect& src, const matrix_t* transform, float alpha, BlendMode blend_mode)
+void pdf_canvas::place_image(int object, int w, int h, const rect& dst, const rect& src, const matrix_t* transform_, float alpha, blend_mode blend_mode_)
 {
     std::string name = "Im" + std::to_string(m_xobjects.size());
     m_xobjects.emplace_back(name, object);
@@ -455,14 +455,14 @@ void pdf_canvas::place_image(int object, int w, int h, const Rect& dst, const Re
     const float ix = dst.x - src.x * xs, iy = dst.y - src.y * ys;
     const float iw = w * xs, ih = h * ys;
     m_content += "q\n";
-    if(transform)
-        m_content += matrix_str(*transform) + " cm\n";
+    if(transform_)
+        m_content += matrix_str(*transform_) + " cm\n";
     emit_rect_path(dst, nullptr);
-    m_content += "W n\n/" + alpha_state(alpha, blend_mode) + " gs\n";
+    m_content += "W n\n/" + alpha_state(alpha, blend_mode_) + " gs\n";
     m_content += num(iw) + " 0 0 " + num(-ih) + " " + num(ix) + " " + num(iy + ih) + " cm\n/" + name + " Do\nQ\n";
 }
 
-void pdf_canvas::draw_image(const pixmap& image, const Rect& dst, const Rect& src, const Transform& transform)
+void pdf_canvas::draw_image(const pixmap& image, const rect& dst, const rect& src, const transform& transform_)
 {
     if(image.is_null() || src.w <= 0.f || src.h <= 0.f || dst.w <= 0.f || dst.h <= 0.f)
         return;
@@ -470,10 +470,10 @@ void pdf_canvas::draw_image(const pixmap& image, const Rect& dst, const Rect& sr
     int object = add_image(image, &w, &h);
     if(object == 0)
         return;
-    place_image(object, w, h, dst, src, &transform.matrix(), 1.f, BlendMode::src_over);
+    place_image(object, w, h, dst, src, &transform_.matrix(), 1.f, blend_mode::src_over);
 }
 
-void pdf_canvas::draw_raster_group(const pixmap& image, const Rect& dst, BlendMode blend_mode, float opacity)
+void pdf_canvas::draw_raster_group(const pixmap& image, const rect& dst, blend_mode blend_mode_, float opacity)
 {
     if(image.is_null() || dst.w <= 0.f || dst.h <= 0.f)
         return;
@@ -481,10 +481,10 @@ void pdf_canvas::draw_raster_group(const pixmap& image, const Rect& dst, BlendMo
     int object = add_image(image, &w, &h);
     if(object == 0)
         return;
-    place_image(object, w, h, dst, Rect(0, 0, float(w), float(h)), nullptr, opacity, blend_mode);
+    place_image(object, w, h, dst, rect(0, 0, float(w), float(h)), nullptr, opacity, blend_mode_);
 }
 
-void pdf_canvas::set_tiled_image(const pixmap& tile, const Transform& transform, float opacity)
+void pdf_canvas::set_tiled_image(const pixmap& tile, const transform& transform_, float opacity)
 {
     if(tile.is_null())
         return;
@@ -494,20 +494,20 @@ void pdf_canvas::set_tiled_image(const pixmap& tile, const Transform& transform,
         return;
     paint& p = m_paints.back();
     p = paint();
-    p.type = paint::kind::tiled;
+    p.type_ = paint::kind::tiled;
     p.tile_object = object;
     p.tile_w = w;
     p.tile_h = h;
     p.a = opacity;
-    p.matrix = transform.matrix();
+    p.matrix = transform_.matrix();
 }
 
 // A tiling pattern for the current tiled paint, drawn through `transform` (the matrix of the operation).
-int pdf_canvas::tiling_pattern(const matrix_t& transform)
+int pdf_canvas::tiling_pattern(const matrix_t& transform_)
 {
     const paint& p = m_paints.back();
     matrix_t base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
-    matrix_t m = then(then(p.matrix, transform), base);
+    matrix_t m = then(then(p.matrix, transform_), base);
     const std::string w = std::to_string(p.tile_w), h = std::to_string(p.tile_h);
     // Tile space is y-down like the bitmap: the image's top row sits at y = 0.
     std::string content = w + " 0 0 -" + h + " 0 " + h + " cm\n/T Do\n";
@@ -525,7 +525,7 @@ void pdf_canvas::begin_group()
     m_paints.push_back(m_paints.back());
 }
 
-void pdf_canvas::end_group(BlendMode blend_mode, float opacity)
+void pdf_canvas::end_group(blend_mode blend_mode_, float opacity)
 {
     if(m_groups.empty())
         return;
@@ -546,7 +546,7 @@ void pdf_canvas::end_group(BlendMode blend_mode, float opacity)
         + "] /Group << /S /Transparency /CS /DeviceRGB >> /Resources %%RES%%", body, true);
     std::string name = "Fm" + std::to_string(m_xobjects.size());
     m_xobjects.emplace_back(name, form);
-    m_content += "q\n/" + alpha_state(opacity, blend_mode) + " gs\n/" + name + " Do\nQ\n";
+    m_content += "q\n/" + alpha_state(opacity, blend_mode_) + " gs\n/" + name + " Do\nQ\n";
 }
 
 void pdf_canvas::save()

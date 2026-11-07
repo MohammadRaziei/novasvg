@@ -80,19 +80,19 @@ struct text_squeeze {
 class foreign_object_painter {
 public:
     virtual ~foreign_object_painter() = default;
-    virtual void fill_rect(const vg::Box& box, const stb::color& color) = 0;
+    virtual void fill_rect(const vg::box& box_, const stb::color& color_) = 0;
     /// `x`, `y`: the left end of the baseline.
-    virtual void fill_text(std::u32string_view text, const foreign_object_font& font, float x, float y,
-                           const stb::color& color, const text_squeeze& squeeze = {}) = 0;
+    virtual void fill_text(std::u32string_view text, const foreign_object_font& font_, float x, float y,
+                           const stb::color& color_, const text_squeeze& squeeze = {}) = 0;
     /// Straight (not premultiplied) RGBA, stretched to `dest`. For renderers that rasterize.
-    virtual void draw_image(const stb::image& image, const vg::Box& dest) = 0;
-    virtual foreign_object_font_metrics metrics(const foreign_object_font& font) const = 0;
-    virtual float measure_text(std::u32string_view text, const foreign_object_font& font) const = 0;
+    virtual void draw_image(const stb::image& image, const vg::box& dest) = 0;
+    virtual foreign_object_font_metrics metrics(const foreign_object_font& font_) const = 0;
+    virtual float measure_text(std::u32string_view text, const foreign_object_font& font_) const = 0;
 };
 
 struct foreign_object_context {
     std::string_view markup; ///< untouched, as in the source
-    vg::Box box;             ///< the foreignObject's x, y, width, height
+    vg::box box;             ///< the foreignObject's x, y, width, height
     foreign_object_font font; ///< inherited through the svg cascade
     float device_scale = 1.f; ///< device pixels per user unit (the larger axis), for renderers that rasterize
     const void* prepared = nullptr; ///< what prepare() returned for this element

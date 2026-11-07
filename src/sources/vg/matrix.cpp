@@ -168,14 +168,14 @@ static int parse_matrix_parameters(const char** begin, const char* end, float va
     return 0;
 }
 
-bool matrix_parse(matrix_t* matrix, const char* data, int length)
+bool matrix_parse(matrix_t* matrix, const char* data, int length_)
 {
     float values[6];
     matrix_init_identity(matrix);
-    if(length == -1)
-        length = strlen(data);
+    if(length_ == -1)
+        length_ = strlen(data);
     const char* it = data;
-    const char* end = it + length;
+    const char* end = it + length_;
     bool has_trailing_comma = false;
     skip_ws(&it, end);
     while(it < end) {

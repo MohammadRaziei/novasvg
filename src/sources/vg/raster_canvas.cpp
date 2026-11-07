@@ -3,134 +3,134 @@
 
 namespace nova::vg {
 
-Transform::Transform()
+transform::transform()
 {
     matrix_init_identity(&m_matrix);
 }
 
-Transform::Transform(float a, float b, float c, float d, float e, float f)
+transform::transform(float a, float b, float c, float d, float e, float f)
 {
     matrix_init(&m_matrix, a, b, c, d, e, f);
 }
 
-Transform Transform::operator*(const Transform& transform) const
+transform transform::operator*(const transform& transform_) const
 {
     matrix_t result;
-    matrix_multiply(&result, &transform.m_matrix, &m_matrix);
+    matrix_multiply(&result, &transform_.m_matrix, &m_matrix);
     return result;
 }
 
-Transform& Transform::operator*=(const Transform& transform)
+transform& transform::operator*=(const transform& transform_)
 {
-    return (*this = *this * transform);
+    return (*this = *this * transform_);
 }
 
-Transform& Transform::multiply(const Transform& transform)
+transform& transform::multiply(const transform& transform_)
 {
-    return (*this *= transform);
+    return (*this *= transform_);
 }
 
-Transform& Transform::translate(float tx, float ty)
+transform& transform::translate(float tx, float ty)
 {
     return multiply(translated(tx, ty));
 }
 
-Transform& Transform::scale(float sx, float sy)
+transform& transform::scale(float sx, float sy)
 {
     return multiply(scaled(sx, sy));
 }
 
-Transform& Transform::rotate(float angle, float cx, float cy)
+transform& transform::rotate(float angle, float cx, float cy)
 {
     return multiply(rotated(angle, cx, cy));
 }
 
-Transform& Transform::shear(float shx, float shy)
+transform& transform::shear(float shx, float shy)
 {
     return multiply(sheared(shx, shy));
 }
 
-Transform& Transform::post_multiply(const Transform& transform)
+transform& transform::post_multiply(const transform& transform_)
 {
-    return (*this = transform * *this);
+    return (*this = transform_ * *this);
 }
 
-Transform& Transform::post_translate(float tx, float ty)
+transform& transform::post_translate(float tx, float ty)
 {
     return post_multiply(translated(tx, ty));
 }
 
-Transform& Transform::post_scale(float sx, float sy)
+transform& transform::post_scale(float sx, float sy)
 {
     return post_multiply(scaled(sx, sy));
 }
 
-Transform& Transform::post_rotate(float angle, float cx, float cy)
+transform& transform::post_rotate(float angle, float cx, float cy)
 {
     return post_multiply(rotated(angle, cx, cy));
 }
 
-Transform& Transform::post_shear(float shx, float shy)
+transform& transform::post_shear(float shx, float shy)
 {
     return post_multiply(sheared(shx, shy));
 }
 
-Transform Transform::inverse() const
+transform transform::inverse() const
 {
     matrix_t inverse;
     matrix_invert(&m_matrix, &inverse);
     return inverse;
 }
 
-Transform& Transform::invert()
+transform& transform::invert()
 {
     matrix_invert(&m_matrix, &m_matrix);
     return *this;
 }
 
-void Transform::reset()
+void transform::reset()
 {
     matrix_init_identity(&m_matrix);
 }
 
-Point Transform::map_point(float x, float y) const
+point transform::map_point(float x, float y) const
 {
     matrix_map(&m_matrix, x, y, &x, &y);
-    return Point(x, y);
+    return point(x, y);
 }
 
-Point Transform::map_point(const Point& point) const
+point transform::map_point(const point& point_) const
 {
-    return map_point(point.x, point.y);
+    return map_point(point_.x, point_.y);
 }
 
-Rect Transform::map_rect(const Rect& rect) const
+rect transform::map_rect(const rect& rect_) const
 {
-    if(!rect.is_valid()) {
-        return Rect::invalid;
+    if(!rect_.is_valid()) {
+        return rect::invalid;
     }
 
-    rect_t result = {rect.x, rect.y, rect.w, rect.h};
+    rect_t result = {rect_.x, rect_.y, rect_.w, rect_.h};
     matrix_map_rect(&m_matrix, &result, &result);
     return result;
 }
 
-float Transform::x_scale() const
+float transform::x_scale() const
 {
     return std::sqrt(m_matrix.a * m_matrix.a + m_matrix.b * m_matrix.b);
 }
 
-float Transform::y_scale() const
+float transform::y_scale() const
 {
     return std::sqrt(m_matrix.c * m_matrix.c + m_matrix.d * m_matrix.d);
 }
 
-bool Transform::parse(const char* data, size_t length)
+bool transform::parse(const char* data, size_t length_)
 {
-    return matrix_parse(&m_matrix, data, length);
+    return matrix_parse(&m_matrix, data, length_);
 }
 
-Transform Transform::rotated(float angle, float cx, float cy)
+transform transform::rotated(float angle, float cx, float cy)
 {
     matrix_t matrix;
     if(cx == 0.f && cy == 0.f) {
@@ -144,21 +144,21 @@ Transform Transform::rotated(float angle, float cx, float cy)
     return matrix;
 }
 
-Transform Transform::scaled(float sx, float sy)
+transform transform::scaled(float sx, float sy)
 {
     matrix_t matrix;
     matrix_init_scale(&matrix, sx, sy);
     return matrix;
 }
 
-Transform Transform::sheared(float shx, float shy)
+transform transform::sheared(float shx, float shy)
 {
     matrix_t matrix;
     matrix_init_shear(&matrix, NOVA_DEG2RAD(shx), NOVA_DEG2RAD(shy));
     return matrix;
 }
 
-Transform Transform::translated(float tx, float ty)
+transform transform::translated(float tx, float ty)
 {
     matrix_t matrix;
     matrix_init_translate(&matrix, tx, ty);
@@ -193,14 +193,14 @@ std::shared_ptr<raster_canvas> raster_canvas::create(float x, float y, float wid
     return std::shared_ptr<raster_canvas>(new raster_canvas(l, t, r - l, b - t));
 }
 
-std::shared_ptr<raster_canvas> raster_canvas::create(const Rect& extents)
+std::shared_ptr<raster_canvas> raster_canvas::create(const rect& extents)
 {
     return create(extents.x, extents.y, extents.w, extents.h);
 }
 
-void raster_canvas::set_color(const stb::color& color)
+void raster_canvas::set_color(const stb::color& color_)
 {
-    set_color(red_f(color), green_f(color), blue_f(color), alpha_f(color));
+    set_color(red_f(color_), green_f(color_), blue_f(color_), alpha_f(color_));
 }
 
 void raster_canvas::set_color(float r, float g, float b, float a)
@@ -208,107 +208,107 @@ void raster_canvas::set_color(float r, float g, float b, float a)
     canvas_set_rgba(m_canvas, r, g, b, a);
 }
 
-void raster_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
+void raster_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const transform& transform_)
 {
-    canvas_set_linear_gradient(m_canvas, x1, y1, x2, y2, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform.matrix());
+    canvas_set_linear_gradient(m_canvas, x1, y1, x2, y2, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform_.matrix());
 }
 
-void raster_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform)
+void raster_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const transform& transform_)
 {
-    canvas_set_radial_gradient(m_canvas, cx, cy, r, fx, fy, 0.f, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform.matrix());
+    canvas_set_radial_gradient(m_canvas, cx, cy, r, fx, fy, 0.f, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform_.matrix());
 }
 
-void raster_canvas::set_texture(const raster_canvas& source, texture_type type, float opacity, const Transform& transform)
+void raster_canvas::set_texture(const raster_canvas& source, texture_type type_, float opacity, const transform& transform_)
 {
-    canvas_set_texture(m_canvas, source.surface(), static_cast<texture_type_t>(type), opacity, &transform.matrix());
+    canvas_set_texture(m_canvas, source.surface(), static_cast<texture_type_t>(type_), opacity, &transform_.matrix());
 }
 
-void raster_canvas::fill_path(const stb::outline& path, FillRule fillRule, const Transform& transform)
+void raster_canvas::fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_)
 {
     canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(fillRule));
+    canvas_transform(m_canvas, &transform_.matrix());
+    canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(fill_rule_));
     canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
-    path_guard guard(to_path_t(path));
+    path_guard guard(to_path_t(path_));
     canvas_fill_path(m_canvas, guard.get());
 }
 
-void raster_canvas::stroke_path(const stb::outline& path, const StrokeData& strokeData, const Transform& transform)
+void raster_canvas::stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_)
 {
     canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_set_line_width(m_canvas, strokeData.lineWidth());
-    canvas_set_miter_limit(m_canvas, strokeData.miterLimit());
-    canvas_set_line_cap(m_canvas, static_cast<line_cap_t>(strokeData.lineCap()));
-    canvas_set_line_join(m_canvas, static_cast<line_join_t>(strokeData.lineJoin()));
-    canvas_set_dash_offset(m_canvas, strokeData.dashOffset());
-    canvas_set_dash_array(m_canvas, strokeData.dashArray().data(), strokeData.dashArray().size());
+    canvas_transform(m_canvas, &transform_.matrix());
+    canvas_set_line_width(m_canvas, stroke_data_.line_width());
+    canvas_set_miter_limit(m_canvas, stroke_data_.miter_limit());
+    canvas_set_line_cap(m_canvas, static_cast<line_cap_t>(stroke_data_.line_cap_()));
+    canvas_set_line_join(m_canvas, static_cast<line_join_t>(stroke_data_.line_join_()));
+    canvas_set_dash_offset(m_canvas, stroke_data_.dash_offset());
+    canvas_set_dash_array(m_canvas, stroke_data_.dashArray().data(), stroke_data_.dashArray().size());
     canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
-    path_guard guard(to_path_t(path));
+    path_guard guard(to_path_t(path_));
     canvas_stroke_path(m_canvas, guard.get());
 }
 
-void raster_canvas::fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform)
+void raster_canvas::fill_text(const std::u32string_view& text, const font& font_, const point& origin, const transform& transform_)
 {
     canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
+    canvas_transform(m_canvas, &transform_.matrix());
     canvas_set_fill_rule(m_canvas, NOVA_FILL_RULE_NON_ZERO);
     canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
-    canvas_set_font(m_canvas, font.face().get(), font.size());
+    canvas_set_font(m_canvas, font_.face().get(), font_.size_());
     canvas_fill_text(m_canvas, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF32, origin.x, origin.y);
 }
 
-void raster_canvas::stroke_text(const std::u32string_view& text, float strokeWidth, const Font& font, const Point& origin, const Transform& transform)
+void raster_canvas::stroke_text(const std::u32string_view& text, float stroke_width, const font& font_, const point& origin, const transform& transform_)
 {
     canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_set_line_width(m_canvas, strokeWidth);
+    canvas_transform(m_canvas, &transform_.matrix());
+    canvas_set_line_width(m_canvas, stroke_width);
     canvas_set_miter_limit(m_canvas, 4.f);
     canvas_set_line_cap(m_canvas, NOVA_LINE_CAP_BUTT);
     canvas_set_line_join(m_canvas, NOVA_LINE_JOIN_MITER);
     canvas_set_dash_offset(m_canvas, 0.f);
     canvas_set_dash_array(m_canvas, nullptr, 0);
     canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
-    canvas_set_font(m_canvas, font.face().get(), font.size());
+    canvas_set_font(m_canvas, font_.face().get(), font_.size_());
     canvas_stroke_text(m_canvas, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF32, origin.x, origin.y);
 }
 
-void raster_canvas::clip_path(const stb::outline& path, FillRule clipRule, const Transform& transform)
+void raster_canvas::clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_)
 {
     canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(clipRule));
-    path_guard guard(to_path_t(path));
+    canvas_transform(m_canvas, &transform_.matrix());
+    canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(clip_rule));
+    path_guard guard(to_path_t(path_));
     canvas_clip_path(m_canvas, guard.get());
 }
 
-void raster_canvas::clip_rect(const Rect& rect, FillRule clipRule, const Transform& transform)
+void raster_canvas::clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_)
 {
     canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(clipRule));
-    canvas_clip_rect(m_canvas, rect.x, rect.y, rect.w, rect.h);
+    canvas_transform(m_canvas, &transform_.matrix());
+    canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(clip_rule));
+    canvas_clip_rect(m_canvas, rect_.x, rect_.y, rect_.w, rect_.h);
 }
 
-void raster_canvas::draw_image(const pixmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform)
+void raster_canvas::draw_image(const pixmap& image, const rect& dst_rect, const rect& src_rect, const transform& transform_)
 {
-    auto x_scale = dstRect.w / srcRect.w;
-    auto y_scale = dstRect.h / srcRect.h;
-    matrix_t matrix = { x_scale, 0, 0, y_scale, -srcRect.x * x_scale, -srcRect.y * y_scale };
+    auto x_scale = dst_rect.w / src_rect.w;
+    auto y_scale = dst_rect.h / src_rect.h;
+    matrix_t matrix = { x_scale, 0, 0, y_scale, -src_rect.x * x_scale, -src_rect.y * y_scale };
     canvas_set_matrix(m_canvas, &m_translation);
-    canvas_transform(m_canvas, &transform.matrix());
-    canvas_translate(m_canvas, dstRect.x, dstRect.y);
+    canvas_transform(m_canvas, &transform_.matrix());
+    canvas_translate(m_canvas, dst_rect.x, dst_rect.y);
     canvas_set_fill_rule(m_canvas, NOVA_FILL_RULE_NON_ZERO);
     canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
     canvas_set_texture(m_canvas, image.surface(), NOVA_TEXTURE_TYPE_PLAIN, 1.f, &matrix);
-    canvas_fill_rect(m_canvas, 0, 0, dstRect.w, dstRect.h);
+    canvas_fill_rect(m_canvas, 0, 0, dst_rect.w, dst_rect.h);
 }
 
-void raster_canvas::blend_canvas(const raster_canvas& canvas, BlendMode blendMode, float opacity)
+void raster_canvas::blend_canvas(const raster_canvas& canvas, blend_mode blend_mode_, float opacity)
 {
     matrix_t matrix = { 1, 0, 0, 1, static_cast<float>(canvas.x()), static_cast<float>(canvas.y()) };
     canvas_set_matrix(m_canvas, &m_translation);
-    canvas_set_operator(m_canvas, static_cast<operator_t>(blendMode));
+    canvas_set_operator(m_canvas, static_cast<operator_t>(blend_mode_));
     canvas_set_texture(m_canvas, canvas.surface(), NOVA_TEXTURE_TYPE_PLAIN, opacity, &matrix);
     canvas_paint(m_canvas);
 }
@@ -460,21 +460,21 @@ void raster_canvas::composite_with(const raster_canvas& src, porter_duff mode)
             auto d_a = (d >> 24) & 0xFF;
 
             // Porter-Duff coefficients (premultiplied): result = s*Fs + d*Fd
-            int Fs, Fd;
+            int fs, fd;
             switch(mode) {
-            case porter_duff::In:   Fs = d_a;       Fd = 0;             break;
-            case porter_duff::Out:  Fs = 255 - d_a; Fd = 0;             break;
-            case porter_duff::atop: Fs = d_a;       Fd = 255 - s_a;      break;
-            case porter_duff::Xor:  Fs = 255 - d_a; Fd = 255 - s_a;      break;
-            case porter_duff::Over: default:       Fs = 255;          Fd = 255 - s_a; break;
+            case porter_duff::in:   fs = d_a;       fd = 0;             break;
+            case porter_duff::out:  fs = 255 - d_a; fd = 0;             break;
+            case porter_duff::atop: fs = d_a;       fd = 255 - s_a;      break;
+            case porter_duff::xor_:  fs = 255 - d_a; fd = 255 - s_a;      break;
+            case porter_duff::over: default:       fs = 255;          fd = 255 - s_a; break;
             }
 
             auto sr = (s >> 16) & 0xFF, sg = (s >> 8) & 0xFF, sb = s & 0xFF;
             auto dr = (d >> 16) & 0xFF, dg = (d >> 8) & 0xFF, db = d & 0xFF;
-            auto out_a = STB_MIN(255, int(s_a * Fs + d_a * Fd) / 255);
-            auto out_r = STB_MIN(255, int(sr * Fs + dr * Fd) / 255);
-            auto out_g = STB_MIN(255, int(sg * Fs + dg * Fd) / 255);
-            auto out_b = STB_MIN(255, int(sb * Fs + db * Fd) / 255);
+            auto out_a = STB_MIN(255, int(s_a * fs + d_a * fd) / 255);
+            auto out_r = STB_MIN(255, int(sr * fs + dr * fd) / 255);
+            auto out_g = STB_MIN(255, int(sg * fs + dg * fd) / 255);
+            auto out_b = STB_MIN(255, int(sb * fs + db * fd) / 255);
             dst[x] = (uint32_t(out_a) << 24) | (uint32_t(out_r) << 16) | (uint32_t(out_g) << 8) | uint32_t(out_b);
         }
     }
@@ -482,7 +482,7 @@ void raster_canvas::composite_with(const raster_canvas& src, porter_duff mode)
 
 void raster_canvas::composite_over(const raster_canvas& src)
 {
-    composite_with(src, porter_duff::Over);
+    composite_with(src, porter_duff::over);
 }
 
 void raster_canvas::composite_arithmetic(const raster_canvas& src, float k1, float k2, float k3, float k4)

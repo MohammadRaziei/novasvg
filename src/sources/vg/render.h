@@ -76,7 +76,7 @@ typedef void (*destroy_func_t)(void* closure);
  * @param data A pointer to the data to be written.
  * @param size The size of the data in bytes.
  */
-typedef void (*write_func_t)(void* closure, void* data, int size);
+typedef void (*write_func_t)(void* closure, void* data, int size_);
 
 #define NOVA_PI      3.14159265358979323846f
 #define NOVA_TWO_PI  6.28318530717958647693f
@@ -90,7 +90,7 @@ typedef void (*write_func_t)(void* closure, void* data, int size);
 /**
  * @brief A structure representing a point in 2D space.
  */
-typedef struct point {
+typedef struct {
     float x; ///< The x-coordinate of the point.
     float y; ///< The y-coordinate of the point.
 } point_t;
@@ -101,7 +101,7 @@ typedef struct point {
 /**
  * @brief A structure representing a rectangle in 2D space.
  */
-typedef struct rect {
+typedef struct {
     float x; ///< The x-coordinate of the top-left corner of the rectangle.
     float y; ///< The y-coordinate of the top-left corner of the rectangle.
     float w; ///< The width of the rectangle.
@@ -276,7 +276,7 @@ NOVA_API void matrix_map_rect(const matrix_t* matrix, const rect_t* src, rect_t*
  * 
  * @return `true` on success, `false` on failure.
  */
-NOVA_API bool matrix_parse(matrix_t* matrix, const char* data, int length);
+NOVA_API bool matrix_parse(matrix_t* matrix, const char* data, int length_);
 
 /**
  * @brief Represents a 2D path for drawing operations.
@@ -330,9 +330,9 @@ typedef enum path_command {
 typedef union path_element {
     struct {
         path_command_t command; ///< The path command.
-        int length; ///< Number of elements including the header.
+        int length_; ///< Number of elements including the header.
     } header; ///< Header for path commands.
-    point_t point; ///< A coordinate point in the path.
+    point_t point_; ///< A coordinate point in the path.
 } path_element_t;
 
 /**
@@ -340,7 +340,7 @@ typedef union path_element {
  */
 typedef struct path_iterator {
     const path_element_t* elements; ///< Pointer to the array of path elements.
-    int size; ///< Total number of elements in the array.
+    int size_; ///< Total number of elements in the array.
     int index; ///< Current position in the array.
 } path_iterator_t;
 
@@ -350,7 +350,7 @@ typedef struct path_iterator {
  * @param it The path iterator to initialize.
  * @param path The path to iterate over.
  */
-NOVA_API void path_iterator_init(path_iterator_t* it, const path_t* path);
+NOVA_API void path_iterator_init(path_iterator_t* it, const path_t* path_);
 
 /**
  * @brief Checks if there are more elements to iterate over.
@@ -382,7 +382,7 @@ NOVA_API path_t* path_create(void);
  * @param path A pointer to a `path_t` object.
  * @return A pointer to the same `path_t` object.
  */
-NOVA_API path_t* path_reference(path_t* path);
+NOVA_API path_t* path_reference(path_t* path_);
 
 /**
  * @brief Decreases the reference count of a path object.
@@ -393,7 +393,7 @@ NOVA_API path_t* path_reference(path_t* path);
  *
  * @param path A pointer to the `path_t` object.
  */
-NOVA_API void path_destroy(path_t* path);
+NOVA_API void path_destroy(path_t* path_);
 
 /**
  * @brief Retrieves the reference count of a path object.
@@ -401,7 +401,7 @@ NOVA_API void path_destroy(path_t* path);
  * @param path A pointer to a `path_t` object.
  * @return The current reference count of the path object.
  */
-NOVA_API int path_get_reference_count(const path_t* path);
+NOVA_API int path_get_reference_count(const path_t* path_);
 
 /**
  * @brief Retrieves the elements of a path.
@@ -412,7 +412,7 @@ NOVA_API int path_get_reference_count(const path_t* path);
  * @param elements A pointer to a pointer that will be set to the array of path elements.
  * @return The number of elements in the path.
  */
-NOVA_API int path_get_elements(const path_t* path, const path_element_t** elements);
+NOVA_API int path_get_elements(const path_t* path_, const path_element_t** elements);
 
 /**
  * @brief Moves the current point to a new position.
@@ -424,7 +424,7 @@ NOVA_API int path_get_elements(const path_t* path, const path_element_t** elemen
  * @param x The x-coordinate of the new position.
  * @param y The y-coordinate of the new position.
  */
-NOVA_API void path_move_to(path_t* path, float x, float y);
+NOVA_API void path_move_to(path_t* path_, float x, float y);
 
 /**
  * @brief Adds a straight line segment to the path.
@@ -436,7 +436,7 @@ NOVA_API void path_move_to(path_t* path, float x, float y);
  * @param x The x-coordinate of the end point of the line segment.
  * @param y The y-coordinate of the end point of the line segment.
  */
-NOVA_API void path_line_to(path_t* path, float x, float y);
+NOVA_API void path_line_to(path_t* path_, float x, float y);
 
 /**
  * @brief Adds a quadratic Bézier curve to the path.
@@ -451,7 +451,7 @@ NOVA_API void path_line_to(path_t* path, float x, float y);
  * @param x2 The x-coordinate of the end point of the curve.
  * @param y2 The y-coordinate of the end point of the curve.
  */
-NOVA_API void path_quad_to(path_t* path, float x1, float y1, float x2, float y2);
+NOVA_API void path_quad_to(path_t* path_, float x1, float y1, float x2, float y2);
 
 /**
  * @brief Adds a cubic Bézier curve to the path.
@@ -468,7 +468,7 @@ NOVA_API void path_quad_to(path_t* path, float x1, float y1, float x2, float y2)
  * @param x3 The x-coordinate of the end point of the curve.
  * @param y3 The y-coordinate of the end point of the curve.
  */
-NOVA_API void path_cubic_to(path_t* path, float x1, float y1, float x2, float y2, float x3, float y3);
+NOVA_API void path_cubic_to(path_t* path_, float x1, float y1, float x2, float y2, float x3, float y3);
 
 /**
  * @brief Adds an elliptical arc to the path.
@@ -487,7 +487,7 @@ NOVA_API void path_cubic_to(path_t* path, float x1, float y1, float x2, float y2
  * @param x The x-coordinate of the end point of the arc.
  * @param y The y-coordinate of the end point of the arc.
  */
-NOVA_API void path_arc_to(path_t* path, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y);
+NOVA_API void path_arc_to(path_t* path_, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y);
 
 /**
  * @brief Closes the current sub-path.
@@ -498,7 +498,7 @@ NOVA_API void path_arc_to(path_t* path, float rx, float ry, float angle, bool la
  *
  * @param path A pointer to a `path_t` object.
  */
-NOVA_API void path_close(path_t* path);
+NOVA_API void path_close(path_t* path_);
 
 /**
  * @brief Retrieves the current point of the path.
@@ -510,7 +510,7 @@ NOVA_API void path_close(path_t* path);
  * @param x The x-coordinate of the current point.
  * @param y The y-coordinate of the current point.
  */
-NOVA_API void path_get_current_point(const path_t* path, float* x, float* y);
+NOVA_API void path_get_current_point(const path_t* path_, float* x, float* y);
 
 /**
  * @brief Reserves space for path elements.
@@ -521,7 +521,7 @@ NOVA_API void path_get_current_point(const path_t* path, float* x, float* y);
  * @param path A pointer to a `path_t` object.
  * @param count The number of path elements to reserve space for.
  */
-NOVA_API void path_reserve(path_t* path, int count);
+NOVA_API void path_reserve(path_t* path_, int count);
 
 /**
  * @brief Resets the path.
@@ -530,7 +530,7 @@ NOVA_API void path_reserve(path_t* path, int count);
  *
  * @param path A pointer to a `path_t` object.
  */
-NOVA_API void path_reset(path_t* path);
+NOVA_API void path_reset(path_t* path_);
 
 /**
  * @brief Adds a rectangle to the path.
@@ -543,7 +543,7 @@ NOVA_API void path_reset(path_t* path);
  * @param w The width of the rectangle.
  * @param h The height of the rectangle.
  */
-NOVA_API void path_add_rect(path_t* path, float x, float y, float w, float h);
+NOVA_API void path_add_rect(path_t* path_, float x, float y, float w, float h);
 
 /**
  * @brief Adds a rounded rectangle to the path.
@@ -559,7 +559,7 @@ NOVA_API void path_add_rect(path_t* path, float x, float y, float w, float h);
  * @param rx The x-radius of the rectangle's corners.
  * @param ry The y-radius of the rectangle's corners.
  */
-NOVA_API void path_add_round_rect(path_t* path, float x, float y, float w, float h, float rx, float ry);
+NOVA_API void path_add_round_rect(path_t* path_, float x, float y, float w, float h, float rx, float ry);
 
 /**
  * @brief Adds an ellipse to the path.
@@ -572,7 +572,7 @@ NOVA_API void path_add_round_rect(path_t* path, float x, float y, float w, float
  * @param rx The x-radius of the ellipse.
  * @param ry The y-radius of the ellipse.
  */
-NOVA_API void path_add_ellipse(path_t* path, float cx, float cy, float rx, float ry);
+NOVA_API void path_add_ellipse(path_t* path_, float cx, float cy, float rx, float ry);
 
 /**
  * @brief Adds a circle to the path.
@@ -584,7 +584,7 @@ NOVA_API void path_add_ellipse(path_t* path, float cx, float cy, float rx, float
  * @param cy The y-coordinate of the circle's center.
  * @param r The radius of the circle.
  */
-NOVA_API void path_add_circle(path_t* path, float cx, float cy, float r);
+NOVA_API void path_add_circle(path_t* path_, float cx, float cy, float r);
 
 /**
  * @brief Adds an arc to the path.
@@ -600,7 +600,7 @@ NOVA_API void path_add_circle(path_t* path, float cx, float cy, float r);
  * @param a1 The end angle of the arc in radians.
  * @param ccw If true, the arc is drawn counter-clockwise; if false, clockwise.
  */
-NOVA_API void path_add_arc(path_t* path, float cx, float cy, float r, float a0, float a1, bool ccw);
+NOVA_API void path_add_arc(path_t* path_, float cx, float cy, float r, float a0, float a1, bool ccw);
 
 /**
  * @brief Adds a sub-path to the path.
@@ -612,7 +612,7 @@ NOVA_API void path_add_arc(path_t* path, float cx, float cy, float r, float a0, 
  * @param source A pointer to the `path_t` object to copy elements from.
  * @param matrix A pointer to a `matrix_t` object, or `NULL` to apply no transformation.
  */
-NOVA_API void path_add_path(path_t* path, const path_t* source, const matrix_t* matrix);
+NOVA_API void path_add_path(path_t* path_, const path_t* source, const matrix_t* matrix);
 
 /**
  * @brief Applies a transformation matrix to the path.
@@ -622,7 +622,7 @@ NOVA_API void path_add_path(path_t* path, const path_t* source, const matrix_t* 
  * @param path A pointer to a `path_t` object.
  * @param matrix A pointer to a `matrix_t` object.
  */
-NOVA_API void path_transform(path_t* path, const matrix_t* matrix);
+NOVA_API void path_transform(path_t* path_, const matrix_t* matrix);
 
 /**
  * @brief Callback function type for traversing a path.
@@ -643,7 +643,7 @@ typedef void (*path_traverse_func_t)(void* closure, path_command_t command, cons
  * @param traverse_func The callback function to be called for each el of the path.
  * @param closure User-defined data passed to the callback.
  */
-NOVA_API void path_traverse(const path_t* path, path_traverse_func_t traverse_func, void* closure);
+NOVA_API void path_traverse(const path_t* path_, path_traverse_func_t traverse_func, void* closure);
 
 /**
  * @brief Traverses the path with Bézier curves flattened to line segments.
@@ -652,7 +652,7 @@ NOVA_API void path_traverse(const path_t* path, path_traverse_func_t traverse_fu
  * @param traverse_func The callback function to be called for each el of the path.
  * @param closure User-defined data passed to the callback.
  */
-NOVA_API void path_traverse_flatten(const path_t* path, path_traverse_func_t traverse_func, void* closure);
+NOVA_API void path_traverse_flatten(const path_t* path_, path_traverse_func_t traverse_func, void* closure);
 
 /**
  * @brief Traverses the path with a dashed pattern and calls the callback for each segment.
@@ -664,7 +664,7 @@ NOVA_API void path_traverse_flatten(const path_t* path, path_traverse_func_t tra
  * @param traverse_func The callback function to be called for each el of the path.
  * @param closure User-defined data passed to the callback.
  */
-NOVA_API void path_traverse_dashed(const path_t* path, float offset, const float* dashes, int ndashes, path_traverse_func_t traverse_func, void* closure);
+NOVA_API void path_traverse_dashed(const path_t* path_, float offset, const float* dashes, int ndashes, path_traverse_func_t traverse_func, void* closure);
 
 /**
  * @brief Creates a copy of the path.
@@ -672,7 +672,7 @@ NOVA_API void path_traverse_dashed(const path_t* path, float offset, const float
  * @param path A pointer to the `path_t` object to clone.
  * @return A pointer to the newly created path clone.
  */
-NOVA_API path_t* path_clone(const path_t* path);
+NOVA_API path_t* path_clone(const path_t* path_);
 
 /**
  * @brief Creates a copy of the path with Bézier curves flattened to line segments.
@@ -680,7 +680,7 @@ NOVA_API path_t* path_clone(const path_t* path);
  * @param path A pointer to the `path_t` object to clone.
  * @return A pointer to the newly created path clone with flattened curves.
  */
-NOVA_API path_t* path_clone_flatten(const path_t* path);
+NOVA_API path_t* path_clone_flatten(const path_t* path_);
 
 /**
  * @brief Creates a copy of the path with a dashed pattern applied.
@@ -691,7 +691,7 @@ NOVA_API path_t* path_clone_flatten(const path_t* path);
  * @param ndashes The number of elements in the `dashes` array.
  * @return A pointer to the newly created path clone with dashed pattern.
  */
-NOVA_API path_t* path_clone_dashed(const path_t* path, float offset, const float* dashes, int ndashes);
+NOVA_API path_t* path_clone_dashed(const path_t* path_, float offset, const float* dashes, int ndashes);
 
 /**
  * @brief Computes the bounding box and total length of the path.
@@ -701,7 +701,7 @@ NOVA_API path_t* path_clone_dashed(const path_t* path, float offset, const float
  * @param tight If `true`, computes a precise bounding box; otherwise, aligns to control points.
  * @return The total length of the path.
  */
-NOVA_API float path_extents(const path_t* path, rect_t* extents, bool tight);
+NOVA_API float path_extents(const path_t* path_, rect_t* extents, bool tight);
 
 /**
  * @brief Calculates the total length of the path.
@@ -709,7 +709,7 @@ NOVA_API float path_extents(const path_t* path, rect_t* extents, bool tight);
  * @param path A pointer to a `path_t` object.
  * @return The total length of the path.
  */
-NOVA_API float path_length(const path_t* path);
+NOVA_API float path_length(const path_t* path_);
 
 /**
  * @brief Parses svg path data into a `path_t` object.
@@ -719,7 +719,7 @@ NOVA_API float path_length(const path_t* path);
  * @param length The length of `data`, or `-1` for null-terminated data.
  * @return `true` if successful; `false` otherwise.
  */
-NOVA_API bool path_parse(path_t* path, const char* data, int length);
+NOVA_API bool path_parse(path_t* path_, const char* data, int length_);
 
 /**
  * @brief Text encodings used for converting text data to code points.
@@ -736,7 +736,7 @@ typedef enum text_encoding {
  */
 typedef struct text_iterator {
     const void* text; ///< Pointer to the text data.
-    int length; ///< Length of the text data.
+    int length_; ///< Length of the text data.
     text_encoding_t encoding; ///< Encoding format of the text data.
     int index; ///< Current position in the text data.
 } text_iterator_t;
@@ -754,7 +754,7 @@ typedef unsigned int codepoint_t;
  * @param length Length of the text data, or -1 if the data is null-terminated.
  * @param encoding Encoding of the text data.
  */
-NOVA_API void text_iterator_init(text_iterator_t* it, const void* text, int length, text_encoding_t encoding);
+NOVA_API void text_iterator_init(text_iterator_t* it, const void* text, int length_, text_encoding_t encoding);
 
 /**
  * @brief Checks if there are more code points to iterate.
@@ -775,7 +775,7 @@ NOVA_API codepoint_t text_iterator_next(text_iterator_t* it);
 /**
  * @brief Represents a font face.
  */
-typedef struct font_face font_face_t;
+typedef struct font_face_impl font_face_t;
 
 /**
  * @brief Loads a font face from a file.
@@ -796,7 +796,7 @@ NOVA_API font_face_t* font_face_load_from_file(const char* filename, int ttcinde
  * @param closure User-defined data passed to `destroy_func`.
  * @return A pointer to the loaded `font_face_t` object, or `NULL` on failure.
  */
-NOVA_API font_face_t* font_face_load_from_data(const void* data, unsigned int length, int ttcindex, destroy_func_t destroy_func, void* closure);
+NOVA_API font_face_t* font_face_load_from_data(const void* data, unsigned int length_, int ttcindex, destroy_func_t destroy_func, void* closure);
 
 /**
  * @brief Increments the reference count of a font face.
@@ -831,7 +831,7 @@ NOVA_API int font_face_get_reference_count(const font_face_t* face);
  * @param line_gap Pointer to store the line gap metric.
  * @param extents Pointer to a `rect_t` object to store the font bounding box.
  */
-NOVA_API void font_face_get_metrics(const font_face_t* face, float size, float* ascent, float* descent, float* line_gap, rect_t* extents);
+NOVA_API void font_face_get_metrics(const font_face_t* face, float size_, float* ascent, float* descent, float* line_gap, rect_t* extents);
 
 /**
  * @brief Retrieves metrics for a specified glyph at a given size.
@@ -843,7 +843,7 @@ NOVA_API void font_face_get_metrics(const font_face_t* face, float size, float* 
  * @param left_side_bearing Pointer to store the left side bearing of the glyph.
  * @param extents Pointer to a `rect_t` object to store the glyph bounding box.
  */
-NOVA_API void font_face_get_glyph_metrics(font_face_t* face, float size, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents);
+NOVA_API void font_face_get_glyph_metrics(font_face_t* face, float size_, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents);
 
 /**
  * @brief Retrieves the path of a glyph and its advance width.
@@ -856,7 +856,7 @@ NOVA_API void font_face_get_glyph_metrics(font_face_t* face, float size, codepoi
  * @param path Pointer to a `path_t` object to store the glyph path.
  * @return The advance width of the glyph.
  */
-NOVA_API float font_face_get_glyph_path(font_face_t* face, float size, float x, float y, codepoint_t codepoint, path_t* path);
+NOVA_API float font_face_get_glyph_path(font_face_t* face, float size_, float x, float y, codepoint_t codepoint, path_t* path_);
 
 /**
  * @brief Traverses the path of a glyph and calls a callback for each path el.
@@ -870,7 +870,7 @@ NOVA_API float font_face_get_glyph_path(font_face_t* face, float size, float x, 
  * @param closure User-defined data passed to the callback function.
  * @return The advance width of the glyph.
  */
-NOVA_API float font_face_traverse_glyph_path(font_face_t* face, float size, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure);
+NOVA_API float font_face_traverse_glyph_path(font_face_t* face, float size_, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure);
 
 /**
  * @brief Computes the bounding box of a text string and its advance width.
@@ -883,12 +883,12 @@ NOVA_API float font_face_traverse_glyph_path(font_face_t* face, float size, floa
  * @param extents Pointer to a `rect_t` object to store the bounding box of the text.
  * @return The total advance width of the text.
  */
-NOVA_API float font_face_text_extents(font_face_t* face, float size, const void* text, int length, text_encoding_t encoding, rect_t* extents);
+NOVA_API float font_face_text_extents(font_face_t* face, float size_, const void* text, int length_, text_encoding_t encoding, rect_t* extents);
 
 /**
  * @brief Represents a cache of loaded font faces.
  */
-typedef struct font_face_cache font_face_cache_t;
+typedef struct font_face_cache_impl font_face_cache_t;
 
 /**
  * @brief Create a new, empty font‐face cache.
@@ -1021,7 +1021,7 @@ typedef struct color {
  * @param g Green component (0 to 1).
  * @param b Blue component (0 to 1).
  */
-NOVA_API void color_init_rgb(color_t* color, float r, float g, float b);
+NOVA_API void color_init_rgb(color_t* color_, float r, float g, float b);
 
 /**
  * @brief Initializes a color using RGBA components in the 0-1 range.
@@ -1032,7 +1032,7 @@ NOVA_API void color_init_rgb(color_t* color, float r, float g, float b);
  * @param b Blue component (0 to 1).
  * @param a Alpha component (0 to 1).
  */
-NOVA_API void color_init_rgba(color_t* color, float r, float g, float b, float a);
+NOVA_API void color_init_rgba(color_t* color_, float r, float g, float b, float a);
 
 /**
  * @brief Initializes a color using RGB components in the 0-255 range.
@@ -1042,7 +1042,7 @@ NOVA_API void color_init_rgba(color_t* color, float r, float g, float b, float a
  * @param g Green component (0 to 255).
  * @param b Blue component (0 to 255).
  */
-NOVA_API void color_init_rgb8(color_t* color, int r, int g, int b);
+NOVA_API void color_init_rgb8(color_t* color_, int r, int g, int b);
 
 /**
  * @brief Initializes a color using RGBA components in the 0-255 range.
@@ -1053,7 +1053,7 @@ NOVA_API void color_init_rgb8(color_t* color, int r, int g, int b);
  * @param b Blue component (0 to 255).
  * @param a Alpha component (0 to 255).
  */
-NOVA_API void color_init_rgba8(color_t* color, int r, int g, int b, int a);
+NOVA_API void color_init_rgba8(color_t* color_, int r, int g, int b, int a);
 
 /**
  * @brief Initializes a color from a 32-bit unsigned RGBA value.
@@ -1061,7 +1061,7 @@ NOVA_API void color_init_rgba8(color_t* color, int r, int g, int b, int a);
  * @param color A pointer to a `color_t` object.
  * @param value 32-bit unsigned RGBA value.
  */
-NOVA_API void color_init_rgba32(color_t* color, unsigned int value);
+NOVA_API void color_init_rgba32(color_t* color_, unsigned int value);
 
 /**
  * @brief Initializes a color from a 32-bit unsigned ARGB value.
@@ -1069,7 +1069,7 @@ NOVA_API void color_init_rgba32(color_t* color, unsigned int value);
  * @param color A pointer to a `color_t` object.
  * @param value 32-bit unsigned ARGB value.
  */
-NOVA_API void color_init_argb32(color_t* color, unsigned int value);
+NOVA_API void color_init_argb32(color_t* color_, unsigned int value);
 
 /**
  * @brief Initializes a color with the specified HSL color values.
@@ -1079,7 +1079,7 @@ NOVA_API void color_init_argb32(color_t* color, unsigned int value);
  * @param s Saturation component (0 to 1).
  * @param l Lightness component (0 to 1).
  */
-NOVA_API void color_init_hsl(color_t* color, float h, float s, float l);
+NOVA_API void color_init_hsl(color_t* color_, float h, float s, float l);
 
 /**
  * @brief Initializes a color with the specified HSLA color values.
@@ -1090,7 +1090,7 @@ NOVA_API void color_init_hsl(color_t* color, float h, float s, float l);
  * @param l Lightness component (0 to 1).
  * @param a Alpha component (0 to 1).
  */
-NOVA_API void color_init_hsla(color_t* color, float h, float s, float l, float a);
+NOVA_API void color_init_hsla(color_t* color_, float h, float s, float l, float a);
 
 /**
  * @brief Converts a color to a 32-bit unsigned RGBA value.
@@ -1099,7 +1099,7 @@ NOVA_API void color_init_hsla(color_t* color, float h, float s, float l, float a
  * 
  * @return 32-bit unsigned RGBA value.
  */
-NOVA_API unsigned int color_to_rgba32(const color_t* color);
+NOVA_API unsigned int color_to_rgba32(const color_t* color_);
 
 /**
  * @brief Converts a color to a 32-bit unsigned ARGB value.
@@ -1108,7 +1108,7 @@ NOVA_API unsigned int color_to_rgba32(const color_t* color);
  * 
  * @return 32-bit unsigned ARGB value.
  */
-NOVA_API unsigned int color_to_argb32(const color_t* color);
+NOVA_API unsigned int color_to_argb32(const color_t* color_);
 
 /**
  * @brief Parses a color from a string using CSS color syntax.
@@ -1119,7 +1119,7 @@ NOVA_API unsigned int color_to_argb32(const color_t* color);
  * 
  * @return The number of characters consumed on success (including leading/trailing spaces), or 0 on failure.
  */
-NOVA_API int color_parse(color_t* color, const char* data, int length);
+NOVA_API int color_parse(color_t* color_, const char* data, int length_);
 
 /**
  * @brief Represents an image surface for drawing operations.
@@ -1138,7 +1138,7 @@ typedef struct surface surface_t;
  * @return A pointer to the newly created `surface_t` object.
  */
 /** @brief Decodes base64 text (used for data: URIs). Returns a malloc'd buffer the caller frees, or NULL. */
-NOVA_API uint8_t* base64_decode(const char* data, int length, size_t* out_length);
+NOVA_API uint8_t* base64_decode(const char* data, int length_, size_t* out_length);
 
 NOVA_API surface_t* surface_create(int width, int height);
 
@@ -1168,7 +1168,7 @@ NOVA_API surface_t* surface_load_from_image_file(const char* filename);
  * @param length Length of the data in bytes.
  * @return Pointer to the surface, or `NULL` on failure.
  */
-NOVA_API surface_t* surface_load_from_image_data(const void* data, int length);
+NOVA_API surface_t* surface_load_from_image_data(const void* data, int length_);
 
 /**
  * @brief Loads an image surface from base64-encoded data.
@@ -1177,7 +1177,7 @@ NOVA_API surface_t* surface_load_from_image_data(const void* data, int length);
  * @param length Length of the data in bytes, or `-1` if null-terminated.
  * @return Pointer to the surface, or `NULL` on failure.
  */
-NOVA_API surface_t* surface_load_from_image_base64(const char* data, int length);
+NOVA_API surface_t* surface_load_from_image_base64(const char* data, int length_);
 
 /**
  * @brief Increments the reference count for a surface.
@@ -1240,7 +1240,7 @@ NOVA_API int surface_get_stride(const surface_t* surface);
  * @param surface Pointer to the target surface.
  * @param color Pointer to the color used for clearing.
  */
-NOVA_API void surface_clear(surface_t* surface, const color_t* color);
+NOVA_API void surface_clear(surface_t* surface, const color_t* color_);
 
 /**
  * @brief Converts pixel data from premultiplied ARGB to RGBA format.
@@ -1292,7 +1292,7 @@ typedef enum {
  */
 typedef struct {
     float offset; ///< The offset of the gradient stop, as a value between 0 and 1.
-    color_t color; ///< The color of the gradient stop.
+    color_t color_; ///< The color of the gradient stop.
 } gradient_stop_t;
 
 /**
@@ -1327,7 +1327,7 @@ NOVA_API paint_t* paint_create_rgba(float r, float g, float b, float a);
  * @param color A pointer to the `color_t` object.
  * @return A pointer to the created `paint_t` object.
  */
-NOVA_API paint_t* paint_create_color(const color_t* color);
+NOVA_API paint_t* paint_create_color(const color_t* color_);
 
 /**
  * @brief Creates a linear gradient paint.
@@ -1372,7 +1372,7 @@ NOVA_API paint_t* paint_create_radial_gradient(float cx, float cy, float cr, flo
  * @param matrix Optional transformation matrix.
  * @return A pointer to the created `paint_t` object.
  */
-NOVA_API paint_t* paint_create_texture(surface_t* surface, texture_type_t type, float opacity, const matrix_t* matrix);
+NOVA_API paint_t* paint_create_texture(surface_t* surface, texture_type_t type_, float opacity, const matrix_t* matrix);
 
 /**
  * @brief Increments the reference count of a paint object.
@@ -1380,14 +1380,14 @@ NOVA_API paint_t* paint_create_texture(surface_t* surface, texture_type_t type, 
  * @param paint A pointer to the `paint_t` object.
  * @return A pointer to the referenced `paint_t` object.
  */
-NOVA_API paint_t* paint_reference(paint_t* paint);
+NOVA_API paint_t* paint_reference(paint_t* paint_);
 
 /**
  * @brief Decrements the reference count and destroys the paint if the count reaches zero.
  *
  * @param paint A pointer to the `paint_t` object.
  */
-NOVA_API void paint_destroy(paint_t* paint);
+NOVA_API void paint_destroy(paint_t* paint_);
 
 /**
  * @brief Retrieves the reference count of a paint object.
@@ -1395,7 +1395,7 @@ NOVA_API void paint_destroy(paint_t* paint);
  * @param paint A pointer to the `paint_t` object.
  * @return The reference count of the `paint_t` object.
  */
-NOVA_API int paint_get_reference_count(const paint_t* paint);
+NOVA_API int paint_get_reference_count(const paint_t* paint_);
 
 /**
  * @brief Defines fill rule types for filling paths.
@@ -1540,7 +1540,7 @@ NOVA_API void canvas_set_rgba(canvas_t* canvas, float r, float g, float b, float
  * @param canvas A pointer to a `canvas_t` object.
  * @param color A pointer to a `color_t` object.
  */
-NOVA_API void canvas_set_color(canvas_t* canvas, const color_t* color);
+NOVA_API void canvas_set_color(canvas_t* canvas, const color_t* color_);
 
 /**
  * @brief Sets the current paint to a linear gradient.
@@ -1591,7 +1591,7 @@ NOVA_API void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, f
  * @param opacity The opacity of the texture (0 to 1).
  * @param matrix Optional transformation matrix.
  */
-NOVA_API void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type_t type, float opacity, const matrix_t* matrix);
+NOVA_API void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type_t type_, float opacity, const matrix_t* matrix);
 
 /**
  * @brief Sets the current paint.
@@ -1601,7 +1601,7 @@ NOVA_API void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_t
  * @param canvas A pointer to a `canvas_t` object.
  * @param paint The paint to be used for subsequent drawing operations.
  */
-NOVA_API void canvas_set_paint(canvas_t* canvas, paint_t* paint);
+NOVA_API void canvas_set_paint(canvas_t* canvas, paint_t* paint_);
 
 /**
  * @brief Retrieves the current paint.
@@ -1612,7 +1612,7 @@ NOVA_API void canvas_set_paint(canvas_t* canvas, paint_t* paint);
  * @param color A pointer to a `color_t` object where the current color will be stored.
  * @return The current `paint_t` used for drawing operations. If no paint is set, `NULL` is returned.
  */
-NOVA_API paint_t* canvas_get_paint(const canvas_t* canvas, color_t* color);
+NOVA_API paint_t* canvas_get_paint(const canvas_t* canvas, color_t* color_);
 
 /**
  * @brief Assigns a font-face cache to the canvas for font management.
@@ -1674,7 +1674,7 @@ NOVA_API bool canvas_select_font_face(canvas_t* canvas, const char* family, bool
  * @param face A pointer to a `font_face_t` object representing the font face to use.
  * @param size The size of the font, in pixels. This determines the height of the rendered text.
  */
-NOVA_API void canvas_set_font(canvas_t* canvas, font_face_t* face, float size);
+NOVA_API void canvas_set_font(canvas_t* canvas, font_face_t* face, float size_);
 
 /**
  * @brief Sets the font face for text rendering on the canvas.
@@ -1704,7 +1704,7 @@ NOVA_API font_face_t* canvas_get_font_face(const canvas_t* canvas);
  * @param canvas A pointer to a `canvas_t` object.
  * @param size The size of the font, in pixels. This value defines the height of the rendered text.
  */
-NOVA_API void canvas_set_font_size(canvas_t* canvas, float size);
+NOVA_API void canvas_set_font_size(canvas_t* canvas, float size_);
 
 /**
  * @brief Retrieves the current font size used for text rendering on the canvas.
@@ -1804,7 +1804,7 @@ NOVA_API float canvas_get_line_width(const canvas_t* canvas);
  * @param canvas A pointer to a `canvas_t` object.
  * @param line_cap The line cap style.
  */
-NOVA_API void canvas_set_line_cap(canvas_t* canvas, line_cap_t line_cap);
+NOVA_API void canvas_set_line_cap(canvas_t* canvas, line_cap_t line_cap_);
 
 /**
  * @brief Retrieves the current line cap style.
@@ -1824,7 +1824,7 @@ NOVA_API line_cap_t canvas_get_line_cap(const canvas_t* canvas);
  * @param canvas A pointer to a `canvas_t` object.
  * @param line_join The line join style.
  */
-NOVA_API void canvas_set_line_join(canvas_t* canvas, line_join_t line_join);
+NOVA_API void canvas_set_line_join(canvas_t* canvas, line_join_t line_join_);
 
 /**
  * @brief Retrieves the current line join style.
@@ -2147,7 +2147,7 @@ NOVA_API void canvas_arc(canvas_t* canvas, float cx, float cy, float r, float a0
  * @param canvas A pointer to a `canvas_t` object.
  * @param path A pointer to the `path_t` object to be added.
  */
-NOVA_API void canvas_add_path(canvas_t* canvas, const path_t* path);
+NOVA_API void canvas_add_path(canvas_t* canvas, const path_t* path_);
 
 /**
  * @brief Starts a new path on the canvas.
@@ -2360,7 +2360,7 @@ NOVA_API void canvas_fill_rect(canvas_t* canvas, float x, float y, float w, floa
  * @param canvas A pointer to a `canvas_t` object.
  * @param path The `path_t` object.
  */
-NOVA_API void canvas_fill_path(canvas_t* canvas, const path_t* path);
+NOVA_API void canvas_fill_path(canvas_t* canvas, const path_t* path_);
 
 /**
  * @brief Strokes a rectangle with the current stroke settings.
@@ -2381,7 +2381,7 @@ NOVA_API void canvas_stroke_rect(canvas_t* canvas, float x, float y, float w, fl
  * @param canvas A pointer to a `canvas_t` object.
  * @param path The `path_t` object.
  */
-NOVA_API void canvas_stroke_path(canvas_t* canvas, const path_t* path);
+NOVA_API void canvas_stroke_path(canvas_t* canvas, const path_t* path_);
 
 /**
  * @brief Intersects the current clipping region with a rectangle according to the current fill rule.
@@ -2402,7 +2402,7 @@ NOVA_API void canvas_clip_rect(canvas_t* canvas, float x, float y, float w, floa
  * @param canvas A pointer to a `canvas_t` object.
  * @param path The `path_t` object.
  */
-NOVA_API void canvas_clip_path(canvas_t* canvas, const path_t* path);
+NOVA_API void canvas_clip_path(canvas_t* canvas, const path_t* path_);
 
 /**
  * @brief Adds a glyph to the current path at the specified origin.
@@ -2426,7 +2426,7 @@ NOVA_API float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_add_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y);
+NOVA_API float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y);
 
 /**
  * @brief Fills a text at the specified origin.
@@ -2440,7 +2440,7 @@ NOVA_API float canvas_add_text(canvas_t* canvas, const void* text, int length, t
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_fill_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y);
+NOVA_API float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y);
 
 /**
  * @brief Strokes a text at the specified origin.
@@ -2454,7 +2454,7 @@ NOVA_API float canvas_fill_text(canvas_t* canvas, const void* text, int length, 
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_stroke_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y);
+NOVA_API float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y);
 
 /**
  * @brief Intersects the current clipping region with text at the specified origin.
@@ -2468,7 +2468,7 @@ NOVA_API float canvas_stroke_text(canvas_t* canvas, const void* text, int length
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_clip_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y);
+NOVA_API float canvas_clip_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y);
 
 /**
  * @brief Retrieves font metrics for the current font.
@@ -2502,7 +2502,7 @@ NOVA_API void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, floa
  * @param extents The bounding box of the text.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_text_extents(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, rect_t* extents);
+NOVA_API float canvas_text_extents(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, rect_t* extents);
 
 } // namespace vg
 } // namespace nova

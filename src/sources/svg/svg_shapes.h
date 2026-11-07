@@ -13,40 +13,40 @@ public:
 
     bool is_geometry_element() const final { return true; }
 
-    Rect fill_bounding_box() const override { return m_fill_bounding_box; }
-    Rect stroke_bounding_box() const override;
+    rect fill_bounding_box() const override { return m_fill_bounding_box; }
+    rect stroke_bounding_box() const override;
     void layout_element(const svg_layout_state& state) override;
 
     bool is_renderable() const { return !m_path.empty() && !is_display_none() && !is_visibility_hidden(); }
 
-    FillRule fill_rule() const { return m_fill_rule; }
-    FillRule clip_rule() const { return m_clip_rule; }
+    fill_rule fill_rule_() const { return m_fill_rule; }
+    fill_rule clip_rule() const { return m_clip_rule; }
 
-    virtual Rect update_shape(stb::outline& path) = 0;
+    virtual rect update_shape(stb::outline& path_) = 0;
 
     void update_marker_positions(svg_marker_position_list& positions, const svg_layout_state& state);
     void render(svg_render_state& state) const override;
 
-    const stb::outline& path() const { return m_path; }
+    const stb::outline& path_() const { return m_path; }
 
 private:
     stb::outline m_path;
-    Rect m_fill_bounding_box;
-    StrokeData m_stroke_data;
+    rect m_fill_bounding_box;
+    stroke_data m_stroke_data;
 
     svg_paint_server m_fill;
     svg_paint_server m_stroke;
     svg_marker_position_list m_marker_positions;
 
-    FillRule m_fill_rule = FillRule::NonZero;
-    FillRule m_clip_rule = FillRule::NonZero;
+    fill_rule m_fill_rule = fill_rule::non_zero;
+    fill_rule m_clip_rule = fill_rule::non_zero;
 };
 
 class svg_line_element final : public svg_geometry_element {
 public:
     svg_line_element(document* dom);
 
-    Rect update_shape(stb::outline& path) final;
+    rect update_shape(stb::outline& path_) final;
 
 private:
     svg_length m_x1;
@@ -59,7 +59,7 @@ class svg_rect_element final : public svg_geometry_element {
 public:
     svg_rect_element(document* dom);
 
-    Rect update_shape(stb::outline& path) final;
+    rect update_shape(stb::outline& path_) final;
 
 private:
     svg_length m_x;
@@ -74,7 +74,7 @@ class svg_ellipse_element final : public svg_geometry_element {
 public:
     svg_ellipse_element(document* dom);
 
-    Rect update_shape(stb::outline& path) final;
+    rect update_shape(stb::outline& path_) final;
 
 private:
     svg_length m_cx;
@@ -87,7 +87,7 @@ class svg_circle_element final : public svg_geometry_element {
 public:
     svg_circle_element(document* dom);
 
-    Rect update_shape(stb::outline& path) final;
+    rect update_shape(stb::outline& path_) final;
 
 private:
     svg_length m_cx;
@@ -99,7 +99,7 @@ class svg_poly_element final : public svg_geometry_element {
 public:
     svg_poly_element(document* dom, element_id id);
 
-    Rect update_shape(stb::outline& path) final;
+    rect update_shape(stb::outline& path_) final;
 
 private:
     svg_point_list m_points;
@@ -109,7 +109,7 @@ class svg_path_element final : public svg_geometry_element {
 public:
     svg_path_element(document* dom);
 
-    Rect update_shape(stb::outline& path) final;
+    rect update_shape(stb::outline& path_) final;
 
 private:
     svg_path m_d;

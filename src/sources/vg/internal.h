@@ -65,7 +65,7 @@ struct path {
     point_t start_point;
     struct {
         path_element_t* data;
-        int size;
+        int size_;
         int capacity;
     } elements;
 };
@@ -78,12 +78,12 @@ typedef enum {
 
 struct paint {
     ref_count_t ref_count;
-    paint_type_t type;
+    paint_type_t type_;
 };
 
 typedef struct {
     paint_t base;
-    color_t color;
+    color_t color_;
 } solid_paint_t;
 
 typedef enum {
@@ -93,7 +93,7 @@ typedef enum {
 
 typedef struct {
     paint_t base;
-    gradient_type_t type;
+    gradient_type_t type_;
     spread_method_t spread;
     matrix_t matrix;
     gradient_stop_t* stops;
@@ -103,7 +103,7 @@ typedef struct {
 
 typedef struct {
     paint_t base;
-    texture_type_t type;
+    texture_type_t type_;
     float opacity;
     matrix_t matrix;
     surface_t* surface;
@@ -119,7 +119,7 @@ typedef struct {
 typedef struct {
     struct {
         span_t* data;
-        int size;
+        int size_;
         int capacity;
     } spans;
 
@@ -133,7 +133,7 @@ typedef struct {
     float offset;
     struct {
         float* data;
-        int size;
+        int size_;
         int capacity;
     } array;
 } stroke_dash_t;
@@ -151,9 +151,9 @@ typedef struct {
 } stroke_data_t;
 
 typedef struct state {
-    paint_t* paint;
-    font_face_t* font_face;
-    color_t color;
+    paint_t* paint_;
+    font_face_t* font_face_;
+    color_t color_;
     matrix_t matrix;
     stroke_data_t stroke;
     span_buffer_t clip_spans;
@@ -168,7 +168,7 @@ typedef struct state {
 struct canvas_context {
     ref_count_t ref_count;
     surface_t* surface;
-    path_t* path;
+    path_t* path_;
     state_t* state;
     state_t* freed_state;
     font_face_cache_t* face_cache;
@@ -186,9 +186,9 @@ bool span_buffer_contains(const span_buffer_t* span_buffer, float x, float y);
 void span_buffer_extents(span_buffer_t* span_buffer, rect_t* extents);
 void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, const span_buffer_t* b);
 
-void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data, fill_rule_t winding);
+void rasterize(span_buffer_t* span_buffer, const path_t* path_, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data_, fill_rule_t winding);
 void blend(canvas_t* canvas, const span_buffer_t* span_buffer);
-void memfill32(unsigned int* dest, int length, unsigned int value);
+void memfill32(unsigned int* dest, int length_, unsigned int value);
 
 } // namespace vg
 } // namespace nova

@@ -26,21 +26,21 @@
 
 namespace nova::vg {
 
-enum class LineCap : uint8_t {
-    Butt = NOVA_LINE_CAP_BUTT,
-    Round = NOVA_LINE_CAP_ROUND,
-    Square = NOVA_LINE_CAP_SQUARE
+enum class line_cap : uint8_t {
+    butt = NOVA_LINE_CAP_BUTT,
+    round = NOVA_LINE_CAP_ROUND,
+    square = NOVA_LINE_CAP_SQUARE
 };
 
-enum class LineJoin : uint8_t {
-    Miter = NOVA_LINE_JOIN_MITER,
-    Round = NOVA_LINE_JOIN_ROUND,
-    Bevel = NOVA_LINE_JOIN_BEVEL
+enum class line_join : uint8_t {
+    miter = NOVA_LINE_JOIN_MITER,
+    round = NOVA_LINE_JOIN_ROUND,
+    bevel = NOVA_LINE_JOIN_BEVEL
 };
 
-enum class FillRule : uint8_t {
-    NonZero = NOVA_FILL_RULE_NON_ZERO,
-    EvenOdd = NOVA_FILL_RULE_EVEN_ODD
+enum class fill_rule : uint8_t {
+    non_zero = NOVA_FILL_RULE_NON_ZERO,
+    even_odd = NOVA_FILL_RULE_EVEN_ODD
 };
 
 enum class SpreadMethod : uint8_t {
@@ -53,66 +53,66 @@ enum class SpreadMethod : uint8_t {
 // this engine's needs and the richer string-parsing/blending API) --
 // no separate definition here anymore.
 
-class Point {
+class point {
 public:
-    constexpr Point() = default;
-    constexpr Point(const point_t& point) : Point(point.x, point.y) {}
-    constexpr Point(float x, float y) : x(x), y(y) {}
+    constexpr point() = default;
+    constexpr point(const point_t& point_) : point(point_.x, point_.y) {}
+    constexpr point(float x, float y) : x(x), y(y) {}
 
     constexpr void move(float dx, float dy) { x += dx; y += dy; }
     constexpr void move(float d) { move(d, d); }
-    constexpr void move(const Point& p) { move(p.x, p.y); }
+    constexpr void move(const point& p) { move(p.x, p.y); }
 
     constexpr void scale(float sx, float sy) { x *= sx; y *= sy; }
     constexpr void scale(float s) { scale(s, s); }
 
-    constexpr float dot(const Point& p) const { return x * p.x + y * p.y; }
+    constexpr float dot(const point& p) const { return x * p.x + y * p.y; }
 
 public:
     float x{0};
     float y{0};
 };
 
-constexpr Point operator+(const Point& a, const Point& b)
+constexpr point operator+(const point& a, const point& b)
 {
-    return Point(a.x + b.x, a.y + b.y);
+    return point(a.x + b.x, a.y + b.y);
 }
 
-constexpr Point operator-(const Point& a, const Point& b)
+constexpr point operator-(const point& a, const point& b)
 {
-    return Point(a.x - b.x, a.y - b.y);
+    return point(a.x - b.x, a.y - b.y);
 }
 
-constexpr Point operator-(const Point& a)
+constexpr point operator-(const point& a)
 {
-    return Point(-a.x, -a.y);
+    return point(-a.x, -a.y);
 }
 
-constexpr Point& operator+=(Point& a, const Point& b)
+constexpr point& operator+=(point& a, const point& b)
 {
     a.move(b);
     return a;
 }
 
-constexpr Point& operator-=(Point& a, const Point& b)
+constexpr point& operator-=(point& a, const point& b)
 {
     a.move(-b);
     return a;
 }
 
-constexpr float operator*(const Point& a, const Point& b)
+constexpr float operator*(const point& a, const point& b)
 {
     return a.dot(b);
 }
 
-class Size {
+class size {
 public:
-    constexpr Size() = default;
-    constexpr Size(float w, float h) : w(w), h(h) {}
+    constexpr size() = default;
+    constexpr size(float w, float h) : w(w), h(h) {}
 
     constexpr void expand(float dw, float dh) { w += dw; h += dh; }
     constexpr void expand(float d) { expand(d, d); }
-    constexpr void expand(const Size& s) { expand(s.w, s.h); }
+    constexpr void expand(const size& s) { expand(s.w, s.h); }
 
     constexpr void scale(float sw, float sh) { w *= sw; h *= sh; }
     constexpr void scale(float s) { scale(s, s); }
@@ -126,49 +126,49 @@ public:
     float h{0};
 };
 
-constexpr Size operator+(const Size& a, const Size& b)
+constexpr size operator+(const size& a, const size& b)
 {
-    return Size(a.w + b.w, a.h + b.h);
+    return size(a.w + b.w, a.h + b.h);
 }
 
-constexpr Size operator-(const Size& a, const Size& b)
+constexpr size operator-(const size& a, const size& b)
 {
-    return Size(a.w - b.w, a.h - b.h);
+    return size(a.w - b.w, a.h - b.h);
 }
 
-constexpr Size operator-(const Size& a)
+constexpr size operator-(const size& a)
 {
-    return Size(-a.w, -a.h);
+    return size(-a.w, -a.h);
 }
 
-constexpr Size& operator+=(Size& a, const Size& b)
+constexpr size& operator+=(size& a, const size& b)
 {
     a.expand(b);
     return a;
 }
 
-constexpr Size& operator-=(Size& a, const Size& b)
+constexpr size& operator-=(size& a, const size& b)
 {
     a.expand(-b);
     return a;
 }
 
-class Box;
+class box;
 
-class Rect {
+class rect {
 public:
-    constexpr Rect() = default;
-    constexpr explicit Rect(const Size& size) : Rect(size.w, size.h) {}
-    constexpr Rect(float width, float height) : Rect(0, 0, width, height) {}
-    constexpr Rect(const Point& origin, const Size& size) : Rect(origin.x, origin.y, size.w, size.h) {}
-    constexpr Rect(const rect_t& rect) : Rect(rect.x, rect.y, rect.w, rect.h) {}
-    constexpr Rect(float x, float y, float w, float h) : x(x), y(y), w(w), h(h) {}
+    constexpr rect() = default;
+    constexpr explicit rect(const size& size_) : rect(size_.w, size_.h) {}
+    constexpr rect(float width, float height) : rect(0, 0, width, height) {}
+    constexpr rect(const point& origin, const size& size_) : rect(origin.x, origin.y, size_.w, size_.h) {}
+    constexpr rect(const rect_t& rect_) : rect(rect_.x, rect_.y, rect_.w, rect_.h) {}
+    constexpr rect(float x, float y, float w, float h) : x(x), y(y), w(w), h(h) {}
 
-    Rect(const Box& box);
+    rect(const box& box_);
 
     constexpr void move(float dx, float dy) { x += dx; y += dy; }
     constexpr void move(float d) { move(d, d); }
-    constexpr void move(const Point& p) { move(p.x, p.y); }
+    constexpr void move(const point& p) { move(p.x, p.y); }
 
     constexpr void scale(float sx, float sy) { x *= sx; y *= sy; w *= sx; h *= sy; }
     constexpr void scale(float s) { scale(s, s); }
@@ -177,16 +177,16 @@ public:
     constexpr void inflate(float d) { inflate(d, d); }
 
     constexpr bool contains(float px, float py) const { return px >= x && px <= x + w && py >= y && py <= y + h; }
-    constexpr bool contains(const Point& p) const { return contains(p.x, p.y); }
+    constexpr bool contains(const point& p) const { return contains(p.x, p.y); }
 
-    constexpr Rect intersected(const Rect& rect) const;
-    constexpr Rect united(const Rect& rect) const;
+    constexpr rect intersected(const rect& rect_) const;
+    constexpr rect united(const rect& rect_) const;
 
-    constexpr Rect& intersect(const Rect& o);
-    constexpr Rect& unite(const Rect& o);
+    constexpr rect& intersect(const rect& o);
+    constexpr rect& unite(const rect& o);
 
-    constexpr Point origin() const { return Point(x, y); }
-    constexpr Size size() const { return Size(w, h); }
+    constexpr point origin() const { return point(x, y); }
+    constexpr size size_() const { return size(w, h); }
 
     constexpr float right() const { return x + w; }
     constexpr float bottom() const { return y + h; }
@@ -195,9 +195,9 @@ public:
     constexpr bool is_zero() const { return w <= 0.f && h <= 0.f; }
     constexpr bool is_valid() const { return w >= 0.f && h >= 0.f; }
 
-    static const Rect Empty;
-    static const Rect invalid;
-    static const Rect infinite;
+    static const rect empty_rect;
+    static const rect invalid;
+    static const rect infinite;
 
 public:
     float x{0};
@@ -206,77 +206,77 @@ public:
     float h{0};
 };
 
-constexpr Rect Rect::intersected(const Rect& rect) const
+constexpr rect rect::intersected(const rect& rect_) const
 {
-    if(!rect.is_valid())
+    if(!rect_.is_valid())
         return *this;
     if(!is_valid())
-        return rect;
-    auto l = STB_MAX(x, rect.x);
-    auto t = STB_MAX(y, rect.y);
-    auto r = STB_MIN(x + w, rect.x + rect.w);
-    auto b = STB_MIN(y + h, rect.y + rect.h);
+        return rect_;
+    auto l = STB_MAX(x, rect_.x);
+    auto t = STB_MAX(y, rect_.y);
+    auto r = STB_MIN(x + w, rect_.x + rect_.w);
+    auto b = STB_MIN(y + h, rect_.y + rect_.h);
     if(l >= r || t >= b)
-        return Rect::Empty;
-    return Rect(l, t, r - l, b - t);
+        return rect::empty_rect;
+    return rect(l, t, r - l, b - t);
 }
 
-constexpr Rect Rect::united(const Rect& rect) const
+constexpr rect rect::united(const rect& rect_) const
 {
-    if(!rect.is_valid())
+    if(!rect_.is_valid())
         return *this;
     if(!is_valid())
-        return rect;
-    auto l = STB_MIN(x, rect.x);
-    auto t = STB_MIN(y, rect.y);
-    auto r = STB_MAX(x + w, rect.x + rect.w);
-    auto b = STB_MAX(y + h, rect.y + rect.h);
-    return Rect(l, t, r - l, b - t);
+        return rect_;
+    auto l = STB_MIN(x, rect_.x);
+    auto t = STB_MIN(y, rect_.y);
+    auto r = STB_MAX(x + w, rect_.x + rect_.w);
+    auto b = STB_MAX(y + h, rect_.y + rect_.h);
+    return rect(l, t, r - l, b - t);
 }
 
-constexpr Rect& Rect::intersect(const Rect& o)
+constexpr rect& rect::intersect(const rect& o)
 {
     *this = intersected(o);
     return *this;
 }
 
-constexpr Rect& Rect::unite(const Rect& o)
+constexpr rect& rect::unite(const rect& o)
 {
     *this = united(o);
     return *this;
 }
 
 
-class Transform {
+class transform {
 public:
-    Transform();
-    Transform(const stb::matrix& matrix);
-    Transform(float a, float b, float c, float d, float e, float f);
-    Transform(const matrix_t& matrix) : m_matrix(matrix) {}
+    transform();
+    transform(const stb::matrix& matrix);
+    transform(float a, float b, float c, float d, float e, float f);
+    transform(const matrix_t& matrix) : m_matrix(matrix) {}
 
-    Transform operator*(const Transform& transform) const;
-    Transform& operator*=(const Transform& transform);
+    transform operator*(const transform& transform_) const;
+    transform& operator*=(const transform& transform_);
 
-    Transform& multiply(const Transform& transform);
-    Transform& translate(float tx, float ty);
-    Transform& scale(float sx, float sy);
-    Transform& rotate(float angle, float cx = 0.f, float cy = 0.f);
-    Transform& shear(float shx, float shy);
+    transform& multiply(const transform& transform_);
+    transform& translate(float tx, float ty);
+    transform& scale(float sx, float sy);
+    transform& rotate(float angle, float cx = 0.f, float cy = 0.f);
+    transform& shear(float shx, float shy);
 
-    Transform& post_multiply(const Transform& transform);
-    Transform& post_translate(float tx, float ty);
-    Transform& post_scale(float sx, float sy);
-    Transform& post_rotate(float angle, float cx = 0.f, float cy = 0.f);
-    Transform& post_shear(float shx, float shy);
+    transform& post_multiply(const transform& transform_);
+    transform& post_translate(float tx, float ty);
+    transform& post_scale(float sx, float sy);
+    transform& post_rotate(float angle, float cx = 0.f, float cy = 0.f);
+    transform& post_shear(float shx, float shy);
 
-    Transform inverse() const;
-    Transform& invert();
+    transform inverse() const;
+    transform& invert();
 
     void reset();
 
-    Point map_point(float x, float y) const;
-    Point map_point(const Point& point) const;
-    Rect map_rect(const Rect& rect) const;
+    point map_point(float x, float y) const;
+    point map_point(const point& point_) const;
+    rect map_rect(const rect& rect_) const;
 
     float x_scale() const;
     float y_scale() const;
@@ -284,14 +284,14 @@ public:
     const matrix_t& matrix() const { return m_matrix; }
     matrix_t& matrix() { return m_matrix; }
 
-    bool parse(const char* data, size_t length);
+    bool parse(const char* data, size_t length_);
 
-    static Transform translated(float tx, float ty);
-    static Transform scaled(float sx, float sy);
-    static Transform rotated(float angle, float cx, float cy);
-    static Transform sheared(float shx, float shy);
+    static transform translated(float tx, float ty);
+    static transform scaled(float sx, float sy);
+    static transform rotated(float angle, float cx, float cy);
+    static transform sheared(float shx, float shy);
 
-    static const Transform identity;
+    static const transform identity;
 
 private:
     matrix_t m_matrix;
@@ -299,18 +299,18 @@ private:
 
 // Conversions between the engine's Transform / the C API's matrix_t and the public stb::matrix.
 inline stb::matrix to_matrix(const matrix_t& m) { return stb::matrix{m.a, m.b, m.c, m.d, m.e, m.f}; }
-inline stb::matrix to_matrix(const Transform& t) { return to_matrix(t.matrix()); }
+inline stb::matrix to_matrix(const transform& t) { return to_matrix(t.matrix()); }
 
 // A path is an stb::outline. The engine needs a few things on top of it (src/sources/vg/outline_util.cpp):
 //   arc_to      the SVG elliptical arc, as cubics, from the outline's current point
 //   parse_path  SVG path data ("M 0 0 L ..."), replaces the content; partial data stays on error, as in SVG
 //   bounding_rect  the box of all points of the outline (what the svg layer calls the fill box)
 //   to_path_t   the C API's path_t (the rasterizer's input); the caller owns the result
-void arc_to(stb::outline& path, float rx, float ry, float x_axis_rotation_deg, bool large_arc, bool sweep, float x, float y);
-bool parse_path(stb::outline& path, const char* data, size_t length);
-Rect bounding_rect(const stb::outline& path);
-path_t* to_path_t(const stb::outline& path);
-stb::outline from_path_t(const path_t* path);
+void arc_to(stb::outline& path_, float rx, float ry, float x_axis_rotation_deg, bool large_arc, bool sweep, float x, float y);
+bool parse_path(stb::outline& path_, const char* data, size_t length_);
+rect bounding_rect(const stb::outline& path_);
+path_t* to_path_t(const stb::outline& path_);
+stb::outline from_path_t(const path_t* path_);
 
 enum class segment_kind { move_to, line_to, cubic_to, close };
 
@@ -318,14 +318,14 @@ enum class segment_kind { move_to, line_to, cubic_to, close };
 // start point of its contour in points[0] (the C API's path_t did the same).
 class outline_walker {
 public:
-    explicit outline_walker(const stb::outline& path);
-    segment_kind current_segment(std::array<Point, 3>& points) const;
+    explicit outline_walker(const stb::outline& path_);
+    segment_kind current_segment(std::array<point, 3>& points) const;
     bool done() const { return m_index >= m_segments.size(); }
     void next() { ++m_index; }
 private:
     struct segment {
         segment_kind command;
-        Point points[3];
+        point points[3];
     };
     std::vector<segment> m_segments;
     size_t m_index = 0;
@@ -335,16 +335,16 @@ private:
 namespace nova::vg {
 
 enum class texture_type {
-    Plain = NOVA_TEXTURE_TYPE_PLAIN,
-    Tiled = NOVA_TEXTURE_TYPE_TILED
+    plain = NOVA_TEXTURE_TYPE_PLAIN,
+    tiled = NOVA_TEXTURE_TYPE_TILED
 };
 
-enum class BlendMode {
-    Src = NOVA_OPERATOR_SRC,
+enum class blend_mode {
+    src = NOVA_OPERATOR_SRC,
     src_over = NOVA_OPERATOR_SRC_OVER,
     dst_in = NOVA_OPERATOR_DST_IN,
     dst_out = NOVA_OPERATOR_DST_OUT,
-    Multiply = NOVA_OPERATOR_MULTIPLY,
+    multiply = NOVA_OPERATOR_MULTIPLY,
     screen = NOVA_OPERATOR_SCREEN,
     darken = NOVA_OPERATOR_DARKEN,
     lighten = NOVA_OPERATOR_LIGHTEN,
@@ -354,34 +354,34 @@ enum class BlendMode {
 
 using DashArray = std::vector<float>;
 
-class StrokeData {
+class stroke_data {
 public:
-    explicit StrokeData(float lineWidth = 1.f) : m_line_width(lineWidth) {}
+    explicit stroke_data(float line_width = 1.f) : m_line_width(line_width) {}
 
-    void set_line_width(float lineWidth) { m_line_width = lineWidth; }
-    float lineWidth() const { return m_line_width; }
+    void set_line_width(float line_width) { m_line_width = line_width; }
+    float line_width() const { return m_line_width; }
 
-    void set_miter_limit(float miterLimit) { m_miter_limit = miterLimit; }
-    float miterLimit() const { return m_miter_limit; }
+    void set_miter_limit(float miter_limit) { m_miter_limit = miter_limit; }
+    float miter_limit() const { return m_miter_limit; }
 
-    void set_dash_offset(float dashOffset) { m_dash_offset = dashOffset; }
-    float dashOffset() const { return m_dash_offset; }
+    void set_dash_offset(float dash_offset) { m_dash_offset = dash_offset; }
+    float dash_offset() const { return m_dash_offset; }
 
     void set_dash_array(DashArray dashArray) { m_dash_array = std::move(dashArray); }
     const DashArray& dashArray() const { return m_dash_array; }
 
-    void set_line_cap(LineCap lineCap) { m_line_cap = lineCap; }
-    LineCap lineCap() const { return m_line_cap; }
+    void set_line_cap(line_cap line_cap_) { m_line_cap = line_cap_; }
+    line_cap line_cap_() const { return m_line_cap; }
 
-    void set_line_join(LineJoin lineJoin) { m_line_join = lineJoin; }
-    LineJoin lineJoin() const { return m_line_join; }
+    void set_line_join(line_join line_join_) { m_line_join = line_join_; }
+    line_join line_join_() const { return m_line_join; }
 
 private:
     float m_line_width;
     float m_miter_limit{4.f};
     float m_dash_offset{0.f};
-    LineCap m_line_cap{LineCap::Butt};
-    LineJoin m_line_join{LineJoin::Miter};
+    line_cap m_line_cap{line_cap::butt};
+    line_join m_line_join{line_join::miter};
     DashArray m_dash_array;
 };
 
@@ -400,21 +400,21 @@ class canvas {
 public:
     virtual ~canvas() = default;
 
-    virtual void set_color(const stb::color& color) = 0;
+    virtual void set_color(const stb::color& color_) = 0;
     virtual void set_color(float r, float g, float b, float a) = 0;
-    virtual void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform) = 0;
-    virtual void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform) = 0;
+    virtual void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const transform& transform_) = 0;
+    virtual void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const transform& transform_) = 0;
 
-    virtual void fill_path(const stb::outline& path, FillRule fill_rule, const Transform& transform) = 0;
-    virtual void stroke_path(const stb::outline& path, const StrokeData& stroke_data, const Transform& transform) = 0;
+    virtual void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) = 0;
+    virtual void stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_) = 0;
 
-    virtual void fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform) = 0;
-    virtual void stroke_text(const std::u32string_view& text, float stroke_width, const Font& font, const Point& origin, const Transform& transform) = 0;
+    virtual void fill_text(const std::u32string_view& text, const font& font_, const point& origin, const transform& transform_) = 0;
+    virtual void stroke_text(const std::u32string_view& text, float stroke_width, const font& font_, const point& origin, const transform& transform_) = 0;
 
-    virtual void clip_path(const stb::outline& path, FillRule clip_rule, const Transform& transform) = 0;
-    virtual void clip_rect(const Rect& rect, FillRule clip_rule, const Transform& transform) = 0;
+    virtual void clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_) = 0;
+    virtual void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) = 0;
 
-    virtual void draw_image(const pixmap& image, const Rect& dst_rect, const Rect& src_rect, const Transform& transform) = 0;
+    virtual void draw_image(const pixmap& image, const rect& dst_rect, const rect& src_rect, const transform& transform_) = 0;
 
     virtual void save() = 0;
     virtual void restore() = 0;
@@ -424,25 +424,25 @@ class raster_canvas final : public canvas {
 public:
     static std::shared_ptr<raster_canvas> create(const pixmap& bitmap);
     static std::shared_ptr<raster_canvas> create(float x, float y, float width, float height);
-    static std::shared_ptr<raster_canvas> create(const Rect& extents);
+    static std::shared_ptr<raster_canvas> create(const rect& extents);
 
-    void set_color(const stb::color& color) override;
+    void set_color(const stb::color& color_) override;
     void set_color(float r, float g, float b, float a) override;
-    void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform) override;
-    void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform) override;
-    void set_texture(const raster_canvas& source, texture_type type, float opacity, const Transform& transform);
+    void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const transform& transform_) override;
+    void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const transform& transform_) override;
+    void set_texture(const raster_canvas& source, texture_type type_, float opacity, const transform& transform_);
 
-    void fill_path(const stb::outline& path, FillRule fillRule, const Transform& transform) override;
-    void stroke_path(const stb::outline& path, const StrokeData& strokeData, const Transform& transform) override;
+    void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) override;
+    void stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_) override;
 
-    void fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform) override;
-    void stroke_text(const std::u32string_view& text, float strokeWidth, const Font& font, const Point& origin, const Transform& transform) override;
+    void fill_text(const std::u32string_view& text, const font& font_, const point& origin, const transform& transform_) override;
+    void stroke_text(const std::u32string_view& text, float stroke_width, const font& font_, const point& origin, const transform& transform_) override;
 
-    void clip_path(const stb::outline& path, FillRule clipRule, const Transform& transform) override;
-    void clip_rect(const Rect& rect, FillRule clipRule, const Transform& transform) override;
+    void clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_) override;
+    void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) override;
 
-    void draw_image(const pixmap& image, const Rect& dstRect, const Rect& srcRect, const Transform& transform) override;
-    void blend_canvas(const raster_canvas& canvas, BlendMode blendMode, float opacity);
+    void draw_image(const pixmap& image, const rect& dst_rect, const rect& src_rect, const transform& transform_) override;
+    void blend_canvas(const raster_canvas& canvas, blend_mode blend_mode_, float opacity);
 
     void save() override;
     void restore() override;
@@ -475,7 +475,7 @@ public:
 
     // Porter-Duff compositing operators needed by feComposite/feMerge.
     // (arithmetic is intentionally not offered -- see svg_fe_composite_element)
-    enum class porter_duff { Over, In, Out, atop, Xor };
+    enum class porter_duff { over, in, out, atop, xor_ };
     void composite_with(const raster_canvas& src, porter_duff mode);
     void composite_over(const raster_canvas& src) ;
 
@@ -494,7 +494,7 @@ public:
     int width() const;
     int height() const;
 
-    Rect extents() const { return Rect(m_x, m_y, width(), height()); }
+    rect extents() const { return rect(m_x, m_y, width(), height()); }
 
     surface_t* surface() const { return m_surface; }
     canvas_t* handle() const { return m_canvas; }
@@ -522,16 +522,16 @@ private:
 
 // stb::color::black()/White/Transparent are defined once, in color.h.
 
-NOVA_INLINE const Rect Rect::Empty(0, 0, 0, 0);
-NOVA_INLINE const Rect Rect::invalid(0, 0, -1, -1);
-NOVA_INLINE const Rect Rect::infinite(-FLT_MAX / 2.f, -FLT_MAX / 2.f, FLT_MAX, FLT_MAX);
+NOVA_INLINE const rect rect::empty_rect(0, 0, 0, 0);
+NOVA_INLINE const rect rect::invalid(0, 0, -1, -1);
+NOVA_INLINE const rect rect::infinite(-FLT_MAX / 2.f, -FLT_MAX / 2.f, FLT_MAX, FLT_MAX);
 
 // Rect::Rect(const Box&) is defined in novasvg.h, right after Box itself --
 // Box belongs to the svg/document layer, not here, so this file (which
 // stays usable without that layer) only declares the conversion, it
 // doesn't define it.
 
-NOVA_INLINE const Transform Transform::identity(1, 0, 0, 1, 0, 0);
+NOVA_INLINE const transform transform::identity(1, 0, 0, 1, 0, 0);
 
 
 

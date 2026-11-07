@@ -10,22 +10,22 @@ property_id propertyid(std::string_view name)
     static const struct {
         std::string_view name;
         property_id value;
-    } table[] = {
-        {"class", property_id::Class},
+    } table_[] = {
+        {"class", property_id::class_},
         {"clipPathUnits", property_id::ClipPathUnits},
-        {"cx", property_id::Cx},
-        {"cy", property_id::Cy},
+        {"cx", property_id::cx},
+        {"cy", property_id::cy},
         {"d", property_id::D},
-        {"dx", property_id::Dx},
-        {"dy", property_id::Dy},
-        {"fx", property_id::Fx},
-        {"fy", property_id::Fy},
+        {"dx", property_id::dx},
+        {"dy", property_id::dy},
+        {"fx", property_id::fx},
+        {"fy", property_id::fy},
         {"gradientTransform", property_id::GradientTransform},
         {"gradientUnits", property_id::GradientUnits},
-        {"height", property_id::Height},
-        {"href", property_id::Href},
-        {"id", property_id::Id},
-        {"in", property_id::In},
+        {"height", property_id::height},
+        {"href", property_id::href},
+        {"id", property_id::id},
+        {"in", property_id::in},
         {"in2", property_id::in2},
         {"k1", property_id::K1},
         {"k2", property_id::K2},
@@ -37,42 +37,42 @@ property_id propertyid(std::string_view name)
         {"markerWidth", property_id::MarkerWidth},
         {"maskContentUnits", property_id::MaskContentUnits},
         {"maskUnits", property_id::MaskUnits},
-        {"offset", property_id::Offset},
-        {"operator", property_id::Operator},
-        {"orient", property_id::Orient},
+        {"offset", property_id::offset},
+        {"operator", property_id::operator_},
+        {"orient", property_id::orient},
         {"patternContentUnits", property_id::PatternContentUnits},
         {"patternTransform", property_id::PatternTransform},
         {"patternUnits", property_id::PatternUnits},
-        {"points", property_id::Points},
+        {"points", property_id::points},
         {"preserveAspectRatio", property_id::PreserveAspectRatio},
         {"r", property_id::R},
         {"refX", property_id::RefX},
         {"refY", property_id::RefY},
         {"requiredExtensions", property_id::required_extensions},
-        {"result", property_id::Result},
-        {"rotate", property_id::Rotate},
-        {"rx", property_id::Rx},
-        {"ry", property_id::Ry},
+        {"result", property_id::result},
+        {"rotate", property_id::rotate},
+        {"rx", property_id::rx},
+        {"ry", property_id::ry},
         {"spreadMethod", property_id::SpreadMethod},
         {"stdDeviation", property_id::std_deviation},
-        {"style", property_id::Style},
+        {"style", property_id::style},
         {"systemLanguage", property_id::system_language},
         {"textLength", property_id::TextLength},
-        {"transform", property_id::Transform},
+        {"transform", property_id::transform},
         {"viewBox", property_id::ViewBox},
-        {"width", property_id::Width},
+        {"width", property_id::width},
         {"x", property_id::X},
         {"x1", property_id::X1},
         {"x2", property_id::X2},
-        {"xlink:href", property_id::Href},
-        {"xml:space", property_id::White_Space},
+        {"xlink:href", property_id::href},
+        {"xml:space", property_id::white_space_},
         {"y", property_id::Y},
         {"y1", property_id::Y1},
         {"y2", property_id::Y2}
     };
 
-    auto it = std::lower_bound(table, std::end(table), name, [](const auto& item, const auto& name) { return item.name < name; });
-    if(it == std::end(table) || it->name != name)
+    auto it = std::lower_bound(table_, std::end(table_), name, [](const auto& item, const auto& name) { return item.name < name; });
+    if(it == std::end(table_) || it->name != name)
         return csspropertyid(name);
     return it->value;
 }
@@ -82,86 +82,86 @@ property_id csspropertyid(std::string_view name)
     static const struct {
         std::string_view name;
         property_id value;
-    } table[] = {
-        {"alignment-baseline", property_id::Alignment_Baseline},
-        {"background-color", property_id::Background_Color},
-        {"baseline-shift", property_id::Baseline_Shift},
-        {"clip-path", property_id::Clip_Path},
-        {"clip-rule", property_id::Clip_Rule},
-        {"color", property_id::Color},
-        {"direction", property_id::Direction},
-        {"display", property_id::Display},
-        {"dominant-baseline", property_id::Dominant_Baseline},
-        {"fill", property_id::Fill},
-        {"fill-opacity", property_id::Fill_Opacity},
-        {"fill-rule", property_id::Fill_Rule},
-        {"filter", property_id::Filter},
+    } table_[] = {
+        {"alignment-baseline", property_id::alignment_baseline_},
+        {"background-color", property_id::background_color},
+        {"baseline-shift", property_id::baseline_shift_},
+        {"clip-path", property_id::clip_path},
+        {"clip-rule", property_id::clip_rule},
+        {"color", property_id::color},
+        {"direction", property_id::direction},
+        {"display", property_id::display},
+        {"dominant-baseline", property_id::dominant_baseline_},
+        {"fill", property_id::fill},
+        {"fill-opacity", property_id::fill_opacity},
+        {"fill-rule", property_id::fill_rule_},
+        {"filter", property_id::filter},
         {"flood-color", property_id::Flood_Color},
         {"flood-opacity", property_id::Flood_Opacity},
-        {"font-family", property_id::Font_Family},
-        {"font-size", property_id::Font_Size},
-        {"font-style", property_id::Font_Style},
-        {"font-weight", property_id::Font_Weight},
-        {"letter-spacing", property_id::Letter_Spacing},
-        {"marker-end", property_id::Marker_End},
-        {"marker-mid", property_id::Marker_Mid},
-        {"marker-start", property_id::Marker_Start},
-        {"mask", property_id::Mask},
-        {"mask-type", property_id::Mask_Type},
-        {"mix-blend-mode", property_id::Mix_Blend_Mode},
-        {"opacity", property_id::Opacity},
-        {"overflow", property_id::Overflow},
-        {"pointer-events", property_id::Pointer_Events},
-        {"stop-color", property_id::Stop_Color},
-        {"stop-opacity", property_id::Stop_Opacity},
-        {"stroke", property_id::Stroke},
-        {"stroke-dasharray", property_id::Stroke_Dasharray},
-        {"stroke-dashoffset", property_id::Stroke_Dashoffset},
-        {"stroke-linecap", property_id::Stroke_Linecap},
-        {"stroke-linejoin", property_id::Stroke_Linejoin},
-        {"stroke-miterlimit", property_id::Stroke_Miterlimit},
-        {"stroke-opacity", property_id::Stroke_Opacity},
-        {"stroke-width", property_id::Stroke_Width},
-        {"text-anchor", property_id::Text_Anchor},
-        {"text-orientation", property_id::Text_Orientation},
+        {"font-family", property_id::font_family},
+        {"font-size", property_id::font_size},
+        {"font-style", property_id::font_style_},
+        {"font-weight", property_id::font_weight_},
+        {"letter-spacing", property_id::letter_spacing},
+        {"marker-end", property_id::marker_end},
+        {"marker-mid", property_id::marker_mid},
+        {"marker-start", property_id::marker_start},
+        {"mask", property_id::mask},
+        {"mask-type", property_id::mask_type_},
+        {"mix-blend-mode", property_id::mix_blend_mode_},
+        {"opacity", property_id::opacity},
+        {"overflow", property_id::overflow},
+        {"pointer-events", property_id::pointer_events_},
+        {"stop-color", property_id::stop_color},
+        {"stop-opacity", property_id::stop_opacity},
+        {"stroke", property_id::stroke},
+        {"stroke-dasharray", property_id::stroke_dasharray},
+        {"stroke-dashoffset", property_id::stroke_dashoffset},
+        {"stroke-linecap", property_id::stroke_linecap},
+        {"stroke-linejoin", property_id::stroke_linejoin},
+        {"stroke-miterlimit", property_id::stroke_miterlimit},
+        {"stroke-opacity", property_id::stroke_opacity},
+        {"stroke-width", property_id::stroke_width},
+        {"text-anchor", property_id::text_anchor_},
+        {"text-orientation", property_id::text_orientation_},
         {"transform-box", property_id::transform_box},
         {"transform-origin", property_id::transform_origin},
-        {"visibility", property_id::Visibility},
-        {"white-space", property_id::White_Space},
-        {"word-spacing", property_id::Word_Spacing},
-        {"writing-mode", property_id::Writing_Mode}
+        {"visibility", property_id::visibility},
+        {"white-space", property_id::white_space_},
+        {"word-spacing", property_id::word_spacing},
+        {"writing-mode", property_id::writing_mode_}
     };
 
-    auto it = std::lower_bound(table, std::end(table), name, [](const auto& item, const auto& name) { return item.name < name; });
-    if(it == std::end(table) || it->name != name)
+    auto it = std::lower_bound(table_, std::end(table_), name, [](const auto& item, const auto& name) { return item.name < name; });
+    if(it == std::end(table_) || it->name != name)
         return property_id::unknown;
     return it->value;
 }
 
 std::optional<stb::color> parse_color_value(std::string_view& input, const svg_layout_state* state)
 {
-    if(skipString(input, "currentColor")) {
-        return state->color();
+    if(skip_string(input, "currentColor")) {
+        return state->color_();
     }
 
-    color_t color;
-    int length = color_parse(&color, input.data(), input.length());
-    if(length == 0)
+    color_t color_;
+    int length_ = color_parse(&color_, input.data(), input.length());
+    if(length_ == 0)
         return std::nullopt;
-    input.remove_prefix(length);
+    input.remove_prefix(length_);
     // color_to_argb32() packs as 0xAARRGGBB (alpha high byte) -- a
     // different layout than stb::color::value()'s 0xRRGGBBAA, so this goes
     // through components, never through the raw packed value.
-    auto argb = color_to_argb32(&color);
+    auto argb = color_to_argb32(&color_);
     return stb::color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff);
 }
 
 stb::color parse_color(std::string_view input, const svg_layout_state* state, const stb::color& default_value)
 {
-    auto color = parse_color_value(input, state);
-    if(!color || !input.empty())
-        color = default_value;
-    return color.value();
+    auto color_ = parse_color_value(input, state);
+    if(!color_ || !input.empty())
+        color_ = default_value;
+    return color_.value();
 }
 
 stb::color parse_color_or_none(std::string_view input, const svg_layout_state* state, const stb::color& default_value)
@@ -173,7 +173,7 @@ stb::color parse_color_or_none(std::string_view input, const svg_layout_state* s
 
 bool parse_url_value(std::string_view& input, std::string& value)
 {
-    if(!skipString(input, "url")
+    if(!skip_string(input, "url")
         || !skip_optional_spaces(input)
         || !skip_delimiter(input, '(')
         || !skip_optional_spaces(input)) {
@@ -220,20 +220,20 @@ std::string parse_url(std::string_view input)
     return value;
 }
 
-Paint parse_paint(std::string_view input, const svg_layout_state* state, const stb::color& default_value)
+paint parse_paint(std::string_view input, const svg_layout_state* state, const stb::color& default_value)
 {
     std::string id;
     if(!parse_url_value(input, id))
-        return Paint(parse_color_or_none(input, state, default_value));
+        return paint(parse_color_or_none(input, state, default_value));
     if(skip_optional_spaces(input))
-        return Paint(id, parse_color_or_none(input, state, default_value));
-    return Paint(id, stb::color::transparent());
+        return paint(id, parse_color_or_none(input, state, default_value));
+    return paint(id, stb::color::transparent());
 }
 
 float parse_number_or_percentage(std::string_view input, bool allow_percentage, float default_value)
 {
     float value;
-    if(!parseNumber(input, value))
+    if(!parse_number(input, value))
         return default_value;
     if(allow_percentage) {
         if(skip_delimiter(input, '%'))
@@ -246,23 +246,23 @@ float parse_number_or_percentage(std::string_view input, bool allow_percentage, 
     return value;
 }
 
-Length parse_length(std::string_view input, length_negative_mode mode, const Length& default_value)
+length parse_length(std::string_view input, length_negative_mode mode, const length& default_value)
 {
-    Length value;
+    length value;
     if(!value.parse(input, mode))
         value = default_value;
     return value;
 }
 
-BaselineShift parse_baseline_shift(std::string_view input)
+baseline_shift parse_baseline_shift(std::string_view input)
 {
     if(input.compare("baseline") == 0)
-        return BaselineShift::Type::Baseline;
+        return baseline_shift::type::baseline;
     if(input.compare("sub") == 0)
-        return BaselineShift::Type::sub;
+        return baseline_shift::type::sub;
     if(input.compare("super") == 0)
-        return BaselineShift::Type::super;
-    return parse_length(input, length_negative_mode::allow, Length(0.f, length_units::None));
+        return baseline_shift::type::super;
+    return parse_length(input, length_negative_mode::allow, length(0.f, length_units::none));
 }
 
 length_list parse_dash_array(std::string_view input)
@@ -274,7 +274,7 @@ length_list parse_dash_array(std::string_view input)
         size_t count = 0;
         while(count < input.length() && input[count] != ',' && !IS_WS(input[count]))
             ++count;
-        Length value(0, length_units::None);
+        length value(0, length_units::none);
         if(!value.parse(input.substr(0, count), length_negative_mode::forbid))
             return length_list();
         input.remove_prefix(count);
@@ -283,269 +283,269 @@ length_list parse_dash_array(std::string_view input)
     return values;
 }
 
-Length parse_length_or_normal(std::string_view input)
+length parse_length_or_normal(std::string_view input)
 {
     if(input.compare("normal") == 0)
-        return Length(0, length_units::None);
-    return parse_length(input, length_negative_mode::allow, Length(0, length_units::None));
+        return length(0, length_units::none);
+    return parse_length(input, length_negative_mode::allow, length(0, length_units::none));
 }
 
 float parse_font_size(std::string_view input, const svg_layout_state* state)
 {
-    auto length = parse_length(input, length_negative_mode::forbid, Length(12, length_units::None));
-    if(length.units() == length_units::percent)
-        return length.value() * state->font_size() / 100.f;
-    if(length.units() == length_units::ex)
-        return length.value() * state->font_size() / 2.f;
-    if(length.units() == length_units::em)
-        return length.value() * state->font_size();
-    return length.value();
+    auto length_ = parse_length(input, length_negative_mode::forbid, length(12, length_units::none));
+    if(length_.units_() == length_units::percent)
+        return length_.value() * state->font_size() / 100.f;
+    if(length_.units_() == length_units::ex)
+        return length_.value() * state->font_size() / 2.f;
+    if(length_.units_() == length_units::em)
+        return length_.value() * state->font_size();
+    return length_.value();
 }
 
-Display parse_display(std::string_view input)
+display parse_display(std::string_view input)
 {
-    static const svg_enumeration_entry<Display> entries[] = {
-        {Display::Inline, "inline"},
-        {Display::None, "none"}
+    static const svg_enumeration_entry<display> entries[] = {
+        {display::inline_, "inline"},
+        {display::none, "none"}
     };
 
-    return parse_enum_value(input, entries, Display::Inline);
+    return parse_enum_value(input, entries, display::inline_);
 }
 
-Visibility parse_visibility(std::string_view input)
+visibility parse_visibility(std::string_view input)
 {
-    static const svg_enumeration_entry<Visibility> entries[] = {
-        {Visibility::visible, "visible"},
-        {Visibility::hidden, "hidden"},
-        {Visibility::collapse, "collapse"}
+    static const svg_enumeration_entry<visibility> entries[] = {
+        {visibility::visible, "visible"},
+        {visibility::hidden, "hidden"},
+        {visibility::collapse, "collapse"}
     };
 
-    return parse_enum_value(input, entries, Visibility::visible);
+    return parse_enum_value(input, entries, visibility::visible);
 }
 
-Overflow parse_overflow(std::string_view input)
+overflow parse_overflow(std::string_view input)
 {
-    static const svg_enumeration_entry<Overflow> entries[] = {
-        {Overflow::visible, "visible"},
-        {Overflow::hidden, "hidden"}
+    static const svg_enumeration_entry<overflow> entries[] = {
+        {overflow::visible, "visible"},
+        {overflow::hidden, "hidden"}
     };
 
-    return parse_enum_value(input, entries, Overflow::visible);
+    return parse_enum_value(input, entries, overflow::visible);
 }
 
-PointerEvents parse_pointer_events(std::string_view input)
+pointer_events parse_pointer_events(std::string_view input)
 {
-    static const svg_enumeration_entry<PointerEvents> entries[] = {
-        {PointerEvents::None,"none"},
-        {PointerEvents::Auto,"auto"},
-        {PointerEvents::Stroke,"stroke"},
-        {PointerEvents::Fill,"fill"},
-        {PointerEvents::painted,"painted"},
-        {PointerEvents::visible,"visible"},
-        {PointerEvents::visible_stroke,"visibleStroke"},
-        {PointerEvents::visible_fill,"visibleFill"},
-        {PointerEvents::visible_painted,"visiblePainted"},
-        {PointerEvents::BoundingBox,"bounding-box"},
-        {PointerEvents::All,"all"},
+    static const svg_enumeration_entry<pointer_events> entries[] = {
+        {pointer_events::none,"none"},
+        {pointer_events::auto_,"auto"},
+        {pointer_events::stroke,"stroke"},
+        {pointer_events::fill,"fill"},
+        {pointer_events::painted,"painted"},
+        {pointer_events::visible,"visible"},
+        {pointer_events::visible_stroke,"visibleStroke"},
+        {pointer_events::visible_fill,"visibleFill"},
+        {pointer_events::visible_painted,"visiblePainted"},
+        {pointer_events::bounding_box,"bounding-box"},
+        {pointer_events::all,"all"},
     };
 
-    return parse_enum_value(input, entries, PointerEvents::Auto);
+    return parse_enum_value(input, entries, pointer_events::auto_);
 }
 
-FontWeight parse_font_weight(std::string_view input)
+font_weight parse_font_weight(std::string_view input)
 {
-    static const svg_enumeration_entry<FontWeight> entries[] = {
-        {FontWeight::normal, "normal"},
-        {FontWeight::Bold, "bold"},
-        {FontWeight::Bold, "bolder"},
-        {FontWeight::normal, "lighter"},
-        {FontWeight::normal, "100"},
-        {FontWeight::normal, "200"},
-        {FontWeight::normal, "300"},
-        {FontWeight::normal, "400"},
-        {FontWeight::normal, "500"},
-        {FontWeight::Bold, "600"},
-        {FontWeight::Bold, "700"},
-        {FontWeight::Bold, "800"},
-        {FontWeight::Bold, "900"}
+    static const svg_enumeration_entry<font_weight> entries[] = {
+        {font_weight::normal, "normal"},
+        {font_weight::bold, "bold"},
+        {font_weight::bold, "bolder"},
+        {font_weight::normal, "lighter"},
+        {font_weight::normal, "100"},
+        {font_weight::normal, "200"},
+        {font_weight::normal, "300"},
+        {font_weight::normal, "400"},
+        {font_weight::normal, "500"},
+        {font_weight::bold, "600"},
+        {font_weight::bold, "700"},
+        {font_weight::bold, "800"},
+        {font_weight::bold, "900"}
     };
 
-    return parse_enum_value(input, entries, FontWeight::normal);
+    return parse_enum_value(input, entries, font_weight::normal);
 }
 
-FontStyle parse_font_style(std::string_view input)
+font_style parse_font_style(std::string_view input)
 {
-    static const svg_enumeration_entry<FontStyle> entries[] = {
-        {FontStyle::normal, "normal"},
-        {FontStyle::Italic, "italic"},
-        {FontStyle::Italic, "oblique"}
+    static const svg_enumeration_entry<font_style> entries[] = {
+        {font_style::normal, "normal"},
+        {font_style::italic, "italic"},
+        {font_style::italic, "oblique"}
     };
 
-    return parse_enum_value(input, entries, FontStyle::normal);
+    return parse_enum_value(input, entries, font_style::normal);
 }
 
-AlignmentBaseline parse_alignment_baseline(std::string_view input)
+alignment_baseline parse_alignment_baseline(std::string_view input)
 {
-    static const svg_enumeration_entry<AlignmentBaseline> entries[] = {
-        {AlignmentBaseline::Auto, "auto"},
-        {AlignmentBaseline::Baseline, "baseline"},
-        {AlignmentBaseline::before_edge, "before-edge"},
-        {AlignmentBaseline::text_before_edge, "text-before-edge"},
-        {AlignmentBaseline::middle, "middle"},
-        {AlignmentBaseline::central, "central"},
-        {AlignmentBaseline::after_edge, "after-edge"},
-        {AlignmentBaseline::text_after_edge, "text-after-edge"},
-        {AlignmentBaseline::ideographic, "ideographic"},
-        {AlignmentBaseline::alphabetic, "alphabetic"},
-        {AlignmentBaseline::hanging, "hanging"},
-        {AlignmentBaseline::mathematical, "mathematical"}
+    static const svg_enumeration_entry<alignment_baseline> entries[] = {
+        {alignment_baseline::auto_, "auto"},
+        {alignment_baseline::baseline, "baseline"},
+        {alignment_baseline::before_edge, "before-edge"},
+        {alignment_baseline::text_before_edge, "text-before-edge"},
+        {alignment_baseline::middle, "middle"},
+        {alignment_baseline::central, "central"},
+        {alignment_baseline::after_edge, "after-edge"},
+        {alignment_baseline::text_after_edge, "text-after-edge"},
+        {alignment_baseline::ideographic, "ideographic"},
+        {alignment_baseline::alphabetic, "alphabetic"},
+        {alignment_baseline::hanging, "hanging"},
+        {alignment_baseline::mathematical, "mathematical"}
     };
 
-    return parse_enum_value(input, entries, AlignmentBaseline::Auto);
+    return parse_enum_value(input, entries, alignment_baseline::auto_);
 }
 
-DominantBaseline parse_dominant_baseline(std::string_view input)
+dominant_baseline parse_dominant_baseline(std::string_view input)
 {
-    static const svg_enumeration_entry<DominantBaseline> entries[] = {
-        {DominantBaseline::Auto, "auto"},
-        {DominantBaseline::use_script, "use-script"},
-        {DominantBaseline::no_change, "no-change"},
-        {DominantBaseline::reset_size, "reset-size"},
-        {DominantBaseline::ideographic, "ideographic"},
-        {DominantBaseline::alphabetic, "alphabetic"},
-        {DominantBaseline::hanging, "hanging"},
-        {DominantBaseline::mathematical, "mathematical"},
-        {DominantBaseline::central, "central"},
-        {DominantBaseline::middle, "middle"},
-        {DominantBaseline::text_after_edge, "text-after-edge"},
-        {DominantBaseline::text_before_edge, "text-before-edge"}
+    static const svg_enumeration_entry<dominant_baseline> entries[] = {
+        {dominant_baseline::auto_, "auto"},
+        {dominant_baseline::use_script, "use-script"},
+        {dominant_baseline::no_change, "no-change"},
+        {dominant_baseline::reset_size, "reset-size"},
+        {dominant_baseline::ideographic, "ideographic"},
+        {dominant_baseline::alphabetic, "alphabetic"},
+        {dominant_baseline::hanging, "hanging"},
+        {dominant_baseline::mathematical, "mathematical"},
+        {dominant_baseline::central, "central"},
+        {dominant_baseline::middle, "middle"},
+        {dominant_baseline::text_after_edge, "text-after-edge"},
+        {dominant_baseline::text_before_edge, "text-before-edge"}
     };
 
-    return parse_enum_value(input, entries, DominantBaseline::Auto);
+    return parse_enum_value(input, entries, dominant_baseline::auto_);
 }
 
-Direction parse_direction(std::string_view input)
+direction parse_direction(std::string_view input)
 {
-    static const svg_enumeration_entry<Direction> entries[] = {
-        {Direction::ltr, "ltr"},
-        {Direction::rtl, "rtl"}
+    static const svg_enumeration_entry<direction> entries[] = {
+        {direction::ltr, "ltr"},
+        {direction::rtl, "rtl"}
     };
 
-    return parse_enum_value(input, entries, Direction::ltr);
+    return parse_enum_value(input, entries, direction::ltr);
 }
 
-WritingMode parse_writing_mode(std::string_view input)
+writing_mode parse_writing_mode(std::string_view input)
 {
-    static const svg_enumeration_entry<WritingMode> entries[] = {
-        {WritingMode::Horizontal, "horizontal-tb"},
-        {WritingMode::vertical, "vertical-rl"},
-        {WritingMode::vertical, "vertical-lr"},
-        {WritingMode::Horizontal, "lr-tb"},
-        {WritingMode::Horizontal, "lr"},
-        {WritingMode::Horizontal, "rl-tb"},
-        {WritingMode::Horizontal, "rl"},
-        {WritingMode::vertical, "tb-rl"},
-        {WritingMode::vertical, "tb"}
+    static const svg_enumeration_entry<writing_mode> entries[] = {
+        {writing_mode::horizontal, "horizontal-tb"},
+        {writing_mode::vertical, "vertical-rl"},
+        {writing_mode::vertical, "vertical-lr"},
+        {writing_mode::horizontal, "lr-tb"},
+        {writing_mode::horizontal, "lr"},
+        {writing_mode::horizontal, "rl-tb"},
+        {writing_mode::horizontal, "rl"},
+        {writing_mode::vertical, "tb-rl"},
+        {writing_mode::vertical, "tb"}
     };
 
-    return parse_enum_value(input, entries, WritingMode::Horizontal);
+    return parse_enum_value(input, entries, writing_mode::horizontal);
 }
 
-TextOrientation parse_text_orientation(std::string_view input)
+text_orientation parse_text_orientation(std::string_view input)
 {
-    static const svg_enumeration_entry<TextOrientation> entries[] = {
-        {TextOrientation::mixed, "mixed"},
-        {TextOrientation::upright, "upright"}
+    static const svg_enumeration_entry<text_orientation> entries[] = {
+        {text_orientation::mixed, "mixed"},
+        {text_orientation::upright, "upright"}
     };
 
-    return parse_enum_value(input, entries, TextOrientation::mixed);
+    return parse_enum_value(input, entries, text_orientation::mixed);
 }
 
-TextAnchor parse_text_anchor(std::string_view input)
+text_anchor parse_text_anchor(std::string_view input)
 {
-    static const svg_enumeration_entry<TextAnchor> entries[] = {
-        {TextAnchor::Start, "start"},
-        {TextAnchor::middle, "middle"},
-        {TextAnchor::End, "end"}
+    static const svg_enumeration_entry<text_anchor> entries[] = {
+        {text_anchor::start, "start"},
+        {text_anchor::middle, "middle"},
+        {text_anchor::end, "end"}
     };
 
-    return parse_enum_value(input, entries, TextAnchor::Start);
+    return parse_enum_value(input, entries, text_anchor::start);
 }
 
-WhiteSpace parse_white_space(std::string_view input)
+white_space parse_white_space(std::string_view input)
 {
-    static const svg_enumeration_entry<WhiteSpace> entries[] = {
-        {WhiteSpace::Default, "default"},
-        {WhiteSpace::preserve, "preserve"},
-        {WhiteSpace::Default, "normal"},
-        {WhiteSpace::Default, "nowrap"},
-        {WhiteSpace::Default, "pre-line"},
-        {WhiteSpace::preserve, "pre-wrap"},
-        {WhiteSpace::preserve, "pre"}
+    static const svg_enumeration_entry<white_space> entries[] = {
+        {white_space::default_, "default"},
+        {white_space::preserve, "preserve"},
+        {white_space::default_, "normal"},
+        {white_space::default_, "nowrap"},
+        {white_space::default_, "pre-line"},
+        {white_space::preserve, "pre-wrap"},
+        {white_space::preserve, "pre"}
     };
 
-    return parse_enum_value(input, entries, WhiteSpace::Default);
+    return parse_enum_value(input, entries, white_space::default_);
 }
 
-MixBlendMode parse_mix_blend_mode(std::string_view input)
+mix_blend_mode parse_mix_blend_mode(std::string_view input)
 {
-    static const svg_enumeration_entry<MixBlendMode> entries[] = {
-        {MixBlendMode::normal, "normal"},
-        {MixBlendMode::Multiply, "multiply"},
-        {MixBlendMode::screen, "screen"},
-        {MixBlendMode::darken, "darken"},
-        {MixBlendMode::lighten, "lighten"},
-        {MixBlendMode::difference, "difference"},
-        {MixBlendMode::exclusion, "exclusion"}
+    static const svg_enumeration_entry<mix_blend_mode> entries[] = {
+        {mix_blend_mode::normal, "normal"},
+        {mix_blend_mode::multiply, "multiply"},
+        {mix_blend_mode::screen, "screen"},
+        {mix_blend_mode::darken, "darken"},
+        {mix_blend_mode::lighten, "lighten"},
+        {mix_blend_mode::difference, "difference"},
+        {mix_blend_mode::exclusion, "exclusion"}
     };
 
     // CSS keywords are ASCII case-insensitive
     std::string keyword;
     for(char ch : input)
         keyword.push_back(char(std::tolower(static_cast<unsigned char>(ch))));
-    return parse_enum_value(keyword, entries, MixBlendMode::normal);
+    return parse_enum_value(keyword, entries, mix_blend_mode::normal);
 }
 
-MaskType parse_mask_type(std::string_view input)
+mask_type parse_mask_type(std::string_view input)
 {
-    static const svg_enumeration_entry<MaskType> entries[] = {
-        {MaskType::luminance, "luminance"},
-        {MaskType::Alpha, "alpha"}
+    static const svg_enumeration_entry<mask_type> entries[] = {
+        {mask_type::luminance, "luminance"},
+        {mask_type::alpha, "alpha"}
     };
 
-    return parse_enum_value(input, entries, MaskType::luminance);
+    return parse_enum_value(input, entries, mask_type::luminance);
 }
 
-FillRule parse_fill_rule(std::string_view input)
+fill_rule parse_fill_rule(std::string_view input)
 {
-    static const svg_enumeration_entry<FillRule> entries[] = {
-        {FillRule::NonZero, "nonzero"},
-        {FillRule::EvenOdd, "evenodd"}
+    static const svg_enumeration_entry<fill_rule> entries[] = {
+        {fill_rule::non_zero, "nonzero"},
+        {fill_rule::even_odd, "evenodd"}
     };
 
-    return parse_enum_value(input, entries, FillRule::NonZero);
+    return parse_enum_value(input, entries, fill_rule::non_zero);
 }
 
-LineCap parse_line_cap(std::string_view input)
+line_cap parse_line_cap(std::string_view input)
 {
-    static const svg_enumeration_entry<LineCap> entries[] = {
-        {LineCap::Butt, "butt"},
-        {LineCap::Round, "round"},
-        {LineCap::Square, "square"}
+    static const svg_enumeration_entry<line_cap> entries[] = {
+        {line_cap::butt, "butt"},
+        {line_cap::round, "round"},
+        {line_cap::square, "square"}
     };
 
-    return parse_enum_value(input, entries, LineCap::Butt);
+    return parse_enum_value(input, entries, line_cap::butt);
 }
 
-LineJoin parse_line_join(std::string_view input)
+line_join parse_line_join(std::string_view input)
 {
-    static const svg_enumeration_entry<LineJoin> entries[] = {
-        {LineJoin::Miter, "miter"},
-        {LineJoin::Round, "round"},
-        {LineJoin::Bevel, "bevel"}
+    static const svg_enumeration_entry<line_join> entries[] = {
+        {line_join::miter, "miter"},
+        {line_join::round, "round"},
+        {line_join::bevel, "bevel"}
     };
 
-    return parse_enum_value(input, entries, LineJoin::Miter);
+    return parse_enum_value(input, entries, line_join::miter);
 }
 
 element_id elementid(std::string_view name)
@@ -553,11 +553,11 @@ element_id elementid(std::string_view name)
     static const struct {
         std::string_view name;
         element_id value;
-    } table[] = {
+    } table_[] = {
         {"a", element_id::G},
-        {"circle", element_id::Circle},
-        {"clipPath", element_id::ClipPath},
-        {"defs", element_id::Defs},
+        {"circle", element_id::circle},
+        {"clipPath", element_id::clip_path},
+        {"defs", element_id::defs},
         {"ellipse", element_id::ellipse},
         {"feComposite", element_id::fe_composite},
         {"feDropShadow", element_id::fe_drop_shadow},
@@ -566,32 +566,32 @@ element_id elementid(std::string_view name)
         {"feMerge", element_id::fe_merge},
         {"feMergeNode", element_id::fe_merge_node},
         {"feOffset", element_id::fe_offset},
-        {"filter", element_id::Filter},
+        {"filter", element_id::filter},
         {"foreignObject", element_id::ForeignObject},
         {"g", element_id::G},
-        {"image", element_id::Image},
-        {"line", element_id::Line},
+        {"image", element_id::image},
+        {"line", element_id::line},
         {"linearGradient", element_id::linear_gradient},
         {"marker", element_id::marker},
-        {"mask", element_id::Mask},
-        {"path", element_id::Path},
-        {"pattern", element_id::Pattern},
+        {"mask", element_id::mask},
+        {"path", element_id::path},
+        {"pattern", element_id::pattern},
         {"polygon", element_id::polygon},
         {"polyline", element_id::polyline},
         {"radialGradient", element_id::radial_gradient},
-        {"rect", element_id::Rect},
-        {"stop", element_id::Stop},
-        {"style", element_id::Style},
-        {"svg", element_id::Svg},
-        {"switch", element_id::Switch},
+        {"rect", element_id::rect},
+        {"stop", element_id::stop},
+        {"style", element_id::style},
+        {"svg", element_id::svg},
+        {"switch", element_id::switch_},
         {"symbol", element_id::symbol},
-        {"text", element_id::Text},
+        {"text", element_id::text},
         {"tspan", element_id::tspan},
         {"use", element_id::use}
     };
 
-    auto it = std::lower_bound(table, std::end(table), name, [](const auto& item, const auto& name) { return item.name < name; });
-    if(it == std::end(table) || it->name != name)
+    auto it = std::lower_bound(table_, std::end(table_), name, [](const auto& item, const auto& name) { return item.name < name; });
+    if(it == std::end(table_) || it->name != name)
         return element_id::unknown;
     return it->value;
 }

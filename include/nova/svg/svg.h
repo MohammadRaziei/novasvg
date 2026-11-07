@@ -236,7 +236,7 @@ public:
      * @param backgroundColor The background color to render onto.
      * @return The rendered image, or an empty image if the el has nothing to draw or memory ran out.
      */
-    stb::image render_to_image(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
+    stb::image render_to_image(int width = -1, int height = -1, const stb::color& background_color = stb::color(0, 0, 0, 0)) const;
 
     /**
      * @internal Premultiplied-ARGB32 rendering target (pixmap is not part of the public API; use the
@@ -247,7 +247,7 @@ public:
     /**
      * @internal See render(pixmap&).
      */
-    pixmap render_to_pixmap(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
+    pixmap render_to_pixmap(int width = -1, int height = -1, const stb::color& background_color = stb::color(0, 0, 0, 0)) const;
 
     /**
      * @brief Retrieves the local transformation matrix of the el.
@@ -265,19 +265,19 @@ public:
      * @brief Retrieves the local bounding box of the el.
      * @return A Box representing the bounding box after applying local transformations.
      */
-    Box local_bounding_box() const;
+    box local_bounding_box() const;
 
     /**
      * @brief Retrieves the global bounding box of the el.
      * @return A Box representing the bounding box after applying global transformations.
      */
-    Box global_bounding_box() const;
+    box global_bounding_box() const;
 
     /**
      * @brief Retrieves the bounding box of the el without any transformations.
      * @return A Box representing the bounding box of the el without any transformations applied.
      */
-    Box bounding_box() const;
+    box bounding_box() const;
 
     /**
      * @brief Returns the child nodes of this nd.
@@ -325,7 +325,7 @@ public:
      * @param length The length of the string in bytes.
      * @return A pointer to the loaded `document`, or `nullptr` on failure.
      */
-    static std::unique_ptr<document> load_data(const char* data, size_t length);
+    static std::unique_ptr<document> load_data(const char* data, size_t length_);
 
     /**
      * @brief Applies a CSS stylesheet to the dom.
@@ -356,7 +356,7 @@ public:
      * @brief Returns the smallest rectangle that encloses the dom content.
      * @return A Box representing the bounding box of the dom.
      */
-    Box bounding_box() const;
+    box bounding_box() const;
 
     /**
      * @brief Updates the layout of the dom if needed.
@@ -388,7 +388,7 @@ public:
      * @param backgroundColor The background color to render onto.
      * @return The rendered image, or an empty image if the dom has nothing to draw or memory ran out.
      */
-    stb::image render_to_image(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
+    stb::image render_to_image(int width = -1, int height = -1, const stb::color& background_color = stb::color(0, 0, 0, 0)) const;
 
     /**
      * @internal Premultiplied-ARGB32 rendering target (pixmap is not part of the public API; use the
@@ -399,7 +399,7 @@ public:
     /**
      * @internal See render(pixmap&).
      */
-    pixmap render_to_pixmap(int width = -1, int height = -1, const stb::color& backgroundColor = stb::color(0, 0, 0, 0)) const;
+    pixmap render_to_pixmap(int width = -1, int height = -1, const stb::color& background_color = stb::color(0, 0, 0, 0)) const;
 
     /**
      * @brief How render_to_pdf() writes the page.
@@ -465,7 +465,7 @@ private:
     document(const document&) = delete;
     document& operator=(const document&) = delete;
     svg_root_element* root_element(bool layout_if_needed = false) const;
-    bool parse(const char* data, size_t length);
+    bool parse(const char* data, size_t length_);
     std::unique_ptr<svg_root_element> m_root_element;
     std::shared_ptr<foreign_object_renderer> m_foreign_object_renderer = default_foreign_object_renderer();
     friend class svg_uri_reference;

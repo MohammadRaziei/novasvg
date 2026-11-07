@@ -17,20 +17,20 @@
 
 namespace nova::vg {
 
-class FontFace {
+class font_face {
 public:
-    FontFace() = default;
-    explicit FontFace(font_face_t* face);
-    FontFace(const void* data, size_t length, destroy_func_t destroy_func, void* closure);
-    FontFace(const char* filename);
-    FontFace(const FontFace& face);
-    FontFace(FontFace&& face);
-    ~FontFace();
+    font_face() = default;
+    explicit font_face(font_face_t* face);
+    font_face(const void* data, size_t length_, destroy_func_t destroy_func, void* closure);
+    font_face(const char* filename);
+    font_face(const font_face& face);
+    font_face(font_face&& face);
+    ~font_face();
 
-    FontFace& operator=(const FontFace& face);
-    FontFace& operator=(FontFace&& face);
+    font_face& operator=(const font_face& face);
+    font_face& operator=(font_face&& face);
 
-    void swap(FontFace& face);
+    void swap(font_face& face);
 
     bool is_null() const { return m_face == nullptr; }
     font_face_t* get() const { return m_face; }
@@ -45,7 +45,7 @@ public:
     // which needs exactly this to replace its own hand-rolled TTF-table
     // parser). Font::measureText()/ascent()/etc. remain the right choice
     // whenever a single already-known pixel size is enough.
-    float unitsPerEm() const;
+    float units_per_em() const;
     float ascent_units() const;
     float descent_units() const;
     float advance_width_units(char32_t codepoint) const;
@@ -88,11 +88,11 @@ private:
 // compiled into the library (see default_font.h); the face matching `bold` / `italic` is returned.
 // A null face when built with NOVA_DISABLE_EMBEDDED_FONT.
 // Defined in svgparser.hpp, next to the base64 decoding it shares with @font-face.
-FontFace embedded_fallback_font(bool bold = false, bool italic = false);
+font_face embedded_fallback_font(bool bold = false, bool italic = false);
 
-class FontFaceCache {
+class font_face_cache {
 public:
-    bool add_font_face(const std::string& family, bool bold, bool italic, const FontFace& face);
+    bool add_font_face(const std::string& family, bool bold, bool italic, const font_face& face);
 
     // Local-only lookup: just this cache's literal-name scan (system
     // fonts by their own internal name, plus anything explicitly
@@ -102,11 +102,11 @@ public:
     // by svg_layout_state::font()'s per-name stack loop so an embedded
     // font is found (and wins) before falling through to guessing at a
     // substitute for names later in the stack.
-    FontFace get_font_face_local(const std::string& family, bool bold, bool italic) const;
+    font_face get_font_face_local(const std::string& family, bool bold, bool italic) const;
 
     // getFontFaceLocal(), then the hardcoded generic-family table
     // ("sans-serif" -> "DejaVu Sans" and similar) as a last resort.
-    FontFace get_font_face(const std::string& family, bool bold, bool italic) const;
+    font_face get_font_face(const std::string& family, bool bold, bool italic) const;
 
     // Resolves a CSS-style comma-separated family stack (e.g.
     // `"trebuchet ms", verdana, arial, sans-serif`) the way a browser walks
@@ -118,25 +118,25 @@ public:
     // A name nothing matches is skipped, not guessed at; returns a null
     // face when the whole stack is unresolved. A generic keyword nothing on
     // the machine satisfies resolves to the embedded fallback font.
-    FontFace get_font_face_for_family_stack(const std::string& familyStack, bool bold, bool italic) const;
+    font_face get_font_face_for_family_stack(const std::string& family_stack, bool bold, bool italic) const;
 
 private:
-    FontFaceCache();
+    font_face_cache();
     font_face_cache_t* m_cache;
-    friend FontFaceCache* fontFaceCache();
+    friend font_face_cache* font_face_cache_();
 };
 
-FontFaceCache* fontFaceCache();
+font_face_cache* font_face_cache_();
 
-class Font {
+class font {
 public:
-    Font() = default;
-    Font(const FontFace& face, float size);
+    font() = default;
+    font(const font_face& face, float size_);
 
     float ascent() const { return m_ascent; }
     float descent() const { return m_descent; }
     float height() const { return m_ascent - m_descent; }
-    float lineGap() const { return m_line_gap; }
+    float line_gap() const { return m_line_gap; }
     float x_height() const;
 
     float measure_text(const std::u32string_view& text) const;
@@ -159,13 +159,13 @@ public:
     };
     std::vector<glyph_box> glyph_boxes(const std::u32string_view& text) const;
 
-    const FontFace& face() const { return m_face; }
-    float size() const { return m_size; }
+    const font_face& face() const { return m_face; }
+    float size_() const { return m_size; }
 
     bool is_null() const { return m_size <= 0.f || m_face.is_null(); }
 
 private:
-    FontFace m_face;
+    font_face m_face;
     float m_size = 0.f;
     float m_ascent = 0.f;
     float m_descent = 0.f;
@@ -193,7 +193,7 @@ bool add_font_face_from_file(const char* family, bool bold, bool italic, const c
 * @param closure User-defined pointer passed to the `destroy_func` callback.
 * @return `true` if the font face was successfully added to the cache, `false` otherwise.
 */
-bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length, novasvg_destroy_func_t destroy_func, void* closure);
+bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length_, novasvg_destroy_func_t destroy_func, void* closure);
 
 } // namespace nova::vg
 
@@ -220,13 +220,13 @@ namespace nova::vg {
 
 
 
-FontFaceCache* fontFaceCache();
+font_face_cache* font_face_cache_();
 
 
 
 
 bool add_font_face_from_file(const char* family, bool bold, bool italic, const char* filename);
 
-bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length, destroy_func_t destroy_func, void* closure);
+bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length_, destroy_func_t destroy_func, void* closure);
 
 } // namespace nova::vg

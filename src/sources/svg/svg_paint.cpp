@@ -10,13 +10,13 @@ svg_blend_info::svg_blend_info(const svg_element* el)
     , m_masker(el->masker())
     , m_filter(el->filter_element())
     , m_opacity(el->opacity())
-    , m_mixBlendMode(el->mixBlendMode())
+    , m_mix_blend_mode(el->mix_blend_mode_())
 {
 }
 
 bool svg_blend_info::requires_compositing(svg_render_mode mode) const
 {
-    return (m_clipper && m_clipper->requires_masking()) || (mode == svg_render_mode::painting && (m_masker || m_filter || m_opacity < 1.f || m_mixBlendMode != MixBlendMode::normal));
+    return (m_clipper && m_clipper->requires_masking()) || (mode == svg_render_mode::painting && (m_masker || m_filter || m_opacity < 1.f || m_mix_blend_mode != mix_blend_mode::normal));
 }
 
 bool svg_render_state::has_cycle_reference(const svg_element* el) const
@@ -30,7 +30,7 @@ bool svg_render_state::has_cycle_reference(const svg_element* el) const
     return false;
 }
 
-void svg_render_state::beginGroup(const svg_blend_info& blend_info)
+void svg_render_state::begin_group(const svg_blend_info& blend_info)
 {
     auto requires_compositing = blend_info.requires_compositing(m_mode);
     pdf_canvas* pdf = dynamic_cast<pdf_canvas*>(m_canvas.get());
@@ -51,8 +51,8 @@ void svg_render_state::beginGroup(const svg_blend_info& blend_info)
             }
             bounding_box.intersect(pdf->extents());
             m_layer_scale = pdf->raster_scale();
-            m_canvas = raster_canvas::create(Rect(bounding_box.x * m_layer_scale, bounding_box.y * m_layer_scale, bounding_box.w * m_layer_scale, bounding_box.h * m_layer_scale));
-            m_current_transform = Transform::scaled(m_layer_scale, m_layer_scale) * m_current_transform;
+            m_canvas = raster_canvas::create(rect(bounding_box.x * m_layer_scale, bounding_box.y * m_layer_scale, bounding_box.w * m_layer_scale, bounding_box.h * m_layer_scale));
+            m_current_transform = transform::scaled(m_layer_scale, m_layer_scale) * m_current_transform;
             m_layer = layer_kind::raster_in_pdf;
         }
         return;
@@ -75,7 +75,7 @@ void svg_render_state::beginGroup(const svg_blend_info& blend_info)
     }
 }
 
-void svg_render_state::endGroup(const svg_blend_info& blend_info)
+void svg_render_state::end_group(const svg_blend_info& blend_info)
 {
     if(m_layer == layer_kind::none) {
         m_canvas->restore();
@@ -83,22 +83,22 @@ void svg_render_state::endGroup(const svg_blend_info& blend_info)
     }
 
     // the finished group is blended into what is already painted under it, with its mix-blend-mode
-    BlendMode blendMode = BlendMode::src_over;
+    blend_mode blend_mode_ = blend_mode::src_over;
     if(m_mode == svg_render_mode::painting) {
-        switch(blend_info.mixBlendMode()) {
-        case MixBlendMode::Multiply: blendMode = BlendMode::Multiply; break;
-        case MixBlendMode::screen: blendMode = BlendMode::screen; break;
-        case MixBlendMode::darken: blendMode = BlendMode::darken; break;
-        case MixBlendMode::lighten: blendMode = BlendMode::lighten; break;
-        case MixBlendMode::difference: blendMode = BlendMode::difference; break;
-        case MixBlendMode::exclusion: blendMode = BlendMode::exclusion; break;
-        case MixBlendMode::normal: break;
+        switch(blend_info.mix_blend_mode_()) {
+        case mix_blend_mode::multiply: blend_mode_ = blend_mode::multiply; break;
+        case mix_blend_mode::screen: blend_mode_ = blend_mode::screen; break;
+        case mix_blend_mode::darken: blend_mode_ = blend_mode::darken; break;
+        case mix_blend_mode::lighten: blend_mode_ = blend_mode::lighten; break;
+        case mix_blend_mode::difference: blend_mode_ = blend_mode::difference; break;
+        case mix_blend_mode::exclusion: blend_mode_ = blend_mode::exclusion; break;
+        case mix_blend_mode::normal: break;
         }
     }
 
-    auto opacity = m_mode == svg_render_mode::Clipping ? 1.f : blend_info.opacity();
+    auto opacity = m_mode == svg_render_mode::clipping ? 1.f : blend_info.opacity();
     if(m_layer == layer_kind::pdf_group) {
-        static_cast<pdf_canvas&>(*m_canvas).end_group(blendMode, opacity);
+        static_cast<pdf_canvas&>(*m_canvas).end_group(blend_mode_, opacity);
         m_layer = layer_kind::none;
         return;
     }
@@ -115,12 +115,12 @@ void svg_render_state::endGroup(const svg_blend_info& blend_info)
     if(m_layer == layer_kind::raster_in_pdf) {
         auto& layer = static_cast<raster_canvas&>(*m_canvas);
         auto& page = static_cast<pdf_canvas&>(*m_parent->m_canvas);
-        const Rect e = layer.extents();
-        page.draw_raster_group(pixmap(surface_reference(layer.surface())), Rect(e.x / m_layer_scale, e.y / m_layer_scale, e.w / m_layer_scale, e.h / m_layer_scale), blendMode, opacity);
+        const rect e = layer.extents();
+        page.draw_raster_group(pixmap(surface_reference(layer.surface())), rect(e.x / m_layer_scale, e.y / m_layer_scale, e.w / m_layer_scale, e.h / m_layer_scale), blend_mode_, opacity);
         return;
     }
 
-    static_cast<raster_canvas&>(*m_parent->m_canvas).blend_canvas(static_cast<raster_canvas&>(*m_canvas), blendMode, opacity);
+    static_cast<raster_canvas&>(*m_parent->m_canvas).blend_canvas(static_cast<raster_canvas&>(*m_canvas), blend_mode_, opacity);
 }
 
 svg_paint_element::svg_paint_element(document* dom, element_id id)
@@ -129,8 +129,8 @@ svg_paint_element::svg_paint_element(document* dom, element_id id)
 }
 
 svg_stop_element::svg_stop_element(document* dom)
-    : svg_element(dom, element_id::Stop)
-    , m_offset(property_id::Offset, 0.f)
+    : svg_element(dom, element_id::stop)
+    , m_offset(property_id::offset, 0.f)
 {
     add_property(m_offset);
 }
@@ -144,9 +144,9 @@ void svg_stop_element::layout_element(const svg_layout_state& state)
 
 GradientStop svg_stop_element::gradientStop(float opacity) const
 {
-    stb::color stopColor = with_alpha(m_stop_color, m_stop_opacity * opacity);
+    stb::color stop_color = with_alpha(m_stop_color, m_stop_opacity * opacity);
     GradientStop gradientStop = {
-        m_offset.value(), { red_f(stopColor), green_f(stopColor), blue_f(stopColor), alpha_f(stopColor) }
+        m_offset.value(), { red_f(stop_color), green_f(stop_color), blue_f(stop_color), alpha_f(stop_color) }
     };
 
     return gradientStop;
@@ -156,7 +156,7 @@ svg_gradient_element::svg_gradient_element(document* dom, element_id id)
     : svg_paint_element(dom, id)
     , svg_uri_reference(this)
     , m_gradient_transform(property_id::GradientTransform)
-    , m_gradient_units(property_id::GradientUnits, Units::object_bounding_box)
+    , m_gradient_units(property_id::GradientUnits, units::object_bounding_box)
     , m_spread_method(property_id::SpreadMethod, SpreadMethod::pad)
 {
     add_property(m_gradient_transform);
@@ -174,7 +174,7 @@ void svg_gradient_element::collect_gradient_attributes(svg_gradient_attributes& 
         attributes.set_gradient_units(this);
     if(!attributes.has_gradient_content_element()) {
         for(const auto& child : children()) {
-            if(auto el = to_svg_element(child); el && el->id() == element_id::Stop) {
+            if(auto el = to_svg_element(child); el && el->id() == element_id::stop) {
                 attributes.set_gradient_content_element(this);
                 break;
             }
@@ -184,9 +184,9 @@ void svg_gradient_element::collect_gradient_attributes(svg_gradient_attributes& 
 
 svg_linear_gradient_element::svg_linear_gradient_element(document* dom)
     : svg_gradient_element(dom, element_id::linear_gradient)
-    , m_x1(property_id::X1, length_direction::Horizontal, length_negative_mode::allow, 0.f, length_units::percent)
+    , m_x1(property_id::X1, length_direction::horizontal, length_negative_mode::allow, 0.f, length_units::percent)
     , m_y1(property_id::Y1, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::percent)
-    , m_x2(property_id::X2, length_direction::Horizontal, length_negative_mode::allow, 100.f, length_units::percent)
+    , m_x2(property_id::X2, length_direction::horizontal, length_negative_mode::allow, 100.f, length_units::percent)
     , m_y2(property_id::Y2, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::percent)
 {
     add_property(m_x1);
@@ -237,7 +237,7 @@ GradientStops build_gradient_stops(const svg_gradient_element* el, float opacity
     gradientStops.reserve(children.size());
     for(const auto& child : children) {
         auto child_element = to_svg_element(child);
-        if(child_element && child_element->id() == element_id::Stop) {
+        if(child_element && child_element->id() == element_id::stop) {
             auto stop_element = static_cast<svg_stop_element*>(child_element);
             gradientStops.push_back(stop_element->gradientStop(opacity));
         }
@@ -260,16 +260,16 @@ bool svg_linear_gradient_element::apply_paint(svg_render_state& state, float opa
     auto y2 = lengthContext.value_for_length(attributes.y2());
     if(gradientStops.size() == 1 || (x1 == x2 && y1 == y2)) {
         const auto& last_stop = gradientStops.back();
-        state->set_color(last_stop.color.r, last_stop.color.g, last_stop.color.b, last_stop.color.a);
+        state->set_color(last_stop.color_.r, last_stop.color_.g, last_stop.color_.b, last_stop.color_.a);
         return true;
     }
 
     auto spreadMethod = attributes.spreadMethod();
     auto gradientUnits = attributes.gradientUnits();
     auto gradientTransform = attributes.gradientTransform();
-    if(gradientUnits == Units::object_bounding_box) {
+    if(gradientUnits == units::object_bounding_box) {
         auto bbox = state.fill_bounding_box();
-        gradientTransform.post_multiply(Transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
+        gradientTransform.post_multiply(transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
     }
 
     state->set_linear_gradient(x1, y1, x2, y2, spreadMethod, gradientStops, gradientTransform);
@@ -278,11 +278,11 @@ bool svg_linear_gradient_element::apply_paint(svg_render_state& state, float opa
 
 svg_radial_gradient_element::svg_radial_gradient_element(document* dom)
     : svg_gradient_element(dom, element_id::radial_gradient)
-    , m_cx(property_id::Cx, length_direction::Horizontal, length_negative_mode::allow, 50.f, length_units::percent)
-    , m_cy(property_id::Cy, length_direction::vertical, length_negative_mode::allow, 50.f, length_units::percent)
+    , m_cx(property_id::cx, length_direction::horizontal, length_negative_mode::allow, 50.f, length_units::percent)
+    , m_cy(property_id::cy, length_direction::vertical, length_negative_mode::allow, 50.f, length_units::percent)
     , m_r(property_id::R, length_direction::diagonal, length_negative_mode::forbid, 50.f, length_units::percent)
-    , m_fx(property_id::Fx, length_direction::Horizontal, length_negative_mode::allow, 0.f, length_units::None)
-    , m_fy(property_id::Fy, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::None)
+    , m_fx(property_id::fx, length_direction::horizontal, length_negative_mode::allow, 0.f, length_units::none)
+    , m_fy(property_id::fy, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::none)
 {
     add_property(m_cx);
     add_property(m_cy);
@@ -302,7 +302,7 @@ bool svg_radial_gradient_element::apply_paint(svg_render_state& state, float opa
     auto r = lengthContext.value_for_length(attributes.r());
     if(r == 0.f || gradientStops.size() == 1) {
         const auto& last_stop = gradientStops.back();
-        state->set_color(last_stop.color.r, last_stop.color.g, last_stop.color.b, last_stop.color.a);
+        state->set_color(last_stop.color_.r, last_stop.color_.g, last_stop.color_.b, last_stop.color_.a);
         return true;
     }
 
@@ -314,9 +314,9 @@ bool svg_radial_gradient_element::apply_paint(svg_render_state& state, float opa
     auto spreadMethod = attributes.spreadMethod();
     auto gradientUnits = attributes.gradientUnits();
     auto gradientTransform = attributes.gradientTransform();
-    if(gradientUnits == Units::object_bounding_box) {
+    if(gradientUnits == units::object_bounding_box) {
         auto bbox = state.fill_bounding_box();
-        gradientTransform.post_multiply(Transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
+        gradientTransform.post_multiply(transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
     }
 
     state->set_radial_gradient(cx, cy, r, fx, fy, spreadMethod, gradientStops, gradientTransform);
@@ -332,15 +332,15 @@ svg_radial_gradient_attributes svg_radial_gradient_element::collect_gradient_att
         current->collect_gradient_attributes(attributes);
         if(current->id() == element_id::radial_gradient) {
             auto el = static_cast<const svg_radial_gradient_element*>(current);
-            if(!attributes.has_cx() && el->has_attribute(property_id::Cx))
+            if(!attributes.has_cx() && el->has_attribute(property_id::cx))
                 attributes.set_cx(el);
-            if(!attributes.has_cy() && el->has_attribute(property_id::Cy))
+            if(!attributes.has_cy() && el->has_attribute(property_id::cy))
                 attributes.set_cy(el);
             if(!attributes.has_r() && el->has_attribute(property_id::R))
-                attributes.setR(el);
-            if(!attributes.has_fx() && el->has_attribute(property_id::Fx))
+                attributes.set_r(el);
+            if(!attributes.has_fx() && el->has_attribute(property_id::fx))
                 attributes.set_fx(el);
-            if(!attributes.has_fy() && el->has_attribute(property_id::Fy)) {
+            if(!attributes.has_fy() && el->has_attribute(property_id::fy)) {
                 attributes.set_fy(el);
             }
         }
@@ -360,16 +360,16 @@ svg_radial_gradient_attributes svg_radial_gradient_element::collect_gradient_att
 }
 
 svg_pattern_element::svg_pattern_element(document* dom)
-    : svg_paint_element(dom, element_id::Pattern)
+    : svg_paint_element(dom, element_id::pattern)
     , svg_uri_reference(this)
     , svg_fit_to_view_box(this)
-    , m_x(property_id::X, length_direction::Horizontal, length_negative_mode::allow)
+    , m_x(property_id::X, length_direction::horizontal, length_negative_mode::allow)
     , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow)
-    , m_width(property_id::Width, length_direction::Horizontal, length_negative_mode::forbid)
-    , m_height(property_id::Height, length_direction::vertical, length_negative_mode::forbid)
+    , m_width(property_id::width, length_direction::horizontal, length_negative_mode::forbid)
+    , m_height(property_id::height, length_direction::vertical, length_negative_mode::forbid)
     , m_pattern_transform(property_id::PatternTransform)
-    , m_pattern_units(property_id::PatternUnits, Units::object_bounding_box)
-    , m_pattern_content_units(property_id::PatternContentUnits, Units::user_space_on_use)
+    , m_pattern_units(property_id::PatternUnits, units::object_bounding_box)
+    , m_pattern_content_units(property_id::PatternContentUnits, units::user_space_on_use)
 {
     add_property(m_x);
     add_property(m_y);
@@ -389,14 +389,14 @@ bool svg_pattern_element::apply_paint(svg_render_state& state, float opacity) co
     if(pattern_content_element == nullptr)
         return false;
     LengthContext lengthContext(this, attributes.patternUnits());
-    Rect pattern_rect = {
+    rect pattern_rect = {
         lengthContext.value_for_length(attributes.x()),
         lengthContext.value_for_length(attributes.y()),
         lengthContext.value_for_length(attributes.width()),
         lengthContext.value_for_length(attributes.height())
     };
 
-    if(attributes.patternUnits() == Units::object_bounding_box) {
+    if(attributes.patternUnits() == units::object_bounding_box) {
         auto bbox = state.fill_bounding_box();
         pattern_rect.x = pattern_rect.x * bbox.w + bbox.x;
         pattern_rect.y = pattern_rect.y * bbox.h + bbox.y;
@@ -412,19 +412,19 @@ bool svg_pattern_element::apply_paint(svg_render_state& state, float opacity) co
     auto y_scale = current_transform.y_scale() * tile_scale;
 
     auto pattern_image = raster_canvas::create(0, 0, pattern_rect.w * x_scale, pattern_rect.h * y_scale);
-    auto pattern_image_transform = Transform::scaled(x_scale, y_scale);
+    auto pattern_image_transform = transform::scaled(x_scale, y_scale);
 
     const auto& view_box_rect = attributes.viewBox();
     if(view_box_rect.is_valid()) {
         const auto& preserveAspectRatio = attributes.preserveAspectRatio();
-        pattern_image_transform.multiply(preserveAspectRatio.get_transform(view_box_rect, pattern_rect.size()));
-    } else if(attributes.patternContentUnits() == Units::object_bounding_box) {
+        pattern_image_transform.multiply(preserveAspectRatio.get_transform(view_box_rect, pattern_rect.size_()));
+    } else if(attributes.patternContentUnits() == units::object_bounding_box) {
         auto bbox = state.fill_bounding_box();
         pattern_image_transform.scale(bbox.w, bbox.h);
     }
 
-    svg_render_state newState(this, &state, pattern_image_transform, svg_render_mode::painting, pattern_image);
-    pattern_content_element->render_children(newState);
+    svg_render_state new_state(this, &state, pattern_image_transform, svg_render_mode::painting, pattern_image);
+    pattern_content_element->render_children(new_state);
 
     auto patternTransform = attributes.patternTransform();
     patternTransform.translate(pattern_rect.x, pattern_rect.y);
@@ -432,7 +432,7 @@ bool svg_pattern_element::apply_paint(svg_render_state& state, float opacity) co
     if(pdf)
         pdf->set_tiled_image(pixmap(surface_reference(pattern_image->surface())), patternTransform, opacity);
     else
-        state.raster()->set_texture(*pattern_image, texture_type::Tiled, opacity, patternTransform);
+        state.raster()->set_texture(*pattern_image, texture_type::tiled, opacity, patternTransform);
     return true;
 }
 
@@ -446,9 +446,9 @@ svg_pattern_attributes svg_pattern_element::collect_pattern_attributes() const
             attributes.set_x(current);
         if(!attributes.has_y() && current->has_attribute(property_id::Y))
             attributes.set_y(current);
-        if(!attributes.has_width() && current->has_attribute(property_id::Width))
+        if(!attributes.has_width() && current->has_attribute(property_id::width))
             attributes.set_width(current);
-        if(!attributes.has_height() && current->has_attribute(property_id::Height))
+        if(!attributes.has_height() && current->has_attribute(property_id::height))
             attributes.set_height(current);
         if(!attributes.has_pattern_transform() && current->has_attribute(property_id::PatternTransform))
             attributes.set_pattern_transform(current);
@@ -470,7 +470,7 @@ svg_pattern_attributes svg_pattern_element::collect_pattern_attributes() const
         }
 
         auto target_element = current->get_target_element(dom());
-        if(!target_element || target_element->id() != element_id::Pattern)
+        if(!target_element || target_element->id() != element_id::pattern)
             break;
         processed_patterns.insert(current);
         current = static_cast<const svg_pattern_element*>(target_element);

@@ -9,34 +9,34 @@
 
 namespace nova::vg {
 
-Box::Box(float x, float y, float w, float h)
+box::box(float x, float y, float w, float h)
     : x(x), y(y), w(w), h(h)
 {
 }
 
-Box::Box(const Rect& rect)
-    : x(rect.x), y(rect.y), w(rect.w), h(rect.h)
+box::box(const rect& rect_)
+    : x(rect_.x), y(rect_.y), w(rect_.w), h(rect_.h)
 {
 }
 
-Box& Box::transform(const stb::matrix &matrix)
+box& box::transform(const stb::matrix &matrix)
 {
     *this = transformed(matrix);
     return *this;
 }
 
-Box Box::transformed(const stb::matrix& matrix) const
+box box::transformed(const stb::matrix& matrix) const
 {
-    return Transform(matrix).map_rect(*this);
+    return vg::transform(matrix).map_rect(*this);
 }
 
-Rect::Rect(const Box& box)
-    : x(box.x), y(box.y), w(box.w), h(box.h)
+rect::rect(const box& box_)
+    : x(box_.x), y(box_.y), w(box_.w), h(box_.h)
 {
 }
 
-Transform::Transform(const stb::matrix& matrix)
-    : Transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f)
+transform::transform(const stb::matrix& matrix)
+    : transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f)
 {
 }
 

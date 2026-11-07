@@ -22,7 +22,7 @@ bool svg_angle::parse(std::string_view input)
     strip_leading_and_trailing_spaces(input);
     if(input == "auto") {
         m_value = 0.f;
-        m_orient_type = OrientType::Auto;
+        m_orient_type = OrientType::auto_;
         return true;
     }
 
@@ -33,7 +33,7 @@ bool svg_angle::parse(std::string_view input)
     }
 
     float value = 0.f;
-    if(!parseNumber(input, value))
+    if(!parse_number(input, value))
         return false;
     if(!input.empty()) {
         if(input == "rad")
@@ -48,21 +48,21 @@ bool svg_angle::parse(std::string_view input)
     }
 
     m_value = value;
-    m_orient_type = OrientType::Angle;
+    m_orient_type = OrientType::angle;
     return true;
 }
 
-bool Length::parse(std::string_view input, length_negative_mode mode)
+bool length::parse(std::string_view input, length_negative_mode mode)
 {
     float value = 0.f;
     strip_leading_and_trailing_spaces(input);
-    if(!parseNumber(input, value))
+    if(!parse_number(input, value))
         return false;
     if(value < 0.f && mode == length_negative_mode::forbid)
         return false;
     if(input.empty()) {
         m_value = value;
-        m_units = length_units::None;
+        m_units = length_units::none;
         return true;
     }
 
@@ -85,7 +85,7 @@ bool Length::parse(std::string_view input, length_negative_mode mode)
             m_value = value * dpi / 72.f;
         else
             return false;
-        m_units = length_units::Px;
+        m_units = length_units::px;
         input.remove_prefix(1);
         break;
     case 'i':
@@ -96,7 +96,7 @@ bool Length::parse(std::string_view input, length_negative_mode mode)
             m_value = value * dpi;
         else
             return false;
-        m_units = length_units::Px;
+        m_units = length_units::px;
         input.remove_prefix(1);
         break;
     case 'c':
@@ -107,7 +107,7 @@ bool Length::parse(std::string_view input, length_negative_mode mode)
             m_value = value * dpi / 2.54f;
         else
             return false;
-        m_units = length_units::Px;
+        m_units = length_units::px;
         input.remove_prefix(1);
         break;
     case 'm':
@@ -118,7 +118,7 @@ bool Length::parse(std::string_view input, length_negative_mode mode)
             m_value = value * dpi / 25.4f;
         else
             return false;
-        m_units = length_units::Px;
+        m_units = length_units::px;
         input.remove_prefix(1);
         break;
     case 'e':
@@ -141,26 +141,26 @@ bool Length::parse(std::string_view input, length_negative_mode mode)
     return input.empty();
 }
 
-float LengthContext::value_for_length(const Length& length, length_direction direction) const
+float LengthContext::value_for_length(const length& length_, length_direction direction_) const
 {
-    if(length.units() == length_units::percent) {
-        if(m_units == Units::user_space_on_use)
-            return length.value() * viewport_dimension(direction) / 100.f;
-        return length.value() / 100.f;
+    if(length_.units_() == length_units::percent) {
+        if(m_units == units::user_space_on_use)
+            return length_.value() * viewport_dimension(direction_) / 100.f;
+        return length_.value() / 100.f;
     }
 
-    if(length.units() == length_units::ex)
-        return length.value() * m_element->font_size() / 2.f;
-    if(length.units() == length_units::em)
-        return length.value() * m_element->font_size();
-    return length.value();
+    if(length_.units_() == length_units::ex)
+        return length_.value() * m_element->font_size() / 2.f;
+    if(length_.units_() == length_units::em)
+        return length_.value() * m_element->font_size();
+    return length_.value();
 }
 
-float LengthContext::viewport_dimension(length_direction direction) const
+float LengthContext::viewport_dimension(length_direction direction_) const
 {
     auto viewport_size = m_element->current_viewport_size();
-    switch(direction) {
-    case length_direction::Horizontal:
+    switch(direction_) {
+    case length_direction::horizontal:
         return viewport_size.w;
     case length_direction::vertical:
         return viewport_size.h;
@@ -183,7 +183,7 @@ bool svg_length_list::parse(std::string_view input)
             ++count;
         if(count == 0)
             break;
-        Length value(0, length_units::None);
+        length value(0, length_units::none);
         if(!value.parse(input.substr(0, count), m_negative_mode))
             return false;
         input.remove_prefix(count);
@@ -198,7 +198,7 @@ bool svg_number::parse(std::string_view input)
 {
     float value = 0.f;
     strip_leading_and_trailing_spaces(input);
-    if(!parseNumber(input, value))
+    if(!parse_number(input, value))
         return false;
     if(!input.empty())
         return false;
@@ -210,7 +210,7 @@ bool svg_number_percentage::parse(std::string_view input)
 {
     float value = 0.f;
     strip_leading_and_trailing_spaces(input);
-    if(!parseNumber(input, value))
+    if(!parse_number(input, value))
         return false;
     if(!input.empty() && input.front() == '%') {
         value /= 100.f;
@@ -229,7 +229,7 @@ bool svg_number_list::parse(std::string_view input)
     strip_leading_spaces(input);
     while(!input.empty()) {
         float value = 0.f;
-        if(!parseNumber(input, value))
+        if(!parse_number(input, value))
             return false;
         skip_optional_spaces_or_comma(input);
         m_values.push_back(value);
@@ -245,11 +245,11 @@ bool svg_path::parse(std::string_view input)
 
 bool svg_point::parse(std::string_view input)
 {
-    Point value;
+    point value;
     strip_leading_and_trailing_spaces(input);
-    if(!parseNumber(input, value.x)
+    if(!parse_number(input, value.x)
         || !skip_optional_spaces(input)
-        || !parseNumber(input, value.y)
+        || !parse_number(input, value.y)
         || !input.empty()) {
         return false;
     }
@@ -263,10 +263,10 @@ bool svg_point_list::parse(std::string_view input)
     m_values.clear();
     strip_leading_spaces(input);
     while(!input.empty()) {
-        Point value;
-        if(!parseNumber(input, value.x)
+        point value;
+        if(!parse_number(input, value.x)
             || !skip_optional_spaces_or_comma(input)
-            || !parseNumber(input, value.y)) {
+            || !parse_number(input, value.y)) {
             return false;
         }
 
@@ -279,15 +279,15 @@ bool svg_point_list::parse(std::string_view input)
 
 bool svg_rect::parse(std::string_view input)
 {
-    Rect value;
+    rect value;
     strip_leading_and_trailing_spaces(input);
-    if(!parseNumber(input, value.x)
+    if(!parse_number(input, value.x)
         || !skip_optional_spaces_or_comma(input)
-        || !parseNumber(input, value.y)
+        || !parse_number(input, value.y)
         || !skip_optional_spaces_or_comma(input)
-        || !parseNumber(input, value.w)
+        || !parse_number(input, value.w)
         || !skip_optional_spaces_or_comma(input)
-        || !parseNumber(input, value.h)
+        || !parse_number(input, value.h)
         || !input.empty()) {
         return false;
     }
@@ -327,7 +327,7 @@ bool svg_transform_origin::parse(std::string_view input)
         if(token == "center") { value = 0.5f; is_percent = true; return true; }
         if(token == "right" || token == "bottom") { value = 1.f; is_percent = true; return true; }
         float number = 0.f;
-        if(!parseNumber(token, number))
+        if(!parse_number(token, number))
             return false;
         if(!token.empty() && token.front() == '%') {
             value = number / 100.f;
@@ -380,25 +380,25 @@ bool svg_preserve_aspect_ratio::parse(std::string_view input)
 {
     auto alignType = AlignType::x_mid_y_mid;
     strip_leading_spaces(input);
-    if(skipString(input, "none"))
-        alignType = AlignType::None;
-    else if(skipString(input, "xMinYMin"))
+    if(skip_string(input, "none"))
+        alignType = AlignType::none;
+    else if(skip_string(input, "xMinYMin"))
         alignType = AlignType::x_min_y_min;
-    else if(skipString(input, "xMidYMin"))
+    else if(skip_string(input, "xMidYMin"))
         alignType = AlignType::x_mid_y_min;
-    else if(skipString(input, "xMaxYMin"))
+    else if(skip_string(input, "xMaxYMin"))
         alignType = AlignType::x_max_y_min;
-    else if(skipString(input, "xMinYMid"))
+    else if(skip_string(input, "xMinYMid"))
         alignType = AlignType::x_min_y_mid;
-    else if(skipString(input, "xMidYMid"))
+    else if(skip_string(input, "xMidYMid"))
         alignType = AlignType::x_mid_y_mid;
-    else if(skipString(input, "xMaxYMid"))
+    else if(skip_string(input, "xMaxYMid"))
         alignType = AlignType::x_max_y_mid;
-    else if(skipString(input, "xMinYMax"))
+    else if(skip_string(input, "xMinYMax"))
         alignType = AlignType::x_min_y_max;
-    else if(skipString(input, "xMidYMax"))
+    else if(skip_string(input, "xMidYMax"))
         alignType = AlignType::x_mid_y_max;
-    else if(skipString(input, "xMaxYMax"))
+    else if(skip_string(input, "xMaxYMax"))
         alignType = AlignType::x_max_y_max;
     else {
         return false;
@@ -406,13 +406,13 @@ bool svg_preserve_aspect_ratio::parse(std::string_view input)
 
     auto meetOrSlice = MeetOrSlice::meet;
     skip_optional_spaces(input);
-    if(skipString(input, "meet")) {
+    if(skip_string(input, "meet")) {
         meetOrSlice = MeetOrSlice::meet;
-    } else if(skipString(input, "slice")) {
+    } else if(skip_string(input, "slice")) {
         meetOrSlice = MeetOrSlice::slice;
     }
 
-    if(alignType == AlignType::None)
+    if(alignType == AlignType::none)
         meetOrSlice = MeetOrSlice::meet;
     skip_optional_spaces(input);
     if(!input.empty())
@@ -422,18 +422,18 @@ bool svg_preserve_aspect_ratio::parse(std::string_view input)
     return true;
 }
 
-Rect svg_preserve_aspect_ratio::get_clip_rect(const Rect& view_box_rect, const Size& viewport_size) const
+rect svg_preserve_aspect_ratio::get_clip_rect(const rect& view_box_rect, const size& viewport_size) const
 {
     assert(!view_box_rect.empty() && !viewport_size.empty());
     auto x_scale = viewport_size.w / view_box_rect.w;
     auto y_scale = viewport_size.h / view_box_rect.h;
-    if(m_align_type == AlignType::None) {
-        return Rect(view_box_rect.x, view_box_rect.y, viewport_size.w / x_scale, viewport_size.h / y_scale);
+    if(m_align_type == AlignType::none) {
+        return rect(view_box_rect.x, view_box_rect.y, viewport_size.w / x_scale, viewport_size.h / y_scale);
     }
 
     auto scale = (m_meet_or_slice == MeetOrSlice::meet) ? STB_MIN(x_scale, y_scale) : STB_MAX(x_scale, y_scale);
     auto x_offset = -view_box_rect.x * scale;
-    auto yOffset = -view_box_rect.y * scale;
+    auto y_offset = -view_box_rect.y * scale;
     auto view_width = view_box_rect.w * scale;
     auto view_height = view_box_rect.h * scale;
     switch(m_align_type) {
@@ -455,32 +455,32 @@ Rect svg_preserve_aspect_ratio::get_clip_rect(const Rect& view_box_rect, const S
     case AlignType::x_min_y_mid:
     case AlignType::x_mid_y_mid:
     case AlignType::x_max_y_mid:
-        yOffset += (viewport_size.h - view_height) * 0.5f;
+        y_offset += (viewport_size.h - view_height) * 0.5f;
         break;
     case AlignType::x_min_y_max:
     case AlignType::x_mid_y_max:
     case AlignType::x_max_y_max:
-        yOffset += (viewport_size.h - view_height);
+        y_offset += (viewport_size.h - view_height);
         break;
     default:
         break;
     }
 
-    return Rect(-x_offset / scale, -yOffset / scale, viewport_size.w / scale, viewport_size.h / scale);
+    return rect(-x_offset / scale, -y_offset / scale, viewport_size.w / scale, viewport_size.h / scale);
 }
 
-Transform svg_preserve_aspect_ratio::get_transform(const Rect& view_box_rect, const Size& viewport_size) const
+transform svg_preserve_aspect_ratio::get_transform(const rect& view_box_rect, const size& viewport_size) const
 {
     assert(!view_box_rect.empty() && !viewport_size.empty());
     auto x_scale = viewport_size.w / view_box_rect.w;
     auto y_scale = viewport_size.h / view_box_rect.h;
-    if(m_align_type == AlignType::None) {
-        return Transform(x_scale, 0, 0, y_scale, -view_box_rect.x * x_scale, -view_box_rect.y * y_scale);
+    if(m_align_type == AlignType::none) {
+        return transform(x_scale, 0, 0, y_scale, -view_box_rect.x * x_scale, -view_box_rect.y * y_scale);
     }
 
     auto scale = (m_meet_or_slice == MeetOrSlice::meet) ? STB_MIN(x_scale, y_scale) : STB_MAX(x_scale, y_scale);
     auto x_offset = -view_box_rect.x * scale;
-    auto yOffset = -view_box_rect.y * scale;
+    auto y_offset = -view_box_rect.y * scale;
     auto view_width = view_box_rect.w * scale;
     auto view_height = view_box_rect.h * scale;
     switch(m_align_type) {
@@ -502,40 +502,40 @@ Transform svg_preserve_aspect_ratio::get_transform(const Rect& view_box_rect, co
     case AlignType::x_min_y_mid:
     case AlignType::x_mid_y_mid:
     case AlignType::x_max_y_mid:
-        yOffset += (viewport_size.h - view_height) * 0.5f;
+        y_offset += (viewport_size.h - view_height) * 0.5f;
         break;
     case AlignType::x_min_y_max:
     case AlignType::x_mid_y_max:
     case AlignType::x_max_y_max:
-        yOffset += (viewport_size.h - view_height);
+        y_offset += (viewport_size.h - view_height);
         break;
     default:
         break;
     }
 
-    return Transform(scale, 0, 0, scale, x_offset, yOffset);
+    return transform(scale, 0, 0, scale, x_offset, y_offset);
 }
 
-void svg_preserve_aspect_ratio::transform_rect(Rect& dstRect, Rect& srcRect) const
+void svg_preserve_aspect_ratio::transform_rect(rect& dst_rect, rect& src_rect) const
 {
-    if(m_align_type == AlignType::None)
+    if(m_align_type == AlignType::none)
         return;
-    auto view_size = dstRect.size();
-    auto image_size = srcRect.size();
+    auto view_size = dst_rect.size_();
+    auto image_size = src_rect.size_();
     if(m_meet_or_slice == MeetOrSlice::meet) {
         auto scale = image_size.h / image_size.w;
         if(view_size.h > view_size.w * scale) {
-            dstRect.h = view_size.w * scale;
+            dst_rect.h = view_size.w * scale;
             switch(m_align_type) {
             case AlignType::x_min_y_mid:
             case AlignType::x_mid_y_mid:
             case AlignType::x_max_y_mid:
-                dstRect.y += (view_size.h - dstRect.h) * 0.5f;
+                dst_rect.y += (view_size.h - dst_rect.h) * 0.5f;
                 break;
             case AlignType::x_min_y_max:
             case AlignType::x_mid_y_max:
             case AlignType::x_max_y_max:
-                dstRect.y += view_size.h - dstRect.h;
+                dst_rect.y += view_size.h - dst_rect.h;
                 break;
             default:
                 break;
@@ -543,17 +543,17 @@ void svg_preserve_aspect_ratio::transform_rect(Rect& dstRect, Rect& srcRect) con
         }
 
         if(view_size.w > view_size.h / scale) {
-            dstRect.w = view_size.h / scale;
+            dst_rect.w = view_size.h / scale;
             switch(m_align_type) {
             case AlignType::x_mid_y_min:
             case AlignType::x_mid_y_mid:
             case AlignType::x_mid_y_max:
-                dstRect.x += (view_size.w - dstRect.w) * 0.5f;
+                dst_rect.x += (view_size.w - dst_rect.w) * 0.5f;
                 break;
             case AlignType::x_max_y_min:
             case AlignType::x_max_y_mid:
             case AlignType::x_max_y_max:
-                dstRect.x += view_size.w - dstRect.w;
+                dst_rect.x += view_size.w - dst_rect.w;
                 break;
             default:
                 break;
@@ -562,17 +562,17 @@ void svg_preserve_aspect_ratio::transform_rect(Rect& dstRect, Rect& srcRect) con
     } else if(m_meet_or_slice == MeetOrSlice::slice) {
         auto scale = image_size.h / image_size.w;
         if(view_size.h < view_size.w * scale) {
-            srcRect.h = view_size.h * (image_size.w / view_size.w);
+            src_rect.h = view_size.h * (image_size.w / view_size.w);
             switch(m_align_type) {
             case AlignType::x_min_y_mid:
             case AlignType::x_mid_y_mid:
             case AlignType::x_max_y_mid:
-                srcRect.y += (image_size.h - srcRect.h) * 0.5f;
+                src_rect.y += (image_size.h - src_rect.h) * 0.5f;
                 break;
             case AlignType::x_min_y_max:
             case AlignType::x_mid_y_max:
             case AlignType::x_max_y_max:
-                srcRect.y += image_size.h - srcRect.h;
+                src_rect.y += image_size.h - src_rect.h;
                 break;
             default:
                 break;
@@ -580,17 +580,17 @@ void svg_preserve_aspect_ratio::transform_rect(Rect& dstRect, Rect& srcRect) con
         }
 
         if(view_size.w < view_size.h / scale) {
-            srcRect.w = view_size.w * (image_size.h / view_size.h);
+            src_rect.w = view_size.w * (image_size.h / view_size.h);
             switch(m_align_type) {
             case AlignType::x_mid_y_min:
             case AlignType::x_mid_y_mid:
             case AlignType::x_mid_y_max:
-                srcRect.x += (image_size.w - srcRect.w) * 0.5f;
+                src_rect.x += (image_size.w - src_rect.w) * 0.5f;
                 break;
             case AlignType::x_max_y_min:
             case AlignType::x_max_y_mid:
             case AlignType::x_max_y_max:
-                srcRect.x += image_size.w - srcRect.w;
+                src_rect.x += image_size.w - src_rect.w;
                 break;
             default:
                 break;

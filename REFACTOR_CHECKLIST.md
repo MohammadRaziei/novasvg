@@ -454,3 +454,9 @@ Scripted (not by hand): every namespace-scope `NOVA_INLINE` definition (non-temp
 - Still to do in 5b: `Path` -> `stb::outline` and `Bitmap` -> `stb::image` (Bitmap has 200+ uses; `document::render(stb::image&, ...)` already exists).
 - Python binding: Color and Matrix sections edited by hand, NOT built.
 - Gate: C++ 84 cases / 592 assertions, font 71, link OK, golden 67 images 0 differ at tolerance 0.
+
+## Session 5 (2026-11-06): Path, pixmap, layout, nova::vg, svgelement split, snake_case pass 1, foreignObject extension
+
+Zips step11 to step17. See `refactor/handoff.md` (section 4) for the list; ADR-0010 for the foreignObject design.
+Gate at step17 (libstb 797038e): C++ 90 cases / 2243 assertions, font test 71, golden 67 images 0 differ at tolerance 0,
+`nova_vg_layering` OK. Open: snake_case pass 2 (195 names, `refactor/tools/rename_pass2.py`), `path_t` C API removal, Python still OFF.

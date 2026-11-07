@@ -31,7 +31,7 @@ void span_buffer_init_rect(span_buffer_t* span_buffer, int x, int y, int width, 
     span_buffer->y = y;
     span_buffer->w = width;
     span_buffer->h = height;
-    span_buffer->spans.size = height;
+    span_buffer->spans.size_ = height;
 }
 
 void span_buffer_reset(span_buffer_t* span_buffer)
@@ -63,7 +63,7 @@ bool span_buffer_contains(const span_buffer_t* span_buffer, float x, float y)
     const int ix = (int)floorf(x);
     const int iy = (int)floorf(y);
 
-    for(int i = 0; i < span_buffer->spans.size; i++) {
+    for(int i = 0; i < span_buffer->spans.size_; i++) {
         span_t* span = &span_buffer->spans.data[i];
         if(span->y != iy)
             continue;
@@ -79,7 +79,7 @@ static void span_buffer_update_extents(span_buffer_t* span_buffer)
 {
     if(span_buffer->w != -1 && span_buffer->h != -1)
         return;
-    if(span_buffer->spans.size == 0) {
+    if(span_buffer->spans.size_ == 0) {
         span_buffer->x = 0;
         span_buffer->y = 0;
         span_buffer->w = 0;
@@ -91,8 +91,8 @@ static void span_buffer_update_extents(span_buffer_t* span_buffer)
     int x1 = INT_MAX;
     int y1 = spans[0].y;
     int x2 = 0;
-    int y2 = spans[span_buffer->spans.size - 1].y;
-    for(int i = 0; i < span_buffer->spans.size; i++) {
+    int y2 = spans[span_buffer->spans.size_ - 1].y;
+    for(int i = 0; i < span_buffer->spans.size_; i++) {
         if(spans[i].x < x1) x1 = spans[i].x;
         if(spans[i].x + spans[i].len > x2) x2 = spans[i].x + spans[i].len;
     }
@@ -115,13 +115,13 @@ void span_buffer_extents(span_buffer_t* span_buffer, rect_t* extents)
 void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, const span_buffer_t* b)
 {
     span_buffer_reset(span_buffer);
-    novasvg_array_ensure(span_buffer->spans, STB_MAX(a->spans.size, b->spans.size));
+    novasvg_array_ensure(span_buffer->spans, STB_MAX(a->spans.size_, b->spans.size_));
 
     span_t* a_spans = a->spans.data;
-    span_t* a_end = a_spans + a->spans.size;
+    span_t* a_end = a_spans + a->spans.size_;
 
     span_t* b_spans = b->spans.data;
-    span_t* b_end = b_spans + b->spans.size;
+    span_t* b_end = b_spans + b->spans.size_;
     while(a_spans < a_end && b_spans < b_end) {
         if(b_spans->y > a_spans->y) {
             ++a_spans;
@@ -151,12 +151,12 @@ void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, c
         int len = STB_MIN(ax2, bx2) - x;
         if(len) {
             novasvg_array_ensure(span_buffer->spans, 1);
-            span_t* span = span_buffer->spans.data + span_buffer->spans.size;
+            span_t* span = span_buffer->spans.data + span_buffer->spans.size_;
             span->x = x;
             span->len = len;
             span->y = a_spans->y;
             span->coverage = (a_spans->coverage * b_spans->coverage) / 255;
-            span_buffer->spans.size += 1;
+            span_buffer->spans.size_ += 1;
         }
 
         if(ax2 < bx2) {
@@ -169,11 +169,11 @@ void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, c
 
 namespace {
 
-stb::outline to_stb_outline(const path_t* path)
+stb::outline to_stb_outline(const path_t* path_)
 {
     stb::outline outline;
     path_iterator_t it;
-    path_iterator_init(&it, path);
+    path_iterator_init(&it, path_);
 
     point_t points[3];
     while(path_iterator_has_next(&it)) {
@@ -198,7 +198,7 @@ stb::outline to_stb_outline(const path_t* path)
 
 } // namespace
 
-void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data, fill_rule_t winding)
+void rasterize(span_buffer_t* span_buffer, const path_t* path_, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data_, fill_rule_t winding)
 {
     span_buffer_reset(span_buffer);
 
@@ -227,7 +227,7 @@ void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* m
     auto sink = [span_buffer](stb::span_view view) {
         const int count = (int)view.size;
         novasvg_array_ensure(span_buffer->spans, count);
-        span_t* out = span_buffer->spans.data + span_buffer->spans.size;
+        span_t* out = span_buffer->spans.data + span_buffer->spans.size_;
         for(int i = 0; i < count; ++i) {
             out[i].x = view.data[i].x;
             out[i].y = view.data[i].y;
@@ -235,14 +235,14 @@ void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* m
             out[i].coverage = view.data[i].coverage;
         }
 
-        span_buffer->spans.size += count;
+        span_buffer->spans.size_ += count;
     };
 
-    const stb::outline outline = to_stb_outline(path);
-    if(stroke_data) {
+    const stb::outline outline = to_stb_outline(path_);
+    if(stroke_data_) {
         stb::stroke_style style;
-        style.width = stroke_data->style.width;
-        switch(stroke_data->style.cap) {
+        style.width = stroke_data_->style.width;
+        switch(stroke_data_->style.cap) {
         case NOVA_LINE_CAP_SQUARE:
             style.cap = stb::line_cap::square;
             break;
@@ -254,7 +254,7 @@ void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* m
             break;
         }
 
-        switch(stroke_data->style.join) {
+        switch(stroke_data_->style.join) {
         case NOVA_LINE_JOIN_BEVEL:
             style.join = stb::line_join::bevel;
             break;
@@ -266,10 +266,10 @@ void rasterize(span_buffer_t* span_buffer, const path_t* path, const matrix_t* m
             break;
         }
 
-        style.miter_limit = stroke_data->style.miter_limit;
-        if(stroke_data->dash.array.size > 0) {
-            style.dashes.assign(stroke_data->dash.array.data, stroke_data->dash.array.data + stroke_data->dash.array.size);
-            style.dash_offset = stroke_data->dash.offset;
+        style.miter_limit = stroke_data_->style.miter_limit;
+        if(stroke_data_->dash.array.size_ > 0) {
+            style.dashes.assign(stroke_data_->dash.array.data, stroke_data_->dash.array.data + stroke_data_->dash.array.size_);
+            style.dash_offset = stroke_data_->dash.offset;
         }
 
         stb::rasterize_stroke(outline, style, m, clip, sink);

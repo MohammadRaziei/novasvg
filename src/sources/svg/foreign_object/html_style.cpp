@@ -174,24 +174,24 @@ struct cascaded_value {
 };
 
 // Offers every `color` / `background-color` declaration of a style="" attribute.
-static void offer_inline_style(std::string_view style, cascaded_value& color, cascaded_value& background)
+static void offer_inline_style(std::string_view style, cascaded_value& color_, cascaded_value& background)
 {
     while(!style.empty()) {
         auto end = style.find(';');
-        auto declaration = style.substr(0, end);
+        auto declaration_ = style.substr(0, end);
         style.remove_prefix(end == std::string_view::npos ? style.size() : end + 1);
-        auto colon = declaration.find(':');
+        auto colon = declaration_.find(':');
         if(colon == std::string_view::npos)
             continue;
-        auto name_text = declaration.substr(0, colon);
+        auto name_text = declaration_.substr(0, colon);
         strip_leading_and_trailing_spaces(name_text);
         auto name = lower_case(name_text);
-        std::string value(declaration.substr(colon + 1));
-        const int priority = strip_important_flag(value) ? Specificity::inline_important : Specificity::InlineStyle;
+        std::string value(declaration_.substr(colon + 1));
+        const int priority = strip_important_flag(value) ? specificity::inline_important : specificity::InlineStyle;
         std::string_view trimmed(value);
         strip_leading_and_trailing_spaces(trimmed);
         if(name == "color")
-            color.offer(priority, std::string(trimmed));
+            color_.offer(priority, std::string(trimmed));
         else if(name == "background-color")
             background.offer(priority, std::string(trimmed));
     }
@@ -226,17 +226,17 @@ html_style resolve_html_style(std::string_view markup, const css_query& css)
     std::optional<stb::color> text_color, text_color_of_last_node, background;
     bool any_text = false;
     for(size_t i = 0; i < nodes.size(); ++i) {
-        cascaded_value color, box;
+        cascaded_value color_, box_;
         if(auto declared = css.declared(tags, int(i), "color"))
-            color.offer(declared->specificity, declared->value);
+            color_.offer(declared->specificity, declared->value);
         if(auto declared = css.declared(tags, int(i), "background-color"))
-            box.offer(declared->specificity, declared->value);
+            box_.offer(declared->specificity, declared->value);
 
-        offer_inline_style(nodes[i].style, color, box);
+        offer_inline_style(nodes[i].style, color_, box_);
 
         std::optional<stb::color> declared;
-        if(color.specificity >= 0)
-            declared = parse_css_color(color.value);
+        if(color_.specificity >= 0)
+            declared = parse_css_color(color_.value);
         color_of[i] = declared ? declared : (nodes[i].parent >= 0 ? color_of[nodes[i].parent] : std::nullopt);
         text_color_of_last_node = color_of[i];
         if(nodes[i].has_text) {
@@ -244,8 +244,8 @@ html_style resolve_html_style(std::string_view markup, const css_query& css)
             any_text = true;
         }
 
-        if(box.specificity >= 0) {
-            if(auto fill = parse_css_color(box.value); fill && is_visible(*fill))
+        if(box_.specificity >= 0) {
+            if(auto fill = parse_css_color(box_.value); fill && is_visible(*fill))
                 background = fill;
         }
     }

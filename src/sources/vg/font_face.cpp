@@ -50,44 +50,44 @@ stb::logging::logger& font_log() { static auto& l = stb::logging::get_logger("no
 
 static int text_iterator_length(const void* data, text_encoding_t encoding)
 {
-    int length = 0;
+    int length_ = 0;
     switch(encoding) {
     case NOVA_TEXT_ENCODING_LATIN1:
     case NOVA_TEXT_ENCODING_UTF8: {
         const uint8_t* text = static_cast<const uint8_t*>(data);
         while(*text++)
-            length++;
+            length_++;
         break;
     } case NOVA_TEXT_ENCODING_UTF16: {
         const uint16_t* text = static_cast<const uint16_t*>(data);
         while(*text++)
-            length++;
+            length_++;
         break;
     } case NOVA_TEXT_ENCODING_UTF32: {
         const uint32_t* text = static_cast<const uint32_t*>(data);
         while(*text++)
-            length++;
+            length_++;
         break;
     } default:
         assert(false);
     }
 
-    return length;
+    return length_;
 }
 
-void text_iterator_init(text_iterator_t* it, const void* text, int length, text_encoding_t encoding)
+void text_iterator_init(text_iterator_t* it, const void* text, int length_, text_encoding_t encoding)
 {
-    if(length == -1)
-        length = text_iterator_length(text, encoding);
+    if(length_ == -1)
+        length_ = text_iterator_length(text, encoding);
     it->text = text;
-    it->length = length;
+    it->length_ = length_;
     it->encoding = encoding;
     it->index = 0;
 }
 
 bool text_iterator_has_next(const text_iterator_t* it)
 {
-    return it->index < it->length;
+    return it->index < it->length_;
 }
 
 codepoint_t text_iterator_next(text_iterator_t* it)
@@ -117,7 +117,7 @@ codepoint_t text_iterator_next(text_iterator_t* it)
         const uint8_t* text = static_cast<const uint8_t*>(it->text);
         uint8_t trailing_offset = trailing[text[it->index]];
         uint32_t offset_value = offsets[trailing_offset];
-        while(trailing_offset > 0 && it->index < it->length - 1) {
+        while(trailing_offset > 0 && it->index < it->length_ - 1) {
             codepoint += text[it->index++];
             codepoint <<= 6;
             trailing_offset--;
@@ -130,7 +130,7 @@ codepoint_t text_iterator_next(text_iterator_t* it)
         const uint16_t* text = static_cast<const uint16_t*>(it->text);
         codepoint = text[it->index++];
         if(((codepoint) & 0xfffffc00) == 0xd800) {
-            if(it->index < it->length && (((codepoint) & 0xfffffc00) == 0xdc00)) {
+            if(it->index < it->length_ && (((codepoint) & 0xfffffc00) == 0xdc00)) {
                 uint16_t trail = text[it->index++];
                 codepoint = (codepoint << 10) + trail - ((0xD800u << 10) - 0x10000u + 0xDC00u);
             }
@@ -191,7 +191,7 @@ struct glyph_entry {
 
 } // namespace
 
-struct font_face {
+struct font_face_impl {
     ref_count_t ref_count;
     stb::font ft;
     stb::font_design_metrics design;
@@ -209,7 +209,7 @@ struct font_face {
         codepoint_t ligature;
     } ligatures[5];
 
-    explicit font_face(stb::font f) : ft(std::move(f)), design(ft.design_metrics()) {}
+    explicit font_face_impl(stb::font f) : ft(std::move(f)), design(ft.design_metrics()) {}
 };
 
 static uint32_t glyph_index_of(const font_face_t* face, codepoint_t codepoint)
@@ -248,43 +248,43 @@ font_face_t* font_face_load_from_file(const char* filename, int ttcindex)
     }
 
     fseek(fp, 0, SEEK_END);
-    long length = ftell(fp);
-    if(length == -1L) {
+    long length_ = ftell(fp);
+    if(length_ == -1L) {
         fclose(fp);
         return NULL;
     }
 
-    void* data = static_cast<void*>(malloc(length));
+    void* data = static_cast<void*>(malloc(length_));
     if(data == NULL) {
         fclose(fp);
         return NULL;
     }
 
     fseek(fp, 0, SEEK_SET);
-    size_t nread = fread(data, 1, length, fp);
+    size_t nread = fread(data, 1, length_, fp);
     fclose(fp);
 
-    if(nread != static_cast<size_t>(length)) {
+    if(nread != static_cast<size_t>(length_)) {
         free(data);
         return NULL;
     }
 
-    return font_face_load_from_data(data, length, ttcindex, free, data);
+    return font_face_load_from_data(data, length_, ttcindex, free, data);
 }
 
-font_face_t* font_face_load_from_data(const void* data, unsigned int length, int ttcindex, destroy_func_t destroy_func, void* closure)
+font_face_t* font_face_load_from_data(const void* data, unsigned int length_, int ttcindex, destroy_func_t destroy_func, void* closure)
 {
     font_face_t* face = NULL;
     try {
         const auto* bytes = static_cast<const std::uint8_t*>(data);
-        face = new font_face(stb::font::from_memory(std::vector<std::uint8_t>(bytes, bytes + length), ttcindex));
+        face = new font_face_impl(stb::font::from_memory(std::vector<std::uint8_t>(bytes, bytes + length_), ttcindex));
     } catch(const std::exception& e) {
-        font_log().warning("cannot load a font from memory (%u bytes, index %d): %s", length, ttcindex, e.what());
+        font_log().warning("cannot load a font from memory (%u bytes, index %d): %s", length_, ttcindex, e.what());
         if(destroy_func)
             destroy_func(closure);
         return NULL;
     } catch(...) {
-        font_log().warning("cannot load a font from memory (%u bytes, index %d)", length, ttcindex);
+        font_log().warning("cannot load a font from memory (%u bytes, index %d)", length_, ttcindex);
         if(destroy_func)
             destroy_func(closure);
         return NULL;
@@ -318,9 +318,9 @@ int font_face_get_reference_count(const font_face_t* face)
     return novasvg_get_reference_count(face);
 }
 
-static float font_face_get_scale(const font_face_t* face, float size)
+static float font_face_get_scale(const font_face_t* face, float size_)
 {
-    return size / static_cast<float>(face->design.units_per_em);
+    return size_ / static_cast<float>(face->design.units_per_em);
 }
 
 float font_face_get_units_per_em(const font_face_t* face)
@@ -340,9 +340,9 @@ void font_face_enumerate_codepoints(const font_face_t* face, void (*callback)(ui
     }
 }
 
-void font_face_get_metrics(const font_face_t* face, float size, float* ascent, float* descent, float* line_gap, rect_t* extents)
+void font_face_get_metrics(const font_face_t* face, float size_, float* ascent, float* descent, float* line_gap, rect_t* extents)
 {
-    float scale = font_face_get_scale(face, size);
+    float scale = font_face_get_scale(face, size_);
     if(ascent) *ascent = face->design.ascent * scale;
     if(descent) *descent = face->design.descent * scale;
     if(line_gap) *line_gap = face->design.line_gap * scale;
@@ -354,9 +354,9 @@ void font_face_get_metrics(const font_face_t* face, float size, float* ascent, f
     }
 }
 
-void font_face_get_glyph_metrics(font_face_t* face, float size, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents)
+void font_face_get_glyph_metrics(font_face_t* face, float size_, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents)
 {
-    float scale = font_face_get_scale(face, size);
+    float scale = font_face_get_scale(face, size_);
     glyph_entry* glyph = font_face_get_glyph(face, codepoint);
     if(advance_width) *advance_width = glyph->advance_width * scale;
     if(left_side_bearing) *left_side_bearing = glyph->left_side_bearing * scale;
@@ -369,9 +369,9 @@ void font_face_get_glyph_metrics(font_face_t* face, float size, codepoint_t code
 }
 
 // Pairwise kerning between two consecutive code points, from the font's own kern/GPOS data.
-float font_face_get_kern_advance(font_face_t* face, float size, codepoint_t ch1, codepoint_t ch2)
+float font_face_get_kern_advance(font_face_t* face, float size_, codepoint_t ch1, codepoint_t ch2)
 {
-    float scale = font_face_get_scale(face, size);
+    float scale = font_face_get_scale(face, size_);
     uint32_t a = font_face_get_glyph(face, ch1)->index;
     uint32_t b = font_face_get_glyph(face, ch2)->index;
     return face->ft.glyph_kerning(a, b) * scale;
@@ -379,30 +379,30 @@ float font_face_get_kern_advance(font_face_t* face, float size, codepoint_t ch1,
 
 static void glyph_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
 {
-    path_t* path = (path_t*)(closure);
+    path_t* path_ = (path_t*)(closure);
     switch(command) {
     case NOVA_PATH_COMMAND_MOVE_TO:
-        path_move_to(path, points[0].x, points[0].y);
+        path_move_to(path_, points[0].x, points[0].y);
         break;
     case NOVA_PATH_COMMAND_LINE_TO:
-        path_line_to(path, points[0].x, points[0].y);
+        path_line_to(path_, points[0].x, points[0].y);
         break;
     case NOVA_PATH_COMMAND_CUBIC_TO:
-        path_cubic_to(path, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
+        path_cubic_to(path_, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
         break;
     case NOVA_PATH_COMMAND_CLOSE:
         assert(false);
     }
 }
 
-float font_face_get_glyph_path(font_face_t* face, float size, float x, float y, codepoint_t codepoint, path_t* path)
+float font_face_get_glyph_path(font_face_t* face, float size_, float x, float y, codepoint_t codepoint, path_t* path_)
 {
-    return font_face_traverse_glyph_path(face, size, x, y, codepoint, glyph_traverse_func, path);
+    return font_face_traverse_glyph_path(face, size_, x, y, codepoint, glyph_traverse_func, path_);
 }
 
-float font_face_traverse_glyph_path(font_face_t* face, float size, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure)
+float font_face_traverse_glyph_path(font_face_t* face, float size_, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure)
 {
-    float scale = font_face_get_scale(face, size);
+    float scale = font_face_get_scale(face, size_);
     matrix_t matrix;
     matrix_init_translate(&matrix, x, y);
     matrix_scale(&matrix, scale, -scale);
@@ -524,10 +524,10 @@ codepoint_t font_face_apply_ligature(font_face_t* face, text_iterator_t* it, cod
     return codepoint;
 }
 
-float font_face_text_extents(font_face_t* face, float size, const void* text, int length, text_encoding_t encoding, rect_t* extents)
+float font_face_text_extents(font_face_t* face, float size_, const void* text, int length_, text_encoding_t encoding, rect_t* extents)
 {
     text_iterator_t it;
-    text_iterator_init(&it, text, length, encoding);
+    text_iterator_init(&it, text, length_, encoding);
     rect_t* text_extents = NULL;
     float total_advance_width = 0.f;
     codepoint_t previous = 0;
@@ -536,19 +536,19 @@ float font_face_text_extents(font_face_t* face, float size, const void* text, in
         codepoint_t codepoint = text_iterator_next(&it);
         codepoint = font_face_apply_ligature(face, &it, codepoint);
         if(has_previous)
-            total_advance_width += font_face_get_kern_advance(face, size, previous, codepoint);
+            total_advance_width += font_face_get_kern_advance(face, size_, previous, codepoint);
         previous = codepoint;
         has_previous = true;
 
         float advance_width;
         if(extents == NULL) {
-            font_face_get_glyph_metrics(face, size, codepoint, &advance_width, NULL, NULL);
+            font_face_get_glyph_metrics(face, size_, codepoint, &advance_width, NULL, NULL);
             total_advance_width += advance_width;
             continue;
         }
 
         rect_t glyph_extents;
-        font_face_get_glyph_metrics(face, size, codepoint, &advance_width, NULL, &glyph_extents);
+        font_face_get_glyph_metrics(face, size_, codepoint, &advance_width, NULL, &glyph_extents);
 
         glyph_extents.x += total_advance_width;
         total_advance_width += advance_width;
@@ -589,11 +589,11 @@ typedef struct font_face_entry {
     struct font_face_entry* next;
 } font_face_entry_t;
 
-struct font_face_cache {
+struct font_face_cache_impl {
     ref_count_t ref_count;
     mutex_t mutex;
     font_face_entry_t** entries;
-    int size;
+    int size_;
     int capacity;
     bool is_sorted;
 };
@@ -604,7 +604,7 @@ font_face_cache_t* font_face_cache_create(void)
     novasvg_init_reference(cache);
     novasvg_mutex_init(&cache->mutex);
     cache->entries = NULL;
-    cache->size = 0;
+    cache->size_ = 0;
     cache->capacity = 0;
     cache->is_sorted = false;
     return cache;
@@ -634,7 +634,7 @@ void font_face_cache_reset(font_face_cache_t* cache)
 {
     novasvg_mutex_lock(&cache->mutex);
 
-    for(int i = 0; i < cache->size; ++i) {
+    for(int i = 0; i < cache->size_; ++i) {
         font_face_entry_t* entry = cache->entries[i];
         do {
             font_face_entry_t* next = entry->next;
@@ -646,7 +646,7 @@ void font_face_cache_reset(font_face_cache_t* cache)
 
     free(cache->entries);
     cache->entries = NULL;
-    cache->size = 0;
+    cache->size_ = 0;
     cache->capacity = 0;
     cache->is_sorted = false;
 
@@ -657,7 +657,7 @@ static void font_face_cache_add_entry(font_face_cache_t* cache, font_face_entry_
 {
     novasvg_mutex_lock(&cache->mutex);
 
-    for(int i = 0; i < cache->size; ++i) {
+    for(int i = 0; i < cache->size_; ++i) {
         if(strcmp(entry->family, cache->entries[i]->family) == 0) {
             entry->next = cache->entries[i];
             cache->entries[i] = entry;
@@ -665,13 +665,13 @@ static void font_face_cache_add_entry(font_face_cache_t* cache, font_face_entry_
         }
     }
 
-    if(cache->size >= cache->capacity) {
+    if(cache->size_ >= cache->capacity) {
         cache->capacity = cache->capacity == 0 ? 8 : cache->capacity << 2;
         cache->entries = static_cast<decltype(cache->entries)>(realloc(cache->entries, cache->capacity * sizeof(font_face_entry_t*)));
     }
 
     entry->next = NULL;
-    cache->entries[cache->size++] = entry;
+    cache->entries[cache->size_++] = entry;
     cache->is_sorted = false;
 
 unlock:
@@ -726,8 +726,8 @@ font_face_t* font_face_cache_get(font_face_cache_t* cache, const char* family, b
 {
     novasvg_mutex_lock(&cache->mutex);
 
-    if(!cache->is_sorted && cache->size > 0) {
-        qsort(cache->entries, cache->size, sizeof(cache->entries[0]), font_face_entry_compare);
+    if(!cache->is_sorted && cache->size_ > 0) {
+        qsort(cache->entries, cache->size_, sizeof(cache->entries[0]), font_face_entry_compare);
         cache->is_sorted = true;
     }
 
@@ -738,7 +738,7 @@ font_face_t* font_face_cache_get(font_face_cache_t* cache, const char* family, b
     font_face_entry_t** entry_result = static_cast<font_face_entry_t**>(bsearch(
         &entry_key_ptr,
         cache->entries,
-        cache->size,
+        cache->size_,
         sizeof(cache->entries[0]),
         font_face_entry_compare
     ));
@@ -774,10 +774,10 @@ static tt_uint16 tt_ushort(const tt_uint8* p) { return static_cast<tt_uint16>(p[
 static tt_uint32 tt_ulong(const tt_uint8* p) { return (static_cast<tt_uint32>(p[0]) << 24) + (p[1] << 16) + (p[2] << 8) + p[3]; }
 static bool tt_tag4(const tt_uint8* p, char c0, char c1, char c2, char c3) { return p[0] == c0 && p[1] == c1 && p[2] == c2 && p[3] == c3; }
 
-static bool tt_is_font(const tt_uint8* font)
+static bool tt_is_font(const tt_uint8* font_)
 {
-    return tt_tag4(font, '1', 0, 0, 0) || tt_tag4(font, 0, 1, 0, 0) || tt_tag4(font, 'O', 'T', 'T', 'O')
-        || tt_tag4(font, 't', 'r', 'u', 'e') || tt_tag4(font, 't', 'y', 'p', '1');
+    return tt_tag4(font_, '1', 0, 0, 0) || tt_tag4(font_, 0, 1, 0, 0) || tt_tag4(font_, 'O', 'T', 'T', 'O')
+        || tt_tag4(font_, 't', 'r', 'u', 'e') || tt_tag4(font_, 't', 'y', 'p', '1');
 }
 
 static int tt_number_of_fonts(const tt_uint8* data)
@@ -849,7 +849,7 @@ static void unmap(void* data, long length)
 
 #else
 
-static void* mmap(const char* filename, long* length)
+static void* mmap(const char* filename, long* length_)
 {
     int fd = open(filename, O_RDONLY);
     if(fd < 0)
@@ -870,21 +870,21 @@ static void* mmap(const char* filename, long* length)
 
     if(data == MAP_FAILED)
         return NULL;
-    *length = st.st_size;
+    *length_ = st.st_size;
     return data;
 }
 
-static void unmap(void* data, long length)
+static void unmap(void* data, long length_)
 {
-    munmap(data, length);
+    munmap(data, length_);
 }
 
 #endif // _WIN32
 
 int font_face_cache_load_file(font_face_cache_t* cache, const char* filename)
 {
-    long length;
-    tt_uint8* data = static_cast<tt_uint8*>(mmap(filename, &length));
+    long length_;
+    tt_uint8* data = static_cast<tt_uint8*>(mmap(filename, &length_));
     if(data == NULL) {
         return 0;
     }
@@ -1045,7 +1045,7 @@ int font_face_cache_load_file(font_face_cache_t* cache, const char* filename)
         num_faces++;
     }
 
-    unmap(data, length);
+    unmap(data, length_);
     return num_faces;
 }
 
@@ -1054,11 +1054,11 @@ static bool font_face_supports_file(const char* filename)
     const char* extension = strrchr(filename, '.');
     if(extension) {
         char ext[5];
-        size_t length = strlen(extension);
-        if(length == 4) {
-            for(size_t i = 0; i < length; ++i)
+        size_t length_ = strlen(extension);
+        if(length_ == 4) {
+            for(size_t i = 0; i < length_; ++i)
                 ext[i] = tolower(extension[i]);
-            ext[length] = '\0';
+            ext[length_] = '\0';
             return strcmp(ext, ".ttf") == 0
                 || strcmp(ext, ".otf") == 0
                 || strcmp(ext, ".ttc") == 0
@@ -1117,16 +1117,16 @@ int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirname)
     while((entry = readdir(dir)) != NULL) {
         if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
             continue;
-        char path[PATH_MAX];
-        snprintf(path, sizeof(path), "%s/%s", dirname, entry->d_name);
+        char path_[PATH_MAX];
+        snprintf(path_, sizeof(path_), "%s/%s", dirname, entry->d_name);
 
         struct stat st;
-        if(stat(path, &st) == -1)
+        if(stat(path_, &st) == -1)
             continue;
         if(S_ISDIR(st.st_mode)) {
-            num_faces += font_face_cache_load_dir(cache, path);
-        } else if(S_ISREG(st.st_mode) && font_face_supports_file(path)) {
-            num_faces += font_face_cache_load_file(cache, path);
+            num_faces += font_face_cache_load_dir(cache, path_);
+        } else if(S_ISREG(st.st_mode) && font_face_supports_file(path_)) {
+            num_faces += font_face_cache_load_file(cache, path_);
         }
     }
 

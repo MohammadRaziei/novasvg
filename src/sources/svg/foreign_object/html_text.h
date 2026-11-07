@@ -16,7 +16,7 @@ struct foreign_object_face {
 
     /// No usable face (the machine has no font at all): text in it is not drawn.
     bool is_null() const { return painter == nullptr || painter->metrics(spec).height <= 0.f; }
-    float size() const { return spec.size; }
+    float size_() const { return spec.size; }
     float ascent() const { return painter->metrics(spec).ascent; }
     float height() const { return painter->metrics(spec).height; }
     float measure_text(std::u32string_view text) const { return painter->measure_text(text, spec); }
@@ -26,8 +26,8 @@ struct foreign_object_face {
 /// <strong>, <i>, <em> and inline `font-weight` / `font-style` ask for. Indexed by style bits (bit 0 bold,
 /// bit 1 italic). What a variant looks like is up to the painter.
 struct foreign_object_fonts {
-    static constexpr unsigned char Bold = 1;
-    static constexpr unsigned char Italic = 2;
+    static constexpr unsigned char bold = 1;
+    static constexpr unsigned char italic = 2;
 
     foreign_object_face face[4];
     const foreign_object_face& get(unsigned char style) const { return face[style & 3]; }
@@ -38,8 +38,8 @@ struct foreign_object_fonts {
         for(unsigned style = 0; style < 4; ++style) {
             fonts.face[style].painter = &painter;
             fonts.face[style].spec = base;
-            fonts.face[style].spec.bold = (style & Bold) != 0;
-            fonts.face[style].spec.italic = (style & Italic) != 0;
+            fonts.face[style].spec.bold = (style & bold) != 0;
+            fonts.face[style].spec.italic = (style & italic) != 0;
         }
 
         return fonts;
@@ -166,21 +166,21 @@ inline unsigned char foreign_object_style_of_opening(const std::string& tag, std
 {
     unsigned char style = inherited;
     if(tag == "b" || tag == "strong")
-        style |= foreign_object_fonts::Bold;
+        style |= foreign_object_fonts::bold;
     else if(tag == "i" || tag == "em" || tag == "cite" || tag == "var" || tag == "dfn")
-        style |= foreign_object_fonts::Italic;
+        style |= foreign_object_fonts::italic;
 
     auto inlineStyle = foreign_object_style_attribute(attributes);
     if(!inlineStyle.empty()) {
         if(auto weight = foreign_object_declaration(inlineStyle, "font-weight"); !weight.empty()) {
-            style &= (unsigned char)~foreign_object_fonts::Bold;
-            if(parse_font_weight(weight) == FontWeight::Bold)
-                style |= foreign_object_fonts::Bold;
+            style &= (unsigned char)~foreign_object_fonts::bold;
+            if(parse_font_weight(weight) == font_weight::bold)
+                style |= foreign_object_fonts::bold;
         }
-        if(auto fontStyle = foreign_object_declaration(inlineStyle, "font-style"); !fontStyle.empty()) {
-            style &= (unsigned char)~foreign_object_fonts::Italic;
-            if(parse_font_style(fontStyle) == FontStyle::Italic)
-                style |= foreign_object_fonts::Italic;
+        if(auto font_style_ = foreign_object_declaration(inlineStyle, "font-style"); !font_style_.empty()) {
+            style &= (unsigned char)~foreign_object_fonts::italic;
+            if(parse_font_style(font_style_) == font_style::italic)
+                style |= foreign_object_fonts::italic;
         }
     }
     return style;
@@ -240,10 +240,10 @@ inline std::vector<foreign_object_segment> foreign_object_styled_text(std::strin
             const bool closing = !inside.empty() && inside.front() == '/';
             const bool self_closing = !inside.empty() && inside.back() == '/';
             auto rest = closing ? inside.substr(1) : inside;
-            size_t nameLength = 0;
-            while(nameLength < rest.size() && std::isalnum(static_cast<unsigned char>(rest[nameLength])))
-                ++nameLength;
-            std::string name(rest.substr(0, nameLength));
+            size_t name_length = 0;
+            while(name_length < rest.size() && std::isalnum(static_cast<unsigned char>(rest[name_length])))
+                ++name_length;
+            std::string name(rest.substr(0, name_length));
             for(auto& ch : name)
                 ch = char(std::tolower(static_cast<unsigned char>(ch)));
 
@@ -269,7 +269,7 @@ inline std::vector<foreign_object_segment> foreign_object_styled_text(std::strin
             } else {
                 boundary(style);
                 if(!self_closing && !foreign_object_is_void_tag(name)) {
-                    style = foreign_object_style_of_opening(name, rest.substr(nameLength), style);
+                    style = foreign_object_style_of_opening(name, rest.substr(name_length), style);
                     open.push_back({name, style});
                 }
             }
@@ -349,7 +349,7 @@ inline std::string foreign_object_plain_text(std::string_view html)
 // mermaid's own default) or an absolute "Npx" length; anything else
 // (%, em, "normal", ...) or no line-height at all falls back to the
 // caller's own default.
-inline std::optional<float> foreign_object_line_height(std::string_view raw_html, float fontSize)
+inline std::optional<float> foreign_object_line_height(std::string_view raw_html, float font_size)
 {
     size_t pos = 0;
     while(pos < raw_html.size()) {
@@ -366,7 +366,7 @@ inline std::optional<float> foreign_object_line_height(std::string_view raw_html
         auto tag = raw_html.substr(tag_start, tag_end - tag_start);
         if(auto style = html_attribute(tag, "style=")) {
             if(auto declaration = parse_numeric_declaration(*style, "line-height"))
-                return declaration->is_pixels ? declaration->raw : declaration->raw * fontSize;
+                return declaration->is_pixels ? declaration->raw : declaration->raw * font_size;
         }
         pos = tag_end + 1;
     }
@@ -445,10 +445,10 @@ inline std::optional<float> foreign_object_declared_width(std::string_view raw_h
 // across the space counts, like a browser's shaping) still fits. A single
 // word wider than maxWidth stays alone on an overflowing line -- CSS never
 // breaks inside a word by default; render() condenses that one line.
-inline void wrap_foreign_object_paragraph(const std::u32string& paragraph, const foreign_object_face& font, float maxWidth, std::vector<std::u32string>& lines)
+inline void wrap_foreign_object_paragraph(const std::u32string& paragraph, const foreign_object_face& font_, float max_width, std::vector<std::u32string>& lines)
 {
     // Browsers lay out in 1/64px units, so "fits" tolerates that much slack.
-    const float limit = maxWidth + 1.f / 128.f;
+    const float limit = max_width + 1.f / 128.f;
     std::u32string current;
     size_t i = 0;
     while(i < paragraph.size()) {
@@ -469,7 +469,7 @@ inline void wrap_foreign_object_paragraph(const std::u32string& paragraph, const
         auto candidate = current;
         candidate += U' ';
         candidate += word;
-        if(font.measure_text(std::u32string_view(candidate)) <= limit) {
+        if(font_.measure_text(std::u32string_view(candidate)) <= limit) {
             current = std::move(candidate);
         } else {
             lines.push_back(std::move(current));
@@ -487,10 +487,10 @@ inline void wrap_foreign_object_paragraph(const std::u32string& paragraph, const
 // mermaid's nowrap labels want. With a positive maxWidth each paragraph is
 // additionally greedy word-wrapped to it, using the same Font::measureText()
 // the paint path uses.
-inline std::vector<std::u32string> wrap_foreign_object_text(const std::string& text, const foreign_object_face* font = nullptr, float maxWidth = 0.f)
+inline std::vector<std::u32string> wrap_foreign_object_text(const std::string& text, const foreign_object_face* font_ = nullptr, float max_width = 0.f)
 {
     std::vector<std::u32string> lines;
-    const bool soft_wrap = font != nullptr && !font->is_null() && maxWidth > 0.f;
+    const bool soft_wrap = font_ != nullptr && !font_->is_null() && max_width > 0.f;
     size_t pos = 0;
     while(pos <= text.size()) {
         auto nl = text.find('\n', pos);
@@ -499,7 +499,7 @@ inline std::vector<std::u32string> wrap_foreign_object_text(const std::string& t
         if(paragraph.empty())
             continue;
         if(soft_wrap)
-            wrap_foreign_object_paragraph(utf8_to_u32(paragraph), *font, maxWidth, lines);
+            wrap_foreign_object_paragraph(utf8_to_u32(paragraph), *font_, max_width, lines);
         else
             lines.push_back(utf8_to_u32(paragraph));
     }
@@ -564,7 +564,7 @@ inline foreign_object_line make_foreign_object_line(const std::u32string& chars,
 }
 
 // Lays ONE paragraph out into lines (appended to `lines`). With maxWidth <= 0 it never soft-wraps.
-inline void wrap_foreign_object_styled_paragraph(const std::vector<foreign_object_segment>& paragraph, const foreign_object_fonts& fonts, float maxWidth, std::vector<foreign_object_line>& lines)
+inline void wrap_foreign_object_styled_paragraph(const std::vector<foreign_object_segment>& paragraph, const foreign_object_fonts& fonts, float max_width, std::vector<foreign_object_line>& lines)
 {
     bool uniform = true;
     for(const auto& segment : paragraph)
@@ -578,10 +578,10 @@ inline void wrap_foreign_object_styled_paragraph(const std::vector<foreign_objec
         for(const auto& segment : paragraph)
             text += segment.text;
         auto chars = utf8_to_u32(text);
-        const auto& font = fonts.get(style);
-        if(maxWidth > 0.f && !font.is_null()) {
+        const auto& font_ = fonts.get(style);
+        if(max_width > 0.f && !font_.is_null()) {
             std::vector<std::u32string> wrapped;
-            wrap_foreign_object_paragraph(chars, font, maxWidth, wrapped);
+            wrap_foreign_object_paragraph(chars, font_, max_width, wrapped);
             for(auto& line : wrapped)
                 lines.push_back(foreign_object_line{foreign_object_run{std::move(line), style}});
         } else {
@@ -597,14 +597,14 @@ inline void wrap_foreign_object_styled_paragraph(const std::vector<foreign_objec
         chars += piece;
         styles.insert(styles.end(), piece.size(), segment.style);
     }
-    if(!(maxWidth > 0.f)) {
+    if(!(max_width > 0.f)) {
         lines.push_back(make_foreign_object_line(chars, styles));
         return;
     }
 
     // Same greedy word-wrap as wrapForeignObjectParagraph(), a word at a time, but a candidate line is
     // measured style stretch by style stretch. A space takes the style it has in the source.
-    const float limit = maxWidth + 1.f / 128.f;
+    const float limit = max_width + 1.f / 128.f;
     std::u32string current;
     std::vector<unsigned char> current_styles;
     size_t i = 0;
@@ -722,25 +722,25 @@ struct foreign_object_metrics {
  * size it to, and the widest line at this exact font is the only figure
  * that guarantees render() never needs to condense anything afterward.
  */
-inline foreign_object_metrics measure_foreign_object_segments(std::string_view raw_html, const std::vector<foreign_object_segment>& segments, const foreign_object_fonts& fonts, unsigned char base_style, float maxWidth)
+inline foreign_object_metrics measure_foreign_object_segments(std::string_view raw_html, const std::vector<foreign_object_segment>& segments, const foreign_object_fonts& fonts, unsigned char base_style, float max_width)
 {
     foreign_object_metrics metrics;
-    const auto& font = fonts.get(base_style);
-    if(font.is_null())
+    const auto& font_ = fonts.get(base_style);
+    if(font_.is_null())
         return metrics;
     // Same rule render() applies, so layout and paint agree: soft-wrap only if
     // the HTML's own `white-space` allows it, at the explicit maxWidth if one
     // was given, else at the width the HTML itself declares (px).
     float wrap_width = 0.f;
     if(foreign_object_allows_wrap(raw_html)) {
-        if(maxWidth > 0.f)
-            wrap_width = maxWidth;
+        if(max_width > 0.f)
+            wrap_width = max_width;
         else if(auto declared = foreign_object_declared_width(raw_html))
             wrap_width = *declared;
     }
     auto lines = layout_foreign_object_text(segments, fonts, wrap_width);
     metrics.line_count = int(lines.size());
-    metrics.line_height = foreign_object_line_height(raw_html, font.size()).value_or(font.height() * 1.2f);
+    metrics.line_height = foreign_object_line_height(raw_html, font_.size_()).value_or(font_.height() * 1.2f);
     metrics.height = metrics.line_height * float(metrics.line_count);
     for(const auto& line : lines)
         // STB_MAX(), not std::max(): see novasvg.h's own
@@ -757,9 +757,9 @@ inline foreign_object_metrics measure_foreign_object_segments(std::string_view r
  * does), `baseStyle` is the style the foreignObject itself has. This is exactly what painting does, so the
  * metrics and the painted box cannot disagree about a bold label being wider than a regular one.
  */
-inline foreign_object_metrics measure_foreign_object_content(std::string_view raw_html, const foreign_object_fonts& fonts, float maxWidth = -1.f, unsigned char base_style = 0)
+inline foreign_object_metrics measure_foreign_object_content(std::string_view raw_html, const foreign_object_fonts& fonts, float max_width = -1.f, unsigned char base_style = 0)
 {
-    return measure_foreign_object_segments(raw_html, foreign_object_styled_text(raw_html, base_style), fonts, base_style, maxWidth);
+    return measure_foreign_object_segments(raw_html, foreign_object_styled_text(raw_html, base_style), fonts, base_style, max_width);
 }
 
 // svg conditional processing for one switch child. `requiredExtensions` must be non-empty

@@ -9,15 +9,15 @@ using namespace vg; // the drawing layer (nova::vg)
 
 enum class svg_render_mode {
     painting,
-    Clipping
+    clipping
 };
 
 class svg_blend_info {
 public:
     explicit svg_blend_info(const svg_element* el);
     svg_blend_info(const svg_clip_path_element* clipper, const svg_mask_element* masker, const svg_filter_element* filter, float opacity,
-                 MixBlendMode mixBlendMode = MixBlendMode::normal)
-        : m_clipper(clipper), m_masker(masker), m_filter(filter), m_opacity(opacity), m_mixBlendMode(mixBlendMode)
+                 mix_blend_mode mix_blend_mode_ = mix_blend_mode::normal)
+        : m_clipper(clipper), m_masker(masker), m_filter(filter), m_opacity(opacity), m_mix_blend_mode(mix_blend_mode_)
     {}
 
     bool requires_compositing(svg_render_mode mode) const;
@@ -25,24 +25,24 @@ public:
     const svg_mask_element* masker() const { return m_masker; }
     const svg_filter_element* filter_element() const { return m_filter; }
     float opacity() const { return m_opacity; }
-    MixBlendMode mixBlendMode() const { return m_mixBlendMode; }
+    mix_blend_mode mix_blend_mode_() const { return m_mix_blend_mode; }
 
 private:
     const svg_clip_path_element* m_clipper;
     const svg_mask_element* m_masker;
     const svg_filter_element* m_filter;
     const float m_opacity;
-    const MixBlendMode m_mixBlendMode;
+    const mix_blend_mode m_mix_blend_mode;
 };
 
 class svg_render_state {
 public:
-    svg_render_state(const svg_element* el, const svg_render_state& parent, const Transform& local_transform)
+    svg_render_state(const svg_element* el, const svg_render_state& parent, const transform& local_transform)
         : m_element(el), m_parent(&parent), m_current_transform(parent.current_transform() * local_transform)
         , m_mode(parent.mode()), m_canvas(parent.m_canvas)
     {}
 
-    svg_render_state(const svg_element* el, const svg_render_state* parent, const Transform& current_transform, svg_render_mode mode, std::shared_ptr<canvas> canvas)
+    svg_render_state(const svg_element* el, const svg_render_state* parent, const transform& current_transform, svg_render_mode mode, std::shared_ptr<canvas> canvas)
         : m_element(el), m_parent(parent), m_current_transform(current_transform), m_mode(mode), m_canvas(std::move(canvas))
     {}
 
@@ -51,18 +51,18 @@ public:
 
     const svg_element* el() const { return m_element; }
     const svg_render_state* parent() const { return m_parent; }
-    const Transform& current_transform() const { return m_current_transform; }
+    const transform& current_transform() const { return m_current_transform; }
     const svg_render_mode mode() const { return m_mode; }
     // The pixel canvas this state draws on, or null when the target is a vector page (pdf_canvas).
     std::shared_ptr<raster_canvas> raster() const { return std::dynamic_pointer_cast<raster_canvas>(m_canvas); }
 
-    Rect fill_bounding_box() const { return m_element->fill_bounding_box(); }
-    Rect paint_bounding_box() const { return m_element->paint_bounding_box(); }
+    rect fill_bounding_box() const { return m_element->fill_bounding_box(); }
+    rect paint_bounding_box() const { return m_element->paint_bounding_box(); }
 
     bool has_cycle_reference(const svg_element* el) const;
 
-    void beginGroup(const svg_blend_info& blend_info);
-    void endGroup(const svg_blend_info& blend_info);
+    void begin_group(const svg_blend_info& blend_info);
+    void end_group(const svg_blend_info& blend_info);
 
 private:
     // What beginGroup() made for this element: nothing (a save()), a pixel layer, a transparency group on a pdf_canvas,
@@ -71,7 +71,7 @@ private:
 
     const svg_element* m_element;
     const svg_render_state* m_parent;
-    Transform m_current_transform;
+    transform m_current_transform;
     const svg_render_mode m_mode;
     std::shared_ptr<canvas> m_canvas;
     layer_kind m_layer = layer_kind::none;
@@ -110,13 +110,13 @@ public:
     svg_gradient_element(document* dom, element_id id);
 
     const svg_transform& gradientTransform() const { return m_gradient_transform; }
-    const svg_enumeration<Units>& gradientUnits() const { return m_gradient_units; }
+    const svg_enumeration<units>& gradientUnits() const { return m_gradient_units; }
     const svg_enumeration<SpreadMethod>& spreadMethod() const { return m_spread_method; }
     void collect_gradient_attributes(svg_gradient_attributes& attributes) const;
 
 private:
     svg_transform m_gradient_transform;
-    svg_enumeration<Units> m_gradient_units;
+    svg_enumeration<units> m_gradient_units;
     svg_enumeration<SpreadMethod> m_spread_method;
 };
 
@@ -124,9 +124,9 @@ class svg_gradient_attributes {
 public:
     svg_gradient_attributes() = default;
 
-    const Transform& gradientTransform() const { return m_gradient_transform->gradientTransform().value(); }
+    const transform& gradientTransform() const { return m_gradient_transform->gradientTransform().value(); }
     SpreadMethod spreadMethod() const { return m_spread_method->spreadMethod().value(); }
-    Units gradientUnits() const { return m_gradient_units->gradientUnits().value(); }
+    units gradientUnits() const { return m_gradient_units->gradientUnits().value(); }
     const svg_gradient_element* gradient_content_element() const { return m_gradient_content_element; }
 
     bool has_gradient_transform() const { return m_gradient_transform; }
@@ -249,7 +249,7 @@ public:
 
     void set_cx(const svg_radial_gradient_element* value) { m_cx = value; }
     void set_cy(const svg_radial_gradient_element* value) { m_cy = value; }
-    void setR(const svg_radial_gradient_element* value) { m_r = value; }
+    void set_r(const svg_radial_gradient_element* value) { m_r = value; }
     void set_fx(const svg_radial_gradient_element* value) { m_fx = value; }
     void set_fy(const svg_radial_gradient_element* value) { m_fy = value; }
 
@@ -279,8 +279,8 @@ public:
     const svg_length& width() const { return m_width; }
     const svg_length& height() const { return m_height; }
     const svg_transform& patternTransform() const { return m_pattern_transform; }
-    const svg_enumeration<Units>& patternUnits() const { return m_pattern_units; }
-    const svg_enumeration<Units>& patternContentUnits() const { return m_pattern_content_units; }
+    const svg_enumeration<units>& patternUnits() const { return m_pattern_units; }
+    const svg_enumeration<units>& patternContentUnits() const { return m_pattern_content_units; }
 
     bool apply_paint(svg_render_state& state, float opacity) const final;
 
@@ -291,8 +291,8 @@ private:
     svg_length m_width;
     svg_length m_height;
     svg_transform m_pattern_transform;
-    svg_enumeration<Units> m_pattern_units;
-    svg_enumeration<Units> m_pattern_content_units;
+    svg_enumeration<units> m_pattern_units;
+    svg_enumeration<units> m_pattern_content_units;
 };
 
 class svg_pattern_attributes {
@@ -303,10 +303,10 @@ public:
     const svg_length& y() const { return m_y->y(); }
     const svg_length& width() const { return m_width->width(); }
     const svg_length& height() const { return m_height->height(); }
-    const Transform& patternTransform() const { return m_pattern_transform->patternTransform().value(); }
-    Units patternUnits() const { return m_pattern_units->patternUnits().value(); }
-    Units patternContentUnits() const { return m_pattern_content_units->patternContentUnits().value(); }
-    const Rect& viewBox() const { return m_view_box->viewBox().value(); }
+    const transform& patternTransform() const { return m_pattern_transform->patternTransform().value(); }
+    units patternUnits() const { return m_pattern_units->patternUnits().value(); }
+    units patternContentUnits() const { return m_pattern_content_units->patternContentUnits().value(); }
+    const rect& viewBox() const { return m_view_box->viewBox().value(); }
     const svg_preserve_aspect_ratio& preserveAspectRatio() const { return m_preserve_aspect_ratio->preserveAspectRatio(); }
     const svg_pattern_element* pattern_content_element() const { return m_pattern_content_element; }
 
@@ -362,20 +362,20 @@ private:
 
 class svg_marker_position {
 public:
-    svg_marker_position(const svg_marker_element* el, const Point& origin, float angle)
+    svg_marker_position(const svg_marker_element* el, const point& origin, float angle)
         : m_element(el), m_origin(origin), m_angle(angle)
     {}
 
     const svg_marker_element* el() const { return m_element; }
-    const Point& origin() const { return m_origin; }
+    const point& origin() const { return m_origin; }
     float angle() const { return m_angle; }
 
-    Rect marker_bounding_box(float strokeWidth) const;
-    void render_marker(svg_render_state& state, float strokeWidth) const;
+    rect marker_bounding_box(float stroke_width) const;
+    void render_marker(svg_render_state& state, float stroke_width) const;
 
 private:
     const svg_marker_element* m_element;
-    Point m_origin;
+    point m_origin;
     float m_angle;
 };
 

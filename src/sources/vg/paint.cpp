@@ -3,53 +3,53 @@
 namespace nova {
 namespace vg {
 
-void color_init_rgb(color_t* color, float r, float g, float b)
+void color_init_rgb(color_t* color_, float r, float g, float b)
 {
-    color_init_rgba(color, r, g, b, 1.f);
+    color_init_rgba(color_, r, g, b, 1.f);
 }
 
-void color_init_rgba(color_t* color, float r, float g, float b, float a)
+void color_init_rgba(color_t* color_, float r, float g, float b, float a)
 {
-    color->r = std::clamp(r, 0.f, 1.f);
-    color->g = std::clamp(g, 0.f, 1.f);
-    color->b = std::clamp(b, 0.f, 1.f);
-    color->a = std::clamp(a, 0.f, 1.f);
+    color_->r = std::clamp(r, 0.f, 1.f);
+    color_->g = std::clamp(g, 0.f, 1.f);
+    color_->b = std::clamp(b, 0.f, 1.f);
+    color_->a = std::clamp(a, 0.f, 1.f);
 }
 
-void color_init_rgb8(color_t* color, int r, int g, int b)
+void color_init_rgb8(color_t* color_, int r, int g, int b)
 {
-    color_init_rgba8(color, r, g, b, 255);
+    color_init_rgba8(color_, r, g, b, 255);
 }
 
-void color_init_rgba8(color_t* color, int r, int g, int b, int a)
+void color_init_rgba8(color_t* color_, int r, int g, int b, int a)
 {
-    color_init_rgba(color, r / 255.f, g / 255.f, b / 255.f, a / 255.f);
+    color_init_rgba(color_, r / 255.f, g / 255.f, b / 255.f, a / 255.f);
 }
 
-void color_init_rgba32(color_t* color, unsigned int value)
+void color_init_rgba32(color_t* color_, unsigned int value)
 {
     uint8_t r = (value >> 24) & 0xFF;
     uint8_t g = (value >> 16) & 0xFF;
     uint8_t b = (value >>  8) & 0xFF;
     uint8_t a = (value >>  0) & 0xFF;
-    color_init_rgba8(color, r, g, b, a);
+    color_init_rgba8(color_, r, g, b, a);
 }
 
-void color_init_argb32(color_t* color, unsigned int value)
+void color_init_argb32(color_t* color_, unsigned int value)
 {
     uint8_t a = (value >> 24) & 0xFF;
     uint8_t r = (value >> 16) & 0xFF;
     uint8_t g = (value >>  8) & 0xFF;
     uint8_t b = (value >>  0) & 0xFF;
-    color_init_rgba8(color, r, g, b, a);
+    color_init_rgba8(color_, r, g, b, a);
 }
 
-void color_init_hsl(color_t* color, float h, float s, float l)
+void color_init_hsl(color_t* color_, float h, float s, float l)
 {
-    color_init_hsla(color, h, s, l, 1.f);
+    color_init_hsla(color_, h, s, l, 1.f);
 }
 
-void color_init_hsla(color_t* color, float h, float s, float l, float a)
+void color_init_hsla(color_t* color_, float h, float s, float l, float a)
 {
     h = fmodf(h, 360.f);
     if(h < 0.f) { h += 360.f; }
@@ -57,33 +57,33 @@ void color_init_hsla(color_t* color, float h, float s, float l, float a)
     float r = hsl_component(h, s, l, 0);
     float g = hsl_component(h, s, l, 8);
     float b = hsl_component(h, s, l, 4);
-    color_init_rgba(color, r, g, b, a);
+    color_init_rgba(color_, r, g, b, a);
 }
 
-unsigned int color_to_rgba32(const color_t* color)
+unsigned int color_to_rgba32(const color_t* color_)
 {
-    uint32_t r = lroundf(color->r * 255);
-    uint32_t g = lroundf(color->g * 255);
-    uint32_t b = lroundf(color->b * 255);
-    uint32_t a = lroundf(color->a * 255);
+    uint32_t r = lroundf(color_->r * 255);
+    uint32_t g = lroundf(color_->g * 255);
+    uint32_t b = lroundf(color_->b * 255);
+    uint32_t a = lroundf(color_->a * 255);
     return (r << 24) | (g << 16) | (b << 8) | (a);
 }
 
-unsigned int color_to_argb32(const color_t* color)
+unsigned int color_to_argb32(const color_t* color_)
 {
-    uint32_t a = lroundf(color->a * 255);
-    uint32_t r = lroundf(color->r * 255);
-    uint32_t g = lroundf(color->g * 255);
-    uint32_t b = lroundf(color->b * 255);
+    uint32_t a = lroundf(color_->a * 255);
+    uint32_t r = lroundf(color_->r * 255);
+    uint32_t g = lroundf(color_->g * 255);
+    uint32_t b = lroundf(color_->b * 255);
     return (a << 24) | (r << 16) | (g << 8) | (b);
 }
 
-int color_parse(color_t* color, const char* data, int length)
+int color_parse(color_t* color_, const char* data, int length_)
 {
-    if(length == -1)
-        length = strlen(data);
+    if(length_ == -1)
+        length_ = strlen(data);
     const char* it = data;
-    const char* end = it + length;
+    const char* end = it + length_;
     skip_ws(&it, end);
     if(skip_delim(&it, end, '#')) {
         int r, g, b, a = 255;
@@ -109,7 +109,7 @@ int color_parse(color_t* color, const char* data, int length)
             return 0;
         }
 
-        color_init_rgba8(color, r, g, b, a);
+        color_init_rgba8(color_, r, g, b, a);
     } else {
         int name_length = 0;
         char name[MAX_NAME + 1];
@@ -118,7 +118,7 @@ int color_parse(color_t* color, const char* data, int length)
         name[name_length] = '\0';
 
         if(strcmp(name, "transparent") == 0) {
-            color_init_rgba(color, 0, 0, 0, 0);
+            color_init_rgba(color_, 0, 0, 0, 0);
         } else if(strcmp(name, "rgb") == 0 || strcmp(name, "rgba") == 0) {
             if(!skip_ws_and_delim(&it, end, '('))
                 return 0;
@@ -139,7 +139,7 @@ int color_parse(color_t* color, const char* data, int length)
             skip_ws(&it, end);
             if(!skip_delim(&it, end, ')'))
                 return 0;
-            color_init_rgba(color, r, g, b, a);
+            color_init_rgba(color_, r, g, b, a);
         } else if(strcmp(name, "hsl") == 0 || strcmp(name, "hsla") == 0) {
             if(!skip_ws_and_delim(&it, end, '('))
                 return 0;
@@ -160,7 +160,7 @@ int color_parse(color_t* color, const char* data, int length)
             skip_ws(&it, end);
             if(!skip_delim(&it, end, ')'))
                 return 0;
-            color_init_hsla(color, h, s, l, a);
+            color_init_hsla(color_, h, s, l, a);
         } else {
             static const color_entry_t colormap[] = {
                 {"aliceblue", 0xF0F8FF},
@@ -322,7 +322,7 @@ int color_parse(color_t* color, const char* data, int length)
             ));
             if(entry == NULL)
                 return 0;
-            color_init_argb32(color, 0xFF000000 | entry->value);
+            color_init_argb32(color_, 0xFF000000 | entry->value);
         }
     }
 
@@ -341,16 +341,16 @@ paint_t* paint_create_rgba(float r, float g, float b, float a)
         NOVA_PAINT_TYPE_COLOR,
         sizeof(solid_paint_t)
     ));
-    solid->color.r = std::clamp(r, 0.f, 1.f);
-    solid->color.g = std::clamp(g, 0.f, 1.f);
-    solid->color.b = std::clamp(b, 0.f, 1.f);
-    solid->color.a = std::clamp(a, 0.f, 1.f);
+    solid->color_.r = std::clamp(r, 0.f, 1.f);
+    solid->color_.g = std::clamp(g, 0.f, 1.f);
+    solid->color_.b = std::clamp(b, 0.f, 1.f);
+    solid->color_.a = std::clamp(a, 0.f, 1.f);
     return &solid->base;
 }
 
-paint_t* paint_create_color(const color_t* color)
+paint_t* paint_create_color(const color_t* color_)
 {
-    return paint_create_rgba(color->r, color->g, color->b, color->a);
+    return paint_create_rgba(color_->r, color_->g, color_->b, color_->a);
 }
 
 paint_t* paint_create_linear_gradient(float x1, float y1, float x2, float y2, spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
@@ -375,40 +375,40 @@ paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, fl
     return &gradient->base;
 }
 
-paint_t* paint_create_texture(surface_t* surface, texture_type_t type, float opacity, const matrix_t* matrix)
+paint_t* paint_create_texture(surface_t* surface, texture_type_t type_, float opacity, const matrix_t* matrix)
 {
     texture_paint_t* texture = static_cast<texture_paint_t*>(paint_create(
         NOVA_PAINT_TYPE_TEXTURE,
         sizeof(texture_paint_t)
     ));
-    texture->type = type;
+    texture->type_ = type_;
     texture->opacity = std::clamp(opacity, 0.f, 1.f);
     texture->matrix = matrix ? *matrix : NOVA_IDENTITY_MATRIX;
     texture->surface = surface_reference(surface);
     return &texture->base;
 }
 
-paint_t* paint_reference(paint_t* paint)
+paint_t* paint_reference(paint_t* paint_)
 {
-    novasvg_increment_reference(paint);
-    return paint;
+    novasvg_increment_reference(paint_);
+    return paint_;
 }
 
-void paint_destroy(paint_t* paint)
+void paint_destroy(paint_t* paint_)
 {
-    if(novasvg_destroy_reference(paint)) {
-        if(paint->type == NOVA_PAINT_TYPE_TEXTURE) {
-            texture_paint_t* texture = (texture_paint_t*)(paint);
+    if(novasvg_destroy_reference(paint_)) {
+        if(paint_->type_ == NOVA_PAINT_TYPE_TEXTURE) {
+            texture_paint_t* texture = (texture_paint_t*)(paint_);
             surface_destroy(texture->surface);
         }
 
-        free(paint);
+        free(paint_);
     }
 }
 
-int paint_get_reference_count(const paint_t* paint)
+int paint_get_reference_count(const paint_t* paint_)
 {
-    return novasvg_get_reference_count(paint);
+    return novasvg_get_reference_count(paint_);
 }
 
 } // namespace vg

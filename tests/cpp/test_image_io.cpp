@@ -52,11 +52,11 @@ nova::vg::pixmap make_pattern()
     return bitmap;
 }
 
-nova::vg::pixmap make_solid_red(int size)
+nova::vg::pixmap make_solid_red(int size_)
 {
-    nova::vg::pixmap bitmap(size, size);
+    nova::vg::pixmap bitmap(size_, size_);
     auto* words = reinterpret_cast<std::uint32_t*>(bitmap.data());
-    for(int i = 0; i < size * size; ++i)
+    for(int i = 0; i < size_ * size_; ++i)
         words[i] = kOpaqueRed;
     return bitmap;
 }
@@ -109,14 +109,14 @@ TEST_CASE("image io: BMP and JPEG decode back to the right size and colour")
 TEST_CASE("image io: writing to a file gives the same pixels as encoding to bytes")
 {
     const stb::image source = nova::vg::pixmap_release_to_image(make_pattern());
-    const std::filesystem::path path = std::filesystem::temp_directory_path() / "novasvg_image_io_test.png";
+    const std::filesystem::path path_ = std::filesystem::temp_directory_path() / "novasvg_image_io_test.png";
 
     const std::vector<std::uint8_t> bytes = source.to_png();
-    source.write(path);  // dispatch by extension reaches the PNG encoder
+    source.write(path_);  // dispatch by extension reaches the PNG encoder
 
-    std::ifstream in(path, std::ios::binary);
+    std::ifstream in(path_, std::ios::binary);
     const std::vector<std::uint8_t> from_file((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-    std::filesystem::remove(path);
+    std::filesystem::remove(path_);
 
     const stb::image a = decode(bytes);
     const stb::image b = decode(from_file);

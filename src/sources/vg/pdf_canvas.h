@@ -20,26 +20,26 @@ public:
     // A page of width x height CSS px.
     static std::shared_ptr<pdf_canvas> create(float width, float height);
 
-    void set_color(const stb::color& color) override;
+    void set_color(const stb::color& color_) override;
     void set_color(float r, float g, float b, float a) override;
-    void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const Transform& transform) override;
-    void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const Transform& transform) override;
+    void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const transform& transform_) override;
+    void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const transform& transform_) override;
 
-    void fill_path(const stb::outline& path, FillRule fill_rule, const Transform& transform) override;
-    void stroke_path(const stb::outline& path, const StrokeData& stroke_data, const Transform& transform) override;
+    void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) override;
+    void stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_) override;
 
-    void fill_text(const std::u32string_view& text, const Font& font, const Point& origin, const Transform& transform) override;
-    void stroke_text(const std::u32string_view& text, float stroke_width, const Font& font, const Point& origin, const Transform& transform) override;
+    void fill_text(const std::u32string_view& text, const font& font_, const point& origin, const transform& transform_) override;
+    void stroke_text(const std::u32string_view& text, float stroke_width, const font& font_, const point& origin, const transform& transform_) override;
 
-    void clip_path(const stb::outline& path, FillRule clip_rule, const Transform& transform) override;
-    void clip_rect(const Rect& rect, FillRule clip_rule, const Transform& transform) override;
+    void clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_) override;
+    void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) override;
 
-    void draw_image(const pixmap& image, const Rect& dst_rect, const Rect& src_rect, const Transform& transform) override;
+    void draw_image(const pixmap& image, const rect& dst_rect, const rect& src_rect, const transform& transform_) override;
 
     // ---- beyond the `canvas` interface; the svg layer calls these when its target is a pdf_canvas ----
 
     // The page in user units: where a group's bitmap may be placed.
-    Rect extents() const { return Rect(0, 0, m_width, m_height); }
+    rect extents() const { return rect(0, 0, m_width, m_height); }
 
     // Pixels per user unit used for the bitmaps the svg layer makes for this page (96 dpi * raster_scale()).
     float raster_scale() const { return m_raster_scale; }
@@ -48,13 +48,13 @@ public:
     // Everything drawn between begin_group() and end_group() is one transparency group, composited
     // with `opacity` and `blend_mode` (Form XObject with a /Group). Groups nest.
     void begin_group();
-    void end_group(BlendMode blend_mode, float opacity);
+    void end_group(blend_mode blend_mode_, float opacity);
 
     // A finished raster group (premultiplied ARGB32) placed at `dst` (user units).
-    void draw_raster_group(const pixmap& image, const Rect& dst, BlendMode blend_mode, float opacity);
+    void draw_raster_group(const pixmap& image, const rect& dst, blend_mode blend_mode_, float opacity);
 
     // Makes the current paint a tiled image: `tile` repeated, `transform` mapping tile pixels to user space.
-    void set_tiled_image(const pixmap& tile, const Transform& transform, float opacity);
+    void set_tiled_image(const pixmap& tile, const transform& transform_, float opacity);
 
     void save() override;
     void restore() override;
@@ -67,7 +67,7 @@ private:
     pdf_canvas(float width, float height);
 
     struct paint {
-        enum class kind { solid, linear, radial, tiled } type = kind::solid;
+        enum class kind { solid, linear, radial, tiled } type_ = kind::solid;
         int tile_object = 0;
         int tile_w = 0, tile_h = 0;
         float r = 0, g = 0, b = 0, a = 1;
@@ -85,16 +85,16 @@ private:
 
     int add_object(std::string dict);
     int add_stream(std::string dict, const std::string& bytes, bool compress);
-    void begin_paint(bool stroke, const matrix_t& transform);
-    void emit_path(const stb::outline& path, const matrix_t* transform);
-    void emit_rect_path(const Rect& rect, const matrix_t* transform);
-    void emit_text_path(const std::u32string_view& text, const Font& font, const Point& origin, const matrix_t* transform);
-    std::string alpha_state(float alpha, BlendMode blend_mode = BlendMode::src_over);
-    int shading_pattern(const matrix_t& transform);
-    int tiling_pattern(const matrix_t& transform);
+    void begin_paint(bool stroke, const matrix_t& transform_);
+    void emit_path(const stb::outline& path_, const matrix_t* transform_);
+    void emit_rect_path(const rect& rect_, const matrix_t* transform_);
+    void emit_text_path(const std::u32string_view& text, const font& font_, const point& origin, const matrix_t* transform_);
+    std::string alpha_state(float alpha, blend_mode blend_mode_ = blend_mode::src_over);
+    int shading_pattern(const matrix_t& transform_);
+    int tiling_pattern(const matrix_t& transform_);
     // Adds `image` as an Image XObject (Flate RGB, plus an SMask when it has alpha). Returns its object number.
     int add_image(const pixmap& image, int* width, int* height);
-    void place_image(int object, int width, int height, const Rect& dst, const Rect& src, const matrix_t* transform, float alpha, BlendMode blend_mode);
+    void place_image(int object, int width, int height, const rect& dst, const rect& src, const matrix_t* transform_, float alpha, blend_mode blend_mode_);
 
     float m_width, m_height;
     std::vector<object> m_objects; // object number = index + 1

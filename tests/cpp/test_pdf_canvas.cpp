@@ -18,29 +18,29 @@ TEST_CASE("pdf_canvas: a page with shapes, a gradient, a clip and text")
     auto pdf = pdf_canvas::create(200, 120);
 
     pdf->set_color(0.9f, 0.2f, 0.1f, 1.f);
-    stb::outline rect;
-    rect.add_rect(10, 10, 80, 50);
-    pdf->fill_path(rect, FillRule::NonZero, Transform());
+    stb::outline rect_;
+    rect_.add_rect(10, 10, 80, 50);
+    pdf->fill_path(rect_, fill_rule::non_zero, transform());
 
-    StrokeData stroke(4.f);
-    stroke.set_line_join(LineJoin::Round);
+    stroke_data stroke(4.f);
+    stroke.set_line_join(line_join::round);
     stroke.set_dash_array({6.f, 3.f});
     pdf->set_color(0.f, 0.f, 0.6f, 0.5f);
     stb::outline circle;
     circle.add_ellipse(140, 40, 40, 30);
-    pdf->stroke_path(circle, stroke, Transform());
+    pdf->stroke_path(circle, stroke, transform());
 
     GradientStops stops = {{0.f, {1.f, 1.f, 0.f, 1.f}}, {0.5f, {0.f, 0.7f, 0.2f, 1.f}}, {1.f, {0.f, 0.2f, 0.9f, 1.f}}};
     pdf->save();
-    pdf->clip_rect(Rect(10, 70, 180, 40), FillRule::NonZero, Transform());
-    pdf->set_linear_gradient(10, 0, 190, 0, SpreadMethod::pad, stops, Transform());
+    pdf->clip_rect(rect(10, 70, 180, 40), fill_rule::non_zero, transform());
+    pdf->set_linear_gradient(10, 0, 190, 0, SpreadMethod::pad, stops, transform());
     stb::outline wide;
     wide.add_rect(0, 60, 200, 60);
-    pdf->fill_path(wide, FillRule::NonZero, Transform());
+    pdf->fill_path(wide, fill_rule::non_zero, transform());
     pdf->restore();
 
     pdf->set_color(0.f, 0.f, 0.f, 1.f);
-    pdf->fill_text(U"Hello, PDF ffi", Font(embedded_fallback_font(), 16.f), Point(14, 100), Transform());
+    pdf->fill_text(U"Hello, PDF ffi", font(embedded_fallback_font(), 16.f), point(14, 100), transform());
 
     auto bytes = pdf->data();
     std::string s = text_of(bytes);

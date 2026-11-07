@@ -3,7 +3,7 @@
 namespace nova {
 namespace vg {
 
-static path_element_t* path_add_command(path_t* path, path_command_t command, int npoints);
+static path_element_t* path_add_command(path_t* path_, path_command_t command, int npoints);
 static void split_bezier(const bezier_t* b, bezier_t* first, bezier_t* second);
 static void dash_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints);
 static void clone_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints);
@@ -11,16 +11,16 @@ static void extents_traverse_func(void* closure, path_command_t command, const p
 static bool parse_arc_flag(const char** begin, const char* end, bool* flag);
 static bool parse_path_coordinates(const char** begin, const char* end, float values[6], int offset, int count);
 
-void path_iterator_init(path_iterator_t* it, const path_t* path)
+void path_iterator_init(path_iterator_t* it, const path_t* path_)
 {
-    it->elements = path->elements.data;
-    it->size = path->elements.size;
+    it->elements = path_->elements.data;
+    it->size_ = path_->elements.size_;
     it->index = 0;
 }
 
 bool path_iterator_has_next(const path_iterator_t* it)
 {
-    return it->index < it->size;
+    return it->index < it->size_;
 }
 
 path_command_t path_iterator_next(path_iterator_t* it, point_t points[3])
@@ -30,113 +30,113 @@ path_command_t path_iterator_next(path_iterator_t* it, point_t points[3])
     case NOVA_PATH_COMMAND_MOVE_TO:
     case NOVA_PATH_COMMAND_LINE_TO:
     case NOVA_PATH_COMMAND_CLOSE:
-        points[0] = elements[1].point;
+        points[0] = elements[1].point_;
         break;
     case NOVA_PATH_COMMAND_CUBIC_TO:
-        points[0] = elements[1].point;
-        points[1] = elements[2].point;
-        points[2] = elements[3].point;
+        points[0] = elements[1].point_;
+        points[1] = elements[2].point_;
+        points[2] = elements[3].point_;
         break;
     }
 
-    it->index += elements[0].header.length;
+    it->index += elements[0].header.length_;
     return elements[0].header.command;
 }
 
 path_t* path_create(void)
 {
-    path_t* path = static_cast<path_t*>(malloc(sizeof(path_t)));
-    novasvg_init_reference(path);
-    path->num_points = 0;
-    path->num_contours = 0;
-    path->num_curves = 0;
-    path->start_point = NOVA_EMPTY_POINT;
-    novasvg_array_init(path->elements);
-    return path;
+    path_t* path_ = static_cast<path_t*>(malloc(sizeof(path_t)));
+    novasvg_init_reference(path_);
+    path_->num_points = 0;
+    path_->num_contours = 0;
+    path_->num_curves = 0;
+    path_->start_point = NOVA_EMPTY_POINT;
+    novasvg_array_init(path_->elements);
+    return path_;
 }
 
-path_t* path_reference(path_t* path)
+path_t* path_reference(path_t* path_)
 {
-    novasvg_increment_reference(path);
-    return path;
+    novasvg_increment_reference(path_);
+    return path_;
 }
 
-void path_destroy(path_t* path)
+void path_destroy(path_t* path_)
 {
-    if(novasvg_destroy_reference(path)) {
-        novasvg_array_destroy(path->elements);
-        free(path);
+    if(novasvg_destroy_reference(path_)) {
+        novasvg_array_destroy(path_->elements);
+        free(path_);
     }
 }
 
-int path_get_reference_count(const path_t* path)
+int path_get_reference_count(const path_t* path_)
 {
-    return novasvg_get_reference_count(path);
+    return novasvg_get_reference_count(path_);
 }
 
-int path_get_elements(const path_t* path, const path_element_t** elements)
+int path_get_elements(const path_t* path_, const path_element_t** elements)
 {
     if(elements)
-        *elements = path->elements.data;
-    return path->elements.size;
+        *elements = path_->elements.data;
+    return path_->elements.size_;
 }
 
-static path_element_t* path_add_command(path_t* path, path_command_t command, int npoints)
+static path_element_t* path_add_command(path_t* path_, path_command_t command, int npoints)
 {
-    const int length = npoints + 1;
-    novasvg_array_ensure(path->elements, length);
-    path_element_t* elements = path->elements.data + path->elements.size;
+    const int length_ = npoints + 1;
+    novasvg_array_ensure(path_->elements, length_);
+    path_element_t* elements = path_->elements.data + path_->elements.size_;
     elements->header.command = command;
-    elements->header.length = length;
-    path->elements.size += length;
-    path->num_points += npoints;
+    elements->header.length_ = length_;
+    path_->elements.size_ += length_;
+    path_->num_points += npoints;
     return elements + 1;
 }
 
-void path_move_to(path_t* path, float x, float y)
+void path_move_to(path_t* path_, float x, float y)
 {
-    path_element_t* elements = path_add_command(path, NOVA_PATH_COMMAND_MOVE_TO, 1);
-    elements[0].point = NOVA_MAKE_POINT(x, y);
-    path->start_point = NOVA_MAKE_POINT(x, y);
-    path->num_contours += 1;
+    path_element_t* elements = path_add_command(path_, NOVA_PATH_COMMAND_MOVE_TO, 1);
+    elements[0].point_ = NOVA_MAKE_POINT(x, y);
+    path_->start_point = NOVA_MAKE_POINT(x, y);
+    path_->num_contours += 1;
 }
 
-void path_line_to(path_t* path, float x, float y)
+void path_line_to(path_t* path_, float x, float y)
 {
-    if(path->elements.size == 0)
-        path_move_to(path, 0, 0);
-    path_element_t* elements = path_add_command(path, NOVA_PATH_COMMAND_LINE_TO, 1);
-    elements[0].point = NOVA_MAKE_POINT(x, y);
+    if(path_->elements.size_ == 0)
+        path_move_to(path_, 0, 0);
+    path_element_t* elements = path_add_command(path_, NOVA_PATH_COMMAND_LINE_TO, 1);
+    elements[0].point_ = NOVA_MAKE_POINT(x, y);
 }
 
-void path_quad_to(path_t* path, float x1, float y1, float x2, float y2)
+void path_quad_to(path_t* path_, float x1, float y1, float x2, float y2)
 {
     float current_x, current_y;
-    path_get_current_point(path, &current_x, &current_y);
+    path_get_current_point(path_, &current_x, &current_y);
     float cp1x = 2.f / 3.f * x1 + 1.f / 3.f * current_x;
     float cp1y = 2.f / 3.f * y1 + 1.f / 3.f * current_y;
     float cp2x = 2.f / 3.f * x1 + 1.f / 3.f * x2;
     float cp2y = 2.f / 3.f * y1 + 1.f / 3.f * y2;
-    path_cubic_to(path, cp1x, cp1y, cp2x, cp2y, x2, y2);
+    path_cubic_to(path_, cp1x, cp1y, cp2x, cp2y, x2, y2);
 }
 
-void path_cubic_to(path_t* path, float x1, float y1, float x2, float y2, float x3, float y3)
+void path_cubic_to(path_t* path_, float x1, float y1, float x2, float y2, float x3, float y3)
 {
-    if(path->elements.size == 0)
-        path_move_to(path, 0, 0);
-    path_element_t* elements = path_add_command(path, NOVA_PATH_COMMAND_CUBIC_TO, 3);
-    elements[0].point = NOVA_MAKE_POINT(x1, y1);
-    elements[1].point = NOVA_MAKE_POINT(x2, y2);
-    elements[2].point = NOVA_MAKE_POINT(x3, y3);
-    path->num_curves += 1;
+    if(path_->elements.size_ == 0)
+        path_move_to(path_, 0, 0);
+    path_element_t* elements = path_add_command(path_, NOVA_PATH_COMMAND_CUBIC_TO, 3);
+    elements[0].point_ = NOVA_MAKE_POINT(x1, y1);
+    elements[1].point_ = NOVA_MAKE_POINT(x2, y2);
+    elements[2].point_ = NOVA_MAKE_POINT(x3, y3);
+    path_->num_curves += 1;
 }
 
-void path_arc_to(path_t* path, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y)
+void path_arc_to(path_t* path_, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y)
 {
     float current_x, current_y;
-    path_get_current_point(path, &current_x, &current_y);
+    path_get_current_point(path_, &current_x, &current_y);
     if(rx == 0.f || ry == 0.f || (current_x == x && current_y == y)) {
-        path_line_to(path, x, y);
+        path_line_to(path_, x, y);
         return;
     }
 
@@ -213,62 +213,62 @@ void path_arc_to(path_t* path, float rx, float ry, float angle, bool large_arc_f
         matrix_map(&matrix, cp2x, cp2y, &cp2x, &cp2y);
         matrix_map(&matrix, x3, y3, &x3, &y3);
 
-        path_cubic_to(path, cp1x, cp1y, cp2x, cp2y, x3, y3);
+        path_cubic_to(path_, cp1x, cp1y, cp2x, cp2y, x3, y3);
     }
 }
 
-void path_close(path_t* path)
+void path_close(path_t* path_)
 {
-    if(path->elements.size == 0)
+    if(path_->elements.size_ == 0)
         return;
-    path_element_t* elements = path_add_command(path, NOVA_PATH_COMMAND_CLOSE, 1);
-    elements[0].point = path->start_point;
+    path_element_t* elements = path_add_command(path_, NOVA_PATH_COMMAND_CLOSE, 1);
+    elements[0].point_ = path_->start_point;
 }
 
-void path_get_current_point(const path_t* path, float* x, float* y)
+void path_get_current_point(const path_t* path_, float* x, float* y)
 {
     float xx = 0.f;
     float yy = 0.f;
-    if(path->num_points > 0) {
-        xx = path->elements.data[path->elements.size - 1].point.x;
-        yy = path->elements.data[path->elements.size - 1].point.y;
+    if(path_->num_points > 0) {
+        xx = path_->elements.data[path_->elements.size_ - 1].point_.x;
+        yy = path_->elements.data[path_->elements.size_ - 1].point_.y;
     }
 
     if(x) *x = xx;
     if(y) *y = yy;
 }
 
-void path_reserve(path_t* path, int count)
+void path_reserve(path_t* path_, int count)
 {
-    novasvg_array_ensure(path->elements, count);
+    novasvg_array_ensure(path_->elements, count);
 }
 
-void path_reset(path_t* path)
+void path_reset(path_t* path_)
 {
-    novasvg_array_clear(path->elements);
-    path->start_point = NOVA_EMPTY_POINT;
-    path->num_points = 0;
-    path->num_contours = 0;
-    path->num_curves = 0;
+    novasvg_array_clear(path_->elements);
+    path_->start_point = NOVA_EMPTY_POINT;
+    path_->num_points = 0;
+    path_->num_contours = 0;
+    path_->num_curves = 0;
 }
 
-void path_add_rect(path_t* path, float x, float y, float w, float h)
+void path_add_rect(path_t* path_, float x, float y, float w, float h)
 {
-    path_reserve(path, 6 * 2);
-    path_move_to(path, x, y);
-    path_line_to(path, x + w, y);
-    path_line_to(path, x + w, y + h);
-    path_line_to(path, x, y + h);
-    path_line_to(path, x, y);
-    path_close(path);
+    path_reserve(path_, 6 * 2);
+    path_move_to(path_, x, y);
+    path_line_to(path_, x + w, y);
+    path_line_to(path_, x + w, y + h);
+    path_line_to(path_, x, y + h);
+    path_line_to(path_, x, y);
+    path_close(path_);
 }
 
-void path_add_round_rect(path_t* path, float x, float y, float w, float h, float rx, float ry)
+void path_add_round_rect(path_t* path_, float x, float y, float w, float h, float rx, float ry)
 {
     rx = STB_MIN(rx, w * 0.5f);
     ry = STB_MIN(ry, h * 0.5f);
     if(rx == 0.f && ry == 0.f) {
-        path_add_rect(path, x, y, w, h);
+        path_add_rect(path_, x, y, w, h);
         return;
     }
 
@@ -278,20 +278,20 @@ void path_add_round_rect(path_t* path, float x, float y, float w, float h, float
     float cpx = rx * NOVA_KAPPA;
     float cpy = ry * NOVA_KAPPA;
 
-    path_reserve(path, 6 * 2 + 4 * 4);
-    path_move_to(path, x, y+ry);
-    path_cubic_to(path, x, y+ry-cpy, x+rx-cpx, y, x+rx, y);
-    path_line_to(path, right-rx, y);
-    path_cubic_to(path, right-rx+cpx, y, right, y+ry-cpy, right, y+ry);
-    path_line_to(path, right, bottom-ry);
-    path_cubic_to(path, right, bottom-ry+cpy, right-rx+cpx, bottom, right-rx, bottom);
-    path_line_to(path, x+rx, bottom);
-    path_cubic_to(path, x+rx-cpx, bottom, x, bottom-ry+cpy, x, bottom-ry);
-    path_line_to(path, x, y+ry);
-    path_close(path);
+    path_reserve(path_, 6 * 2 + 4 * 4);
+    path_move_to(path_, x, y+ry);
+    path_cubic_to(path_, x, y+ry-cpy, x+rx-cpx, y, x+rx, y);
+    path_line_to(path_, right-rx, y);
+    path_cubic_to(path_, right-rx+cpx, y, right, y+ry-cpy, right, y+ry);
+    path_line_to(path_, right, bottom-ry);
+    path_cubic_to(path_, right, bottom-ry+cpy, right-rx+cpx, bottom, right-rx, bottom);
+    path_line_to(path_, x+rx, bottom);
+    path_cubic_to(path_, x+rx-cpx, bottom, x, bottom-ry+cpy, x, bottom-ry);
+    path_line_to(path_, x, y+ry);
+    path_close(path_);
 }
 
-void path_add_ellipse(path_t* path, float cx, float cy, float rx, float ry)
+void path_add_ellipse(path_t* path_, float cx, float cy, float rx, float ry)
 {
     float left = cx - rx;
     float top = cy - ry;
@@ -301,21 +301,21 @@ void path_add_ellipse(path_t* path, float cx, float cy, float rx, float ry)
     float cpx = rx * NOVA_KAPPA;
     float cpy = ry * NOVA_KAPPA;
 
-    path_reserve(path, 2 * 2 + 4 * 4);
-    path_move_to(path, cx, top);
-    path_cubic_to(path, cx+cpx, top, right, cy-cpy, right, cy);
-    path_cubic_to(path, right, cy+cpy, cx+cpx, bottom, cx, bottom);
-    path_cubic_to(path, cx-cpx, bottom, left, cy+cpy, left, cy);
-    path_cubic_to(path, left, cy-cpy, cx-cpx, top, cx, top);
-    path_close(path);
+    path_reserve(path_, 2 * 2 + 4 * 4);
+    path_move_to(path_, cx, top);
+    path_cubic_to(path_, cx+cpx, top, right, cy-cpy, right, cy);
+    path_cubic_to(path_, right, cy+cpy, cx+cpx, bottom, cx, bottom);
+    path_cubic_to(path_, cx-cpx, bottom, left, cy+cpy, left, cy);
+    path_cubic_to(path_, left, cy-cpy, cx-cpx, top, cx, top);
+    path_close(path_);
 }
 
-void path_add_circle(path_t* path, float cx, float cy, float r)
+void path_add_circle(path_t* path_, float cx, float cy, float r)
 {
-    path_add_ellipse(path, cx, cy, r, r);
+    path_add_ellipse(path_, cx, cy, r, r);
 }
 
-void path_add_arc(path_t* path, float cx, float cy, float r, float a0, float a1, bool ccw)
+void path_add_arc(path_t* path_, float cx, float cy, float r, float a0, float a1, bool ccw)
 {
     float da = a1 - a0;
     if(fabsf(da) > NOVA_TWO_PI) {
@@ -336,11 +336,11 @@ void path_add_arc(path_t* path, float cx, float cy, float r, float a0, float a1,
     float dx = -sinf(a) * d;
     float dy = cosf(a) * d;
 
-    path_reserve(path, 2 + 4 * seg_n);
-    if(path->elements.size == 0) {
-        path_move_to(path, ax, ay);
+    path_reserve(path_, 2 + 4 * seg_n);
+    if(path_->elements.size_ == 0) {
+        path_move_to(path_, ax, ay);
     } else {
-        path_line_to(path, ax, ay);
+        path_line_to(path_, ax, ay);
     }
 
     for(int i = 0; i < seg_n; i++) {
@@ -357,37 +357,37 @@ void path_add_arc(path_t* path, float cx, float cy, float r, float a0, float a1,
         float cp2x = ax - dx;
         float cp2y = ay - dy;
 
-        path_cubic_to(path, cp1x, cp1y, cp2x, cp2y, ax, ay);
+        path_cubic_to(path_, cp1x, cp1y, cp2x, cp2y, ax, ay);
     }
 }
 
-void path_transform(path_t* path, const matrix_t* matrix)
+void path_transform(path_t* path_, const matrix_t* matrix)
 {
-    path_element_t* elements = path->elements.data;
-    for(int i = 0; i < path->elements.size; i += elements[i].header.length) {
+    path_element_t* elements = path_->elements.data;
+    for(int i = 0; i < path_->elements.size_; i += elements[i].header.length_) {
         switch(elements[i].header.command) {
         case NOVA_PATH_COMMAND_MOVE_TO:
         case NOVA_PATH_COMMAND_LINE_TO:
         case NOVA_PATH_COMMAND_CLOSE:
-            matrix_map_point(matrix, &elements[i + 1].point, &elements[i + 1].point);
+            matrix_map_point(matrix, &elements[i + 1].point_, &elements[i + 1].point_);
             break;
         case NOVA_PATH_COMMAND_CUBIC_TO:
-            matrix_map_point(matrix, &elements[i + 1].point, &elements[i + 1].point);
-            matrix_map_point(matrix, &elements[i + 2].point, &elements[i + 2].point);
-            matrix_map_point(matrix, &elements[i + 3].point, &elements[i + 3].point);
+            matrix_map_point(matrix, &elements[i + 1].point_, &elements[i + 1].point_);
+            matrix_map_point(matrix, &elements[i + 2].point_, &elements[i + 2].point_);
+            matrix_map_point(matrix, &elements[i + 3].point_, &elements[i + 3].point_);
             break;
         }
     }
 }
 
-void path_add_path(path_t* path, const path_t* source, const matrix_t* matrix)
+void path_add_path(path_t* path_, const path_t* source, const matrix_t* matrix)
 {
     if(matrix == NULL) {
-        novasvg_array_append(path->elements, source->elements);
-        path->start_point = source->start_point;
-        path->num_points += source->num_points;
-        path->num_contours += source->num_contours;
-        path->num_curves += source->num_curves;
+        novasvg_array_append(path_->elements, source->elements);
+        path_->start_point = source->start_point;
+        path_->num_points += source->num_points;
+        path_->num_contours += source->num_contours;
+        path_->num_curves += source->num_curves;
         return;
     }
 
@@ -395,32 +395,32 @@ void path_add_path(path_t* path, const path_t* source, const matrix_t* matrix)
     path_iterator_init(&it, source);
 
     point_t points[3];
-    novasvg_array_ensure(path->elements, source->elements.size);
+    novasvg_array_ensure(path_->elements, source->elements.size_);
     while(path_iterator_has_next(&it)) {
         switch(path_iterator_next(&it, points)) {
         case NOVA_PATH_COMMAND_MOVE_TO:
             matrix_map_points(matrix, points, points, 1);
-            path_move_to(path, points[0].x, points[0].y);
+            path_move_to(path_, points[0].x, points[0].y);
             break;
         case NOVA_PATH_COMMAND_LINE_TO:
             matrix_map_points(matrix, points, points, 1);
-            path_line_to(path, points[0].x, points[0].y);
+            path_line_to(path_, points[0].x, points[0].y);
             break;
         case NOVA_PATH_COMMAND_CUBIC_TO:
             matrix_map_points(matrix, points, points, 3);
-            path_cubic_to(path, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
+            path_cubic_to(path_, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
             break;
         case NOVA_PATH_COMMAND_CLOSE:
-            path_close(path);
+            path_close(path_);
             break;
         }
     }
 }
 
-void path_traverse(const path_t* path, path_traverse_func_t traverse_func, void* closure)
+void path_traverse(const path_t* path_, path_traverse_func_t traverse_func, void* closure)
 {
     path_iterator_t it;
-    path_iterator_init(&it, path);
+    path_iterator_init(&it, path_);
 
     point_t points[3];
     while(path_iterator_has_next(&it)) {
@@ -462,17 +462,17 @@ static void split_bezier(const bezier_t* b, bezier_t* first, bezier_t* second)
     first->y4 = second->y1 = (first->y3 + second->y2) * 0.5f;
 }
 
-void path_traverse_flatten(const path_t* path, path_traverse_func_t traverse_func, void* closure)
+void path_traverse_flatten(const path_t* path_, path_traverse_func_t traverse_func, void* closure)
 {
-    if(path->num_curves == 0) {
-        path_traverse(path, traverse_func, closure);
+    if(path_->num_curves == 0) {
+        path_traverse(path_, traverse_func, closure);
         return;
     }
 
     const float threshold = 0.25f;
 
     path_iterator_t it;
-    path_iterator_init(&it, path);
+    path_iterator_init(&it, path_);
 
     bezier_t beziers[32];
     point_t points[3];
@@ -567,7 +567,7 @@ static void dash_traverse_func(void* closure, path_command_t command, const poin
     dasher->current_point = p1;
 }
 
-void path_traverse_dashed(const path_t* path, float offset, const float* dashes, int ndashes, path_traverse_func_t traverse_func, void* closure)
+void path_traverse_dashed(const path_t* path_, float offset, const float* dashes, int ndashes, path_traverse_func_t traverse_func, void* closure)
 {
     float dash_sum = 0.f;
     for(int i = 0; i < ndashes; ++i)
@@ -575,7 +575,7 @@ void path_traverse_dashed(const path_t* path, float offset, const float* dashes,
     if(ndashes % 2 == 1)
         dash_sum *= 2.f;
     if(dash_sum <= 0.f) {
-        path_traverse(path, traverse_func, closure);
+        path_traverse(path_, traverse_func, closure);
         return;
     }
 
@@ -599,52 +599,52 @@ void path_traverse_dashed(const path_t* path, float offset, const float* dashes,
     dasher.current_point = NOVA_EMPTY_POINT;
     dasher.traverse_func = traverse_func;
     dasher.closure = closure;
-    path_traverse_flatten(path, dash_traverse_func, &dasher);
+    path_traverse_flatten(path_, dash_traverse_func, &dasher);
 }
 
-path_t* path_clone(const path_t* path)
+path_t* path_clone(const path_t* path_)
 {
     path_t* clone = path_create();
-    novasvg_array_append(clone->elements, path->elements);
-    clone->start_point = path->start_point;
-    clone->num_points = path->num_points;
-    clone->num_contours = path->num_contours;
-    clone->num_curves = path->num_curves;
+    novasvg_array_append(clone->elements, path_->elements);
+    clone->start_point = path_->start_point;
+    clone->num_points = path_->num_points;
+    clone->num_contours = path_->num_contours;
+    clone->num_curves = path_->num_curves;
     return clone;
 }
 
 static void clone_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
 {
-    path_t* path = (path_t*)(closure);
+    path_t* path_ = (path_t*)(closure);
     switch(command) {
     case NOVA_PATH_COMMAND_MOVE_TO:
-        path_move_to(path, points[0].x, points[0].y);
+        path_move_to(path_, points[0].x, points[0].y);
         break;
     case NOVA_PATH_COMMAND_LINE_TO:
-        path_line_to(path, points[0].x, points[0].y);
+        path_line_to(path_, points[0].x, points[0].y);
         break;
     case NOVA_PATH_COMMAND_CUBIC_TO:
-        path_cubic_to(path, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
+        path_cubic_to(path_, points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
         break;
     case NOVA_PATH_COMMAND_CLOSE:
-        path_close(path);
+        path_close(path_);
         break;
     }
 }
 
-path_t* path_clone_flatten(const path_t* path)
+path_t* path_clone_flatten(const path_t* path_)
 {
     path_t* clone = path_create();
-    path_reserve(clone, path->elements.size + path->num_curves * 32);
-    path_traverse_flatten(path, clone_traverse_func, clone);
+    path_reserve(clone, path_->elements.size_ + path_->num_curves * 32);
+    path_traverse_flatten(path_, clone_traverse_func, clone);
     return clone;
 }
 
-path_t* path_clone_dashed(const path_t* path, float offset, const float* dashes, int ndashes)
+path_t* path_clone_dashed(const path_t* path_, float offset, const float* dashes, int ndashes)
 {
     path_t* clone = path_create();
-    path_reserve(clone, path->elements.size + path->num_curves * 32);
-    path_traverse_dashed(path, offset, dashes, ndashes, clone_traverse_func, clone);
+    path_reserve(clone, path_->elements.size_ + path_->num_curves * 32);
+    path_traverse_dashed(path_, offset, dashes, ndashes, clone_traverse_func, clone);
     return clone;
 }
 
@@ -659,7 +659,7 @@ static void extents_traverse_func(void* closure, path_command_t command, const p
         calculator->y1 = points[0].y;
         calculator->x2 = points[0].x;
         calculator->y2 = points[0].y;
-        calculator->length = 0;
+        calculator->length_ = 0;
         return;
     }
 
@@ -669,18 +669,18 @@ static void extents_traverse_func(void* closure, path_command_t command, const p
         calculator->x2 = STB_MAX(calculator->x2, points[i].x);
         calculator->y2 = STB_MAX(calculator->y2, points[i].y);
         if(command != NOVA_PATH_COMMAND_MOVE_TO)
-            calculator->length += hypotf(points[i].x - calculator->current_point.x, points[i].y - calculator->current_point.y);
+            calculator->length_ += hypotf(points[i].x - calculator->current_point.x, points[i].y - calculator->current_point.y);
         calculator->current_point = points[i];
     }
 }
 
-float path_extents(const path_t* path, rect_t* extents, bool tight)
+float path_extents(const path_t* path_, rect_t* extents, bool tight)
 {
     extents_calculator_t calculator = {{0, 0}, true, 0, 0, 0, 0, 0};
     if(tight) {
-        path_traverse_flatten(path, extents_traverse_func, &calculator);
+        path_traverse_flatten(path_, extents_traverse_func, &calculator);
     } else {
-        path_traverse(path, extents_traverse_func, &calculator);
+        path_traverse(path_, extents_traverse_func, &calculator);
     }
 
     if(extents) {
@@ -690,12 +690,12 @@ float path_extents(const path_t* path, rect_t* extents, bool tight)
         extents->h = calculator.y2 - calculator.y1;
     }
 
-    return calculator.length;
+    return calculator.length_;
 }
 
-float path_length(const path_t* path)
+float path_length(const path_t* path_)
 {
-    return path_extents(path, NULL, true);
+    return path_extents(path_, NULL, true);
 }
 
 static bool parse_arc_flag(const char** begin, const char* end, bool* flag)
@@ -721,12 +721,12 @@ static bool parse_path_coordinates(const char** begin, const char* end, float va
     return true;
 }
 
-bool path_parse(path_t* path, const char* data, int length)
+bool path_parse(path_t* path_, const char* data, int length_)
 {
-    if(length == -1)
-        length = strlen(data);
+    if(length_ == -1)
+        length_ = strlen(data);
     const char* it = data;
-    const char* end = it + length;
+    const char* end = it + length_;
 
     float values[6];
     bool flags[2];
@@ -757,7 +757,7 @@ bool path_parse(path_t* path, const char* data, int length)
                 values[1] += current_y;
             }
 
-            path_move_to(path, values[0], values[1]);
+            path_move_to(path_, values[0], values[1]);
             current_x = start_x = values[0];
             current_y = start_y = values[1];
             command = command == 'm' ? 'l' : 'L';
@@ -769,7 +769,7 @@ bool path_parse(path_t* path, const char* data, int length)
                 values[1] += current_y;
             }
 
-            path_line_to(path, values[0], values[1]);
+            path_line_to(path_, values[0], values[1]);
             current_x = values[0];
             current_y = values[1];
         } else if(command == 'H' || command == 'h') {
@@ -779,7 +779,7 @@ bool path_parse(path_t* path, const char* data, int length)
                 values[0] += current_x;
             }
 
-            path_line_to(path, values[0], current_y);
+            path_line_to(path_, values[0], current_y);
             current_x = values[0];
         } else if(command == 'V' || command == 'v') {
             if(!parse_path_coordinates(&it, end, values, 1, 1))
@@ -788,7 +788,7 @@ bool path_parse(path_t* path, const char* data, int length)
                 values[1] += current_y;
             }
 
-            path_line_to(path, current_x, values[1]);
+            path_line_to(path_, current_x, values[1]);
             current_y = values[1];
         } else if(command == 'Q' || command == 'q') {
             if(!parse_path_coordinates(&it, end, values, 0, 4))
@@ -800,7 +800,7 @@ bool path_parse(path_t* path, const char* data, int length)
                 values[3] += current_y;
             }
 
-            path_quad_to(path, values[0], values[1], values[2], values[3]);
+            path_quad_to(path_, values[0], values[1], values[2], values[3]);
             last_control_x = values[0];
             last_control_y = values[1];
             current_x = values[2];
@@ -817,7 +817,7 @@ bool path_parse(path_t* path, const char* data, int length)
                 values[5] += current_y;
             }
 
-            path_cubic_to(path, values[0], values[1], values[2], values[3], values[4], values[5]);
+            path_cubic_to(path_, values[0], values[1], values[2], values[3], values[4], values[5]);
             last_control_x = values[2];
             last_control_y = values[3];
             current_x = values[4];
@@ -838,7 +838,7 @@ bool path_parse(path_t* path, const char* data, int length)
                 values[3] += current_y;
             }
 
-            path_quad_to(path, values[0], values[1], values[2], values[3]);
+            path_quad_to(path_, values[0], values[1], values[2], values[3]);
             last_control_x = values[0];
             last_control_y = values[1];
             current_x = values[2];
@@ -861,7 +861,7 @@ bool path_parse(path_t* path, const char* data, int length)
                 values[5] += current_y;
             }
 
-            path_cubic_to(path, values[0], values[1], values[2], values[3], values[4], values[5]);
+            path_cubic_to(path_, values[0], values[1], values[2], values[3], values[4], values[5]);
             last_control_x = values[2];
             last_control_y = values[3];
             current_x = values[4];
@@ -879,13 +879,13 @@ bool path_parse(path_t* path, const char* data, int length)
                 values[4] += current_y;
             }
 
-            path_arc_to(path, values[0], values[1], NOVA_DEG2RAD(values[2]), flags[0], flags[1], values[3], values[4]);
+            path_arc_to(path_, values[0], values[1], NOVA_DEG2RAD(values[2]), flags[0], flags[1], values[3], values[4]);
             current_x = values[3];
             current_y = values[4];
         } else if(command == 'Z' || command == 'z') {
             if(last_command == 'Z' || last_command == 'z')
                 return false;
-            path_close(path);
+            path_close(path_);
             current_x = start_x;
             current_y = start_y;
         } else {

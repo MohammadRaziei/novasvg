@@ -51,7 +51,7 @@ typedef struct {
     bool extended;
 } radial_gradient_values_t;
 
-uint32_t premultiply_color_with_opacity(const color_t* color, float opacity);
+uint32_t premultiply_color_with_opacity(const color_t* color_, float opacity);
 
 uint32_t INTERPOLATE_PIXEL_255(uint32_t x, uint32_t a, uint32_t y, uint32_t b);
 
@@ -67,15 +67,15 @@ uint32_t BYTE_MUL(uint32_t x, uint32_t a);
 namespace nova {
 namespace vg {
 
-NOVA_INLINE void memfill32(unsigned int* dest, int length, unsigned int value)
+NOVA_INLINE void memfill32(unsigned int* dest, int length_, unsigned int value)
 {
     __m128i vector_data = _mm_set_epi32(value, value, value, value);
-    while(length && ((uintptr_t)dest & 0xf)) {
+    while(length_ && ((uintptr_t)dest & 0xf)) {
         *dest++ = value;
-        length--;
+        length_--;
     }
 
-    while(length >= 32) {
+    while(length_ >= 32) {
         _mm_store_si128((__m128i*)(dest), vector_data);
         _mm_store_si128((__m128i*)(dest + 4), vector_data);
         _mm_store_si128((__m128i*)(dest + 8), vector_data);
@@ -86,37 +86,37 @@ NOVA_INLINE void memfill32(unsigned int* dest, int length, unsigned int value)
         _mm_store_si128((__m128i*)(dest + 28), vector_data);
 
         dest += 32;
-        length -= 32;
+        length_ -= 32;
     }
 
-    if(length >= 16) {
+    if(length_ >= 16) {
         _mm_store_si128((__m128i*)(dest), vector_data);
         _mm_store_si128((__m128i*)(dest + 4), vector_data);
         _mm_store_si128((__m128i*)(dest + 8), vector_data);
         _mm_store_si128((__m128i*)(dest + 12), vector_data);
 
         dest += 16;
-        length -= 16;
+        length_ -= 16;
     }
 
-    if(length >= 8) {
+    if(length_ >= 8) {
         _mm_store_si128((__m128i*)(dest), vector_data);
         _mm_store_si128((__m128i*)(dest + 4), vector_data);
 
         dest += 8;
-        length -= 8;
+        length_ -= 8;
     }
 
-    if(length >= 4) {
+    if(length_ >= 4) {
         _mm_store_si128((__m128i*)(dest), vector_data);
 
         dest += 4;
-        length -= 4;
+        length_ -= 4;
     }
 
-    while(length) {
+    while(length_) {
         *dest++ = value;
-        length--;
+        length_--;
     }
 }
 
@@ -139,33 +139,33 @@ uint32_t gradient_pixel_fixed(const gradient_data_t* gradient, int fixed_pos);
 
 uint32_t gradient_pixel(const gradient_data_t* gradient, float pos);
 
-void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length);
+void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length_);
 
-void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length);
+void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length_);
 
-void composition_solid_clear(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+void composition_solid_clear(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
-void composition_solid_source(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+void composition_solid_source(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
-void composition_solid_destination(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+void composition_solid_destination(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
-void composition_solid_source_over(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+void composition_solid_source_over(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
-void composition_solid_destination_over(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+void composition_solid_destination_over(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
-void composition_solid_source_in(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+void composition_solid_source_in(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
-void composition_solid_destination_in(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+void composition_solid_destination_in(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
-void composition_solid_source_out(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+void composition_solid_source_out(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
-void composition_solid_destination_out(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+void composition_solid_destination_out(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
-void composition_solid_source_atop(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+void composition_solid_source_atop(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
-void composition_solid_destination_atop(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+void composition_solid_destination_atop(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
-void composition_solid_xor(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+void composition_solid_xor(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
 // ---- CSS blend modes -------------------------------------------------------------------------------
 // W3C Compositing and Blending, on premultiplied channels (all 0..255, "mul" = x*y/255 rounded):
@@ -179,26 +179,26 @@ void composition_solid_xor(uint32_t* dest, int length, uint32_t color, uint32_t 
 //   exclusion  Cs + Cb - 2*Cs*Cb
 int blend_mul255(int x, int y);
 
-template<operator_t Mode>
+template<operator_t mode>
 NOVA_INLINE int blend_mode_channel(int cs, int cb, int as, int ab)
 {
     int value;
-    if(Mode == NOVA_OPERATOR_MULTIPLY)
+    if(mode == NOVA_OPERATOR_MULTIPLY)
         value = blend_mul255(cs, 255 - ab) + blend_mul255(cb, 255 - as) + blend_mul255(cs, cb);
-    else if(Mode == NOVA_OPERATOR_SCREEN)
+    else if(mode == NOVA_OPERATOR_SCREEN)
         value = cs + cb - blend_mul255(cs, cb);
-    else if(Mode == NOVA_OPERATOR_DARKEN)
+    else if(mode == NOVA_OPERATOR_DARKEN)
         value = cs + cb - STB_MAX(blend_mul255(cs, ab), blend_mul255(cb, as));
-    else if(Mode == NOVA_OPERATOR_LIGHTEN)
+    else if(mode == NOVA_OPERATOR_LIGHTEN)
         value = cs + cb - STB_MIN(blend_mul255(cs, ab), blend_mul255(cb, as));
-    else if(Mode == NOVA_OPERATOR_DIFFERENCE)
+    else if(mode == NOVA_OPERATOR_DIFFERENCE)
         value = cs + cb - 2 * STB_MIN(blend_mul255(cs, ab), blend_mul255(cb, as));
     else
         value = cs + cb - 2 * blend_mul255(cs, cb);
     return value;
 }
 
-template<operator_t Mode>
+template<operator_t mode>
 NOVA_INLINE uint32_t blend_mode_pixel(uint32_t dest, uint32_t src)
 {
     if(src == 0)
@@ -208,7 +208,7 @@ NOVA_INLINE uint32_t blend_mode_pixel(uint32_t dest, uint32_t src)
     const int ar = as + ab - blend_mul255(as, ab);
     uint32_t result = uint32_t(ar) << 24;
     for(int shift = 16; shift >= 0; shift -= 8) {
-        int c = blend_mode_channel<Mode>(int((src >> shift) & 0xff), int((dest >> shift) & 0xff), as, ab);
+        int c = blend_mode_channel<mode>(int((src >> shift) & 0xff), int((dest >> shift) & 0xff), as, ab);
         c = STB_MAX(0, STB_MIN(c, ar)); // a premultiplied channel never exceeds the alpha
         result |= uint32_t(c) << shift;
     }
@@ -216,25 +216,25 @@ NOVA_INLINE uint32_t blend_mode_pixel(uint32_t dest, uint32_t src)
     return result;
 }
 
-template<operator_t Mode>
-NOVA_INLINE void composition_blend_mode(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+template<operator_t mode>
+NOVA_INLINE void composition_blend_mode(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
-    for(int i = 0; i < length; i++) {
+    for(int i = 0; i < length_; i++) {
         uint32_t s = const_alpha == 255 ? src[i] : BYTE_MUL(src[i], const_alpha);
-        dest[i] = blend_mode_pixel<Mode>(dest[i], s);
+        dest[i] = blend_mode_pixel<mode>(dest[i], s);
     }
 }
 
-template<operator_t Mode>
-NOVA_INLINE void composition_solid_blend_mode(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+template<operator_t mode>
+NOVA_INLINE void composition_solid_blend_mode(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
     if(const_alpha != 255)
-        color = BYTE_MUL(color, const_alpha);
-    for(int i = 0; i < length; i++)
-        dest[i] = blend_mode_pixel<Mode>(dest[i], color);
+        color_ = BYTE_MUL(color_, const_alpha);
+    for(int i = 0; i < length_; i++)
+        dest[i] = blend_mode_pixel<mode>(dest[i], color_);
 }
 
-typedef void(*composition_solid_function_t)(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha);
+typedef void(*composition_solid_function_t)(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
 NOVA_INLINE const composition_solid_function_t composition_solid_table[] = {
     composition_solid_clear,
@@ -257,31 +257,31 @@ NOVA_INLINE const composition_solid_function_t composition_solid_table[] = {
     composition_solid_blend_mode<NOVA_OPERATOR_EXCLUSION>
 };
 
-void composition_clear(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+void composition_clear(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-void composition_source(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+void composition_source(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-void composition_destination(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+void composition_destination(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-void composition_source_over(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+void composition_source_over(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-void composition_destination_over(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+void composition_destination_over(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-void composition_source_in(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+void composition_source_in(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-void composition_destination_in(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+void composition_destination_in(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-void composition_source_out(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+void composition_source_out(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-void composition_destination_out(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+void composition_destination_out(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-void composition_source_atop(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+void composition_source_atop(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-void composition_destination_atop(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+void composition_destination_atop(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-void composition_xor(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+void composition_xor(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-typedef void(*composition_function_t)(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha);
+typedef void(*composition_function_t)(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
 NOVA_INLINE const composition_function_t composition_table[] = {
     composition_clear,
@@ -325,7 +325,7 @@ uint32_t interpolate_4_pixels(uint32_t tl, uint32_t tr, uint32_t bl, uint32_t br
 #define HALF_POINT (1 << 15)
 void blend_transformed_bilinear_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer);
 
-void blend_color(canvas_t* canvas, const color_t* color, const span_buffer_t* span_buffer);
+void blend_color(canvas_t* canvas, const color_t* color_, const span_buffer_t* span_buffer);
 
 void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const span_buffer_t* span_buffer);
 

@@ -163,42 +163,42 @@ NB_MODULE(novasvg_py, m) {
     // ever builds the svg -- can ask the exact same engine that will later
     // paint the glyphs, instead of hand-rolling a second TTF parser that
     // has to be kept in sync with it by hand.
-    nb::class_<nova::vg::FontFace>(m, "FontFace")
+    nb::class_<nova::vg::font_face>(m, "FontFace")
         .def(nb::init<>(), "Construct a null font face.")
         .def(nb::init<const char*>(), "filename"_a, "Load a font face directly from a font file (no cache involved).")
-        .def("__init__", [](nova::vg::FontFace* self, nb::bytes data) {
+        .def("__init__", [](nova::vg::font_face* self, nb::bytes data) {
             auto* copy = std::malloc(data.size());
             if(copy == nullptr) {
-                new (self) nova::vg::FontFace();
+                new (self) nova::vg::font_face();
                 return;
             }
             std::memcpy(copy, data.data(), data.size());
-            new (self) nova::vg::FontFace(copy, data.size(), [](void* p) { std::free(p); }, copy);
+            new (self) nova::vg::font_face(copy, data.size(), [](void* p) { std::free(p); }, copy);
         }, "data"_a, "Load a font face directly from a memory buffer (bytes), no cache involved.")
-        .def("is_null", &nova::vg::FontFace::is_null, "Check if the font face is null/invalid.")
-        .def("__bool__", [](const nova::vg::FontFace& face) { return !face.is_null(); })
-        .def_prop_ro("units_per_em", &nova::vg::FontFace::unitsPerEm,
+        .def("is_null", &nova::vg::font_face::is_null, "Check if the font face is null/invalid.")
+        .def("__bool__", [](const nova::vg::font_face& face) { return !face.is_null(); })
+        .def_prop_ro("units_per_em", &nova::vg::font_face::units_per_em,
              "Raw font design-unit space this face's own tables are defined in "
              "(e.g. head.unitsPerEm). Pair with advance_width_units()/ascent_units()/"
              "descent_units() to build a complete, size-independent advance table -- "
              "e.g. to hand text-measurement data to a JS engine that can't call back "
              "into Python per string (mermaidx's v8_engine does exactly this).")
-        .def_prop_ro("ascent_units", &nova::vg::FontFace::ascent_units, "Ascent in raw font design units (unscaled).")
-        .def_prop_ro("descent_units", &nova::vg::FontFace::descent_units, "Descent in raw font design units (unscaled).")
-        .def("advance_width_units", [](const nova::vg::FontFace& face, uint32_t codepoint) {
+        .def_prop_ro("ascent_units", &nova::vg::font_face::ascent_units, "Ascent in raw font design units (unscaled).")
+        .def_prop_ro("descent_units", &nova::vg::font_face::descent_units, "Descent in raw font design units (unscaled).")
+        .def("advance_width_units", [](const nova::vg::font_face& face, uint32_t codepoint) {
             return face.advance_width_units(static_cast<char32_t>(codepoint));
         }, "codepoint"_a, "Advance width of a single Unicode codepoint, in raw font design units (unscaled).")
-        .def("kern_advance_units", [](const nova::vg::FontFace& face, uint32_t first, uint32_t second) {
+        .def("kern_advance_units", [](const nova::vg::font_face& face, uint32_t first, uint32_t second) {
             return face.kern_advance_units(static_cast<char32_t>(first), static_cast<char32_t>(second));
         }, "first"_a, "second"_a,
            "Kerning adjustment between two consecutive codepoints, in raw font design units "
            "(unscaled) -- see FontFace::kernAdvanceUnits() in font.h for why this is a per-pair "
            "query rather than a bulk table like codepoints().")
-        .def_prop_ro("notdef_advance_width_units", &nova::vg::FontFace::notdef_advance_width_units,
+        .def_prop_ro("notdef_advance_width_units", &nova::vg::font_face::notdef_advance_width_units,
              "The advance width used for any codepoint outside this font's cmap "
              "(glyph id 0, the \".notdef\" glyph) -- what advance_width_units() itself "
              "already falls back to for such a codepoint.")
-        .def("codepoints", [](const nova::vg::FontFace& face) {
+        .def("codepoints", [](const nova::vg::font_face& face) {
             auto cps = face.codepoints();
             std::vector<uint32_t> out;
             out.reserve(cps.size());
@@ -209,13 +209,13 @@ NB_MODULE(novasvg_py, m) {
            "for exactly which cmap formats are covered -- virtually every real-world font).");
 
     m.def("get_font_face", [](const std::string& family, bool bold, bool italic) {
-        return nova::vg::fontFaceCache()->get_font_face(family, bold, italic);
+        return nova::vg::font_face_cache_()->get_font_face(family, bold, italic);
     }, "family"_a, "bold"_a = false, "italic"_a = false,
        "Look up a font face previously registered via add_font_face_from_file/_data "
        "(falling back to novasvg's built-in generic-family table, e.g. \"sans-serif\").");
 
     m.def("get_font_face_for_family_stack", [](const std::string& family_stack, bool bold, bool italic) {
-        return nova::vg::fontFaceCache()->get_font_face_for_family_stack(family_stack, bold, italic);
+        return nova::vg::font_face_cache_()->get_font_face_for_family_stack(family_stack, bold, italic);
     }, "family_stack"_a, "bold"_a = false, "italic"_a = false,
        "Resolve a CSS-style comma-separated font-family stack (e.g. "
        "'\"trebuchet ms\", verdana, arial, sans-serif') name by name: a face registered or "
@@ -223,20 +223,20 @@ NB_MODULE(novasvg_py, m) {
        "built-in table (case-insensitive, e.g. 'arial' -> Liberation Sans), then generic "
        "keywords. Names nothing matches are skipped; returns a null face if none resolve.");
 
-    nb::class_<nova::vg::Font>(m, "Font")
+    nb::class_<nova::vg::font>(m, "Font")
         .def(nb::init<>(), "Construct a null font.")
-        .def(nb::init<const nova::vg::FontFace&, float>(), "face"_a, "size"_a,
+        .def(nb::init<const nova::vg::font_face&, float>(), "face"_a, "size"_a,
              "Construct a font from a face at a given pixel size.")
-        .def_prop_ro("ascent", &nova::vg::Font::ascent, "Ascent in pixels, at this font's size.")
-        .def_prop_ro("descent", &nova::vg::Font::descent, "Descent in pixels (typically negative), at this font's size.")
-        .def_prop_ro("height", &nova::vg::Font::height, "ascent - descent.")
-        .def_prop_ro("line_gap", &nova::vg::Font::lineGap, "Recommended extra spacing between lines, in pixels.")
-        .def_prop_ro("x_height", &nova::vg::Font::x_height, "Height of a lowercase 'x' glyph, in pixels.")
-        .def_prop_ro("size", &nova::vg::Font::size, "The pixel size this font was constructed with.")
-        .def_prop_ro("face", &nova::vg::Font::face, nb::rv_policy::reference_internal, "The underlying FontFace.")
-        .def("is_null", &nova::vg::Font::is_null, "Check if the font is null/invalid.")
-        .def("__bool__", [](const nova::vg::Font& font) { return !font.is_null(); })
-        .def("measure_text", [](const nova::vg::Font& font, const std::string& text) {
+        .def_prop_ro("ascent", &nova::vg::font::ascent, "Ascent in pixels, at this font's size.")
+        .def_prop_ro("descent", &nova::vg::font::descent, "Descent in pixels (typically negative), at this font's size.")
+        .def_prop_ro("height", &nova::vg::font::height, "ascent - descent.")
+        .def_prop_ro("line_gap", &nova::vg::font::line_gap, "Recommended extra spacing between lines, in pixels.")
+        .def_prop_ro("x_height", &nova::vg::font::x_height, "Height of a lowercase 'x' glyph, in pixels.")
+        .def_prop_ro("size", &nova::vg::font::size, "The pixel size this font was constructed with.")
+        .def_prop_ro("face", &nova::vg::font::face, nb::rv_policy::reference_internal, "The underlying FontFace.")
+        .def("is_null", &nova::vg::font::is_null, "Check if the font is null/invalid.")
+        .def("__bool__", [](const nova::vg::font& font) { return !font.is_null(); })
+        .def("measure_text", [](const nova::vg::font& font, const std::string& text) {
             // Python str arrives as UTF-8 (nanobind's std::string conversion);
             // Font::measureText wants UTF-32, same as novasvg's own svg text
             // layout path (see svg_text_fragments_builder), so route through the
@@ -248,7 +248,7 @@ NB_MODULE(novasvg_py, m) {
 
     // nb::class_<Font> chain above ends with measure_text; attach glyph_boxes to it.
     m.attr("Font").attr("glyph_boxes") = nb::cpp_function(
-        [](const nova::vg::Font& font, const std::string& text) {
+        [](const nova::vg::font& font, const std::string& text) {
             nb::list out;
             for(const auto& box : font.glyph_boxes(nova::vg::utf8_to_u32(text)))
                 out.append(nb::make_tuple(box.pen, box.ink_left, box.ink_right, box.ink_top, box.ink_bottom));
@@ -257,7 +257,7 @@ NB_MODULE(novasvg_py, m) {
         "Per-glyph (pen_x, ink_left, ink_right, ink_top, ink_bottom) in pixels (top/bottom relative to the baseline, y down) for every glyph that has an outline "
         "(spaces are skipped), using the same ligature + kerning walk as measure_text().");
 
-    m.def("measure_foreign_object", [](const std::string& html, const nova::vg::Font& font, std::optional<float> max_width,
+    m.def("measure_foreign_object", [](const std::string& html, const nova::vg::font& font, std::optional<float> max_width,
                                        std::optional<std::string> family, bool bold, bool italic) {
         auto renderer = nova::svg::default_foreign_object_renderer();
         if(!renderer)
@@ -351,15 +351,15 @@ NB_MODULE(novasvg_py, m) {
         .def_static("shearing", &stb::matrix::shearing, "shx"_a, "shy"_a, "Create a shear matrix.");
 
     // --- Bind Box Class ---
-    nb::class_<nova::vg::Box>(m, "Box")
+    nb::class_<nova::vg::box>(m, "Box")
         .def(nb::init<>(), "Construct a box with zero dimensions.")
         .def(nb::init<float, float, float, float>(), "x"_a, "y"_a, "w"_a, "h"_a, "Construct a box with position and size.")
-        .def_rw("x", &nova::vg::Box::x, "X-coordinate of the box.")
-        .def_rw("y", &nova::vg::Box::y, "Y-coordinate of the box.")
-        .def_rw("w", &nova::vg::Box::w, "Width of the box.")
-        .def_rw("h", &nova::vg::Box::h, "Height of the box.")
-        .def("transform", &nova::vg::Box::transform, "matrix"_a, "Transform the box by a matrix in place.")
-        .def("transformed", &nova::vg::Box::transformed, "matrix"_a, "Return a new transformed box.");
+        .def_rw("x", &nova::vg::box::x, "X-coordinate of the box.")
+        .def_rw("y", &nova::vg::box::y, "Y-coordinate of the box.")
+        .def_rw("w", &nova::vg::box::w, "Width of the box.")
+        .def_rw("h", &nova::vg::box::h, "Height of the box.")
+        .def("transform", &nova::vg::box::transform, "matrix"_a, "Transform the box by a matrix in place.")
+        .def("transformed", &nova::vg::box::transformed, "matrix"_a, "Return a new transformed box.");
 
     // --- Bind pixmap Class ---
     // The buffer protocol, DLPack, NumPy, __array_interface__ and array import all live in

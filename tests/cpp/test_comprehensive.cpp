@@ -22,9 +22,9 @@ std::filesystem::path data_path(const std::string& filename)
     return project_root() / "data" / filename;
 }
 
-std::string read_file(const std::filesystem::path& path)
+std::string read_file(const std::filesystem::path& path_)
 {
-    std::ifstream file(path);
+    std::ifstream file(path_);
     if (!file.is_open()) {
         return "";
     }
@@ -104,14 +104,14 @@ TEST_CASE("Matrix operations") {
 
 TEST_CASE("Box operations") {
     // Default constructor
-    nova::vg::Box b1;
+    nova::vg::box b1;
     CHECK(b1.x == doctest::Approx(0.0f));
     CHECK(b1.y == doctest::Approx(0.0f));
     CHECK(b1.w == doctest::Approx(0.0f));
     CHECK(b1.h == doctest::Approx(0.0f));
     
     // Parameterized constructor
-    nova::vg::Box b2(10.0f, 20.0f, 30.0f, 40.0f);
+    nova::vg::box b2(10.0f, 20.0f, 30.0f, 40.0f);
     CHECK(b2.x == doctest::Approx(10.0f));
     CHECK(b2.y == doctest::Approx(20.0f));
     CHECK(b2.w == doctest::Approx(30.0f));

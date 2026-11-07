@@ -3,12 +3,12 @@
 namespace nova {
 namespace vg {
 
-uint32_t premultiply_color_with_opacity(const color_t* color, float opacity)
+uint32_t premultiply_color_with_opacity(const color_t* color_, float opacity)
 {
-    uint32_t alpha = lroundf(color->a * opacity * 255);
-    uint32_t pr = lroundf(color->r * alpha);
-    uint32_t pg = lroundf(color->g * alpha);
-    uint32_t pb = lroundf(color->b * alpha);
+    uint32_t alpha = lroundf(color_->a * opacity * 255);
+    uint32_t pr = lroundf(color_->r * alpha);
+    uint32_t pg = lroundf(color_->g * alpha);
+    uint32_t pb = lroundf(color_->b * alpha);
     return (alpha << 24) | (pr << 16) | (pg << 8) | (pb);
 }
 
@@ -83,7 +83,7 @@ uint32_t gradient_pixel(const gradient_data_t* gradient, float pos)
     return gradient->colortable[gradient_clamp(gradient, ipos)];
 }
 
-void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length)
+void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length_)
 {
     float t, inc;
     float rx = 0, ry = 0;
@@ -99,11 +99,11 @@ void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values_t* v, 
         inc *= (COLOR_TABLE_SIZE - 1);
     }
 
-    const uint32_t* end = buffer + length;
+    const uint32_t* end = buffer + length_;
     if(inc > -1e-5f && inc < 1e-5f) {
-        memfill32(buffer, length, gradient_pixel_fixed(gradient, (int)(t * FIXPT_SIZE)));
+        memfill32(buffer, length_, gradient_pixel_fixed(gradient, (int)(t * FIXPT_SIZE)));
     } else {
-        if(t + inc * length < (float)(INT_MAX >> (FIXPT_BITS + 1)) && t + inc * length > (float)(INT_MIN >> (FIXPT_BITS + 1))) {
+        if(t + inc * length_ < (float)(INT_MAX >> (FIXPT_BITS + 1)) && t + inc * length_ > (float)(INT_MIN >> (FIXPT_BITS + 1))) {
             int t_fixed = (int)(t * FIXPT_SIZE);
             int inc_fixed = (int)(inc * FIXPT_SIZE);
             while(buffer < end) {
@@ -121,10 +121,10 @@ void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values_t* v, 
     }
 }
 
-void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length)
+void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length_)
 {
     if(v->a == 0.f) {
-        memfill32(buffer, length, 0);
+        memfill32(buffer, length_, 0);
         return;
     }
 
@@ -160,7 +160,7 @@ void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values_t* v, 
     float delta_det = (b_delta_b + delta_bb + 4 * v->a * (rx_plus_ry + delta_rxrxryry)) * inv_a;
     float delta_delta_det = (delta_b_delta_b + 4 * v->a * delta_rx_plus_ry) * inv_a;
 
-    const uint32_t* end = buffer + length;
+    const uint32_t* end = buffer + length_;
     if(v->extended) {
         while(buffer < end) {
             uint32_t result = 0;
@@ -187,140 +187,140 @@ void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values_t* v, 
     }
 }
 
-void composition_solid_clear(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+void composition_solid_clear(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        memfill32(dest, length, 0);
+        memfill32(dest, length_, 0);
     } else {
         uint32_t ialpha = 255 - const_alpha;
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             dest[i] = BYTE_MUL(dest[i], ialpha);
         }
     }
 }
 
-void composition_solid_source(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+void composition_solid_source(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        memfill32(dest, length, color);
+        memfill32(dest, length_, color_);
     } else {
         uint32_t ialpha = 255 - const_alpha;
-        color = BYTE_MUL(color, const_alpha);
-        for(int i = 0; i < length; i++) {
-            dest[i] = color + BYTE_MUL(dest[i], ialpha);
+        color_ = BYTE_MUL(color_, const_alpha);
+        for(int i = 0; i < length_; i++) {
+            dest[i] = color_ + BYTE_MUL(dest[i], ialpha);
         }
     }
 }
 
-void composition_solid_destination(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+void composition_solid_destination(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
 }
 
-void composition_solid_source_over(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+void composition_solid_source_over(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
     if(const_alpha != 255)
-        color = BYTE_MUL(color, const_alpha);
-    uint32_t ialpha = 255 - novasvg_alpha(color);
-    for(int i = 0; i < length; i++) {
-        dest[i] = color + BYTE_MUL(dest[i], ialpha);
+        color_ = BYTE_MUL(color_, const_alpha);
+    uint32_t ialpha = 255 - novasvg_alpha(color_);
+    for(int i = 0; i < length_; i++) {
+        dest[i] = color_ + BYTE_MUL(dest[i], ialpha);
     }
 }
 
-void composition_solid_destination_over(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+void composition_solid_destination_over(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
     if(const_alpha != 255)
-        color = BYTE_MUL(color, const_alpha);
-    for(int i = 0; i < length; i++) {
+        color_ = BYTE_MUL(color_, const_alpha);
+    for(int i = 0; i < length_; i++) {
         uint32_t d = dest[i];
-        dest[i] = d + BYTE_MUL(color, novasvg_alpha(~d));
+        dest[i] = d + BYTE_MUL(color_, novasvg_alpha(~d));
     }
 }
 
-void composition_solid_source_in(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+void composition_solid_source_in(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        for(int i = 0; i < length; i++) {
-            dest[i] = BYTE_MUL(color, novasvg_alpha(dest[i]));
+        for(int i = 0; i < length_; i++) {
+            dest[i] = BYTE_MUL(color_, novasvg_alpha(dest[i]));
         }
     } else {
-        color = BYTE_MUL(color, const_alpha);
+        color_ = BYTE_MUL(color_, const_alpha);
         uint32_t cia = 255 - const_alpha;
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t d = dest[i];
-            dest[i] = INTERPOLATE_PIXEL_255(color, novasvg_alpha(d), d, cia);
+            dest[i] = INTERPOLATE_PIXEL_255(color_, novasvg_alpha(d), d, cia);
         }
     }
 }
 
-void composition_solid_destination_in(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+void composition_solid_destination_in(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
-    uint32_t a = novasvg_alpha(color);
+    uint32_t a = novasvg_alpha(color_);
     if(const_alpha != 255)
         a = BYTE_MUL(a, const_alpha) + 255 - const_alpha;
-    for(int i = 0; i < length; i++) {
+    for(int i = 0; i < length_; i++) {
         dest[i] = BYTE_MUL(dest[i], a);
     }
 }
 
-void composition_solid_source_out(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+void composition_solid_source_out(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        for(int i = 0; i < length; i++) {
-            dest[i] = BYTE_MUL(color, novasvg_alpha(~dest[i]));
+        for(int i = 0; i < length_; i++) {
+            dest[i] = BYTE_MUL(color_, novasvg_alpha(~dest[i]));
         }
     } else {
-        color = BYTE_MUL(color, const_alpha);
+        color_ = BYTE_MUL(color_, const_alpha);
         uint32_t cia = 255 - const_alpha;
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t d = dest[i];
-            dest[i] = INTERPOLATE_PIXEL_255(color, novasvg_alpha(~d), d, cia);
+            dest[i] = INTERPOLATE_PIXEL_255(color_, novasvg_alpha(~d), d, cia);
         }
     }
 }
 
-void composition_solid_destination_out(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+void composition_solid_destination_out(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
-    uint32_t a = novasvg_alpha(~color);
+    uint32_t a = novasvg_alpha(~color_);
     if(const_alpha != 255)
         a = BYTE_MUL(a, const_alpha) + 255 - const_alpha;
-    for(int i = 0; i < length; i++) {
+    for(int i = 0; i < length_; i++) {
         dest[i] = BYTE_MUL(dest[i], a);
     }
 }
 
-void composition_solid_source_atop(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+void composition_solid_source_atop(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
     if(const_alpha != 255)
-        color = BYTE_MUL(color, const_alpha);
-    uint32_t sia = novasvg_alpha(~color);
-    for(int i = 0; i < length; i++) {
+        color_ = BYTE_MUL(color_, const_alpha);
+    uint32_t sia = novasvg_alpha(~color_);
+    for(int i = 0; i < length_; i++) {
         uint32_t d = dest[i];
-        dest[i] = INTERPOLATE_PIXEL_255(color, novasvg_alpha(d), d, sia);
+        dest[i] = INTERPOLATE_PIXEL_255(color_, novasvg_alpha(d), d, sia);
     }
 }
 
-void composition_solid_destination_atop(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+void composition_solid_destination_atop(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
-    uint32_t a = novasvg_alpha(color);
+    uint32_t a = novasvg_alpha(color_);
     if(const_alpha != 255) {
-        color = BYTE_MUL(color, const_alpha);
-        a = novasvg_alpha(color) + 255 - const_alpha;
+        color_ = BYTE_MUL(color_, const_alpha);
+        a = novasvg_alpha(color_) + 255 - const_alpha;
     }
 
-    for(int i = 0; i < length; i++) {
+    for(int i = 0; i < length_; i++) {
         uint32_t d = dest[i];
-        dest[i] = INTERPOLATE_PIXEL_255(d, a, color, novasvg_alpha(~d));
+        dest[i] = INTERPOLATE_PIXEL_255(d, a, color_, novasvg_alpha(~d));
     }
 }
 
-void composition_solid_xor(uint32_t* dest, int length, uint32_t color, uint32_t const_alpha)
+void composition_solid_xor(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
     if(const_alpha != 255)
-        color = BYTE_MUL(color, const_alpha);
-    uint32_t sia = novasvg_alpha(~color);
-    for(int i = 0; i < length; i++) {
+        color_ = BYTE_MUL(color_, const_alpha);
+    uint32_t sia = novasvg_alpha(~color_);
+    for(int i = 0; i < length_; i++) {
         uint32_t d = dest[i];
-        dest[i] = INTERPOLATE_PIXEL_255(color, novasvg_alpha(~d), d, sia);
+        dest[i] = INTERPOLATE_PIXEL_255(color_, novasvg_alpha(~d), d, sia);
     }
 }
 
@@ -329,38 +329,38 @@ int blend_mul255(int x, int y)
     return (x * y + 127) / 255;
 }
 
-void composition_clear(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+void composition_clear(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        memfill32(dest, length, 0);
+        memfill32(dest, length_, 0);
     } else {
         uint32_t ialpha = 255 - const_alpha;
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             dest[i] = BYTE_MUL(dest[i], ialpha);
         }
     }
 }
 
-void composition_source(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+void composition_source(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        memcpy(dest, src, length * sizeof(uint32_t));
+        memcpy(dest, src, length_ * sizeof(uint32_t));
     } else {
         uint32_t ialpha = 255 - const_alpha;
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             dest[i] = INTERPOLATE_PIXEL_255(src[i], const_alpha, dest[i], ialpha);
         }
     }
 }
 
-void composition_destination(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+void composition_destination(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
 }
 
-void composition_source_over(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+void composition_source_over(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t s = src[i];
             if(s >= 0xff000000) {
                 dest[i] = s;
@@ -369,22 +369,22 @@ void composition_source_over(uint32_t* dest, int length, const uint32_t* src, ui
             }
         }
     } else {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t s = BYTE_MUL(src[i], const_alpha);
             dest[i] = s + BYTE_MUL(dest[i], novasvg_alpha(~s));
         }
     }
 }
 
-void composition_destination_over(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+void composition_destination_over(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t d = dest[i];
             dest[i] = d + BYTE_MUL(src[i], novasvg_alpha(~d));
         }
     } else {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t d = dest[i];
             uint32_t s = BYTE_MUL(src[i], const_alpha);
             dest[i] = d + BYTE_MUL(s, novasvg_alpha(~d));
@@ -392,15 +392,15 @@ void composition_destination_over(uint32_t* dest, int length, const uint32_t* sr
     }
 }
 
-void composition_source_in(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+void composition_source_in(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             dest[i] = BYTE_MUL(src[i], novasvg_alpha(dest[i]));
         }
     } else {
         uint32_t cia = 255 - const_alpha;
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t d = dest[i];
             uint32_t s = BYTE_MUL(src[i], const_alpha);
             dest[i] = INTERPOLATE_PIXEL_255(s, novasvg_alpha(d), d, cia);
@@ -408,30 +408,30 @@ void composition_source_in(uint32_t* dest, int length, const uint32_t* src, uint
     }
 }
 
-void composition_destination_in(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+void composition_destination_in(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             dest[i] = BYTE_MUL(dest[i], novasvg_alpha(src[i]));
         }
     } else {
         uint32_t cia = 255 - const_alpha;
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t a = BYTE_MUL(novasvg_alpha(src[i]), const_alpha) + cia;
             dest[i] = BYTE_MUL(dest[i], a);
         }
     }
 }
 
-void composition_source_out(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+void composition_source_out(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             dest[i] = BYTE_MUL(src[i], novasvg_alpha(~dest[i]));
         }
     } else {
         uint32_t cia = 255 - const_alpha;
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t s = BYTE_MUL(src[i], const_alpha);
             uint32_t d = dest[i];
             dest[i] = INTERPOLATE_PIXEL_255(s, novasvg_alpha(~d), d, cia);
@@ -439,31 +439,31 @@ void composition_source_out(uint32_t* dest, int length, const uint32_t* src, uin
     }
 }
 
-void composition_destination_out(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+void composition_destination_out(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             dest[i] = BYTE_MUL(dest[i], novasvg_alpha(~src[i]));
         }
     } else {
         uint32_t cia = 255 - const_alpha;
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t sia = BYTE_MUL(novasvg_alpha(~src[i]), const_alpha) + cia;
             dest[i] = BYTE_MUL(dest[i], sia);
         }
     }
 }
 
-void composition_source_atop(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+void composition_source_atop(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t s = src[i];
             uint32_t d = dest[i];
             dest[i] = INTERPOLATE_PIXEL_255(s, novasvg_alpha(d), d, novasvg_alpha(~s));
         }
     } else {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t s = BYTE_MUL(src[i], const_alpha);
             uint32_t d = dest[i];
             dest[i] = INTERPOLATE_PIXEL_255(s, novasvg_alpha(d), d, novasvg_alpha(~s));
@@ -471,17 +471,17 @@ void composition_source_atop(uint32_t* dest, int length, const uint32_t* src, ui
     }
 }
 
-void composition_destination_atop(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+void composition_destination_atop(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t s = src[i];
             uint32_t d = dest[i];
             dest[i] = INTERPOLATE_PIXEL_255(d, novasvg_alpha(s), s, novasvg_alpha(~d));
         }
     } else {
         uint32_t cia = 255 - const_alpha;
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t s = BYTE_MUL(src[i], const_alpha);
             uint32_t d = dest[i];
             uint32_t a = novasvg_alpha(s) + cia;
@@ -490,16 +490,16 @@ void composition_destination_atop(uint32_t* dest, int length, const uint32_t* sr
     }
 }
 
-void composition_xor(uint32_t* dest, int length, const uint32_t* src, uint32_t const_alpha)
+void composition_xor(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     if(const_alpha == 255) {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t d = dest[i];
             uint32_t s = src[i];
             dest[i] = INTERPOLATE_PIXEL_255(s, novasvg_alpha(~d), d, novasvg_alpha(~s));
         }
     } else {
-        for(int i = 0; i < length; i++) {
+        for(int i = 0; i < length_; i++) {
             uint32_t d = dest[i];
             uint32_t s = BYTE_MUL(src[i], const_alpha);
             dest[i] = INTERPOLATE_PIXEL_255(s, novasvg_alpha(~d), d, novasvg_alpha(~s));
@@ -510,7 +510,7 @@ void composition_xor(uint32_t* dest, int length, const uint32_t* src, uint32_t c
 void blend_solid(surface_t* surface, operator_t op, uint32_t solid, const span_buffer_t* span_buffer)
 {
     composition_solid_function_t func = composition_solid_table[op];
-    int count = span_buffer->spans.size;
+    int count = span_buffer->spans.size_;
     const span_t* spans = span_buffer->spans.data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + spans->x;
@@ -535,18 +535,18 @@ void blend_linear_gradient(surface_t* surface, operator_t op, const gradient_dat
         v.off = -v.dx * gradient->values.linear.x1 - v.dy * gradient->values.linear.y1;
     }
 
-    int count = span_buffer->spans.size;
+    int count = span_buffer->spans.size_;
     const span_t* spans = span_buffer->spans.data;
     while(count--) {
-        int length = spans->len;
+        int length_ = spans->len;
         int x = spans->x;
-        while(length) {
-            int l = STB_MIN(length, BUFFER_SIZE);
+        while(length_) {
+            int l = STB_MIN(length_, BUFFER_SIZE);
             fetch_linear_gradient(buffer, &v, gradient, spans->y, x, l);
             uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + x;
             func(target, l, buffer, spans->coverage);
             x += l;
-            length -= l;
+            length_ -= l;
         }
 
         ++spans;
@@ -566,18 +566,18 @@ void blend_radial_gradient(surface_t* surface, operator_t op, const gradient_dat
     v.a = v.dr * v.dr - v.dx * v.dx - v.dy * v.dy;
     v.extended = gradient->values.radial.fr != 0.f || v.a <= 0.f;
 
-    int count = span_buffer->spans.size;
+    int count = span_buffer->spans.size_;
     const span_t* spans = span_buffer->spans.data;
     while(count--) {
-        int length = spans->len;
+        int length_ = spans->len;
         int x = spans->x;
-        while(length) {
-            int l = STB_MIN(length, BUFFER_SIZE);
+        while(length_) {
+            int l = STB_MIN(length_, BUFFER_SIZE);
             fetch_radial_gradient(buffer, &v, gradient, spans->y, x, l);
             uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + x;
             func(target, l, buffer, spans->coverage);
             x += l;
-            length -= l;
+            length_ -= l;
         }
 
         ++spans;
@@ -594,27 +594,27 @@ void blend_untransformed_argb(surface_t* surface, operator_t op, const texture_d
     int xoff = (int)(texture->matrix.e);
     int yoff = (int)(texture->matrix.f);
 
-    int count = span_buffer->spans.size;
+    int count = span_buffer->spans.size_;
     const span_t* spans = span_buffer->spans.data;
     while(count--) {
         int x = spans->x;
-        int length = spans->len;
+        int length_ = spans->len;
         int sx = xoff + x;
         int sy = yoff + spans->y;
         if(sy >= 0 && sy < image_height && sx < image_width) {
             if(sx < 0) {
                 x -= sx;
-                length += sx;
+                length_ += sx;
                 sx = 0;
             }
 
-            if(sx + length > image_width)
-                length = image_width - sx;
-            if(length > 0) {
+            if(sx + length_ > image_width)
+                length_ = image_width - sx;
+            if(length_ > 0) {
                 const int coverage = (spans->coverage * texture->const_alpha) >> 8;
                 const uint32_t* src = (const uint32_t*)(texture->data + sy * texture->stride) + sx;
                 uint32_t* dest = (uint32_t*)(surface->data + spans->y * surface->stride) + x;
-                func(dest, length, src, coverage);
+                func(dest, length_, src, coverage);
             }
         }
 
@@ -633,7 +633,7 @@ void blend_transformed_argb(surface_t* surface, operator_t op, const texture_dat
     int fdx = (int)(texture->matrix.a * FIXED_SCALE);
     int fdy = (int)(texture->matrix.b * FIXED_SCALE);
 
-    int count = span_buffer->spans.size;
+    int count = span_buffer->spans.size_;
     const span_t* spans = span_buffer->spans.data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + spans->x;
@@ -644,10 +644,10 @@ void blend_transformed_argb(surface_t* surface, operator_t op, const texture_dat
         int x = (int)((texture->matrix.c * cy + texture->matrix.a * cx + texture->matrix.e) * FIXED_SCALE);
         int y = (int)((texture->matrix.d * cy + texture->matrix.b * cx + texture->matrix.f) * FIXED_SCALE);
 
-        int length = spans->len;
+        int length_ = spans->len;
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
-        while(length) {
-            int l = STB_MIN(length, BUFFER_SIZE);
+        while(length_) {
+            int l = STB_MIN(length_, BUFFER_SIZE);
             const uint32_t* end = buffer + l;
             uint32_t* b = buffer;
             while(b < end) {
@@ -666,7 +666,7 @@ void blend_transformed_argb(surface_t* surface, operator_t op, const texture_dat
 
             func(target, l, buffer, coverage);
             target += l;
-            length -= l;
+            length_ -= l;
         }
 
         ++spans;
@@ -689,11 +689,11 @@ void blend_untransformed_tiled_argb(surface_t* surface, operator_t op, const tex
         yoff += image_height;
     }
 
-    int count = span_buffer->spans.size;
+    int count = span_buffer->spans.size_;
     const span_t* spans = span_buffer->spans.data;
     while(count--) {
         int x = spans->x;
-        int length = spans->len;
+        int length_ = spans->len;
         int sx = (xoff + spans->x) % image_width;
         int sy = (spans->y + yoff) % image_height;
         if(sx < 0)
@@ -703,8 +703,8 @@ void blend_untransformed_tiled_argb(surface_t* surface, operator_t op, const tex
         }
 
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
-        while(length) {
-            int l = STB_MIN(image_width - sx, length);
+        while(length_) {
+            int l = STB_MIN(image_width - sx, length_);
             if(BUFFER_SIZE < l)
                 l = BUFFER_SIZE;
             const uint32_t* src = (const uint32_t*)(texture->data + sy * texture->stride) + sx;
@@ -712,7 +712,7 @@ void blend_untransformed_tiled_argb(surface_t* surface, operator_t op, const tex
             func(dest, l, src, coverage);
             x += l;
             sx += l;
-            length -= l;
+            length_ -= l;
             if(sx >= image_width) {
                 sx = 0;
             }
@@ -734,7 +734,7 @@ void blend_transformed_tiled_argb(surface_t* surface, operator_t op, const textu
     int fdx = (int)(texture->matrix.a * FIXED_SCALE);
     int fdy = (int)(texture->matrix.b * FIXED_SCALE);
 
-    int count = span_buffer->spans.size;
+    int count = span_buffer->spans.size_;
     const span_t* spans = span_buffer->spans.data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + spans->x;
@@ -747,9 +747,9 @@ void blend_transformed_tiled_argb(surface_t* surface, operator_t op, const textu
         int y = (int)((texture->matrix.d * cy + texture->matrix.b * cx + texture->matrix.f) * FIXED_SCALE);
 
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
-        int length = spans->len;
-        while(length) {
-            int l = STB_MIN(length, BUFFER_SIZE);
+        int length_ = spans->len;
+        while(length_) {
+            int l = STB_MIN(length_, BUFFER_SIZE);
             const uint32_t* end = buffer + l;
             uint32_t* b = buffer;
             while(b < end) {
@@ -772,7 +772,7 @@ void blend_transformed_tiled_argb(surface_t* surface, operator_t op, const textu
 
             func(target, l, buffer, coverage);
             target += l;
-            length -= l;
+            length_ -= l;
         }
 
         ++spans;
@@ -799,7 +799,7 @@ void blend_transformed_bilinear_tiled_argb(surface_t* surface, operator_t op, co
     int fdx = (int)(texture->matrix.a * FIXED_SCALE);
     int fdy = (int)(texture->matrix.b * FIXED_SCALE);
 
-    int count = span_buffer->spans.size;
+    int count = span_buffer->spans.size_;
     const span_t* spans = span_buffer->spans.data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data + spans->y * surface->stride) + spans->x;
@@ -814,9 +814,9 @@ void blend_transformed_bilinear_tiled_argb(surface_t* surface, operator_t op, co
         fy -= HALF_POINT;
 
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
-        int length = spans->len;
-        while(length) {
-            int l = STB_MIN(length, BUFFER_SIZE);
+        int length_ = spans->len;
+        while(length_) {
+            int l = STB_MIN(length_, BUFFER_SIZE);
             const uint32_t* end = buffer + l;
             uint32_t* b = buffer;
             while (b < end) {
@@ -848,17 +848,17 @@ void blend_transformed_bilinear_tiled_argb(surface_t* surface, operator_t op, co
 
             func(target, l, buffer, coverage);
             target += l;
-            length -= l;
+            length_ -= l;
         }
 
         ++spans;
     }
 }
 
-void blend_color(canvas_t* canvas, const color_t* color, const span_buffer_t* span_buffer)
+void blend_color(canvas_t* canvas, const color_t* color_, const span_buffer_t* span_buffer)
 {
     state_t* state = canvas->state;
-    uint32_t solid = premultiply_color_with_opacity(color, state->opacity);
+    uint32_t solid = premultiply_color_with_opacity(color_, state->opacity);
     uint32_t alpha = novasvg_alpha(solid);
 
     if(alpha == 255 && state->op == NOVA_OPERATOR_SRC_OVER) {
@@ -888,7 +888,7 @@ void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const sp
 
     start = gradient->stops;
     curr = start;
-    curr_color = premultiply_color_with_opacity(&curr->color, opacity);
+    curr_color = premultiply_color_with_opacity(&curr->color_, opacity);
 
     data.colortable[pos++] = curr_color;
     incr = 1.0f / COLOR_TABLE_SIZE;
@@ -906,7 +906,7 @@ void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const sp
         if(curr->offset == next->offset)
             continue;
         delta = 1.f / (next->offset - curr->offset);
-        next_color = premultiply_color_with_opacity(&next->color, opacity);
+        next_color = premultiply_color_with_opacity(&next->color_, opacity);
         while(fpos < next->offset && pos < COLOR_TABLE_SIZE) {
             t = (fpos - curr->offset) * delta;
             dist = (uint32_t)(255 * t);
@@ -920,12 +920,12 @@ void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const sp
     }
 
     last = start + nstops - 1;
-    last_color = premultiply_color_with_opacity(&last->color, opacity);
+    last_color = premultiply_color_with_opacity(&last->color_, opacity);
     for(; pos < COLOR_TABLE_SIZE; ++pos) {
         data.colortable[pos] = last_color;
     }
 
-    if(gradient->type == NOVA_GRADIENT_TYPE_LINEAR) {
+    if(gradient->type_ == NOVA_GRADIENT_TYPE_LINEAR) {
         data.values.linear.x1 = gradient->values[0];
         data.values.linear.y1 = gradient->values[1];
         data.values.linear.x2 = gradient->values[2];
@@ -960,13 +960,13 @@ void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_
         return;
     const matrix_t* matrix = &data.matrix;
     if(matrix->a == 1 && matrix->b == 0 && matrix->c == 0 && matrix->d == 1) {
-        if(texture->type == NOVA_TEXTURE_TYPE_PLAIN) {
+        if(texture->type_ == NOVA_TEXTURE_TYPE_PLAIN) {
             blend_untransformed_argb(canvas->surface, state->op, &data, span_buffer);
         } else {
             blend_untransformed_tiled_argb(canvas->surface, state->op, &data, span_buffer);
         }
     } else {
-        if(texture->type == NOVA_TEXTURE_TYPE_PLAIN) {
+        if(texture->type_ == NOVA_TEXTURE_TYPE_PLAIN) {
             blend_transformed_argb(canvas->surface, state->op, &data, span_buffer);
         } else if(fabsf(matrix->b) > 1e-6f || fabsf(matrix->c) > 1e-6f) {
             blend_transformed_bilinear_tiled_argb(canvas->surface, state->op, &data, span_buffer);
@@ -978,22 +978,22 @@ void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_
 
 void blend(canvas_t* canvas, const span_buffer_t* span_buffer)
 {
-    if(span_buffer->spans.size == 0)
+    if(span_buffer->spans.size_ == 0)
         return;
-    if(canvas->state->paint == NULL) {
-        blend_color(canvas, &canvas->state->color, span_buffer);
+    if(canvas->state->paint_ == NULL) {
+        blend_color(canvas, &canvas->state->color_, span_buffer);
         return;
     }
 
-    paint_t* paint = canvas->state->paint;
-    if(paint->type == NOVA_PAINT_TYPE_COLOR) {
-        solid_paint_t* solid = (solid_paint_t*)(paint);
-        blend_color(canvas, &solid->color, span_buffer);
-    } else if(paint->type == NOVA_PAINT_TYPE_GRADIENT) {
-        gradient_paint_t* gradient = (gradient_paint_t*)(paint);
+    paint_t* paint_ = canvas->state->paint_;
+    if(paint_->type_ == NOVA_PAINT_TYPE_COLOR) {
+        solid_paint_t* solid = (solid_paint_t*)(paint_);
+        blend_color(canvas, &solid->color_, span_buffer);
+    } else if(paint_->type_ == NOVA_PAINT_TYPE_GRADIENT) {
+        gradient_paint_t* gradient = (gradient_paint_t*)(paint_);
         blend_gradient(canvas, gradient, span_buffer);
     } else {
-        texture_paint_t* texture = (texture_paint_t*)(paint);
+        texture_paint_t* texture = (texture_paint_t*)(paint_);
         blend_texture(canvas, texture, span_buffer);
     }
 }

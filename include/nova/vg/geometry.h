@@ -10,17 +10,17 @@
 
 namespace nova::vg {
 
-class Rect;
+class rect;
 
 /**
  * @brief Represents a 2D axis-aligned bounding box.
  */
-class NOVA_API Box {
+class NOVA_API box {
 public:
     /**
      * @brief Constructs a box with zero dimensions.
      */
-    Box() = default;
+    box() = default;
 
     /**
      * @brief Constructs a box with the specified position and size.
@@ -29,26 +29,26 @@ public:
      * @param w The width of the box.
      * @param h The height of the box.
      */
-    Box(float x, float y, float w, float h);
+    box(float x, float y, float w, float h);
 
     /**
      * @internal
      */
-    Box(const Rect& rect);
+    box(const rect& rect_);
 
     /**
      * @brief Transforms the box using the specified matrix.
      * @param matrix The transformation matrix.
      * @return A reference to this box, modified by the transformation.
      */
-    Box& transform(const stb::matrix& matrix);
+    box& transform(const stb::matrix& matrix);
 
     /**
      * @brief Returns a new box transformed by the specified matrix.
      * @param matrix The transformation matrix.
      * @return A new box, transformed by the matrix.
      */
-    Box transformed(const stb::matrix& matrix) const;
+    box transformed(const stb::matrix& matrix) const;
 
     float x{0}; ///< The x-coordinate of the box's origin.
     float y{0}; ///< The y-coordinate of the box's origin.

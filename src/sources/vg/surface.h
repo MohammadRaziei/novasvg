@@ -27,8 +27,8 @@ static surface_t* surface_create_uninitialized(int width, int height)
     static const int k_max_size = 1 << 15;
     if(width <= 0 || height <= 0 || width >= k_max_size || height >= k_max_size)
         return NULL;
-    const size_t size = width * height * 4;
-    surface_t* surface = static_cast<surface_t*>(malloc(size + sizeof(surface_t)));
+    const size_t size_ = width * height * 4;
+    surface_t* surface = static_cast<surface_t*>(malloc(size_ + sizeof(surface_t)));
     if(surface == NULL)
         return NULL;
     novasvg_init_reference(surface);

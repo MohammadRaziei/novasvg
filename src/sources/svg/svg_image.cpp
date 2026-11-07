@@ -6,11 +6,11 @@ namespace nova::svg {
 using namespace vg;
 
 svg_image_element::svg_image_element(document* dom)
-    : svg_graphics_element(dom, element_id::Image)
-    , m_x(property_id::X, length_direction::Horizontal, length_negative_mode::allow, 0.f, length_units::None)
-    , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::None)
-    , m_width(property_id::Width, length_direction::Horizontal, length_negative_mode::forbid, 100.f, length_units::percent)
-    , m_height(property_id::Height, length_direction::vertical, length_negative_mode::forbid, 100.f, length_units::percent)
+    : svg_graphics_element(dom, element_id::image)
+    , m_x(property_id::X, length_direction::horizontal, length_negative_mode::allow, 0.f, length_units::none)
+    , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::none)
+    , m_width(property_id::width, length_direction::horizontal, length_negative_mode::forbid, 100.f, length_units::percent)
+    , m_height(property_id::height, length_direction::vertical, length_negative_mode::forbid, 100.f, length_units::percent)
     , m_preserve_aspect_ratio(property_id::PreserveAspectRatio)
 {
     add_property(m_x);
@@ -20,10 +20,10 @@ svg_image_element::svg_image_element(document* dom)
     add_property(m_preserve_aspect_ratio);
 }
 
-Rect svg_image_element::fill_bounding_box() const
+rect svg_image_element::fill_bounding_box() const
 {
     LengthContext lengthContext(this);
-    const Rect viewport_rect = {
+    const rect viewport_rect = {
         lengthContext.value_for_length(m_x),
         lengthContext.value_for_length(m_y),
         lengthContext.value_for_length(m_width),
@@ -33,7 +33,7 @@ Rect svg_image_element::fill_bounding_box() const
     return viewport_rect;
 }
 
-Rect svg_image_element::stroke_bounding_box() const
+rect svg_image_element::stroke_bounding_box() const
 {
     return fill_bounding_box();
 }
@@ -42,17 +42,17 @@ void svg_image_element::render(svg_render_state& state) const
 {
     if(m_image.is_null() || is_display_none() || is_visibility_hidden())
         return;
-    Rect dstRect(fill_bounding_box());
-    Rect srcRect(0, 0, m_image.width(), m_image.height());
-    if(dstRect.empty() || srcRect.empty())
+    rect dst_rect(fill_bounding_box());
+    rect src_rect(0, 0, m_image.width(), m_image.height());
+    if(dst_rect.empty() || src_rect.empty())
         return;
-    m_preserve_aspect_ratio.transform_rect(dstRect, srcRect);
+    m_preserve_aspect_ratio.transform_rect(dst_rect, src_rect);
 
     svg_blend_info blend_info(this);
-    svg_render_state newState(this, state, local_transform());
-    newState.beginGroup(blend_info);
-    newState->draw_image(m_image, dstRect, srcRect, newState.current_transform());
-    newState.endGroup(blend_info);
+    svg_render_state new_state(this, state, local_transform());
+    new_state.begin_group(blend_info);
+    new_state->draw_image(m_image, dst_rect, src_rect, new_state.current_transform());
+    new_state.end_group(blend_info);
 }
 
 pixmap load_image_resource(const std::string& href)
@@ -71,7 +71,7 @@ pixmap load_image_resource(const std::string& href)
 
 void svg_image_element::parse_attribute(property_id id, const std::string& value)
 {
-    if(id == property_id::Href) {
+    if(id == property_id::href) {
         m_image = load_image_resource(value);
     } else {
         svg_graphics_element::parse_attribute(id, value);

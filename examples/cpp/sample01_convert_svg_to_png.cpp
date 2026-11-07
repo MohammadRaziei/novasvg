@@ -11,8 +11,8 @@ namespace {
     }
 
     // Case-insensitive extension check
-    bool has_svg_extension(const std::filesystem::path& path) {
-        auto ext = path.extension().string();
+    bool has_svg_extension(const std::filesystem::path& path_) {
+        auto ext = path_.extension().string();
         std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
         return ext == ".svg";
     }

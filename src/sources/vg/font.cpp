@@ -4,84 +4,84 @@
 
 namespace nova::vg {
 
-FontFace::FontFace(font_face_t* face)
+font_face::font_face(font_face_t* face)
     : m_face(font_face_reference(face))
 {
 }
 
-FontFace::FontFace(const void* data, size_t length, destroy_func_t destroy_func, void* closure)
-    : m_face(font_face_load_from_data(data, length, 0, destroy_func, closure))
+font_face::font_face(const void* data, size_t length_, destroy_func_t destroy_func, void* closure)
+    : m_face(font_face_load_from_data(data, length_, 0, destroy_func, closure))
 {
 }
 
-FontFace::FontFace(const char* filename)
+font_face::font_face(const char* filename)
     : m_face(font_face_load_from_file(filename, 0))
 {
 }
 
-FontFace::FontFace(const FontFace& face)
+font_face::font_face(const font_face& face)
     : m_face(font_face_reference(face.get()))
 {
 }
 
-FontFace::FontFace(FontFace&& face)
+font_face::font_face(font_face&& face)
     : m_face(face.release())
 {
 }
 
-FontFace::~FontFace()
+font_face::~font_face()
 {
     font_face_destroy(m_face);
 }
 
-FontFace& FontFace::operator=(const FontFace& face)
+font_face& font_face::operator=(const font_face& face)
 {
-    FontFace(face).swap(*this);
+    font_face(face).swap(*this);
     return *this;
 }
 
-FontFace& FontFace::operator=(FontFace&& face)
+font_face& font_face::operator=(font_face&& face)
 {
-    FontFace(std::move(face)).swap(*this);
+    font_face(std::move(face)).swap(*this);
     return *this;
 }
 
-void FontFace::swap(FontFace& face)
+void font_face::swap(font_face& face)
 {
     std::swap(m_face, face.m_face);
 }
 
-font_face_t* FontFace::release()
+font_face_t* font_face::release()
 {
     return std::exchange(m_face, nullptr);
 }
 
-float FontFace::unitsPerEm() const
+float font_face::units_per_em() const
 {
     if(is_null())
         return 0.f;
     return font_face_get_units_per_em(m_face);
 }
 
-float FontFace::ascent_units() const
+float font_face::ascent_units() const
 {
     if(is_null())
         return 0.f;
     float ascent = 0.f;
-    font_face_get_metrics(m_face, unitsPerEm(), &ascent, nullptr, nullptr, nullptr);
+    font_face_get_metrics(m_face, units_per_em(), &ascent, nullptr, nullptr, nullptr);
     return ascent;
 }
 
-float FontFace::descent_units() const
+float font_face::descent_units() const
 {
     if(is_null())
         return 0.f;
     float descent = 0.f;
-    font_face_get_metrics(m_face, unitsPerEm(), nullptr, &descent, nullptr, nullptr);
+    font_face_get_metrics(m_face, units_per_em(), nullptr, &descent, nullptr, nullptr);
     return descent;
 }
 
-float FontFace::advance_width_units(char32_t codepoint) const
+float font_face::advance_width_units(char32_t codepoint) const
 {
     if(is_null())
         return 0.f;
@@ -90,21 +90,21 @@ float FontFace::advance_width_units(char32_t codepoint) const
     // makes scale == 1, i.e. the raw, size-independent font-unit value,
     // with no separate unscaled code path needed on the render side.
     float advance = 0.f;
-    font_face_get_glyph_metrics(m_face, unitsPerEm(), codepoint, &advance, nullptr, nullptr);
+    font_face_get_glyph_metrics(m_face, units_per_em(), codepoint, &advance, nullptr, nullptr);
     return advance;
 }
 
-float FontFace::kern_advance_units(char32_t first, char32_t second) const
+float font_face::kern_advance_units(char32_t first, char32_t second) const
 {
     if(is_null())
         return 0.f;
     // Same unitsPerEm()-as-size trick as advanceWidthUnits(): makes
     // font_face_get_kern_advance()'s internal scale multiplication a
     // no-op, yielding the raw, size-independent value.
-    return font_face_get_kern_advance(m_face, unitsPerEm(), first, second);
+    return font_face_get_kern_advance(m_face, units_per_em(), first, second);
 }
 
-std::vector<char32_t> FontFace::codepoints() const
+std::vector<char32_t> font_face::codepoints() const
 {
     std::vector<char32_t> result;
     if(is_null())
@@ -115,19 +115,19 @@ std::vector<char32_t> FontFace::codepoints() const
     return result;
 }
 
-bool FontFaceCache::add_font_face(const std::string& family, bool bold, bool italic, const FontFace& face)
+bool font_face_cache::add_font_face(const std::string& family, bool bold, bool italic, const font_face& face)
 {
     if(!face.is_null())
         font_face_cache_add(m_cache, family.data(), bold, italic, face.get());
     return !face.is_null();
 }
 
-FontFace FontFaceCache::get_font_face_local(const std::string& family, bool bold, bool italic) const
+font_face font_face_cache::get_font_face_local(const std::string& family, bool bold, bool italic) const
 {
-    return FontFace(font_face_cache_get(m_cache, family.data(), bold, italic));
+    return font_face(font_face_cache_get(m_cache, family.data(), bold, italic));
 }
 
-FontFace FontFaceCache::get_font_face(const std::string& family, bool bold, bool italic) const
+font_face font_face_cache::get_font_face(const std::string& family, bool bold, bool italic) const
 {
     if(auto face = get_font_face_local(family, bold, italic); !face.is_null()) {
         return face;
@@ -152,7 +152,7 @@ FontFace FontFaceCache::get_font_face(const std::string& family, bool bold, bool
 
     for(auto value : generic_fallbacks) {
         if(value.generic == family || family.empty()) {
-            if(auto face = FontFace(font_face_cache_get(m_cache, value.fallback, bold, italic)); !face.is_null())
+            if(auto face = font_face(font_face_cache_get(m_cache, value.fallback, bold, italic)); !face.is_null())
                 return face;
             // Not even the platform's stand-in is installed: use the embedded font
             // so text is still drawn (and drawn the same way) on a machine without fonts.
@@ -160,10 +160,10 @@ FontFace FontFaceCache::get_font_face(const std::string& family, bool bold, bool
         }
     }
 
-    return FontFace();
+    return font_face();
 }
 
-FontFace FontFaceCache::get_font_face_for_family_stack(const std::string& familyStack, bool bold, bool italic) const
+font_face font_face_cache::get_font_face_for_family_stack(const std::string& family_stack, bool bold, bool italic) const
 {
     // Metric-compatible stand-ins only: a substitute must lay text out the
     // same way as the font it replaces, so a name with no such stand-in
@@ -186,7 +186,7 @@ FontFace FontFaceCache::get_font_face_for_family_stack(const std::string& family
         {"Calibri", calibri}, {"Cambria", cambria}, {"Georgia", georgia},
     };
 
-    std::string_view input(familyStack);
+    std::string_view input(family_stack);
     while(!input.empty()) {
         auto family = input.substr(0, input.find(','));
         input.remove_prefix(family.length());
@@ -231,10 +231,10 @@ FontFace FontFaceCache::get_font_face_for_family_stack(const std::string& family
             return face;
     }
 
-    return FontFace();
+    return font_face();
 }
 
-FontFaceCache::FontFaceCache()
+font_face_cache::font_face_cache()
     : m_cache(font_face_cache_create())
 {
 #ifndef NOVA_DISABLE_LOAD_SYSTEM_FONTS
@@ -242,21 +242,21 @@ FontFaceCache::FontFaceCache()
 #endif
 }
 
-FontFaceCache* fontFaceCache()
+font_face_cache* font_face_cache_()
 {
-    static FontFaceCache cache;
+    static font_face_cache cache;
     return &cache;
 }
 
-Font::Font(const FontFace& face, float size)
-    : m_face(face), m_size(size)
+font::font(const font_face& face, float size_)
+    : m_face(face), m_size(size_)
 {
     if(m_size > 0.f && !m_face.is_null()) {
         font_face_get_metrics(m_face.get(), m_size, &m_ascent, &m_descent, &m_line_gap, nullptr);
     }
 }
 
-float Font::x_height() const
+float font::x_height() const
 {
     rect_t extents = {0};
     if(m_size > 0.f && !m_face.is_null())
@@ -264,14 +264,14 @@ float Font::x_height() const
     return extents.h;
 }
 
-float Font::measure_text(const std::u32string_view& text) const
+float font::measure_text(const std::u32string_view& text) const
 {
     if(m_size > 0.f && !m_face.is_null())
         return font_face_text_extents(m_face.get(), m_size, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF32, nullptr);
     return 0;
 }
 
-std::vector<Font::glyph_box> Font::glyph_boxes(const std::u32string_view& text) const
+std::vector<font::glyph_box> font::glyph_boxes(const std::u32string_view& text) const
 {
     std::vector<glyph_box> boxes;
     if(m_size <= 0.f || m_face.is_null())
@@ -282,14 +282,14 @@ std::vector<Font::glyph_box> Font::glyph_boxes(const std::u32string_view& text) 
     text_iterator_init(&it, text.data(), static_cast<int>(text.length()), NOVA_TEXT_ENCODING_UTF32);
     float pen = 0.f;
     codepoint_t previous = 0;
-    bool hasPrevious = false;
+    bool has_previous = false;
     while(text_iterator_has_next(&it)) {
         codepoint_t codepoint = text_iterator_next(&it);
         codepoint = font_face_apply_ligature(face, &it, codepoint);
-        if(hasPrevious)
+        if(has_previous)
             pen += font_face_get_kern_advance(face, m_size, previous, codepoint);
         previous = codepoint;
-        hasPrevious = true;
+        has_previous = true;
 
         float advance = 0.f;
         rect_t extents = {0};
@@ -303,12 +303,12 @@ std::vector<Font::glyph_box> Font::glyph_boxes(const std::u32string_view& text) 
 
 bool add_font_face_from_file(const char* family, bool bold, bool italic, const char* filename)
 {
-    return fontFaceCache()->add_font_face(family, bold, italic, FontFace(filename));
+    return font_face_cache_()->add_font_face(family, bold, italic, font_face(filename));
 }
 
-bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length, destroy_func_t destroy_func, void* closure)
+bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length_, destroy_func_t destroy_func, void* closure)
 {
-    return fontFaceCache()->add_font_face(family, bold, italic, FontFace(data, length, destroy_func, closure));
+    return font_face_cache_()->add_font_face(family, bold, italic, font_face(data, length_, destroy_func, closure));
 }
 
 } // namespace nova::vg

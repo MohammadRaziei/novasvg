@@ -17,7 +17,7 @@ float font_face_get_units_per_em(const font_face_t* face);
 void font_face_enumerate_codepoints(const font_face_t* face, void (*callback)(uint32_t codepoint, void* closure), void* closure);
 
 // Kerning between two consecutive code points, in pixels at `size` (kern table or GPOS).
-float font_face_get_kern_advance(font_face_t* face, float size, codepoint_t ch1, codepoint_t ch2);
+float font_face_get_kern_advance(font_face_t* face, float size_, codepoint_t ch1, codepoint_t ch2);
 
 // `codepoint` was just read from `it`. If it starts an f-ligature the font applies (ffi, ffl, ff,
 // fi, fl) the rest of the sequence is consumed from `it` and the ligature's code point returned.

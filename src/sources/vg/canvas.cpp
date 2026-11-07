@@ -22,9 +22,9 @@ const char* render_version_string(void)
 static state_t* state_create(void)
 {
     state_t* state = static_cast<state_t*>(malloc(sizeof(state_t)));
-    state->paint = NULL;
-    state->font_face = NULL;
-    state->color = NOVA_BLACK_COLOR;
+    state->paint_ = NULL;
+    state->font_face_ = NULL;
+    state->color_ = NOVA_BLACK_COLOR;
     state->matrix = NOVA_IDENTITY_MATRIX;
     state->stroke.style = NOVA_DEFAULT_STROKE_STYLE;
     state->stroke.dash.offset = 0.f;
@@ -41,11 +41,11 @@ static state_t* state_create(void)
 
 static void state_reset(state_t* state)
 {
-    paint_destroy(state->paint);
-    font_face_destroy(state->font_face);
-    state->paint = NULL;
-    state->font_face = NULL;
-    state->color = NOVA_BLACK_COLOR;
+    paint_destroy(state->paint_);
+    font_face_destroy(state->font_face_);
+    state->paint_ = NULL;
+    state->font_face_ = NULL;
+    state->color_ = NOVA_BLACK_COLOR;
     state->matrix = NOVA_IDENTITY_MATRIX;
     state->stroke.style = NOVA_DEFAULT_STROKE_STYLE;
     state->stroke.dash.offset = 0.f;
@@ -60,9 +60,9 @@ static void state_reset(state_t* state)
 
 static void state_copy(state_t* state, const state_t* source)
 {
-    state->paint = paint_reference(source->paint);
-    state->font_face = font_face_reference(source->font_face);
-    state->color = source->color;
+    state->paint_ = paint_reference(source->paint_);
+    state->font_face_ = font_face_reference(source->font_face_);
+    state->color_ = source->color_;
     state->matrix = source->matrix;
     state->stroke.style = source->stroke.style;
     state->stroke.dash.offset = source->stroke.dash.offset;
@@ -78,8 +78,8 @@ static void state_copy(state_t* state, const state_t* source)
 
 static void state_destroy(state_t* state)
 {
-    paint_destroy(state->paint);
-    font_face_destroy(state->font_face);
+    paint_destroy(state->paint_);
+    font_face_destroy(state->font_face_);
     novasvg_array_destroy(state->stroke.dash.array);
     span_buffer_destroy(&state->clip_spans);
     free(state);
@@ -90,7 +90,7 @@ canvas_t* canvas_create(surface_t* surface)
     canvas_t* canvas = static_cast<canvas_t*>(malloc(sizeof(canvas_t)));
     novasvg_init_reference(canvas);
     canvas->surface = surface_reference(surface);
-    canvas->path = path_create();
+    canvas->path_ = path_create();
     canvas->state = state_create();
     canvas->freed_state = NULL;
     canvas->face_cache = NULL;
@@ -125,7 +125,7 @@ void canvas_destroy(canvas_t* canvas)
         span_buffer_destroy(&canvas->fill_spans);
         span_buffer_destroy(&canvas->clip_spans);
         surface_destroy(canvas->surface);
-        path_destroy(canvas->path);
+        path_destroy(canvas->path_);
         free(canvas);
     }
 }
@@ -170,48 +170,48 @@ void canvas_set_rgb(canvas_t* canvas, float r, float g, float b)
 
 void canvas_set_rgba(canvas_t* canvas, float r, float g, float b, float a)
 {
-    color_init_rgba(&canvas->state->color, r, g, b, a);
+    color_init_rgba(&canvas->state->color_, r, g, b, a);
     canvas_set_paint(canvas, NULL);
 }
 
-void canvas_set_color(canvas_t* canvas, const color_t* color)
+void canvas_set_color(canvas_t* canvas, const color_t* color_)
 {
-    canvas_set_rgba(canvas, color->r, color->g, color->b, color->a);
+    canvas_set_rgba(canvas, color_->r, color_->g, color_->b, color_->a);
 }
 
 void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2, spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
 {
-    paint_t* paint = paint_create_linear_gradient(x1, y1, x2, y2, spread, stops, nstops, matrix);
-    canvas_set_paint(canvas, paint);
-    paint_destroy(paint);
+    paint_t* paint_ = paint_create_linear_gradient(x1, y1, x2, y2, spread, stops, nstops, matrix);
+    canvas_set_paint(canvas, paint_);
+    paint_destroy(paint_);
 }
 
 void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr, spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
 {
-    paint_t* paint = paint_create_radial_gradient(cx, cy, cr, fx, fy, fr, spread, stops, nstops, matrix);
-    canvas_set_paint(canvas, paint);
-    paint_destroy(paint);
+    paint_t* paint_ = paint_create_radial_gradient(cx, cy, cr, fx, fy, fr, spread, stops, nstops, matrix);
+    canvas_set_paint(canvas, paint_);
+    paint_destroy(paint_);
 }
 
-void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type_t type, float opacity, const matrix_t* matrix)
+void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type_t type_, float opacity, const matrix_t* matrix)
 {
-    paint_t* paint = paint_create_texture(surface, type, opacity, matrix);
-    canvas_set_paint(canvas, paint);
-    paint_destroy(paint);
+    paint_t* paint_ = paint_create_texture(surface, type_, opacity, matrix);
+    canvas_set_paint(canvas, paint_);
+    paint_destroy(paint_);
 }
 
-void canvas_set_paint(canvas_t* canvas, paint_t* paint)
+void canvas_set_paint(canvas_t* canvas, paint_t* paint_)
 {
-    paint = paint_reference(paint);
-    paint_destroy(canvas->state->paint);
-    canvas->state->paint = paint;
+    paint_ = paint_reference(paint_);
+    paint_destroy(canvas->state->paint_);
+    canvas->state->paint_ = paint_;
 }
 
-paint_t* canvas_get_paint(const canvas_t* canvas, color_t* color)
+paint_t* canvas_get_paint(const canvas_t* canvas, color_t* color_)
 {
-    if(color)
-        *color = canvas->state->color;
-    return canvas->state->paint;
+    if(color_)
+        *color_ = canvas->state->color_;
+    return canvas->state->paint_;
 }
 
 void canvas_set_font_face_cache(canvas_t* canvas, font_face_cache_t* cache)
@@ -251,27 +251,27 @@ bool canvas_select_font_face(canvas_t* canvas, const char* family, bool bold, bo
     return true;
 }
 
-void canvas_set_font(canvas_t* canvas, font_face_t* face, float size)
+void canvas_set_font(canvas_t* canvas, font_face_t* face, float size_)
 {
     canvas_set_font_face(canvas, face);
-    canvas_set_font_size(canvas, size);
+    canvas_set_font_size(canvas, size_);
 }
 
 void canvas_set_font_face(canvas_t* canvas, font_face_t* face)
 {
     face = font_face_reference(face);
-    font_face_destroy(canvas->state->font_face);
-    canvas->state->font_face = face;
+    font_face_destroy(canvas->state->font_face_);
+    canvas->state->font_face_ = face;
 }
 
 font_face_t* canvas_get_font_face(const canvas_t* canvas)
 {
-    return canvas->state->font_face;
+    return canvas->state->font_face_;
 }
 
-void canvas_set_font_size(canvas_t* canvas, float size)
+void canvas_set_font_size(canvas_t* canvas, float size_)
 {
-    canvas->state->font_size = size;
+    canvas->state->font_size = size_;
 }
 
 float canvas_get_font_size(const canvas_t* canvas)
@@ -319,9 +319,9 @@ float canvas_get_line_width(const canvas_t* canvas)
     return canvas->state->stroke.style.width;
 }
 
-void canvas_set_line_cap(canvas_t* canvas, line_cap_t line_cap)
+void canvas_set_line_cap(canvas_t* canvas, line_cap_t line_cap_)
 {
-    canvas->state->stroke.style.cap = line_cap;
+    canvas->state->stroke.style.cap = line_cap_;
 }
 
 line_cap_t canvas_get_line_cap(const canvas_t* canvas)
@@ -329,9 +329,9 @@ line_cap_t canvas_get_line_cap(const canvas_t* canvas)
     return canvas->state->stroke.style.cap;
 }
 
-void canvas_set_line_join(canvas_t* canvas, line_join_t line_join)
+void canvas_set_line_join(canvas_t* canvas, line_join_t line_join_)
 {
-    canvas->state->stroke.style.join = line_join;
+    canvas->state->stroke.style.join = line_join_;
 }
 
 line_join_t canvas_get_line_join(const canvas_t* canvas)
@@ -375,7 +375,7 @@ int canvas_get_dash_array(const canvas_t* canvas, const float** dashes)
 {
     if(dashes)
         *dashes = canvas->state->stroke.dash.array.data;
-    return canvas->state->stroke.dash.array.size;
+    return canvas->state->stroke.dash.array.size_;
 }
 
 void canvas_translate(canvas_t* canvas, float tx, float ty)
@@ -435,88 +435,88 @@ void canvas_map_rect(const canvas_t* canvas, const rect_t* src, rect_t* dst)
 
 void canvas_move_to(canvas_t* canvas, float x, float y)
 {
-    path_move_to(canvas->path, x, y);
+    path_move_to(canvas->path_, x, y);
 }
 
 void canvas_line_to(canvas_t* canvas, float x, float y)
 {
-    path_line_to(canvas->path, x, y);
+    path_line_to(canvas->path_, x, y);
 }
 
 void canvas_quad_to(canvas_t* canvas, float x1, float y1, float x2, float y2)
 {
-    path_quad_to(canvas->path, x1, y1, x2, y2);
+    path_quad_to(canvas->path_, x1, y1, x2, y2);
 }
 
 void canvas_cubic_to(canvas_t* canvas, float x1, float y1, float x2, float y2, float x3, float y3)
 {
-    path_cubic_to(canvas->path, x1, y1, x2, y2, x3, y3);
+    path_cubic_to(canvas->path_, x1, y1, x2, y2, x3, y3);
 }
 
 void canvas_arc_to(canvas_t* canvas, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y)
 {
-    path_arc_to(canvas->path, rx, ry, angle, large_arc_flag, sweep_flag, x, y);
+    path_arc_to(canvas->path_, rx, ry, angle, large_arc_flag, sweep_flag, x, y);
 }
 
 void canvas_rect(canvas_t* canvas, float x, float y, float w, float h)
 {
-    path_add_rect(canvas->path, x, y, w, h);
+    path_add_rect(canvas->path_, x, y, w, h);
 }
 
 void canvas_round_rect(canvas_t* canvas, float x, float y, float w, float h, float rx, float ry)
 {
-    path_add_round_rect(canvas->path, x, y, w, h, rx, ry);
+    path_add_round_rect(canvas->path_, x, y, w, h, rx, ry);
 }
 
 void canvas_ellipse(canvas_t* canvas, float cx, float cy, float rx, float ry)
 {
-    path_add_ellipse(canvas->path, cx, cy, rx, ry);
+    path_add_ellipse(canvas->path_, cx, cy, rx, ry);
 }
 
 void canvas_circle(canvas_t* canvas, float cx, float cy, float r)
 {
-    path_add_circle(canvas->path, cx, cy, r);
+    path_add_circle(canvas->path_, cx, cy, r);
 }
 
 void canvas_arc(canvas_t* canvas, float cx, float cy, float r, float a0, float a1, bool ccw)
 {
-    path_add_arc(canvas->path, cx, cy, r, a0, a1, ccw);
+    path_add_arc(canvas->path_, cx, cy, r, a0, a1, ccw);
 }
 
-void canvas_add_path(canvas_t* canvas, const path_t* path)
+void canvas_add_path(canvas_t* canvas, const path_t* path_)
 {
-    path_add_path(canvas->path, path, NULL);
+    path_add_path(canvas->path_, path_, NULL);
 }
 
 void canvas_new_path(canvas_t* canvas)
 {
-    path_reset(canvas->path);
+    path_reset(canvas->path_);
 }
 
 void canvas_close_path(canvas_t* canvas)
 {
-    path_close(canvas->path);
+    path_close(canvas->path_);
 }
 
 void canvas_get_current_point(const canvas_t* canvas, float* x, float* y)
 {
-    path_get_current_point(canvas->path, x, y);
+    path_get_current_point(canvas->path_, x, y);
 }
 
 path_t* canvas_get_path(const canvas_t* canvas)
 {
-    return canvas->path;
+    return canvas->path_;
 }
 
 bool canvas_fill_contains(canvas_t* canvas, float x, float y)
 {
-    rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
+    rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
     return span_buffer_contains(&canvas->fill_spans, x, y);
 }
 
 bool canvas_stroke_contains(canvas_t* canvas, float x, float y)
 {
-    rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
+    rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
     return span_buffer_contains(&canvas->fill_spans, x, y);
 }
 
@@ -536,13 +536,13 @@ bool canvas_clip_contains(canvas_t* canvas, float x, float y)
 
 void canvas_fill_extents(canvas_t *canvas, rect_t* extents)
 {
-    rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
+    rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
     span_buffer_extents(&canvas->fill_spans, extents);
 }
 
 void canvas_stroke_extents(canvas_t *canvas, rect_t* extents)
 {
-    rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, &canvas->state->stroke, NOVA_FILL_RULE_NON_ZERO);
+    rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, NULL, &canvas->state->stroke, NOVA_FILL_RULE_NON_ZERO);
     span_buffer_extents(&canvas->fill_spans, extents);
 }
 
@@ -588,7 +588,7 @@ void canvas_paint(canvas_t* canvas)
 
 void canvas_fill_preserve(canvas_t* canvas)
 {
-    rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
+    rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
     if(canvas->state->clipping) {
         span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
         blend(canvas, &canvas->clip_spans);
@@ -599,7 +599,7 @@ void canvas_fill_preserve(canvas_t* canvas)
 
 void canvas_stroke_preserve(canvas_t* canvas)
 {
-    rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, NOVA_FILL_RULE_NON_ZERO);
+    rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, NOVA_FILL_RULE_NON_ZERO);
     if(canvas->state->clipping) {
         span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
         blend(canvas, &canvas->clip_spans);
@@ -611,11 +611,11 @@ void canvas_stroke_preserve(canvas_t* canvas)
 void canvas_clip_preserve(canvas_t* canvas)
 {
     if(canvas->state->clipping) {
-        rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
+        rasterize(&canvas->fill_spans, canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
         span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
         span_buffer_copy(&canvas->state->clip_spans, &canvas->clip_spans);
     } else {
-        rasterize(&canvas->state->clip_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
+        rasterize(&canvas->state->clip_spans, canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
         canvas->state->clipping = true;
     }
 }
@@ -627,10 +627,10 @@ void canvas_fill_rect(canvas_t* canvas, float x, float y, float w, float h)
     canvas_fill(canvas);
 }
 
-void canvas_fill_path(canvas_t* canvas, const path_t* path)
+void canvas_fill_path(canvas_t* canvas, const path_t* path_)
 {
     canvas_new_path(canvas);
-    canvas_add_path(canvas, path);
+    canvas_add_path(canvas, path_);
     canvas_fill(canvas);
 }
 
@@ -641,10 +641,10 @@ void canvas_stroke_rect(canvas_t* canvas, float x, float y, float w, float h)
     canvas_stroke(canvas);
 }
 
-void canvas_stroke_path(canvas_t* canvas, const path_t* path)
+void canvas_stroke_path(canvas_t* canvas, const path_t* path_)
 {
     canvas_new_path(canvas);
-    canvas_add_path(canvas, path);
+    canvas_add_path(canvas, path_);
     canvas_stroke(canvas);
 }
 
@@ -655,37 +655,37 @@ void canvas_clip_rect(canvas_t* canvas, float x, float y, float w, float h)
     canvas_clip(canvas);
 }
 
-void canvas_clip_path(canvas_t* canvas, const path_t* path)
+void canvas_clip_path(canvas_t* canvas, const path_t* path_)
 {
     canvas_new_path(canvas);
-    canvas_add_path(canvas, path);
+    canvas_add_path(canvas, path_);
     canvas_clip(canvas);
 }
 
 float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x, float y)
 {
     state_t* state = canvas->state;
-    if(state->font_face && state->font_size > 0.f)
-        return font_face_get_glyph_path(state->font_face, state->font_size, x, y, codepoint, canvas->path);
+    if(state->font_face_ && state->font_size > 0.f)
+        return font_face_get_glyph_path(state->font_face_, state->font_size, x, y, codepoint, canvas->path_);
     return 0.f;
 }
 
-float canvas_add_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y)
+float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y)
 {
     state_t* state = canvas->state;
-    if(state->font_face == NULL || state->font_size <= 0.f)
+    if(state->font_face_ == NULL || state->font_size <= 0.f)
         return 0.f;
     text_iterator_t it;
-    text_iterator_init(&it, text, length, encoding);
+    text_iterator_init(&it, text, length_, encoding);
     float advance_width = 0.f;
     codepoint_t previous = 0;
     bool has_previous = false;
     while(text_iterator_has_next(&it)) {
         codepoint_t codepoint = text_iterator_next(&it);
-        codepoint = font_face_apply_ligature(state->font_face, &it, codepoint);
+        codepoint = font_face_apply_ligature(state->font_face_, &it, codepoint);
         if(has_previous)
-            advance_width += font_face_get_kern_advance(state->font_face, state->font_size, previous, codepoint);
-        advance_width += font_face_get_glyph_path(state->font_face, state->font_size, x + advance_width, y, codepoint, canvas->path);
+            advance_width += font_face_get_kern_advance(state->font_face_, state->font_size, previous, codepoint);
+        advance_width += font_face_get_glyph_path(state->font_face_, state->font_size, x + advance_width, y, codepoint, canvas->path_);
         previous = codepoint;
         has_previous = true;
     }
@@ -693,26 +693,26 @@ float canvas_add_text(canvas_t* canvas, const void* text, int length, text_encod
     return advance_width;
 }
 
-float canvas_fill_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y)
+float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y)
 {
     canvas_new_path(canvas);
-    float advance_width = canvas_add_text(canvas, text, length, encoding, x, y);
+    float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y);
     canvas_fill(canvas);
     return advance_width;
 }
 
-float canvas_stroke_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y)
+float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y)
 {
     canvas_new_path(canvas);
-    float advance_width = canvas_add_text(canvas, text, length, encoding, x, y);
+    float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y);
     canvas_stroke(canvas);
     return advance_width;
 }
 
-float canvas_clip_text(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, float x, float y)
+float canvas_clip_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y)
 {
     canvas_new_path(canvas);
-    float advance_width = canvas_add_text(canvas, text, length, encoding, x, y);
+    float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y);
     canvas_clip(canvas);
     return advance_width;
 }
@@ -720,8 +720,8 @@ float canvas_clip_text(canvas_t* canvas, const void* text, int length, text_enco
 void canvas_font_metrics(const canvas_t* canvas, float* ascent, float* descent, float* line_gap, rect_t* extents)
 {
     state_t* state = canvas->state;
-    if(state->font_face && state->font_size > 0.f) {
-        font_face_get_metrics(state->font_face, state->font_size, ascent, descent, line_gap, extents);
+    if(state->font_face_ && state->font_size > 0.f) {
+        font_face_get_metrics(state->font_face_, state->font_size, ascent, descent, line_gap, extents);
         return;
     }
 
@@ -739,8 +739,8 @@ void canvas_font_metrics(const canvas_t* canvas, float* ascent, float* descent, 
 void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents)
 {
     state_t* state = canvas->state;
-    if(state->font_face && state->font_size > 0.f) {
-        font_face_get_glyph_metrics(state->font_face, state->font_size, codepoint, advance_width, left_side_bearing, extents);
+    if(state->font_face_ && state->font_size > 0.f) {
+        font_face_get_glyph_metrics(state->font_face_, state->font_size, codepoint, advance_width, left_side_bearing, extents);
         return;
     }
 
@@ -754,11 +754,11 @@ void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, float* advanc
     }
 }
 
-float canvas_text_extents(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, rect_t* extents)
+float canvas_text_extents(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, rect_t* extents)
 {
     state_t* state = canvas->state;
-    if(state->font_face && state->font_size > 0.f) {
-        return font_face_text_extents(state->font_face, state->font_size, text, length, encoding, extents);
+    if(state->font_face_ && state->font_size > 0.f) {
+        return font_face_text_extents(state->font_face_, state->font_size, text, length_, encoding, extents);
     }
 
     if(extents) {

@@ -34,24 +34,24 @@ surface_t* surface_load_from_image_file(const char* filename)
     }
 }
 
-surface_t* surface_load_from_image_data(const void* data, int length)
+surface_t* surface_load_from_image_data(const void* data, int length_)
 {
-    if(data == NULL || length <= 0)
+    if(data == NULL || length_ <= 0)
         return NULL;
     try {
-        return surface_load_from_image(stb::image::decode(data, size_t(length), surface_load_options()));
+        return surface_load_from_image(stb::image::decode(data, size_t(length_), surface_load_options()));
     } catch(const std::exception&) {
         return NULL;
     }
 }
 
-uint8_t* base64_decode(const char* data, int length, size_t* out_length)
+uint8_t* base64_decode(const char* data, int length_, size_t* out_length)
 {
     // 0..63 = the sextet a character stands for; kWs = whitespace (skipped); kPad = '='; kBad = anything else.
     enum : uint8_t { k_ws = 0xFD, k_pad = 0xFE, k_bad = 0xFF };
-    static const struct Table {
+    static const struct table {
         uint8_t v[256];
-        Table()
+        table()
         {
             for(int i = 0; i < 256; ++i)
                 v[i] = k_bad;
@@ -67,15 +67,15 @@ uint8_t* base64_decode(const char* data, int length, size_t* out_length)
             for(int c : {' ', '\t', '\n', '\r', '\f', '\v'})
                 v[c] = k_ws;
         }
-    } table;
+    } table_;
 
     *out_length = 0;
-    if(length == -1)
-        length = int(strlen(data));
-    if(length <= 0)
+    if(length_ == -1)
+        length_ = int(strlen(data));
+    if(length_ <= 0)
         return NULL;
     // Every 4 input characters make 3 bytes, so `length` bytes is always enough room.
-    auto* output_data = static_cast<uint8_t*>(malloc(size_t(length)));
+    auto* output_data = static_cast<uint8_t*>(malloc(size_t(length_)));
     if(output_data == NULL)
         return NULL;
 
@@ -85,12 +85,12 @@ uint8_t* base64_decode(const char* data, int length, size_t* out_length)
     size_t pads = 0;         // '=' seen
     uint32_t acc = 0;
     int bits = 0;
-    for(int i = 0; i < length; ++i) {
+    for(int i = 0; i < length_; ++i) {
         // Fast path: a clean group of four sextets (no padding or whitespace so far, bits aligned) is
         // three bytes, with nothing to track between them.
-        if(bits == 0 && pads == 0 && i + 4 <= length) {
-            const uint8_t a = table.v[uint8_t(data[i])], b = table.v[uint8_t(data[i + 1])];
-            const uint8_t c = table.v[uint8_t(data[i + 2])], d = table.v[uint8_t(data[i + 3])];
+        if(bits == 0 && pads == 0 && i + 4 <= length_) {
+            const uint8_t a = table_.v[uint8_t(data[i])], b = table_.v[uint8_t(data[i + 1])];
+            const uint8_t c = table_.v[uint8_t(data[i + 2])], d = table_.v[uint8_t(data[i + 3])];
             if((a | b | c | d) < 64) {
                 output_data[didx] = uint8_t((a << 2) | (b >> 4));
                 output_data[didx + 1] = uint8_t((b << 4) | (c >> 2));
@@ -102,7 +102,7 @@ uint8_t* base64_decode(const char* data, int length, size_t* out_length)
             }
         }
 
-        const uint8_t v = table.v[uint8_t(data[i])];
+        const uint8_t v = table_.v[uint8_t(data[i])];
         if(v < 64) {
             if(pads > 0)
                 goto cleanup; // data after padding
@@ -132,10 +132,10 @@ cleanup:
     return NULL;
 }
 
-surface_t* surface_load_from_image_base64(const char* data, int length)
+surface_t* surface_load_from_image_base64(const char* data, int length_)
 {
     size_t output_length = 0;
-    uint8_t* output_data = base64_decode(data, length, &output_length);
+    uint8_t* output_data = base64_decode(data, length_, &output_length);
     if(output_data == NULL)
         return NULL;
     surface_t* surface = surface_load_from_image_data(output_data, int(output_length));
@@ -181,10 +181,10 @@ int surface_get_stride(const surface_t* surface)
     return surface->stride;
 }
 
-void surface_clear(surface_t* surface, const color_t* color)
+void surface_clear(surface_t* surface, const color_t* color_)
 {
     // libstb's straight-RGBA -> premultiplied-ARGB32 conversion (c * a / 255, packed 0xAARRGGBB), on one pixel.
-    const uint32_t argb = color_to_argb32(color);
+    const uint32_t argb = color_to_argb32(color_);
     const uint8_t rgba[4] = {static_cast<uint8_t>(novasvg_red(argb)), static_cast<uint8_t>(novasvg_green(argb)),
                              static_cast<uint8_t>(novasvg_blue(argb)), static_cast<uint8_t>(novasvg_alpha(argb))};
     uint32_t pixel = 0;

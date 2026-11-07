@@ -66,21 +66,21 @@ static bool parse_alpha_component(const char** begin, const char* end, float* co
     return true;
 }
 
-static void* paint_create(paint_type_t type, size_t size)
+static void* paint_create(paint_type_t type_, size_t size_)
 {
-    paint_t* paint = static_cast<paint_t*>(malloc(size));
-    novasvg_init_reference(paint);
-    paint->type = type;
-    return paint;
+    paint_t* paint_ = static_cast<paint_t*>(malloc(size_));
+    novasvg_init_reference(paint_);
+    paint_->type_ = type_;
+    return paint_;
 }
 
-static gradient_paint_t* gradient_create(gradient_type_t type, spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
+static gradient_paint_t* gradient_create(gradient_type_t type_, spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
 {
     gradient_paint_t* gradient = static_cast<gradient_paint_t*>(paint_create(
         NOVA_PAINT_TYPE_GRADIENT,
         sizeof(gradient_paint_t) + nstops * sizeof(gradient_stop_t)
     ));
-    gradient->type = type;
+    gradient->type_ = type_;
     gradient->spread = spread;
     gradient->matrix = matrix ? *matrix : NOVA_IDENTITY_MATRIX;
     gradient->stops = (gradient_stop_t*)(gradient + 1);
@@ -90,10 +90,10 @@ static gradient_paint_t* gradient_create(gradient_type_t type, spread_method_t s
     for(int i = 0; i < nstops; ++i) {
         const gradient_stop_t* stop = stops + i;
         gradient->stops[i].offset = STB_MAX(prev_offset, std::clamp(stop->offset, 0.f, 1.f));
-        gradient->stops[i].color.r = std::clamp(stop->color.r, 0.f, 1.f);
-        gradient->stops[i].color.g = std::clamp(stop->color.g, 0.f, 1.f);
-        gradient->stops[i].color.b = std::clamp(stop->color.b, 0.f, 1.f);
-        gradient->stops[i].color.a = std::clamp(stop->color.a, 0.f, 1.f);
+        gradient->stops[i].color_.r = std::clamp(stop->color_.r, 0.f, 1.f);
+        gradient->stops[i].color_.g = std::clamp(stop->color_.g, 0.f, 1.f);
+        gradient->stops[i].color_.b = std::clamp(stop->color_.b, 0.f, 1.f);
+        gradient->stops[i].color_.a = std::clamp(stop->color_.a, 0.f, 1.f);
         prev_offset = gradient->stops[i].offset;
     }
 

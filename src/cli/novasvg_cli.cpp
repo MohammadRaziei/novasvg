@@ -48,14 +48,14 @@ static bool write_image(const stb::image& image, const std::string& filename) {
 
 std::string human_readable_size(std::uintmax_t bytes) {
     const char* suffixes[] = {"B", "KB", "MB", "GB", "TB"};
-    double size = static_cast<double>(bytes);
+    double size_ = static_cast<double>(bytes);
     int i = 0;
-    while (size >= 1024 && i < 4) {
-        size /= 1024;
+    while (size_ >= 1024 && i < 4) {
+        size_ /= 1024;
         ++i;
     }
     std::ostringstream oss;
-    oss << std::fixed << std::setprecision(2) << size << " " << suffixes[i];
+    oss << std::fixed << std::setprecision(2) << size_ << " " << suffixes[i];
     return oss.str();
 }
 
@@ -223,9 +223,9 @@ int cmd_info(const std::string& input, bool json_output = false) {
     }
     
     if (fs::exists(input)) {
-        auto size = fs::file_size(input);
-        std::cout << "  File size: " << size << " bytes\n";
-        std::cout << "  Readable size: " << human_readable_size(size) << "\n";
+        auto size_ = fs::file_size(input);
+        std::cout << "  File size: " << size_ << " bytes\n";
+        std::cout << "  Readable size: " << human_readable_size(size_) << "\n";
     } else {
         std::cout << "  File size: N/A\n";
     }
@@ -325,13 +325,13 @@ int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
     
     for (const auto& entry : fs::directory_iterator(input_dir)) {
         if (!entry.is_regular_file()) continue;
-        auto path = entry.path();
-        if (path.extension() != ".svg") continue;
+        auto path_ = entry.path();
+        if (path_.extension() != ".svg") continue;
         
-        std::string input_file = path.string();
-        std::string output_file = (fs::path(output_dir) / path.stem()).string() + ".png";
+        std::string input_file = path_.string();
+        std::string output_file = (fs::path(output_dir) / path_.stem()).string() + ".png";
         
-        std::cout << "Processing: " << path.filename() << " -> " 
+        std::cout << "Processing: " << path_.filename() << " -> " 
                   << fs::path(output_file).filename() << "\n";
         
         std::unique_ptr<nova::svg::document> doc = nova::svg::document::load_file(input_file);

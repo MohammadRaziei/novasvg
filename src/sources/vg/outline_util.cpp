@@ -5,11 +5,11 @@
 
 namespace nova::vg {
 
-stb::outline from_path_t(const path_t* path)
+stb::outline from_path_t(const path_t* path_)
 {
     stb::outline outline;
     path_iterator_t it;
-    path_iterator_init(&it, path);
+    path_iterator_init(&it, path_);
 
     point_t points[3];
     while(path_iterator_has_next(&it)) {
@@ -34,28 +34,28 @@ stb::outline from_path_t(const path_t* path)
 
 path_t* to_path_t(const stb::outline& outline)
 {
-    path_t* path = path_create();
+    path_t* path_ = path_create();
     for(const stb::outline_command& c : outline) {
         switch(c.op) {
         case stb::outline_op::move_to:
-            path_move_to(path, c.p[0].x, c.p[0].y);
+            path_move_to(path_, c.p[0].x, c.p[0].y);
             break;
         case stb::outline_op::line_to:
-            path_line_to(path, c.p[0].x, c.p[0].y);
+            path_line_to(path_, c.p[0].x, c.p[0].y);
             break;
         case stb::outline_op::quad_to:
-            path_quad_to(path, c.p[0].x, c.p[0].y, c.p[1].x, c.p[1].y);
+            path_quad_to(path_, c.p[0].x, c.p[0].y, c.p[1].x, c.p[1].y);
             break;
         case stb::outline_op::cubic_to:
-            path_cubic_to(path, c.p[0].x, c.p[0].y, c.p[1].x, c.p[1].y, c.p[2].x, c.p[2].y);
+            path_cubic_to(path_, c.p[0].x, c.p[0].y, c.p[1].x, c.p[1].y, c.p[2].x, c.p[2].y);
             break;
         case stb::outline_op::close:
-            path_close(path);
+            path_close(path_);
             break;
         }
     }
 
-    return path;
+    return path_;
 }
 
 void arc_to(stb::outline& outline, float rx, float ry, float x_axis_rotation_deg, bool large_arc, bool sweep, float x, float y)
@@ -97,19 +97,19 @@ void arc_to(stb::outline& outline, float rx, float ry, float x_axis_rotation_deg
     }
 }
 
-bool parse_path(stb::outline& outline, const char* data, size_t length)
+bool parse_path(stb::outline& outline, const char* data, size_t length_)
 {
     path_t* tmp = path_create();
-    const bool ok = path_parse(tmp, data, length);
+    const bool ok = path_parse(tmp, data, length_);
     outline = from_path_t(tmp);
     path_destroy(tmp);
     return ok;
 }
 
-Rect bounding_rect(const stb::outline& outline)
+rect bounding_rect(const stb::outline& outline)
 {
     if(outline.empty())
-        return Rect::Empty;
+        return rect::empty_rect;
     path_t* tmp = to_path_t(outline);
     rect_t extents;
     path_extents(tmp, &extents, false);
@@ -127,12 +127,12 @@ outline_walker::outline_walker(const stb::outline& outline)
         switch(c.op) {
         case stb::outline_op::move_to:
             s.command = segment_kind::move_to;
-            s.points[0] = Point(c.p[0].x, c.p[0].y);
+            s.points[0] = point(c.p[0].x, c.p[0].y);
             start = current = c.p[0];
             break;
         case stb::outline_op::line_to:
             s.command = segment_kind::line_to;
-            s.points[0] = Point(c.p[0].x, c.p[0].y);
+            s.points[0] = point(c.p[0].x, c.p[0].y);
             current = c.p[0];
             break;
         case stb::outline_op::quad_to: {
@@ -142,22 +142,22 @@ outline_walker::outline_walker(const stb::outline& outline)
             const float y1 = 2.f / 3.f * c.p[0].y + 1.f / 3.f * current.y;
             const float x2 = 2.f / 3.f * c.p[0].x + 1.f / 3.f * c.p[1].x;
             const float y2 = 2.f / 3.f * c.p[0].y + 1.f / 3.f * c.p[1].y;
-            s.points[0] = Point(x1, y1);
-            s.points[1] = Point(x2, y2);
-            s.points[2] = Point(c.p[1].x, c.p[1].y);
+            s.points[0] = point(x1, y1);
+            s.points[1] = point(x2, y2);
+            s.points[2] = point(c.p[1].x, c.p[1].y);
             current = c.p[1];
             break;
         }
         case stb::outline_op::cubic_to:
             s.command = segment_kind::cubic_to;
-            s.points[0] = Point(c.p[0].x, c.p[0].y);
-            s.points[1] = Point(c.p[1].x, c.p[1].y);
-            s.points[2] = Point(c.p[2].x, c.p[2].y);
+            s.points[0] = point(c.p[0].x, c.p[0].y);
+            s.points[1] = point(c.p[1].x, c.p[1].y);
+            s.points[2] = point(c.p[2].x, c.p[2].y);
             current = c.p[2];
             break;
         case stb::outline_op::close:
             s.command = segment_kind::close;
-            s.points[0] = Point(start.x, start.y);
+            s.points[0] = point(start.x, start.y);
             current = start;
             break;
         }
@@ -166,7 +166,7 @@ outline_walker::outline_walker(const stb::outline& outline)
     }
 }
 
-segment_kind outline_walker::current_segment(std::array<Point, 3>& points) const
+segment_kind outline_walker::current_segment(std::array<point, 3>& points) const
 {
     const segment& s = m_segments[m_index];
     points[0] = s.points[0];

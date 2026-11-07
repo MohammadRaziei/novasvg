@@ -151,10 +151,10 @@ void skip_css_unit(const char** begin, const char* end, float* number)
     if(it == unit_start)
         return;
 
-    auto length = size_t(it - unit_start);
+    auto length_ = size_t(it - unit_start);
     auto matches = [&](const char* unit) {
         auto unit_length = strlen(unit);
-        return length == unit_length && strncmp(unit_start, unit, unit_length) == 0;
+        return length_ == unit_length && strncmp(unit_start, unit, unit_length) == 0;
     };
 
     if(matches("rad"))

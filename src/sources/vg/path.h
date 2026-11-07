@@ -28,7 +28,7 @@ typedef struct {
 typedef struct {
     point_t current_point;
     bool is_first_point;
-    float length;
+    float length_;
     float x1;
     float y1;
     float x2;

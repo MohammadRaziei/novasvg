@@ -17,51 +17,51 @@ public:
     const svg_layout_state* parent() const { return m_parent; }
     const svg_element* el() const { return m_element; }
 
-    const Paint& fill() const { return m_fill; }
-    const Paint& stroke() const { return m_stroke; }
+    const paint& fill() const { return m_fill; }
+    const paint& stroke() const { return m_stroke; }
 
-    const stb::color& color() const { return m_color; }
+    const stb::color& color_() const { return m_color; }
     const stb::color& stop_color() const { return m_stop_color; }
 
     float opacity() const { return m_opacity; }
-    MixBlendMode mix_blend_mode() const { return m_mix_blend_mode; }
+    mix_blend_mode mix_blend_mode_() const { return m_mix_blend_mode; }
     float stop_opacity() const { return m_stop_opacity; }
     float fill_opacity() const { return m_fill_opacity; }
     float stroke_opacity() const { return m_stroke_opacity; }
     float stroke_miterlimit() const { return m_stroke_miterlimit; }
     float font_size() const { return m_font_size; }
 
-    const Length& letter_spacing() const { return m_letter_spacing; }
-    const Length& word_spacing() const { return m_word_spacing; }
+    const length& letter_spacing() const { return m_letter_spacing; }
+    const length& word_spacing() const { return m_word_spacing; }
 
-    const BaselineShift& baseline_shift() const { return m_baseline_shift; }
-    const Length& stroke_width() const { return m_stroke_width; }
-    const Length& stroke_dashoffset() const { return m_stroke_dashoffset; }
+    const baseline_shift& baseline_shift_() const { return m_baseline_shift; }
+    const length& stroke_width() const { return m_stroke_width; }
+    const length& stroke_dashoffset() const { return m_stroke_dashoffset; }
     const length_list& stroke_dasharray() const { return m_stroke_dasharray; }
 
-    LineCap stroke_linecap() const { return m_stroke_linecap; }
-    LineJoin stroke_linejoin() const { return m_stroke_linejoin; }
+    line_cap stroke_linecap() const { return m_stroke_linecap; }
+    line_join stroke_linejoin() const { return m_stroke_linejoin; }
 
-    FillRule fill_rule() const { return m_fill_rule; }
-    FillRule clip_rule() const { return m_clip_rule; }
+    fill_rule fill_rule_() const { return m_fill_rule; }
+    fill_rule clip_rule() const { return m_clip_rule; }
 
-    FontWeight font_weight() const { return m_font_weight; }
-    FontStyle font_style() const { return m_font_style; }
+    font_weight font_weight_() const { return m_font_weight; }
+    font_style font_style_() const { return m_font_style; }
 
-    AlignmentBaseline alignment_baseline() const { return m_alignment_baseline; }
-    DominantBaseline dominant_baseline() const { return m_dominant_baseline; }
+    alignment_baseline alignment_baseline_() const { return m_alignment_baseline; }
+    dominant_baseline dominant_baseline_() const { return m_dominant_baseline; }
 
-    TextAnchor text_anchor() const { return m_text_anchor; }
-    WhiteSpace white_space() const { return m_white_space; }
-    WritingMode writing_mode() const { return m_writing_mode; }
-    TextOrientation text_orientation() const { return m_text_orientation; }
-    Direction direction() const { return m_direction; }
+    text_anchor text_anchor_() const { return m_text_anchor; }
+    white_space white_space_() const { return m_white_space; }
+    writing_mode writing_mode_() const { return m_writing_mode; }
+    text_orientation text_orientation_() const { return m_text_orientation; }
+    direction direction_() const { return m_direction; }
 
-    Display display() const { return m_display; }
-    Visibility visibility() const { return m_visibility; }
-    Overflow overflow() const { return m_overflow; }
-    PointerEvents pointer_events() const { return m_pointer_events; }
-    MaskType mask_type() const { return m_mask_type; }
+    display display_() const { return m_display; }
+    visibility visibility_() const { return m_visibility; }
+    overflow overflow_() const { return m_overflow; }
+    pointer_events pointer_events_() const { return m_pointer_events; }
+    mask_type mask_type_() const { return m_mask_type; }
 
     const std::string& mask() const { return m_mask; }
     const std::string& clip_path() const { return m_clip_path; }
@@ -71,57 +71,57 @@ public:
     const std::string& marker_end() const { return m_marker_end; }
     const std::string& font_family() const { return m_font_family; }
 
-    Font font() const;
+    font font_() const;
 
 private:
     const svg_layout_state* m_parent = nullptr;
     const svg_element* m_element = nullptr;
 
-    Paint m_fill{stb::color::black()};
-    Paint m_stroke{stb::color::transparent()};
+    paint m_fill{stb::color::black()};
+    paint m_stroke{stb::color::transparent()};
 
     stb::color m_color = stb::color::black();
     stb::color m_stop_color = stb::color::black();
 
     float m_opacity = 1.f;
-    MixBlendMode m_mix_blend_mode = MixBlendMode::normal; // like opacity: not inherited
+    mix_blend_mode m_mix_blend_mode = mix_blend_mode::normal; // like opacity: not inherited
     float m_fill_opacity = 1.f;
     float m_stroke_opacity = 1.f;
     float m_stop_opacity = 1.f;
     float m_stroke_miterlimit = 4.f;
     float m_font_size = 12.f;
 
-    Length m_letter_spacing{0.f, length_units::None};
-    Length m_word_spacing{0.f, length_units::None};
+    length m_letter_spacing{0.f, length_units::none};
+    length m_word_spacing{0.f, length_units::none};
 
-    BaselineShift m_baseline_shift;
-    Length m_stroke_width{1.f, length_units::None};
-    Length m_stroke_dashoffset{0.f, length_units::None};
+    baseline_shift m_baseline_shift;
+    length m_stroke_width{1.f, length_units::none};
+    length m_stroke_dashoffset{0.f, length_units::none};
     length_list m_stroke_dasharray;
 
-    LineCap m_stroke_linecap = LineCap::Butt;
-    LineJoin m_stroke_linejoin = LineJoin::Miter;
+    line_cap m_stroke_linecap = line_cap::butt;
+    line_join m_stroke_linejoin = line_join::miter;
 
-    FillRule m_fill_rule = FillRule::NonZero;
-    FillRule m_clip_rule = FillRule::NonZero;
+    fill_rule m_fill_rule = fill_rule::non_zero;
+    fill_rule m_clip_rule = fill_rule::non_zero;
 
-    FontWeight m_font_weight = FontWeight::normal;
-    FontStyle m_font_style = FontStyle::normal;
+    font_weight m_font_weight = font_weight::normal;
+    font_style m_font_style = font_style::normal;
 
-    AlignmentBaseline m_alignment_baseline = AlignmentBaseline::Auto;
-    DominantBaseline m_dominant_baseline = DominantBaseline::Auto;
+    alignment_baseline m_alignment_baseline = alignment_baseline::auto_;
+    dominant_baseline m_dominant_baseline = dominant_baseline::auto_;
 
-    TextAnchor m_text_anchor = TextAnchor::Start;
-    WhiteSpace m_white_space = WhiteSpace::Default;
-    WritingMode m_writing_mode = WritingMode::Horizontal;
-    TextOrientation m_text_orientation = TextOrientation::mixed;
-    Direction m_direction = Direction::ltr;
+    text_anchor m_text_anchor = text_anchor::start;
+    white_space m_white_space = white_space::default_;
+    writing_mode m_writing_mode = writing_mode::horizontal;
+    text_orientation m_text_orientation = text_orientation::mixed;
+    direction m_direction = direction::ltr;
 
-    Display m_display = Display::Inline;
-    Visibility m_visibility = Visibility::visible;
-    Overflow m_overflow = Overflow::visible;
-    PointerEvents m_pointer_events = PointerEvents::Auto;
-    MaskType m_mask_type = MaskType::luminance;
+    display m_display = display::inline_;
+    visibility m_visibility = visibility::visible;
+    overflow m_overflow = overflow::visible;
+    pointer_events m_pointer_events = pointer_events::auto_;
+    mask_type m_mask_type = mask_type::luminance;
 
     std::string m_mask;
     std::string m_clip_path;
