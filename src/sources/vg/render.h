@@ -189,115 +189,7 @@ NOVA_API codepoint_t text_iterator_next(text_iterator_t* it);
 /**
  * @brief Represents a font face.
  */
-typedef struct font_face_impl font_face_t;
-
-/**
- * @brief Loads a font face from a file.
- *
- * @param filename Path to the font file.
- * @param ttcindex Index of the font face within a TrueType Collection (TTC).
- * @return A pointer to the loaded `font_face_t` object, or `NULL` on failure.
- */
-NOVA_API font_face_t* font_face_load_from_file(const char* filename, int ttcindex);
-
-/**
- * @brief Loads a font face from memory.
- *
- * @param data Pointer to the font data.
- * @param length Length of the font data.
- * @param ttcindex Index of the font face within a TrueType Collection (TTC).
- * @param destroy_func Function to free the font data when no longer needed.
- * @param closure User-defined data passed to `destroy_func`.
- * @return A pointer to the loaded `font_face_t` object, or `NULL` on failure.
- */
-NOVA_API font_face_t* font_face_load_from_data(const void* data, unsigned int length_, int ttcindex, destroy_func_t destroy_func, void* closure);
-
-/**
- * @brief Increments the reference count of a font face.
- *
- * @param face A pointer to a `font_face_t` object.
- * @return A pointer to the same `font_face_t` object with an incremented reference count.
- */
-NOVA_API font_face_t* font_face_reference(font_face_t* face);
-
-/**
- * @brief Decrements the reference count and potentially destroys the font face.
- *
- * @param face A pointer to a `font_face_t` object.
- */
-NOVA_API void font_face_destroy(font_face_t* face);
-
-/**
- * @brief Retrieves the current reference count of a font face.
- *
- * @param face A pointer to a `font_face_t` object.
- * @return The reference count of the font face.
- */
-NOVA_API int font_face_get_reference_count(const font_face_t* face);
-
-/**
- * @brief Retrieves metrics for a font face at a specified size.
- *
- * @param face A pointer to a `font_face_t` object.
- * @param size The font size in pixels.
- * @param ascent Pointer to store the ascent metric.
- * @param descent Pointer to store the descent metric.
- * @param line_gap Pointer to store the line gap metric.
- * @param extents Pointer to a `rect_t` object to store the font bounding box.
- */
-NOVA_API void font_face_get_metrics(const font_face_t* face, float size_, float* ascent, float* descent, float* line_gap, rect_t* extents);
-
-/**
- * @brief Retrieves metrics for a specified glyph at a given size.
- *
- * @param face A pointer to a `font_face_t` object.
- * @param size The font size in pixels.
- * @param codepoint The Unicode code point of the glyph.
- * @param advance_width Pointer to store the advance width of the glyph.
- * @param left_side_bearing Pointer to store the left side bearing of the glyph.
- * @param extents Pointer to a `rect_t` object to store the glyph bounding box.
- */
-NOVA_API void font_face_get_glyph_metrics(font_face_t* face, float size_, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents);
-
-/**
- * @brief Retrieves the path of a glyph and its advance width.
- *
- * @param face A pointer to a `font_face_t` object.
- * @param size The font size in pixels.
- * @param x The x-coordinate for positioning the glyph.
- * @param y The y-coordinate for positioning the glyph.
- * @param codepoint The Unicode code point of the glyph.
- * @param path Pointer to a `path_t` object to store the glyph path.
- * @return The advance width of the glyph.
- */
-NOVA_API float font_face_get_glyph_path(font_face_t* face, float size_, float x, float y, codepoint_t codepoint, stb::outline& path_);
-
-/**
- * @brief Traverses the path of a glyph and calls a callback for each path el.
- *
- * @param face A pointer to a `font_face_t` object.
- * @param size The font size in pixels.
- * @param x The x-coordinate for positioning the glyph.
- * @param y The y-coordinate for positioning the glyph.
- * @param codepoint The Unicode code point of the glyph.
- * @param traverse_func The callback function to be called for each path el.
- * @param closure User-defined data passed to the callback function.
- * @return The advance width of the glyph.
- */
-NOVA_API float font_face_traverse_glyph_path(font_face_t* face, float size_, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure);
-
-/**
- * @brief Computes the bounding box of a text string and its advance width.
- *
- * @param face A pointer to a `font_face_t` object.
- * @param size The font size in pixels.
- * @param text Pointer to the text data.
- * @param length Length of the text data, or -1 if null-terminated.
- * @param encoding Encoding of the text data.
- * @param extents Pointer to a `rect_t` object to store the bounding box of the text.
- * @return The total advance width of the text.
- */
-NOVA_API float font_face_text_extents(font_face_t* face, float size_, const void* text, int length_, text_encoding encoding, rect_t* extents);
+class font_face_data;
 
 /**
  * @brief Represents a cache of loaded font faces.
@@ -348,9 +240,9 @@ NOVA_API void font_face_cache_reset(font_face_cache_t* cache);
  * @param family The font family name.
  * @param bold Whether the font is bold.
  * @param italic Whether the font is italic.
- * @param face A pointer to the `font_face_t` to add. The cache increments its reference count.
+ * @param face A pointer to the `font_face_data` to add. The cache increments its reference count.
  */
-NOVA_API void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold, bool italic, font_face_t* face);
+NOVA_API void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold, bool italic, font_face_data* face);
 
 /**
  * @brief Load a font face from a file and add it to the cache with the specified family and style.
@@ -372,9 +264,9 @@ NOVA_API bool font_face_cache_add_file(font_face_cache_t* cache, const char* fam
  * @param family The font family name.
  * @param bold Whether the font is bold.
  * @param italic Whether the font is italic.
- * @return A pointer to the matching `font_face_t` object, or NULL if not found. The returned face is owned by the cache and must not be destroyed by the caller.
+ * @return A pointer to the matching `font_face_data` object, or NULL if not found. The returned face is owned by the cache and must not be destroyed by the caller.
  */
-NOVA_API font_face_t* font_face_cache_get(font_face_cache_t* cache, const char* family, bool bold, bool italic);
+NOVA_API font_face_data* font_face_cache_get(font_face_cache_t* cache, const char* family, bool bold, bool italic);
 
 /**
  * @brief Load all font faces from a file and add them to the cache.
@@ -1051,9 +943,9 @@ NOVA_API font_face_cache_t* canvas_get_font_face_cache(const canvas_t* canvas);
  * @param family The font family name to associate with the face.
  * @param bold Whether the font is bold.
  * @param italic Whether the font is italic.
- * @param face A pointer to the `font_face_t` object to add.
+ * @param face A pointer to the `font_face_data` object to add.
  */
-NOVA_API void canvas_add_font_face(canvas_t* canvas, const char* family, bool bold, bool italic, font_face_t* face);
+NOVA_API void canvas_add_font_face(canvas_t* canvas, const char* family, bool bold, bool italic, font_face_data* face);
 
 /**
  * @brief Load a font face from a file and add it to the canvas using the specified family and style.
@@ -1085,10 +977,10 @@ NOVA_API bool canvas_select_font_face(canvas_t* canvas, const char* family, bool
  * If not set, the default font face is `NULL`, and the default face size is 12.
  *
  * @param canvas A pointer to a `canvas_t` object.
- * @param face A pointer to a `font_face_t` object representing the font face to use.
+ * @param face A pointer to a `font_face_data` object representing the font face to use.
  * @param size The size of the font, in pixels. This determines the height of the rendered text.
  */
-NOVA_API void canvas_set_font(canvas_t* canvas, font_face_t* face, float size_);
+NOVA_API void canvas_set_font(canvas_t* canvas, font_face_data* face, float size_);
 
 /**
  * @brief Sets the font face for text rendering on the canvas.
@@ -1096,9 +988,9 @@ NOVA_API void canvas_set_font(canvas_t* canvas, font_face_t* face, float size_);
  * If not set, the default font face is `NULL`.
  *
  * @param canvas A pointer to a `canvas_t` object.
- * @param face A pointer to a `font_face_t` object representing the font face to use.
+ * @param face A pointer to a `font_face_data` object representing the font face to use.
  */
-NOVA_API void canvas_set_font_face(canvas_t* canvas, font_face_t* face);
+NOVA_API void canvas_set_font_face(canvas_t* canvas, font_face_data* face);
 
 /**
  * @brief Retrieves the current font face used for text rendering on the canvas.
@@ -1106,9 +998,9 @@ NOVA_API void canvas_set_font_face(canvas_t* canvas, font_face_t* face);
  * If not set, the default font face is `NULL`.
  *
  * @param canvas A pointer to a `canvas_t` object.
- * @return A pointer to a `font_face_t` object representing the current font face.
+ * @return A pointer to a `font_face_data` object representing the current font face.
  */
-NOVA_API font_face_t* canvas_get_font_face(const canvas_t* canvas);
+NOVA_API font_face_data* canvas_get_font_face(const canvas_t* canvas);
 
 /**
  * @brief Sets the font size for text rendering on the canvas.

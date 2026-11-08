@@ -43,6 +43,9 @@
   call sites use `stb::matrix::translation/scaling/rotation/shearing`, `.translate/.scale/.rotate/.shear`, `.then`, `.map` and
   `.inverse()`; three helpers remain in `render.h` (`map_points`, `mapped_bounds`, `parse_matrix`). `transform::inverse()`
   of a singular matrix now gives the identity instead of an uninitialised matrix. `to_matrix` (a copy) is removed.
+- ADR-0011 step 3 (part 1): `font_face_t` is the class `font_face_data` (`font_face.h`); the twelve `font_face_*(face, ...)` functions
+  are its member functions (`face->shape(...)`, `face->get_metrics(...)`), the loaders are `font_face_data::load_from_file/data`, and
+  `render.h` lost ten declarations. Reference counting stays intrusive until the C canvas layer goes.
 
 ## [0.11.5] - 2026-11-05
 

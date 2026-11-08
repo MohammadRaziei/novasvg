@@ -20,7 +20,7 @@ namespace nova::vg {
 class font_face {
 public:
     font_face() = default;
-    explicit font_face(font_face_t* face);
+    explicit font_face(font_face_data* face);
     font_face(const void* data, size_t length_, destroy_func_t destroy_func, void* closure);
     font_face(const char* filename);
     font_face(const font_face& face);
@@ -33,7 +33,7 @@ public:
     void swap(font_face& face);
 
     bool is_null() const { return m_face == nullptr; }
-    font_face_t* get() const { return m_face; }
+    font_face_data* get() const { return m_face; }
 
     // Raw font design units (unscaled by any particular pixel size) -- the
     // same space a font file's own tables (head.unitsPerEm, hmtx advance
@@ -53,7 +53,7 @@ public:
     // Kerning adjustment between two consecutive codepoints, in raw font
     // design units (unscaled) -- the same "kern"/GPOS lookup
     // Font::measureText() itself applies between every glyph pair (see
-    // font_face_text_extents() in src/sources/vg/font_face.cpp), exposed per-pair
+    // font_face_data::text_extents() in src/sources/vg/font_face.cpp), exposed per-pair
     // so a caller that (unlike Font::measureText()) can't call back into
     // novasvg per string -- e.g. mermaidx's V8 engine, which sums a
     // shipped per-codepoint advance table in JS instead -- can still fold
@@ -80,8 +80,8 @@ public:
     std::vector<char32_t> codepoints() const;
 
 private:
-    font_face_t* release();
-    font_face_t* m_face = nullptr;
+    font_face_data* release();
+    font_face_data* m_face = nullptr;
 };
 
 // The last-resort fonts: Latin subsets of DejaVu Sans (regular, bold, oblique and bold oblique)

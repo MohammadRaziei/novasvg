@@ -26,7 +26,8 @@ Remove the layer in four steps, each one gated (tests, golden 0 diff, ASAN), non
    so no pixel moved). `color_t` is a float RGBA used only for gradient stops (not `stb::color`, which is 8-bit), and `rect_t`
    has no libstb type: both go with step 3 (`paint`, and the existing `vg::rect`). Original plan: `point_t`, `rect_t`, `matrix_t`, `color_t` -> `stb::outline` point, a local `rect`, `stb::matrix`,
    `stb::color`. The golden set decides if `stb::matrix::map` (no fused multiply-add) changes any pixel.
-3. **Handles -> classes** with RAII: `surface`, `paint`, `font_face`, `font_face_cache` get member functions
+3. **Handles -> classes** (`font_face_data` DONE 2026-11-08: members instead of `font_face_*(face, ...)`; `font_face_cache_t` is next
+   and needs its malloc'd entry array rewritten with `std::vector`) with RAII: `surface`, `paint`, `font_face`, `font_face_cache` get member functions
    instead of `surface_*(h, ...)`; `canvas_t` goes away because `raster_canvas` already is the canvas.
 4. Delete `render.h`, `NOVA_API` on the C functions, and `src/gfx/vendor` leftovers; rasterizer swap to `stb::fill`
    / `stb::stroke` is a separate step after this one.

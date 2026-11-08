@@ -141,7 +141,7 @@ typedef struct {
 
 typedef struct state {
     paint_t* paint_;
-    font_face_t* font_face_;
+    font_face_data* font_face_;
     color_t color_;
     stb::matrix matrix;
     stroke_data_t stroke;

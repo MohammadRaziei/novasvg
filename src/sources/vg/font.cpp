@@ -5,23 +5,23 @@
 
 namespace nova::vg {
 
-font_face::font_face(font_face_t* face)
-    : m_face(font_face_reference(face))
+font_face::font_face(font_face_data* face)
+    : m_face(font_face_data::reference(face))
 {
 }
 
 font_face::font_face(const void* data, size_t length_, destroy_func_t destroy_func, void* closure)
-    : m_face(font_face_load_from_data(data, length_, 0, destroy_func, closure))
+    : m_face(font_face_data::load_from_data(data, length_, 0, destroy_func, closure))
 {
 }
 
 font_face::font_face(const char* filename)
-    : m_face(font_face_load_from_file(filename, 0))
+    : m_face(font_face_data::load_from_file(filename, 0))
 {
 }
 
 font_face::font_face(const font_face& face)
-    : m_face(font_face_reference(face.get()))
+    : m_face(font_face_data::reference(face.get()))
 {
 }
 
@@ -32,7 +32,7 @@ font_face::font_face(font_face&& face)
 
 font_face::~font_face()
 {
-    font_face_destroy(m_face);
+    font_face_data::release(m_face);
 }
 
 font_face& font_face::operator=(const font_face& face)
@@ -52,7 +52,7 @@ void font_face::swap(font_face& face)
     std::swap(m_face, face.m_face);
 }
 
-font_face_t* font_face::release()
+font_face_data* font_face::release()
 {
     return std::exchange(m_face, nullptr);
 }
@@ -61,7 +61,7 @@ float font_face::units_per_em() const
 {
     if(is_null())
         return 0.f;
-    return font_face_get_units_per_em(m_face);
+    return m_face->units_per_em();
 }
 
 float font_face::ascent_units() const
@@ -69,7 +69,7 @@ float font_face::ascent_units() const
     if(is_null())
         return 0.f;
     float ascent = 0.f;
-    font_face_get_metrics(m_face, units_per_em(), &ascent, nullptr, nullptr, nullptr);
+    m_face->get_metrics(units_per_em(), &ascent, nullptr, nullptr, nullptr);
     return ascent;
 }
 
@@ -78,7 +78,7 @@ float font_face::descent_units() const
     if(is_null())
         return 0.f;
     float descent = 0.f;
-    font_face_get_metrics(m_face, units_per_em(), nullptr, &descent, nullptr, nullptr);
+    m_face->get_metrics(units_per_em(), nullptr, &descent, nullptr, nullptr);
     return descent;
 }
 
@@ -86,12 +86,12 @@ float font_face::advance_width_units(char32_t codepoint) const
 {
     if(is_null())
         return 0.f;
-    // font_face_get_glyph_metrics() always returns advance_width * scale
+    // font_face_data::get_glyph_metrics() always returns advance_width * scale
     // (see font_face.cpp) -- passing unitsPerEm() as the "size"
     // makes scale == 1, i.e. the raw, size-independent font-unit value,
     // with no separate unscaled code path needed on the render side.
     float advance = 0.f;
-    font_face_get_glyph_metrics(m_face, units_per_em(), codepoint, &advance, nullptr, nullptr);
+    m_face->get_glyph_metrics(units_per_em(), codepoint, &advance, nullptr, nullptr);
     return advance;
 }
 
@@ -100,9 +100,9 @@ float font_face::kern_advance_units(char32_t first, char32_t second) const
     if(is_null())
         return 0.f;
     // Same unitsPerEm()-as-size trick as advanceWidthUnits(): makes
-    // font_face_get_kern_advance()'s internal scale multiplication a
+    // font_face_data::get_kern_advance()'s internal scale multiplication a
     // no-op, yielding the raw, size-independent value.
-    return font_face_get_kern_advance(m_face, units_per_em(), first, second);
+    return m_face->get_kern_advance(units_per_em(), first, second);
 }
 
 std::vector<char32_t> font_face::codepoints() const
@@ -110,7 +110,7 @@ std::vector<char32_t> font_face::codepoints() const
     std::vector<char32_t> result;
     if(is_null())
         return result;
-    font_face_enumerate_codepoints(m_face, [](uint32_t codepoint, void* closure) {
+    m_face->enumerate_codepoints([](uint32_t codepoint, void* closure) {
         static_cast<std::vector<char32_t>*>(closure)->push_back(static_cast<char32_t>(codepoint));
     }, &result);
     return result;
@@ -253,7 +253,7 @@ font::font(const font_face& face, float size_)
     : m_face(face), m_size(size_)
 {
     if(m_size > 0.f && !m_face.is_null()) {
-        font_face_get_metrics(m_face.get(), m_size, &m_ascent, &m_descent, &m_line_gap, nullptr);
+        m_face.get()->get_metrics(m_size, &m_ascent, &m_descent, &m_line_gap, nullptr);
     }
 }
 
@@ -261,14 +261,14 @@ float font::x_height() const
 {
     rect_t extents = {0};
     if(m_size > 0.f && !m_face.is_null())
-        font_face_get_glyph_metrics(m_face.get(), m_size, 'x', nullptr, nullptr, &extents);
+        m_face.get()->get_glyph_metrics(m_size, 'x', nullptr, nullptr, &extents);
     return extents.h;
 }
 
 float font::measure_text(const std::u32string_view& text) const
 {
     if(m_size > 0.f && !m_face.is_null())
-        return font_face_text_extents(m_face.get(), m_size, text.data(), text.length(), text_encoding::utf32, nullptr);
+        return m_face.get()->text_extents(m_size, text.data(), text.length(), text_encoding::utf32, nullptr);
     return 0;
 }
 
@@ -278,13 +278,13 @@ std::vector<font::glyph_box> font::glyph_boxes(const std::u32string_view& text) 
     if(m_size <= 0.f || m_face.is_null())
         return boxes;
 
-    font_face_t* face = m_face.get();
+    font_face_data* face = m_face.get();
     std::vector<shaped_glyph_t> glyphs;
-    font_face_shape(face, m_size, text.data(), static_cast<int>(text.length()), text_encoding::utf32, &glyphs);
+    face->shape(m_size, text.data(), static_cast<int>(text.length()), text_encoding::utf32, &glyphs);
     for(const shaped_glyph_t& g : glyphs) {
         float advance = 0.f;
         rect_t extents = {0};
-        font_face_get_glyph_index_metrics(face, m_size, g.glyph, &advance, nullptr, &extents);
+        face->get_glyph_index_metrics(m_size, g.glyph, &advance, nullptr, &extents);
         if(extents.w > 0.f || extents.h > 0.f)
             boxes.push_back({g.x, extents.x, extents.x + extents.w, extents.y + g.y, extents.y + extents.h + g.y});
     }

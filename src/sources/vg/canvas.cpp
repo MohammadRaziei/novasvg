@@ -42,7 +42,7 @@ static state_t* state_create(void)
 static void state_reset(state_t* state)
 {
     paint_destroy(state->paint_);
-    font_face_destroy(state->font_face_);
+    font_face_data::release(state->font_face_);
     state->paint_ = NULL;
     state->font_face_ = NULL;
     state->color_ = NOVA_BLACK_COLOR;
@@ -61,7 +61,7 @@ static void state_reset(state_t* state)
 static void state_copy(state_t* state, const state_t* source)
 {
     state->paint_ = paint_reference(source->paint_);
-    state->font_face_ = font_face_reference(source->font_face_);
+    state->font_face_ = font_face_data::reference(source->font_face_);
     state->color_ = source->color_;
     state->matrix = source->matrix;
     state->stroke.style = source->stroke.style;
@@ -79,7 +79,7 @@ static void state_copy(state_t* state, const state_t* source)
 static void state_destroy(state_t* state)
 {
     paint_destroy(state->paint_);
-    font_face_destroy(state->font_face_);
+    font_face_data::release(state->font_face_);
     novasvg_array_destroy(state->stroke.dash.array);
     span_buffer_destroy(&state->clip_spans);
     free(state);
@@ -226,7 +226,7 @@ font_face_cache_t* canvas_get_font_face_cache(const canvas_t* canvas)
     return canvas->face_cache;
 }
 
-void canvas_add_font_face(canvas_t* canvas, const char* family, bool bold, bool italic, font_face_t* face)
+void canvas_add_font_face(canvas_t* canvas, const char* family, bool bold, bool italic, font_face_data* face)
 {
     if(canvas->face_cache == NULL)
         canvas->face_cache = font_face_cache_create();
@@ -244,27 +244,27 @@ bool canvas_select_font_face(canvas_t* canvas, const char* family, bool bold, bo
 {
     if(canvas->face_cache == NULL)
         return false;
-    font_face_t* face = font_face_cache_get(canvas->face_cache, family, bold, italic);
+    font_face_data* face = font_face_cache_get(canvas->face_cache, family, bold, italic);
     if(face == NULL)
         return false;
     canvas_set_font_face(canvas, face);
     return true;
 }
 
-void canvas_set_font(canvas_t* canvas, font_face_t* face, float size_)
+void canvas_set_font(canvas_t* canvas, font_face_data* face, float size_)
 {
     canvas_set_font_face(canvas, face);
     canvas_set_font_size(canvas, size_);
 }
 
-void canvas_set_font_face(canvas_t* canvas, font_face_t* face)
+void canvas_set_font_face(canvas_t* canvas, font_face_data* face)
 {
-    face = font_face_reference(face);
-    font_face_destroy(canvas->state->font_face_);
+    face = font_face_data::reference(face);
+    font_face_data::release(canvas->state->font_face_);
     canvas->state->font_face_ = face;
 }
 
-font_face_t* canvas_get_font_face(const canvas_t* canvas)
+font_face_data* canvas_get_font_face(const canvas_t* canvas)
 {
     return canvas->state->font_face_;
 }
@@ -656,7 +656,7 @@ float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x, float y
 {
     state_t* state = canvas->state;
     if(state->font_face_ && state->font_size > 0.f)
-        return font_face_get_glyph_path(state->font_face_, state->font_size, x, y, codepoint, *canvas->path_);
+        return state->font_face_->get_glyph_path(state->font_size, x, y, codepoint, *canvas->path_);
     return 0.f;
 }
 
@@ -666,9 +666,9 @@ float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_enco
     if(state->font_face_ == NULL || state->font_size <= 0.f)
         return 0.f;
     std::vector<shaped_glyph_t> glyphs;
-    const float advance_width = font_face_shape(state->font_face_, state->font_size, text, length_, encoding, &glyphs);
+    const float advance_width = state->font_face_->shape(state->font_size, text, length_, encoding, &glyphs);
     for(const shaped_glyph_t& g : glyphs)
-        font_face_get_glyph_index_path(state->font_face_, state->font_size, x + g.x, y + g.y, g.glyph, *canvas->path_);
+        state->font_face_->get_glyph_index_path(state->font_size, x + g.x, y + g.y, g.glyph, *canvas->path_);
     return advance_width;
 }
 
@@ -700,7 +700,7 @@ void canvas_font_metrics(const canvas_t* canvas, float* ascent, float* descent, 
 {
     state_t* state = canvas->state;
     if(state->font_face_ && state->font_size > 0.f) {
-        font_face_get_metrics(state->font_face_, state->font_size, ascent, descent, line_gap, extents);
+        state->font_face_->get_metrics(state->font_size, ascent, descent, line_gap, extents);
         return;
     }
 
@@ -719,7 +719,7 @@ void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, float* advanc
 {
     state_t* state = canvas->state;
     if(state->font_face_ && state->font_size > 0.f) {
-        font_face_get_glyph_metrics(state->font_face_, state->font_size, codepoint, advance_width, left_side_bearing, extents);
+        state->font_face_->get_glyph_metrics(state->font_size, codepoint, advance_width, left_side_bearing, extents);
         return;
     }
 
@@ -737,7 +737,7 @@ float canvas_text_extents(canvas_t* canvas, const void* text, int length_, text_
 {
     state_t* state = canvas->state;
     if(state->font_face_ && state->font_size > 0.f) {
-        return font_face_text_extents(state->font_face_, state->font_size, text, length_, encoding, extents);
+        return state->font_face_->text_extents(state->font_size, text, length_, encoding, extents);
     }
 
     if(extents) {
