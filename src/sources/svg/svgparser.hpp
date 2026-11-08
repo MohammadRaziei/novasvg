@@ -115,17 +115,17 @@ inline bool operator<(const rule_data& a, const rule_data& b) { return a.is_less
 
 using rule_data_list = std::vector<rule_data>;
 
-NOVA_INLINE constexpr bool equals(std::string_view value, std::string_view subvalue)
+inline constexpr bool equals(std::string_view value, std::string_view subvalue)
 {
     return value.compare(subvalue) == 0;
 }
 
-NOVA_INLINE constexpr bool contains(std::string_view value, std::string_view subvalue)
+inline constexpr bool contains(std::string_view value, std::string_view subvalue)
 {
     return value.find(subvalue) != std::string_view::npos;
 }
 
-NOVA_INLINE constexpr bool includes(std::string_view value, std::string_view subvalue)
+inline constexpr bool includes(std::string_view value, std::string_view subvalue)
 {
     if(subvalue.empty() || subvalue.length() > value.length())
         return false;
@@ -143,21 +143,21 @@ NOVA_INLINE constexpr bool includes(std::string_view value, std::string_view sub
     return false;
 }
 
-NOVA_INLINE constexpr bool startswith(std::string_view value, std::string_view subvalue)
+inline constexpr bool startswith(std::string_view value, std::string_view subvalue)
 {
     if(subvalue.empty() || subvalue.length() > value.length())
         return false;
     return subvalue == value.substr(0, subvalue.size());
 }
 
-NOVA_INLINE constexpr bool endswith(std::string_view value, std::string_view subvalue)
+inline constexpr bool endswith(std::string_view value, std::string_view subvalue)
 {
     if(subvalue.empty() || subvalue.length() > value.length())
         return false;
     return subvalue == value.substr(value.size() - subvalue.size(), subvalue.size());
 }
 
-NOVA_INLINE constexpr bool dashequals(std::string_view value, std::string_view subvalue)
+inline constexpr bool dashequals(std::string_view value, std::string_view subvalue)
 {
     if(startswith(value, subvalue))
         return (value.length() == subvalue.length() || value.at(subvalue.length()) == '-');

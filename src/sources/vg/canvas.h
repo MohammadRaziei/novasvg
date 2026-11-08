@@ -524,16 +524,16 @@ private:
 
 // stb::color::black()/White/Transparent are defined once, in color.h.
 
-NOVA_INLINE const rect rect::empty_rect(0, 0, 0, 0);
-NOVA_INLINE const rect rect::invalid(0, 0, -1, -1);
-NOVA_INLINE const rect rect::infinite(-FLT_MAX / 2.f, -FLT_MAX / 2.f, FLT_MAX, FLT_MAX);
+inline const rect rect::empty_rect(0, 0, 0, 0);
+inline const rect rect::invalid(0, 0, -1, -1);
+inline const rect rect::infinite(-FLT_MAX / 2.f, -FLT_MAX / 2.f, FLT_MAX, FLT_MAX);
 
 // Rect::Rect(const Box&) is defined in novasvg.h, right after Box itself --
 // Box belongs to the svg/document layer, not here, so this file (which
 // stays usable without that layer) only declares the conversion, it
 // doesn't define it.
 
-NOVA_INLINE const transform transform::identity(1, 0, 0, 1, 0, 0);
+inline const transform transform::identity(1, 0, 0, 1, 0, 0);
 
 
 

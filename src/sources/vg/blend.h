@@ -67,7 +67,7 @@ uint32_t BYTE_MUL(uint32_t x, uint32_t a);
 namespace nova {
 namespace vg {
 
-NOVA_INLINE void memfill32(unsigned int* dest, int length_, unsigned int value)
+inline void memfill32(unsigned int* dest, int length_, unsigned int value)
 {
     __m128i vector_data = _mm_set_epi32(value, value, value, value);
     while(length_ && ((uintptr_t)dest & 0xf)) {
@@ -122,7 +122,7 @@ NOVA_INLINE void memfill32(unsigned int* dest, int length_, unsigned int value)
 
 #else
 
-NOVA_INLINE void memfill32(unsigned int* dest, int length, unsigned int value)
+inline void memfill32(unsigned int* dest, int length, unsigned int value)
 {
     while(length--) {
         *dest++ = value;
@@ -180,7 +180,7 @@ void composition_solid_xor(uint32_t* dest, int length_, uint32_t color_, uint32_
 int blend_mul255(int x, int y);
 
 template<operator_t mode>
-NOVA_INLINE int blend_mode_channel(int cs, int cb, int as, int ab)
+inline int blend_mode_channel(int cs, int cb, int as, int ab)
 {
     int value;
     if(mode == NOVA_OPERATOR_MULTIPLY)
@@ -199,7 +199,7 @@ NOVA_INLINE int blend_mode_channel(int cs, int cb, int as, int ab)
 }
 
 template<operator_t mode>
-NOVA_INLINE uint32_t blend_mode_pixel(uint32_t dest, uint32_t src)
+inline uint32_t blend_mode_pixel(uint32_t dest, uint32_t src)
 {
     if(src == 0)
         return dest;
@@ -217,7 +217,7 @@ NOVA_INLINE uint32_t blend_mode_pixel(uint32_t dest, uint32_t src)
 }
 
 template<operator_t mode>
-NOVA_INLINE void composition_blend_mode(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
+inline void composition_blend_mode(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     for(int i = 0; i < length_; i++) {
         uint32_t s = const_alpha == 255 ? src[i] : BYTE_MUL(src[i], const_alpha);
@@ -226,7 +226,7 @@ NOVA_INLINE void composition_blend_mode(uint32_t* dest, int length_, const uint3
 }
 
 template<operator_t mode>
-NOVA_INLINE void composition_solid_blend_mode(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
+inline void composition_solid_blend_mode(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
     if(const_alpha != 255)
         color_ = BYTE_MUL(color_, const_alpha);
@@ -236,7 +236,7 @@ NOVA_INLINE void composition_solid_blend_mode(uint32_t* dest, int length_, uint3
 
 typedef void(*composition_solid_function_t)(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha);
 
-NOVA_INLINE const composition_solid_function_t composition_solid_table[] = {
+inline const composition_solid_function_t composition_solid_table[] = {
     composition_solid_clear,
     composition_solid_source,
     composition_solid_destination,
@@ -283,7 +283,7 @@ void composition_xor(uint32_t* dest, int length_, const uint32_t* src, uint32_t 
 
 typedef void(*composition_function_t)(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
 
-NOVA_INLINE const composition_function_t composition_table[] = {
+inline const composition_function_t composition_table[] = {
     composition_clear,
     composition_source,
     composition_destination,

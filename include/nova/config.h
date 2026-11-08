@@ -6,18 +6,13 @@
 // min/max helpers. Kept in its own header so internal headers (and the compiled sources in src/)
 // can use them without pulling in the whole public API.
 
-// Linkage: NOVA_INLINE marks the definitions that have not moved out of the headers yet (step 4 of
-// the refactor). NOVA_API marks what the compiled library exports. Same scheme as STB_API in libstb:
+// Linkage: NOVA_API marks what the compiled library exports. Same scheme as STB_API in libstb:
 //
 //   building the library        NOVA_BUILDING_LIBRARY is defined: dllexport on Windows, default
 //                               visibility elsewhere.
 //   using the library           dllimport on Windows, default visibility elsewhere.
 //   static library              NOVA_STATIC_DEFINE is defined (CMake does it for a static build):
 //                               NOVA_API is empty.
-#ifndef NOVA_INLINE
-#define NOVA_INLINE inline
-#endif
-
 #if defined(NOVA_STATIC_DEFINE)
 #define NOVA_API
 #elif defined(_WIN32) || defined(__CYGWIN__)

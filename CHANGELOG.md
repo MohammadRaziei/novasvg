@@ -24,6 +24,7 @@
   vg layers instead of per-function lambdas.
 - Private C struct tags no longer share a name with a class (`font_face_impl`, `font_face_cache_impl`); a clash made
   `delete face` recurse into the class destructor.
+- `NOVA_INLINE` is gone (it was `inline`); `include/nova/config.h` no longer defines it.
 
 ## [0.11.5] - 2026-11-05
 
