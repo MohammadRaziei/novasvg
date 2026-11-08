@@ -454,7 +454,7 @@ void raster_canvas::composite_with(const raster_canvas& src, porter_duff mode)
             case porter_duff::in:   fs = d_a;       fd = 0;             break;
             case porter_duff::out:  fs = 255 - d_a; fd = 0;             break;
             case porter_duff::atop: fs = d_a;       fd = 255 - s_a;      break;
-            case porter_duff::xor_:  fs = 255 - d_a; fd = 255 - s_a;      break;
+            case porter_duff::exclusive_or:  fs = 255 - d_a; fd = 255 - s_a;      break;
             case porter_duff::over: default:       fs = 255;          fd = 255 - s_a; break;
             }
 

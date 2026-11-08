@@ -499,7 +499,7 @@ public:
         if(op == "in") mode = raster_canvas::porter_duff::in;
         else if(op == "out") mode = raster_canvas::porter_duff::out;
         else if(op == "atop") mode = raster_canvas::porter_duff::atop;
-        else if(op == "xor") mode = raster_canvas::porter_duff::xor_;
+        else if(op == "xor") mode = raster_canvas::porter_duff::exclusive_or;
 
         output->composite_with(*input, mode);
         return output;

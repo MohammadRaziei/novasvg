@@ -436,7 +436,7 @@ public:
 
     // Porter-Duff compositing operators needed by feComposite/feMerge.
     // (arithmetic is intentionally not offered -- see svg_fe_composite_element)
-    enum class porter_duff { over, in, out, atop, xor_ };
+    enum class porter_duff { over, in, out, atop, exclusive_or };
     void composite_with(const raster_canvas& src, porter_duff mode);
     void composite_over(const raster_canvas& src) ;
 
