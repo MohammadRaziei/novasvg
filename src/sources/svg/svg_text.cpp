@@ -345,7 +345,7 @@ void svg_text_fragments_builder::handle_text(const svg_text_node* nd)
     }
 
     text_iterator_t it;
-    text_iterator_init(&it, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF8);
+    text_iterator_init(&it, text.data(), text.length(), text_encoding::utf8);
     while(text_iterator_has_next(&it)) {
         auto current_character = text_iterator_next(&it);
         if(current_character == '\t' || current_character == '\n' || current_character == '\r')

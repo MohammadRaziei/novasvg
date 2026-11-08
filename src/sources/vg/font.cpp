@@ -268,7 +268,7 @@ float font::x_height() const
 float font::measure_text(const std::u32string_view& text) const
 {
     if(m_size > 0.f && !m_face.is_null())
-        return font_face_text_extents(m_face.get(), m_size, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF32, nullptr);
+        return font_face_text_extents(m_face.get(), m_size, text.data(), text.length(), text_encoding::utf32, nullptr);
     return 0;
 }
 
@@ -280,7 +280,7 @@ std::vector<font::glyph_box> font::glyph_boxes(const std::u32string_view& text) 
 
     font_face_t* face = m_face.get();
     std::vector<shaped_glyph_t> glyphs;
-    font_face_shape(face, m_size, text.data(), static_cast<int>(text.length()), NOVA_TEXT_ENCODING_UTF32, &glyphs);
+    font_face_shape(face, m_size, text.data(), static_cast<int>(text.length()), text_encoding::utf32, &glyphs);
     for(const shaped_glyph_t& g : glyphs) {
         float advance = 0.f;
         rect_t extents = {0};

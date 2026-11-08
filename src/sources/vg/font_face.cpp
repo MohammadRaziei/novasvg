@@ -48,22 +48,22 @@ namespace {
 stb::logging::logger& font_log() { static auto& l = stb::logging::get_logger("novasvg.font"); return l; }
 }  // namespace
 
-static int text_iterator_length(const void* data, text_encoding_t encoding)
+static int text_iterator_length(const void* data, text_encoding encoding)
 {
     int length_ = 0;
     switch(encoding) {
-    case NOVA_TEXT_ENCODING_LATIN1:
-    case NOVA_TEXT_ENCODING_UTF8: {
+    case text_encoding::latin1:
+    case text_encoding::utf8: {
         const uint8_t* text = static_cast<const uint8_t*>(data);
         while(*text++)
             length_++;
         break;
-    } case NOVA_TEXT_ENCODING_UTF16: {
+    } case text_encoding::utf16: {
         const uint16_t* text = static_cast<const uint16_t*>(data);
         while(*text++)
             length_++;
         break;
-    } case NOVA_TEXT_ENCODING_UTF32: {
+    } case text_encoding::utf32: {
         const uint32_t* text = static_cast<const uint32_t*>(data);
         while(*text++)
             length_++;
@@ -75,7 +75,7 @@ static int text_iterator_length(const void* data, text_encoding_t encoding)
     return length_;
 }
 
-void text_iterator_init(text_iterator_t* it, const void* text, int length_, text_encoding_t encoding)
+void text_iterator_init(text_iterator_t* it, const void* text, int length_, text_encoding encoding)
 {
     if(length_ == -1)
         length_ = text_iterator_length(text, encoding);
@@ -94,11 +94,11 @@ codepoint_t text_iterator_next(text_iterator_t* it)
 {
     codepoint_t codepoint = 0;
     switch(it->encoding) {
-    case NOVA_TEXT_ENCODING_LATIN1: {
+    case text_encoding::latin1: {
         const uint8_t* text = static_cast<const uint8_t*>(it->text);
         codepoint = text[it->index++];
         break;
-    } case NOVA_TEXT_ENCODING_UTF8: {
+    } case text_encoding::utf8: {
         static const uint8_t trailing[256] = {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -126,7 +126,7 @@ codepoint_t text_iterator_next(text_iterator_t* it)
         codepoint += text[it->index++];
         codepoint -= offset_value;
         break;
-    } case NOVA_TEXT_ENCODING_UTF16: {
+    } case text_encoding::utf16: {
         const uint16_t* text = static_cast<const uint16_t*>(it->text);
         codepoint = text[it->index++];
         if(((codepoint) & 0xfffffc00) == 0xd800) {
@@ -137,7 +137,7 @@ codepoint_t text_iterator_next(text_iterator_t* it)
         }
 
         break;
-    } case NOVA_TEXT_ENCODING_UTF32: {
+    } case text_encoding::utf32: {
         const uint32_t* text = static_cast<const uint32_t*>(it->text);
         codepoint = text[it->index++];
         break;
@@ -378,20 +378,20 @@ float font_face_get_kern_advance(font_face_t* face, float size_, codepoint_t ch1
     return face->ft.glyph_kerning(a, b) * scale;
 }
 
-static void glyph_traverse_func(void* closure, path_command_t command, const point_t* points, int npoints)
+static void glyph_traverse_func(void* closure, path_command command, const point_t* points, int npoints)
 {
     stb::outline* path_ = static_cast<stb::outline*>(closure);
     switch(command) {
-    case NOVA_PATH_COMMAND_MOVE_TO:
+    case path_command::move_to:
         path_->move_to(points[0].x, points[0].y);
         break;
-    case NOVA_PATH_COMMAND_LINE_TO:
+    case path_command::line_to:
         path_->line_to(points[0].x, points[0].y);
         break;
-    case NOVA_PATH_COMMAND_CUBIC_TO:
+    case path_command::cubic_to:
         path_->cubic_to(points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
         break;
-    case NOVA_PATH_COMMAND_CLOSE:
+    case path_command::close:
         assert(false);
     }
 }
@@ -428,14 +428,14 @@ float font_face_traverse_glyph_index_path(font_face_t* face, float size_, float 
             points[0].y = cmd.p[0].y;
             current_point = points[0];
             matrix_map_points(&matrix, points, points, 1);
-            traverse_func(closure, NOVA_PATH_COMMAND_MOVE_TO, points, 1);
+            traverse_func(closure, path_command::move_to, points, 1);
             break;
         case stb::outline_op::line_to:
             points[0].x = cmd.p[0].x;
             points[0].y = cmd.p[0].y;
             current_point = points[0];
             matrix_map_points(&matrix, points, points, 1);
-            traverse_func(closure, NOVA_PATH_COMMAND_LINE_TO, points, 1);
+            traverse_func(closure, path_command::line_to, points, 1);
             break;
         case stb::outline_op::quad_to: // TrueType: raised to a cubic, as the renderer only knows cubics
             points[0].x = 2.f / 3.f * cmd.p[0].x + 1.f / 3.f * current_point.x;
@@ -446,7 +446,7 @@ float font_face_traverse_glyph_index_path(font_face_t* face, float size_, float 
             points[2].y = cmd.p[1].y;
             current_point = points[2];
             matrix_map_points(&matrix, points, points, 3);
-            traverse_func(closure, NOVA_PATH_COMMAND_CUBIC_TO, points, 3);
+            traverse_func(closure, path_command::cubic_to, points, 3);
             break;
         case stb::outline_op::cubic_to: // CFF
             points[0].x = cmd.p[0].x;
@@ -457,7 +457,7 @@ float font_face_traverse_glyph_index_path(font_face_t* face, float size_, float 
             points[2].y = cmd.p[2].y;
             current_point = points[2];
             matrix_map_points(&matrix, points, points, 3);
-            traverse_func(closure, NOVA_PATH_COMMAND_CUBIC_TO, points, 3);
+            traverse_func(closure, path_command::cubic_to, points, 3);
             break;
         case stb::outline_op::close:
             // Contours were never closed explicitly here (stb_truetype gave none): the fill closes
@@ -469,7 +469,7 @@ float font_face_traverse_glyph_index_path(font_face_t* face, float size_, float 
     return glyph->advance_width * scale;
 }
 
-static std::string text_to_utf8(const void* text, int length_, text_encoding_t encoding)
+static std::string text_to_utf8(const void* text, int length_, text_encoding encoding)
 {
     std::string utf8;
     text_iterator_t it;
@@ -495,7 +495,7 @@ static std::string text_to_utf8(const void* text, int length_, text_encoding_t e
     return utf8;
 }
 
-float font_face_shape(font_face_t* face, float size_, const void* text, int length_, text_encoding_t encoding, std::vector<shaped_glyph_t>* glyphs)
+float font_face_shape(font_face_t* face, float size_, const void* text, int length_, text_encoding encoding, std::vector<shaped_glyph_t>* glyphs)
 {
     if(glyphs)
         glyphs->clear();
@@ -515,7 +515,7 @@ float font_face_shape(font_face_t* face, float size_, const void* text, int leng
     return pen;
 }
 
-float font_face_text_extents(font_face_t* face, float size_, const void* text, int length_, text_encoding_t encoding, rect_t* extents)
+float font_face_text_extents(font_face_t* face, float size_, const void* text, int length_, text_encoding encoding, rect_t* extents)
 {
     std::vector<shaped_glyph_t> glyphs;
     const float advance = font_face_shape(face, size_, text, length_, encoding, extents ? &glyphs : nullptr);

@@ -660,7 +660,7 @@ float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x, float y
     return 0.f;
 }
 
-float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y)
+float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y)
 {
     state_t* state = canvas->state;
     if(state->font_face_ == NULL || state->font_size <= 0.f)
@@ -672,7 +672,7 @@ float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_enco
     return advance_width;
 }
 
-float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y)
+float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y)
 {
     canvas_new_path(canvas);
     float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y);
@@ -680,7 +680,7 @@ float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_enc
     return advance_width;
 }
 
-float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y)
+float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y)
 {
     canvas_new_path(canvas);
     float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y);
@@ -688,7 +688,7 @@ float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_e
     return advance_width;
 }
 
-float canvas_clip_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y)
+float canvas_clip_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y)
 {
     canvas_new_path(canvas);
     float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y);
@@ -733,7 +733,7 @@ void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, float* advanc
     }
 }
 
-float canvas_text_extents(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, rect_t* extents)
+float canvas_text_extents(canvas_t* canvas, const void* text, int length_, text_encoding encoding, rect_t* extents)
 {
     state_t* state = canvas->state;
     if(state->font_face_ && state->font_size > 0.f) {

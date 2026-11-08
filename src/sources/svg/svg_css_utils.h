@@ -36,7 +36,7 @@ inline std::u32string utf8_to_u32(const std::string& text)
     std::u32string result;
     result.reserve(text.size());
     text_iterator_t it;
-    text_iterator_init(&it, text.data(), (int)text.length(), NOVA_TEXT_ENCODING_UTF8);
+    text_iterator_init(&it, text.data(), (int)text.length(), text_encoding::utf8);
     while(text_iterator_has_next(&it))
         result.push_back(text_iterator_next(&it));
     return result;

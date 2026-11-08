@@ -282,12 +282,12 @@ NOVA_API bool matrix_parse(matrix_t* matrix, const char* data, int length_);
 /**
  * @brief Enumeration defining path commands.
  */
-typedef enum path_command {
-    NOVA_PATH_COMMAND_MOVE_TO, ///< Moves the current point to a new position.
-    NOVA_PATH_COMMAND_LINE_TO, ///< Draws a straight line to a new point.
-    NOVA_PATH_COMMAND_CUBIC_TO, ///< Draws a cubic Bézier curve to a new point.
-    NOVA_PATH_COMMAND_CLOSE ///< Closes the current path by drawing a line to the starting point.
-} path_command_t;
+enum class path_command : int {
+    move_to, ///< Moves the current point to a new position.
+    line_to, ///< Draws a straight line to a new point.
+    cubic_to, ///< Draws a cubic Bézier curve to a new point.
+    close ///< Closes the current path by drawing a line to the starting point.
+};
 
 /**
  * @brief Callback function type for traversing a path.
@@ -299,17 +299,17 @@ typedef enum path_command {
  * @param points An array of points associated with the command.
  * @param npoints The number of points in the array.
  */
-typedef void (*path_traverse_func_t)(void* closure, path_command_t command, const point_t* points, int npoints);
+typedef void (*path_traverse_func_t)(void* closure, path_command command, const point_t* points, int npoints);
 
 /**
  * @brief Text encodings used for converting text data to code points.
  */
-typedef enum text_encoding {
-    NOVA_TEXT_ENCODING_LATIN1, ///< Latin-1 encoding
-    NOVA_TEXT_ENCODING_UTF8, ///< UTF-8 encoding
-    NOVA_TEXT_ENCODING_UTF16, ///< UTF-16 encoding
-    NOVA_TEXT_ENCODING_UTF32 ///< UTF-32 encoding
-} text_encoding_t;
+enum class text_encoding : int {
+    latin1, ///< Latin-1 encoding
+    utf8, ///< UTF-8 encoding
+    utf16, ///< UTF-16 encoding
+    utf32 ///< UTF-32 encoding
+};
 
 /**
  * @brief Iterator for traversing code points in text data.
@@ -317,7 +317,7 @@ typedef enum text_encoding {
 typedef struct text_iterator {
     const void* text; ///< Pointer to the text data.
     int length_; ///< Length of the text data.
-    text_encoding_t encoding; ///< Encoding format of the text data.
+    text_encoding encoding; ///< Encoding format of the text data.
     int index; ///< Current position in the text data.
 } text_iterator_t;
 
@@ -334,7 +334,7 @@ typedef unsigned int codepoint_t;
  * @param length Length of the text data, or -1 if the data is null-terminated.
  * @param encoding Encoding of the text data.
  */
-NOVA_API void text_iterator_init(text_iterator_t* it, const void* text, int length_, text_encoding_t encoding);
+NOVA_API void text_iterator_init(text_iterator_t* it, const void* text, int length_, text_encoding encoding);
 
 /**
  * @brief Checks if there are more code points to iterate.
@@ -463,7 +463,7 @@ NOVA_API float font_face_traverse_glyph_path(font_face_t* face, float size_, flo
  * @param extents Pointer to a `rect_t` object to store the bounding box of the text.
  * @return The total advance width of the text.
  */
-NOVA_API float font_face_text_extents(font_face_t* face, float size_, const void* text, int length_, text_encoding_t encoding, rect_t* extents);
+NOVA_API float font_face_text_extents(font_face_t* face, float size_, const void* text, int length_, text_encoding encoding, rect_t* extents);
 
 /**
  * @brief Represents a cache of loaded font faces.
@@ -1979,7 +1979,7 @@ NOVA_API float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y);
+NOVA_API float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y);
 
 /**
  * @brief Fills a text at the specified origin.
@@ -1993,7 +1993,7 @@ NOVA_API float canvas_add_text(canvas_t* canvas, const void* text, int length_, 
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y);
+NOVA_API float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y);
 
 /**
  * @brief Strokes a text at the specified origin.
@@ -2007,7 +2007,7 @@ NOVA_API float canvas_fill_text(canvas_t* canvas, const void* text, int length_,
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y);
+NOVA_API float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y);
 
 /**
  * @brief Intersects the current clipping region with text at the specified origin.
@@ -2021,7 +2021,7 @@ NOVA_API float canvas_stroke_text(canvas_t* canvas, const void* text, int length
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_clip_text(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, float x, float y);
+NOVA_API float canvas_clip_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y);
 
 /**
  * @brief Retrieves font metrics for the current font.
@@ -2055,7 +2055,7 @@ NOVA_API void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, floa
  * @param extents The bounding box of the text.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_text_extents(canvas_t* canvas, const void* text, int length_, text_encoding_t encoding, rect_t* extents);
+NOVA_API float canvas_text_extents(canvas_t* canvas, const void* text, int length_, text_encoding encoding, rect_t* extents);
 
 } // namespace vg
 } // namespace nova

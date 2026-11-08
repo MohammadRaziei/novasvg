@@ -30,7 +30,7 @@ struct shaped_glyph_t {
 };
 
 // Shapes `text`; fills `glyphs` (when not null) and returns the advance of the whole text. UTF-8, UTF-16 or UTF-32.
-float font_face_shape(font_face_t* face, float size_, const void* text, int length_, text_encoding_t encoding, std::vector<shaped_glyph_t>* glyphs);
+float font_face_shape(font_face_t* face, float size_, const void* text, int length_, text_encoding encoding, std::vector<shaped_glyph_t>* glyphs);
 
 void font_face_get_glyph_index_metrics(font_face_t* face, float size_, std::uint32_t glyph_index, float* advance_width, float* left_side_bearing, rect_t* extents);
 

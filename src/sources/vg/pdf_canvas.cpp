@@ -316,23 +316,23 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const font& fon
         const matrix_t* transform_;
     } s{this, transform_};
 
-    auto traverse = [](void* closure, path_command_t command, const point_t* points, int) {
+    auto traverse = [](void* closure, path_command command, const point_t* points, int) {
         auto* s = static_cast<sink*>(closure);
         auto pt = [&](const point_t& p) {
             point q = s->transform_ ? apply(*s->transform_, p.x, p.y) : point(p.x, p.y);
             return num(q.x) + " " + num(q.y);
         };
         switch(command) {
-        case NOVA_PATH_COMMAND_MOVE_TO:
+        case path_command::move_to:
             s->self->m_content += pt(points[0]) + " m\n";
             break;
-        case NOVA_PATH_COMMAND_LINE_TO:
+        case path_command::line_to:
             s->self->m_content += pt(points[0]) + " l\n";
             break;
-        case NOVA_PATH_COMMAND_CUBIC_TO:
+        case path_command::cubic_to:
             s->self->m_content += pt(points[0]) + " " + pt(points[1]) + " " + pt(points[2]) + " c\n";
             break;
-        case NOVA_PATH_COMMAND_CLOSE:
+        case path_command::close:
             s->self->m_content += "h\n";
             break;
         }
@@ -340,7 +340,7 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const font& fon
 
     // Same layout as canvas_add_text(): the shaped glyphs, each with its outline.
     std::vector<shaped_glyph_t> glyphs;
-    font_face_shape(face, font_.size_(), text.data(), int(text.length()), NOVA_TEXT_ENCODING_UTF32, &glyphs);
+    font_face_shape(face, font_.size_(), text.data(), int(text.length()), text_encoding::utf32, &glyphs);
     for(const shaped_glyph_t& g : glyphs)
         font_face_traverse_glyph_index_path(face, font_.size_(), origin.x + g.x, origin.y + g.y, g.glyph, traverse, &s);
 }

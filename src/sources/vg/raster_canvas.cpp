@@ -245,7 +245,7 @@ void raster_canvas::fill_text(const std::u32string_view& text, const font& font_
     canvas_set_fill_rule(m_canvas, NOVA_FILL_RULE_NON_ZERO);
     canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
     canvas_set_font(m_canvas, font_.face().get(), font_.size_());
-    canvas_fill_text(m_canvas, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF32, origin.x, origin.y);
+    canvas_fill_text(m_canvas, text.data(), text.length(), text_encoding::utf32, origin.x, origin.y);
 }
 
 void raster_canvas::stroke_text(const std::u32string_view& text, float stroke_width, const font& font_, const point& origin, const transform& transform_)
@@ -260,7 +260,7 @@ void raster_canvas::stroke_text(const std::u32string_view& text, float stroke_wi
     canvas_set_dash_array(m_canvas, nullptr, 0);
     canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
     canvas_set_font(m_canvas, font_.face().get(), font_.size_());
-    canvas_stroke_text(m_canvas, text.data(), text.length(), NOVA_TEXT_ENCODING_UTF32, origin.x, origin.y);
+    canvas_stroke_text(m_canvas, text.data(), text.length(), text_encoding::utf32, origin.x, origin.y);
 }
 
 void raster_canvas::clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_)
