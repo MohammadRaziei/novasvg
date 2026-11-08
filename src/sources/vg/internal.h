@@ -83,7 +83,7 @@ typedef enum {
 typedef struct {
     paint_t base;
     gradient_type_t type_;
-    spread_method_t spread;
+    spread_method spread;
     matrix_t matrix;
     gradient_stop_t* stops;
     int nstops;
@@ -92,7 +92,7 @@ typedef struct {
 
 typedef struct {
     paint_t base;
-    texture_type_t type_;
+    texture_type type_;
     float opacity;
     matrix_t matrix;
     surface_t* surface;
@@ -129,8 +129,8 @@ typedef struct {
 
 typedef struct {
     float width;
-    line_cap_t cap;
-    line_join_t join;
+    line_cap cap;
+    line_join join;
     float miter_limit;
 } stroke_style_t;
 
@@ -146,8 +146,8 @@ typedef struct state {
     matrix_t matrix;
     stroke_data_t stroke;
     span_buffer_t clip_spans;
-    fill_rule_t winding;
-    operator_t op;
+    fill_rule winding;
+    blend_mode op;
     float font_size;
     float opacity;
     bool clipping;
@@ -179,7 +179,7 @@ void arc_to_radians(stb::outline& path_, float rx, float ry, float angle, bool l
 void add_rect_path(stb::outline& path_, float x, float y, float w, float h);
 void add_round_rect_path(stb::outline& path_, float x, float y, float w, float h, float rx, float ry);
 void add_ellipse_path(stb::outline& path_, float cx, float cy, float rx, float ry);
-void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data_, fill_rule_t winding);
+void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data_, fill_rule winding);
 void blend(canvas_t* canvas, const span_buffer_t* span_buffer);
 void memfill32(unsigned int* dest, int length_, unsigned int value);
 

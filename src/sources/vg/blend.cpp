@@ -52,10 +52,10 @@ uint32_t BYTE_MUL(uint32_t x, uint32_t a)
 
 int gradient_clamp(const gradient_data_t* gradient, int ipos)
 {
-    if(gradient->spread == NOVA_SPREAD_METHOD_REPEAT) {
+    if(gradient->spread == spread_method::repeat) {
         ipos = ipos % COLOR_TABLE_SIZE;
         ipos = ipos < 0 ? COLOR_TABLE_SIZE + ipos : ipos;
-    } else if(gradient->spread == NOVA_SPREAD_METHOD_REFLECT) {
+    } else if(gradient->spread == spread_method::reflect) {
         const int limit = COLOR_TABLE_SIZE * 2;
         ipos = ipos % limit;
         ipos = ipos < 0 ? limit + ipos : ipos;
@@ -507,9 +507,9 @@ void composition_xor(uint32_t* dest, int length_, const uint32_t* src, uint32_t 
     }
 }
 
-void blend_solid(surface_t* surface, operator_t op, uint32_t solid, const span_buffer_t* span_buffer)
+void blend_solid(surface_t* surface, blend_mode op, uint32_t solid, const span_buffer_t* span_buffer)
 {
-    composition_solid_function_t func = composition_solid_table[op];
+    composition_solid_function_t func = composition_solid_table[static_cast<int>(op)];
     int count = span_buffer->spans.size_;
     const span_t* spans = span_buffer->spans.data;
     while(count--) {
@@ -519,9 +519,9 @@ void blend_solid(surface_t* surface, operator_t op, uint32_t solid, const span_b
     }
 }
 
-void blend_linear_gradient(surface_t* surface, operator_t op, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
+void blend_linear_gradient(surface_t* surface, blend_mode op, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
 {
-    composition_function_t func = composition_table[op];
+    composition_function_t func = composition_table[static_cast<int>(op)];
     unsigned int buffer[BUFFER_SIZE];
 
     linear_gradient_values_t v;
@@ -553,9 +553,9 @@ void blend_linear_gradient(surface_t* surface, operator_t op, const gradient_dat
     }
 }
 
-void blend_radial_gradient(surface_t* surface, operator_t op, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
+void blend_radial_gradient(surface_t* surface, blend_mode op, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
 {
-    composition_function_t func = composition_table[op];
+    composition_function_t func = composition_table[static_cast<int>(op)];
     unsigned int buffer[BUFFER_SIZE];
 
     radial_gradient_values_t v;
@@ -584,9 +584,9 @@ void blend_radial_gradient(surface_t* surface, operator_t op, const gradient_dat
     }
 }
 
-void blend_untransformed_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_untransformed_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
-    composition_function_t func = composition_table[op];
+    composition_function_t func = composition_table[static_cast<int>(op)];
 
     const int image_width = texture->width;
     const int image_height = texture->height;
@@ -622,9 +622,9 @@ void blend_untransformed_argb(surface_t* surface, operator_t op, const texture_d
     }
 }
 
-void blend_transformed_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_transformed_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
-    composition_function_t func = composition_table[op];
+    composition_function_t func = composition_table[static_cast<int>(op)];
     uint32_t buffer[BUFFER_SIZE];
 
     int image_width = texture->width;
@@ -673,9 +673,9 @@ void blend_transformed_argb(surface_t* surface, operator_t op, const texture_dat
     }
 }
 
-void blend_untransformed_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_untransformed_tiled_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
-    composition_function_t func = composition_table[op];
+    composition_function_t func = composition_table[static_cast<int>(op)];
 
     int image_width = texture->width;
     int image_height = texture->height;
@@ -722,9 +722,9 @@ void blend_untransformed_tiled_argb(surface_t* surface, operator_t op, const tex
     }
 }
 
-void blend_transformed_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_transformed_tiled_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
-    composition_function_t func = composition_table[op];
+    composition_function_t func = composition_table[static_cast<int>(op)];
     uint32_t buffer[BUFFER_SIZE];
 
     int image_width = texture->width;
@@ -788,9 +788,9 @@ uint32_t interpolate_4_pixels(uint32_t tl, uint32_t tr, uint32_t bl, uint32_t br
     return INTERPOLATE_PIXEL_256(xtop, idisty, xbot, disty);
 }
 
-void blend_transformed_bilinear_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_transformed_bilinear_tiled_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
-    composition_function_t func = composition_table[op];
+    composition_function_t func = composition_table[static_cast<int>(op)];
     uint32_t buffer[BUFFER_SIZE];
 
     int image_width = texture->width;
@@ -861,8 +861,8 @@ void blend_color(canvas_t* canvas, const color_t* color_, const span_buffer_t* s
     uint32_t solid = premultiply_color_with_opacity(color_, state->opacity);
     uint32_t alpha = novasvg_alpha(solid);
 
-    if(alpha == 255 && state->op == NOVA_OPERATOR_SRC_OVER) {
-        blend_solid(canvas->surface, NOVA_OPERATOR_SRC, solid, span_buffer);
+    if(alpha == 255 && state->op == blend_mode::src_over) {
+        blend_solid(canvas->surface, blend_mode::src, solid, span_buffer);
     } else {
         blend_solid(canvas->surface, state->op, solid, span_buffer);
     }
@@ -960,13 +960,13 @@ void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_
         return;
     const matrix_t* matrix = &data.matrix;
     if(matrix->a == 1 && matrix->b == 0 && matrix->c == 0 && matrix->d == 1) {
-        if(texture->type_ == NOVA_TEXTURE_TYPE_PLAIN) {
+        if(texture->type_ == texture_type::plain) {
             blend_untransformed_argb(canvas->surface, state->op, &data, span_buffer);
         } else {
             blend_untransformed_tiled_argb(canvas->surface, state->op, &data, span_buffer);
         }
     } else {
-        if(texture->type_ == NOVA_TEXTURE_TYPE_PLAIN) {
+        if(texture->type_ == texture_type::plain) {
             blend_transformed_argb(canvas->surface, state->op, &data, span_buffer);
         } else if(fabsf(matrix->b) > 1e-6f || fabsf(matrix->c) > 1e-6f) {
             blend_transformed_bilinear_tiled_argb(canvas->surface, state->op, &data, span_buffer);

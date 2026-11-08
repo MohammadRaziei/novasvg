@@ -30,8 +30,8 @@ static state_t* state_create(void)
     state->stroke.dash.offset = 0.f;
     novasvg_array_init(state->stroke.dash.array);
     span_buffer_init(&state->clip_spans);
-    state->winding = NOVA_FILL_RULE_NON_ZERO;
-    state->op = NOVA_OPERATOR_SRC_OVER;
+    state->winding = fill_rule::non_zero;
+    state->op = blend_mode::src_over;
     state->font_size = 12.f;
     state->opacity = 1.f;
     state->clipping = false;
@@ -51,8 +51,8 @@ static void state_reset(state_t* state)
     state->stroke.dash.offset = 0.f;
     novasvg_array_clear(state->stroke.dash.array);
     span_buffer_reset(&state->clip_spans);
-    state->winding = NOVA_FILL_RULE_NON_ZERO;
-    state->op = NOVA_OPERATOR_SRC_OVER;
+    state->winding = fill_rule::non_zero;
+    state->op = blend_mode::src_over;
     state->font_size = 12.f;
     state->opacity = 1.f;
     state->clipping = false;
@@ -179,21 +179,21 @@ void canvas_set_color(canvas_t* canvas, const color_t* color_)
     canvas_set_rgba(canvas, color_->r, color_->g, color_->b, color_->a);
 }
 
-void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2, spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
+void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2, spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
 {
     paint_t* paint_ = paint_create_linear_gradient(x1, y1, x2, y2, spread, stops, nstops, matrix);
     canvas_set_paint(canvas, paint_);
     paint_destroy(paint_);
 }
 
-void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr, spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
+void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr, spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
 {
     paint_t* paint_ = paint_create_radial_gradient(cx, cy, cr, fx, fy, fr, spread, stops, nstops, matrix);
     canvas_set_paint(canvas, paint_);
     paint_destroy(paint_);
 }
 
-void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type_t type_, float opacity, const matrix_t* matrix)
+void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type type_, float opacity, const matrix_t* matrix)
 {
     paint_t* paint_ = paint_create_texture(surface, type_, opacity, matrix);
     canvas_set_paint(canvas, paint_);
@@ -279,22 +279,22 @@ float canvas_get_font_size(const canvas_t* canvas)
     return canvas->state->font_size;
 }
 
-void canvas_set_fill_rule(canvas_t* canvas, fill_rule_t winding)
+void canvas_set_fill_rule(canvas_t* canvas, fill_rule winding)
 {
     canvas->state->winding = winding;
 }
 
-fill_rule_t canvas_get_fill_rule(const canvas_t* canvas)
+fill_rule canvas_get_fill_rule(const canvas_t* canvas)
 {
     return canvas->state->winding;
 }
 
-void canvas_set_operator(canvas_t* canvas, operator_t op)
+void canvas_set_operator(canvas_t* canvas, blend_mode op)
 {
     canvas->state->op = op;
 }
 
-operator_t canvas_get_operator(const canvas_t* canvas)
+blend_mode canvas_get_operator(const canvas_t* canvas)
 {
     return canvas->state->op;
 }
@@ -319,22 +319,22 @@ float canvas_get_line_width(const canvas_t* canvas)
     return canvas->state->stroke.style.width;
 }
 
-void canvas_set_line_cap(canvas_t* canvas, line_cap_t line_cap_)
+void canvas_set_line_cap(canvas_t* canvas, line_cap line_cap_)
 {
     canvas->state->stroke.style.cap = line_cap_;
 }
 
-line_cap_t canvas_get_line_cap(const canvas_t* canvas)
+line_cap canvas_get_line_cap(const canvas_t* canvas)
 {
     return canvas->state->stroke.style.cap;
 }
 
-void canvas_set_line_join(canvas_t* canvas, line_join_t line_join_)
+void canvas_set_line_join(canvas_t* canvas, line_join line_join_)
 {
     canvas->state->stroke.style.join = line_join_;
 }
 
-line_join_t canvas_get_line_join(const canvas_t* canvas)
+line_join canvas_get_line_join(const canvas_t* canvas)
 {
     return canvas->state->stroke.style.join;
 }
@@ -532,7 +532,7 @@ void canvas_fill_extents(canvas_t *canvas, rect_t* extents)
 
 void canvas_stroke_extents(canvas_t *canvas, rect_t* extents)
 {
-    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, &canvas->state->stroke, NOVA_FILL_RULE_NON_ZERO);
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, &canvas->state->stroke, fill_rule::non_zero);
     span_buffer_extents(&canvas->fill_spans, extents);
 }
 
@@ -589,7 +589,7 @@ void canvas_fill_preserve(canvas_t* canvas)
 
 void canvas_stroke_preserve(canvas_t* canvas)
 {
-    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, NOVA_FILL_RULE_NON_ZERO);
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, fill_rule::non_zero);
     if(canvas->state->clipping) {
         span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
         blend(canvas, &canvas->clip_spans);

@@ -353,7 +353,7 @@ paint_t* paint_create_color(const color_t* color_)
     return paint_create_rgba(color_->r, color_->g, color_->b, color_->a);
 }
 
-paint_t* paint_create_linear_gradient(float x1, float y1, float x2, float y2, spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
+paint_t* paint_create_linear_gradient(float x1, float y1, float x2, float y2, spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
 {
     gradient_paint_t* gradient = gradient_create(NOVA_GRADIENT_TYPE_LINEAR, spread, stops, nstops, matrix);
     gradient->values[0] = x1;
@@ -363,7 +363,7 @@ paint_t* paint_create_linear_gradient(float x1, float y1, float x2, float y2, sp
     return &gradient->base;
 }
 
-paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr, spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
+paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr, spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
 {
     gradient_paint_t* gradient = gradient_create(NOVA_GRADIENT_TYPE_RADIAL, spread, stops, nstops, matrix);
     gradient->values[0] = cx;
@@ -375,7 +375,7 @@ paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, fl
     return &gradient->base;
 }
 
-paint_t* paint_create_texture(surface_t* surface, texture_type_t type_, float opacity, const matrix_t* matrix)
+paint_t* paint_create_texture(surface_t* surface, texture_type type_, float opacity, const matrix_t* matrix)
 {
     texture_paint_t* texture = static_cast<texture_paint_t*>(paint_create(
         NOVA_PAINT_TYPE_TEXTURE,

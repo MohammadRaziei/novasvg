@@ -12,7 +12,7 @@ namespace vg {
 #define COLOR_TABLE_SIZE 1024
 typedef struct {
     matrix_t matrix;
-    spread_method_t spread;
+    spread_method spread;
     uint32_t colortable[COLOR_TABLE_SIZE];
     union {
         struct {
@@ -179,26 +179,26 @@ void composition_solid_xor(uint32_t* dest, int length_, uint32_t color_, uint32_
 //   exclusion  Cs + Cb - 2*Cs*Cb
 int blend_mul255(int x, int y);
 
-template<operator_t mode>
+template<blend_mode mode>
 inline int blend_mode_channel(int cs, int cb, int as, int ab)
 {
     int value;
-    if(mode == NOVA_OPERATOR_MULTIPLY)
+    if(mode == blend_mode::multiply)
         value = blend_mul255(cs, 255 - ab) + blend_mul255(cb, 255 - as) + blend_mul255(cs, cb);
-    else if(mode == NOVA_OPERATOR_SCREEN)
+    else if(mode == blend_mode::screen)
         value = cs + cb - blend_mul255(cs, cb);
-    else if(mode == NOVA_OPERATOR_DARKEN)
+    else if(mode == blend_mode::darken)
         value = cs + cb - STB_MAX(blend_mul255(cs, ab), blend_mul255(cb, as));
-    else if(mode == NOVA_OPERATOR_LIGHTEN)
+    else if(mode == blend_mode::lighten)
         value = cs + cb - STB_MIN(blend_mul255(cs, ab), blend_mul255(cb, as));
-    else if(mode == NOVA_OPERATOR_DIFFERENCE)
+    else if(mode == blend_mode::difference)
         value = cs + cb - 2 * STB_MIN(blend_mul255(cs, ab), blend_mul255(cb, as));
     else
         value = cs + cb - 2 * blend_mul255(cs, cb);
     return value;
 }
 
-template<operator_t mode>
+template<blend_mode mode>
 inline uint32_t blend_mode_pixel(uint32_t dest, uint32_t src)
 {
     if(src == 0)
@@ -216,7 +216,7 @@ inline uint32_t blend_mode_pixel(uint32_t dest, uint32_t src)
     return result;
 }
 
-template<operator_t mode>
+template<blend_mode mode>
 inline void composition_blend_mode(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha)
 {
     for(int i = 0; i < length_; i++) {
@@ -225,7 +225,7 @@ inline void composition_blend_mode(uint32_t* dest, int length_, const uint32_t* 
     }
 }
 
-template<operator_t mode>
+template<blend_mode mode>
 inline void composition_solid_blend_mode(uint32_t* dest, int length_, uint32_t color_, uint32_t const_alpha)
 {
     if(const_alpha != 255)
@@ -249,12 +249,12 @@ inline const composition_solid_function_t composition_solid_table[] = {
     composition_solid_source_atop,
     composition_solid_destination_atop,
     composition_solid_xor,
-    composition_solid_blend_mode<NOVA_OPERATOR_MULTIPLY>,
-    composition_solid_blend_mode<NOVA_OPERATOR_SCREEN>,
-    composition_solid_blend_mode<NOVA_OPERATOR_DARKEN>,
-    composition_solid_blend_mode<NOVA_OPERATOR_LIGHTEN>,
-    composition_solid_blend_mode<NOVA_OPERATOR_DIFFERENCE>,
-    composition_solid_blend_mode<NOVA_OPERATOR_EXCLUSION>
+    composition_solid_blend_mode<blend_mode::multiply>,
+    composition_solid_blend_mode<blend_mode::screen>,
+    composition_solid_blend_mode<blend_mode::darken>,
+    composition_solid_blend_mode<blend_mode::lighten>,
+    composition_solid_blend_mode<blend_mode::difference>,
+    composition_solid_blend_mode<blend_mode::exclusion>
 };
 
 void composition_clear(uint32_t* dest, int length_, const uint32_t* src, uint32_t const_alpha);
@@ -296,34 +296,34 @@ inline const composition_function_t composition_table[] = {
     composition_source_atop,
     composition_destination_atop,
     composition_xor,
-    composition_blend_mode<NOVA_OPERATOR_MULTIPLY>,
-    composition_blend_mode<NOVA_OPERATOR_SCREEN>,
-    composition_blend_mode<NOVA_OPERATOR_DARKEN>,
-    composition_blend_mode<NOVA_OPERATOR_LIGHTEN>,
-    composition_blend_mode<NOVA_OPERATOR_DIFFERENCE>,
-    composition_blend_mode<NOVA_OPERATOR_EXCLUSION>
+    composition_blend_mode<blend_mode::multiply>,
+    composition_blend_mode<blend_mode::screen>,
+    composition_blend_mode<blend_mode::darken>,
+    composition_blend_mode<blend_mode::lighten>,
+    composition_blend_mode<blend_mode::difference>,
+    composition_blend_mode<blend_mode::exclusion>
 };
 
-void blend_solid(surface_t* surface, operator_t op, uint32_t solid, const span_buffer_t* span_buffer);
+void blend_solid(surface_t* surface, blend_mode op, uint32_t solid, const span_buffer_t* span_buffer);
 
 #define BUFFER_SIZE 1024
-void blend_linear_gradient(surface_t* surface, operator_t op, const gradient_data_t* gradient, const span_buffer_t* span_buffer);
+void blend_linear_gradient(surface_t* surface, blend_mode op, const gradient_data_t* gradient, const span_buffer_t* span_buffer);
 
-void blend_radial_gradient(surface_t* surface, operator_t op, const gradient_data_t* gradient, const span_buffer_t* span_buffer);
+void blend_radial_gradient(surface_t* surface, blend_mode op, const gradient_data_t* gradient, const span_buffer_t* span_buffer);
 
-void blend_untransformed_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer);
+void blend_untransformed_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer);
 
 #define FIXED_SCALE (1 << 16)
-void blend_transformed_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer);
+void blend_transformed_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer);
 
-void blend_untransformed_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer);
+void blend_untransformed_tiled_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer);
 
-void blend_transformed_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer);
+void blend_transformed_tiled_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer);
 
 uint32_t interpolate_4_pixels(uint32_t tl, uint32_t tr, uint32_t bl, uint32_t br, uint32_t distx, uint32_t disty);
 
 #define HALF_POINT (1 << 15)
-void blend_transformed_bilinear_tiled_argb(surface_t* surface, operator_t op, const texture_data_t* texture, const span_buffer_t* span_buffer);
+void blend_transformed_bilinear_tiled_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer);
 
 void blend_color(canvas_t* canvas, const color_t* color_, const span_buffer_t* span_buffer);
 

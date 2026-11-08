@@ -853,19 +853,19 @@ NOVA_API void convert_rgba_to_argb(unsigned char* dst, const unsigned char* src,
 /**
  * @brief Defines the type of texture, either plain or tiled.
  */
-typedef enum {
-    NOVA_TEXTURE_TYPE_PLAIN, ///< Plain texture.
-    NOVA_TEXTURE_TYPE_TILED ///< Tiled texture.
-} texture_type_t;
+enum class texture_type : int {
+    plain, ///< Plain texture.
+    tiled ///< Tiled texture.
+};
 
 /**
  * @brief Defines the spread method for gradients.
  */
-typedef enum {
-    NOVA_SPREAD_METHOD_PAD, ///< Pad the gradient's edges.
-    NOVA_SPREAD_METHOD_REFLECT, ///< Reflect the gradient beyond its bounds.
-    NOVA_SPREAD_METHOD_REPEAT ///< Repeat the gradient pattern.
-} spread_method_t;
+enum class spread_method : uint8_t {
+    pad, ///< Pad the gradient's edges.
+    reflect, ///< Reflect the gradient beyond its bounds.
+    repeat ///< Repeat the gradient pattern.
+};
 
 /**
  * @brief Represents a gradient stop.
@@ -923,7 +923,7 @@ NOVA_API paint_t* paint_create_color(const color_t* color_);
  * @return A pointer to the created `paint_t` object.
  */
 NOVA_API paint_t* paint_create_linear_gradient(float x1, float y1, float x2, float y2,
-    spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
+    spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
 
 /**
  * @brief Creates a radial gradient paint.
@@ -941,7 +941,7 @@ NOVA_API paint_t* paint_create_linear_gradient(float x1, float y1, float x2, flo
  * @return A pointer to the created `paint_t` object.
  */
 NOVA_API paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr,
-    spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
+    spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
 
 /**
  * @brief Creates a texture paint from a surface.
@@ -952,7 +952,7 @@ NOVA_API paint_t* paint_create_radial_gradient(float cx, float cy, float cr, flo
  * @param matrix Optional transformation matrix.
  * @return A pointer to the created `paint_t` object.
  */
-NOVA_API paint_t* paint_create_texture(surface_t* surface, texture_type_t type_, float opacity, const matrix_t* matrix);
+NOVA_API paint_t* paint_create_texture(surface_t* surface, texture_type type_, float opacity, const matrix_t* matrix);
 
 /**
  * @brief Increments the reference count of a paint object.
@@ -980,54 +980,54 @@ NOVA_API int paint_get_reference_count(const paint_t* paint_);
 /**
  * @brief Defines fill rule types for filling paths.
  */
-typedef enum {
-    NOVA_FILL_RULE_NON_ZERO, ///< Non-zero winding fill rule.
-    NOVA_FILL_RULE_EVEN_ODD ///< Even-odd fill rule.
-} fill_rule_t;
+enum class fill_rule : uint8_t {
+    non_zero, ///< Non-zero winding fill rule.
+    even_odd ///< Even-odd fill rule.
+};
 
 /**
  * @brief Defines compositing operations.
  */
-typedef enum {
-    NOVA_OPERATOR_CLEAR,       ///< Clears the destination (resulting in a fully transparent image).
-    NOVA_OPERATOR_SRC,         ///< Source replaces destination.
-    NOVA_OPERATOR_DST,         ///< Destination is kept, source is ignored.
-    NOVA_OPERATOR_SRC_OVER,    ///< Source is composited over destination.
-    NOVA_OPERATOR_DST_OVER,    ///< Destination is composited over source.
-    NOVA_OPERATOR_SRC_IN,      ///< Source within destination (only the overlapping part of source is shown).
-    NOVA_OPERATOR_DST_IN,      ///< Destination within source.
-    NOVA_OPERATOR_SRC_OUT,     ///< Source outside destination (non-overlapping part of source is shown).
-    NOVA_OPERATOR_DST_OUT,     ///< Destination outside source.
-    NOVA_OPERATOR_SRC_ATOP,    ///< Source atop destination (source shown over destination but only in the destination's bounds).
-    NOVA_OPERATOR_DST_ATOP,    ///< Destination atop source (destination shown over source but only in the source's bounds).
-    NOVA_OPERATOR_XOR,         ///< Source and destination are combined, but their overlapping regions are cleared.
+enum class blend_mode : int {
+    clear,       ///< Clears the destination (resulting in a fully transparent image).
+    src,         ///< Source replaces destination.
+    dst,         ///< Destination is kept, source is ignored.
+    src_over,    ///< Source is composited over destination.
+    dst_over,    ///< Destination is composited over source.
+    src_in,      ///< Source within destination (only the overlapping part of source is shown).
+    dst_in,      ///< Destination within source.
+    src_out,     ///< Source outside destination (non-overlapping part of source is shown).
+    dst_out,     ///< Destination outside source.
+    src_atop,    ///< Source atop destination (source shown over destination but only in the destination's bounds).
+    dst_atop,    ///< Destination atop source (destination shown over source but only in the source's bounds).
+    exclusive_or,        ///< Source and destination are combined, but their overlapping regions are cleared.
     // CSS blend modes (W3C Compositing and Blending): the source is blended with the backdrop's colour,
     // then composited over it. Appended after the Porter-Duff operators; same order as the tables in blend.h.
-    NOVA_OPERATOR_MULTIPLY,    ///< Backdrop * source: darkens, white is neutral.
-    NOVA_OPERATOR_SCREEN,      ///< Inverse of multiply: lightens, black is neutral.
-    NOVA_OPERATOR_DARKEN,      ///< The darker of backdrop and source, per channel.
-    NOVA_OPERATOR_LIGHTEN,     ///< The lighter of backdrop and source, per channel.
-    NOVA_OPERATOR_DIFFERENCE,  ///< Absolute difference of backdrop and source, per channel.
-    NOVA_OPERATOR_EXCLUSION    ///< Like difference, with lower contrast.
-} operator_t;
+    multiply,    ///< Backdrop * source: darkens, white is neutral.
+    screen,      ///< Inverse of multiply: lightens, black is neutral.
+    darken,      ///< The darker of backdrop and source, per channel.
+    lighten,     ///< The lighter of backdrop and source, per channel.
+    difference,  ///< Absolute difference of backdrop and source, per channel.
+    exclusion    ///< Like difference, with lower contrast.
+};
 
 /**
  * @brief Defines the shape used at the ends of open subpaths.
  */
-typedef enum {
-    NOVA_LINE_CAP_BUTT, ///< Flat edge at the end of the stroke.
-    NOVA_LINE_CAP_ROUND, ///< Rounded ends at the end of the stroke.
-    NOVA_LINE_CAP_SQUARE ///< Square ends at the end of the stroke.
-} line_cap_t;
+enum class line_cap : uint8_t {
+    butt, ///< Flat edge at the end of the stroke.
+    round, ///< Rounded ends at the end of the stroke.
+    square ///< Square ends at the end of the stroke.
+};
 
 /**
  * @brief Defines the shape used at the corners of paths.
  */
-typedef enum {
-    NOVA_LINE_JOIN_MITER, ///< Miter join with sharp corners.
-    NOVA_LINE_JOIN_ROUND, ///< Rounded join.
-    NOVA_LINE_JOIN_BEVEL ///< Beveled join with a flattened corner.
-} line_join_t;
+enum class line_join : uint8_t {
+    miter, ///< Miter join with sharp corners.
+    round, ///< Rounded join.
+    bevel ///< Beveled join with a flattened corner.
+};
 
 /**
  * @brief Represents a drawing context.
@@ -1138,7 +1138,7 @@ NOVA_API void canvas_set_color(canvas_t* canvas, const color_t* color_);
  * @param matrix Optional transformation matrix.
  */
 NOVA_API void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2,
-    spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
+    spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
 
 /**
  * @brief Sets the current paint to a radial gradient.
@@ -1158,7 +1158,7 @@ NOVA_API void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, f
  * @param matrix Optional transformation matrix.
  */
 NOVA_API void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr,
-    spread_method_t spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
+    spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
 
 /**
  * @brief Sets the current paint to a texture.
@@ -1171,7 +1171,7 @@ NOVA_API void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, f
  * @param opacity The opacity of the texture (0 to 1).
  * @param matrix Optional transformation matrix.
  */
-NOVA_API void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type_t type_, float opacity, const matrix_t* matrix);
+NOVA_API void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type type_, float opacity, const matrix_t* matrix);
 
 /**
  * @brief Sets the current paint.
@@ -1299,42 +1299,42 @@ NOVA_API float canvas_get_font_size(const canvas_t* canvas);
 /**
  * @brief Sets the fill rule.
  *
- * If not set, the default fill rule is `NOVA_FILL_RULE_NON_ZERO`.
+ * If not set, the default fill rule is `fill_rule::non_zero`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param winding The fill rule.
  */
-NOVA_API void canvas_set_fill_rule(canvas_t* canvas, fill_rule_t winding);
+NOVA_API void canvas_set_fill_rule(canvas_t* canvas, fill_rule winding);
 
 /**
  * @brief Retrieves the current fill rule.
  *
- * If not set, the default fill rule is `NOVA_FILL_RULE_NON_ZERO`.
+ * If not set, the default fill rule is `fill_rule::non_zero`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current fill rule.
  */
-NOVA_API fill_rule_t canvas_get_fill_rule(const canvas_t* canvas);
+NOVA_API fill_rule canvas_get_fill_rule(const canvas_t* canvas);
 
 /**
  * @brief Sets the compositing operator.
  *
- * If not set, the default compositing operator is `NOVA_OPERATOR_SRC_OVER`.
+ * If not set, the default compositing operator is `blend_mode::src_over`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param op The compositing operator.
  */
-NOVA_API void canvas_set_operator(canvas_t* canvas, operator_t op);
+NOVA_API void canvas_set_operator(canvas_t* canvas, blend_mode op);
 
 /**
  * @brief Retrieves the current compositing operator.
  *
- * If not set, the default compositing operator is `NOVA_OPERATOR_SRC_OVER`.
+ * If not set, the default compositing operator is `blend_mode::src_over`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current compositing operator.
  */
-NOVA_API operator_t canvas_get_operator(const canvas_t* canvas);
+NOVA_API blend_mode canvas_get_operator(const canvas_t* canvas);
 
 /**
  * @brief Sets the global opacity.
@@ -1379,42 +1379,42 @@ NOVA_API float canvas_get_line_width(const canvas_t* canvas);
 /**
  * @brief Sets the line cap style.
  *
- * If not set, the default line cap is `NOVA_LINE_CAP_BUTT`.
+ * If not set, the default line cap is `line_cap::butt`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param line_cap The line cap style.
  */
-NOVA_API void canvas_set_line_cap(canvas_t* canvas, line_cap_t line_cap_);
+NOVA_API void canvas_set_line_cap(canvas_t* canvas, line_cap line_cap_);
 
 /**
  * @brief Retrieves the current line cap style.
  *
- * If not set, the default line cap is `NOVA_LINE_CAP_BUTT`.
+ * If not set, the default line cap is `line_cap::butt`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current line cap style.
  */
-NOVA_API line_cap_t canvas_get_line_cap(const canvas_t* canvas);
+NOVA_API line_cap canvas_get_line_cap(const canvas_t* canvas);
 
 /**
  * @brief Sets the line join style.
  *
- * If not set, the default line join is `NOVA_LINE_JOIN_MITER`.
+ * If not set, the default line join is `line_join::miter`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param line_join The line join style.
  */
-NOVA_API void canvas_set_line_join(canvas_t* canvas, line_join_t line_join_);
+NOVA_API void canvas_set_line_join(canvas_t* canvas, line_join line_join_);
 
 /**
  * @brief Retrieves the current line join style.
  *
- * If not set, the default line join is `NOVA_LINE_JOIN_MITER`.
+ * If not set, the default line join is `line_join::miter`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current line join style.
  */
-NOVA_API line_join_t canvas_get_line_join(const canvas_t* canvas);
+NOVA_API line_join canvas_get_line_join(const canvas_t* canvas);
 
 /**
  * @brief Sets the miter limit.

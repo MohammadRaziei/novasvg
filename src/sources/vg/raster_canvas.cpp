@@ -202,25 +202,25 @@ void raster_canvas::set_color(float r, float g, float b, float a)
 
 void raster_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, spread_method spread, const gradient_stops& stops, const transform& transform_)
 {
-    canvas_set_linear_gradient(m_canvas, x1, y1, x2, y2, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform_.matrix());
+    canvas_set_linear_gradient(m_canvas, x1, y1, x2, y2, static_cast<spread_method>(spread), stops.data(), stops.size(), &transform_.matrix());
 }
 
 void raster_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method spread, const gradient_stops& stops, const transform& transform_)
 {
-    canvas_set_radial_gradient(m_canvas, cx, cy, r, fx, fy, 0.f, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform_.matrix());
+    canvas_set_radial_gradient(m_canvas, cx, cy, r, fx, fy, 0.f, static_cast<spread_method>(spread), stops.data(), stops.size(), &transform_.matrix());
 }
 
 void raster_canvas::set_texture(const raster_canvas& source, texture_type type_, float opacity, const transform& transform_)
 {
-    canvas_set_texture(m_canvas, source.surface(), static_cast<texture_type_t>(type_), opacity, &transform_.matrix());
+    canvas_set_texture(m_canvas, source.surface(), static_cast<texture_type>(type_), opacity, &transform_.matrix());
 }
 
 void raster_canvas::fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform_.matrix());
-    canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(fill_rule_));
-    canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
+    canvas_set_fill_rule(m_canvas, static_cast<fill_rule>(fill_rule_));
+    canvas_set_operator(m_canvas, blend_mode::src_over);
         canvas_fill_path(m_canvas, path_);
 }
 
@@ -230,11 +230,11 @@ void raster_canvas::stroke_path(const stb::outline& path_, const stroke_data& st
     canvas_transform(m_canvas, &transform_.matrix());
     canvas_set_line_width(m_canvas, stroke_data_.line_width());
     canvas_set_miter_limit(m_canvas, stroke_data_.miter_limit());
-    canvas_set_line_cap(m_canvas, static_cast<line_cap_t>(stroke_data_.line_cap_()));
-    canvas_set_line_join(m_canvas, static_cast<line_join_t>(stroke_data_.line_join_()));
+    canvas_set_line_cap(m_canvas, static_cast<line_cap>(stroke_data_.line_cap_()));
+    canvas_set_line_join(m_canvas, static_cast<line_join>(stroke_data_.line_join_()));
     canvas_set_dash_offset(m_canvas, stroke_data_.dash_offset());
     canvas_set_dash_array(m_canvas, stroke_data_.dash_array_().data(), stroke_data_.dash_array_().size());
-    canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
+    canvas_set_operator(m_canvas, blend_mode::src_over);
         canvas_stroke_path(m_canvas, path_);
 }
 
@@ -242,8 +242,8 @@ void raster_canvas::fill_text(const std::u32string_view& text, const font& font_
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform_.matrix());
-    canvas_set_fill_rule(m_canvas, NOVA_FILL_RULE_NON_ZERO);
-    canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
+    canvas_set_fill_rule(m_canvas, fill_rule::non_zero);
+    canvas_set_operator(m_canvas, blend_mode::src_over);
     canvas_set_font(m_canvas, font_.face().get(), font_.size_());
     canvas_fill_text(m_canvas, text.data(), text.length(), text_encoding::utf32, origin.x, origin.y);
 }
@@ -254,11 +254,11 @@ void raster_canvas::stroke_text(const std::u32string_view& text, float stroke_wi
     canvas_transform(m_canvas, &transform_.matrix());
     canvas_set_line_width(m_canvas, stroke_width);
     canvas_set_miter_limit(m_canvas, 4.f);
-    canvas_set_line_cap(m_canvas, NOVA_LINE_CAP_BUTT);
-    canvas_set_line_join(m_canvas, NOVA_LINE_JOIN_MITER);
+    canvas_set_line_cap(m_canvas, line_cap::butt);
+    canvas_set_line_join(m_canvas, line_join::miter);
     canvas_set_dash_offset(m_canvas, 0.f);
     canvas_set_dash_array(m_canvas, nullptr, 0);
-    canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
+    canvas_set_operator(m_canvas, blend_mode::src_over);
     canvas_set_font(m_canvas, font_.face().get(), font_.size_());
     canvas_stroke_text(m_canvas, text.data(), text.length(), text_encoding::utf32, origin.x, origin.y);
 }
@@ -267,7 +267,7 @@ void raster_canvas::clip_path(const stb::outline& path_, fill_rule clip_rule, co
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform_.matrix());
-    canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(clip_rule));
+    canvas_set_fill_rule(m_canvas, static_cast<fill_rule>(clip_rule));
         canvas_clip_path(m_canvas, path_);
 }
 
@@ -275,7 +275,7 @@ void raster_canvas::clip_rect(const rect& rect_, fill_rule clip_rule, const tran
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform_.matrix());
-    canvas_set_fill_rule(m_canvas, static_cast<fill_rule_t>(clip_rule));
+    canvas_set_fill_rule(m_canvas, static_cast<fill_rule>(clip_rule));
     canvas_clip_rect(m_canvas, rect_.x, rect_.y, rect_.w, rect_.h);
 }
 
@@ -287,9 +287,9 @@ void raster_canvas::draw_image(const pixmap& image, const rect& dst_rect, const 
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform_.matrix());
     canvas_translate(m_canvas, dst_rect.x, dst_rect.y);
-    canvas_set_fill_rule(m_canvas, NOVA_FILL_RULE_NON_ZERO);
-    canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
-    canvas_set_texture(m_canvas, image.surface(), NOVA_TEXTURE_TYPE_PLAIN, 1.f, &matrix);
+    canvas_set_fill_rule(m_canvas, fill_rule::non_zero);
+    canvas_set_operator(m_canvas, blend_mode::src_over);
+    canvas_set_texture(m_canvas, image.surface(), texture_type::plain, 1.f, &matrix);
     canvas_fill_rect(m_canvas, 0, 0, dst_rect.w, dst_rect.h);
 }
 
@@ -297,8 +297,8 @@ void raster_canvas::blend_canvas(const raster_canvas& canvas, blend_mode blend_m
 {
     matrix_t matrix = { 1, 0, 0, 1, static_cast<float>(canvas.x()), static_cast<float>(canvas.y()) };
     canvas_set_matrix(m_canvas, &m_translation);
-    canvas_set_operator(m_canvas, static_cast<operator_t>(blend_mode_));
-    canvas_set_texture(m_canvas, canvas.surface(), NOVA_TEXTURE_TYPE_PLAIN, opacity, &matrix);
+    canvas_set_operator(m_canvas, static_cast<blend_mode>(blend_mode_));
+    canvas_set_texture(m_canvas, canvas.surface(), texture_type::plain, opacity, &matrix);
     canvas_paint(m_canvas);
 }
 

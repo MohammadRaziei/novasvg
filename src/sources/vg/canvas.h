@@ -26,29 +26,6 @@
 
 namespace nova::vg {
 
-enum class line_cap : uint8_t {
-    butt = NOVA_LINE_CAP_BUTT,
-    round = NOVA_LINE_CAP_ROUND,
-    square = NOVA_LINE_CAP_SQUARE
-};
-
-enum class line_join : uint8_t {
-    miter = NOVA_LINE_JOIN_MITER,
-    round = NOVA_LINE_JOIN_ROUND,
-    bevel = NOVA_LINE_JOIN_BEVEL
-};
-
-enum class fill_rule : uint8_t {
-    non_zero = NOVA_FILL_RULE_NON_ZERO,
-    even_odd = NOVA_FILL_RULE_EVEN_ODD
-};
-
-enum class spread_method : uint8_t {
-    pad = NOVA_SPREAD_METHOD_PAD,
-    reflect = NOVA_SPREAD_METHOD_REFLECT,
-    repeat = NOVA_SPREAD_METHOD_REPEAT
-};
-
 // `stb::color` now lives in color.h (a single merged class covering both
 // this engine's needs and the richer string-parsing/blending API) --
 // no separate definition here anymore.
@@ -335,24 +312,6 @@ private:
 } // namespace nova::vg
 
 namespace nova::vg {
-
-enum class texture_type {
-    plain = NOVA_TEXTURE_TYPE_PLAIN,
-    tiled = NOVA_TEXTURE_TYPE_TILED
-};
-
-enum class blend_mode {
-    src = NOVA_OPERATOR_SRC,
-    src_over = NOVA_OPERATOR_SRC_OVER,
-    dst_in = NOVA_OPERATOR_DST_IN,
-    dst_out = NOVA_OPERATOR_DST_OUT,
-    multiply = NOVA_OPERATOR_MULTIPLY,
-    screen = NOVA_OPERATOR_SCREEN,
-    darken = NOVA_OPERATOR_DARKEN,
-    lighten = NOVA_OPERATOR_LIGHTEN,
-    difference = NOVA_OPERATOR_DIFFERENCE,
-    exclusion = NOVA_OPERATOR_EXCLUSION
-};
 
 using dash_array = std::vector<float>;
 

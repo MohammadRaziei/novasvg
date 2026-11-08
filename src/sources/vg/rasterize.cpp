@@ -195,7 +195,7 @@ stb::outline cubics_only(const stb::outline& in)
 
 } // namespace
 
-void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data_, fill_rule_t winding)
+void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data_, fill_rule winding)
 {
     span_buffer_reset(span_buffer);
 
@@ -240,10 +240,10 @@ void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const matr
         stb::stroke_style style;
         style.width = stroke_data_->style.width;
         switch(stroke_data_->style.cap) {
-        case NOVA_LINE_CAP_SQUARE:
+        case line_cap::square:
             style.cap = stb::line_cap::square;
             break;
-        case NOVA_LINE_CAP_ROUND:
+        case line_cap::round:
             style.cap = stb::line_cap::round;
             break;
         default:
@@ -252,10 +252,10 @@ void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const matr
         }
 
         switch(stroke_data_->style.join) {
-        case NOVA_LINE_JOIN_BEVEL:
+        case line_join::bevel:
             style.join = stb::line_join::bevel;
             break;
-        case NOVA_LINE_JOIN_ROUND:
+        case line_join::round:
             style.join = stb::line_join::round;
             break;
         default:
@@ -271,7 +271,7 @@ void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const matr
 
         stb::rasterize_stroke(outline, style, m, clip, sink);
     } else {
-        stb::rasterize_fill(outline, winding == NOVA_FILL_RULE_EVEN_ODD ? stb::fill_rule::even_odd : stb::fill_rule::non_zero, m, clip, sink);
+        stb::rasterize_fill(outline, winding == fill_rule::even_odd ? stb::fill_rule::even_odd : stb::fill_rule::non_zero, m, clip, sink);
     }
 }
 
