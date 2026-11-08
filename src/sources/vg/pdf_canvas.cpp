@@ -338,21 +338,11 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const font& fon
         }
     };
 
-    // Same layout as canvas_add_text(): ligatures, then kerning, then the glyph's outline.
-    text_iterator_t it;
-    text_iterator_init(&it, text.data(), int(text.length()), NOVA_TEXT_ENCODING_UTF32);
-    float advance = 0.f;
-    codepoint_t previous = 0;
-    bool has_previous = false;
-    while(text_iterator_has_next(&it)) {
-        codepoint_t codepoint = text_iterator_next(&it);
-        codepoint = font_face_apply_ligature(face, &it, codepoint);
-        if(has_previous)
-            advance += font_face_get_kern_advance(face, font_.size_(), previous, codepoint);
-        advance += font_face_traverse_glyph_path(face, font_.size_(), origin.x + advance, origin.y, codepoint, traverse, &s);
-        previous = codepoint;
-        has_previous = true;
-    }
+    // Same layout as canvas_add_text(): the shaped glyphs, each with its outline.
+    std::vector<shaped_glyph_t> glyphs;
+    font_face_shape(face, font_.size_(), text.data(), int(text.length()), NOVA_TEXT_ENCODING_UTF32, &glyphs);
+    for(const shaped_glyph_t& g : glyphs)
+        font_face_traverse_glyph_index_path(face, font_.size_(), origin.x + g.x, origin.y + g.y, g.glyph, traverse, &s);
 }
 
 void pdf_canvas::fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_)

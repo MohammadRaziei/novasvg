@@ -146,7 +146,7 @@ public:
     // pixels. inkLeft/inkRight are along the baseline relative to the glyph's
     // own pen; inkTop/inkBottom are relative to the baseline with y pointing
     // DOWN (so ink above the baseline is negative). Walks the text exactly
-    // like measureText() (ligatures, then kerning), so `pen` is where the
+    // like measure_text() (shaped by libstb), so `pen` is where the
     // glyph is painted. These are the raw outline extents -- no pixel
     // rounding; that is a consumer's (browser-emulation) decision, not the
     // font engine's.

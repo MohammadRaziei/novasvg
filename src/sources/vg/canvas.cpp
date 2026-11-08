@@ -665,21 +665,10 @@ float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_enco
     state_t* state = canvas->state;
     if(state->font_face_ == NULL || state->font_size <= 0.f)
         return 0.f;
-    text_iterator_t it;
-    text_iterator_init(&it, text, length_, encoding);
-    float advance_width = 0.f;
-    codepoint_t previous = 0;
-    bool has_previous = false;
-    while(text_iterator_has_next(&it)) {
-        codepoint_t codepoint = text_iterator_next(&it);
-        codepoint = font_face_apply_ligature(state->font_face_, &it, codepoint);
-        if(has_previous)
-            advance_width += font_face_get_kern_advance(state->font_face_, state->font_size, previous, codepoint);
-        advance_width += font_face_get_glyph_path(state->font_face_, state->font_size, x + advance_width, y, codepoint, *canvas->path_);
-        previous = codepoint;
-        has_previous = true;
-    }
-
+    std::vector<shaped_glyph_t> glyphs;
+    const float advance_width = font_face_shape(state->font_face_, state->font_size, text, length_, encoding, &glyphs);
+    for(const shaped_glyph_t& g : glyphs)
+        font_face_get_glyph_index_path(state->font_face_, state->font_size, x + g.x, y + g.y, g.glyph, *canvas->path_);
     return advance_width;
 }
 

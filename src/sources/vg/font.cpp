@@ -279,25 +279,14 @@ std::vector<font::glyph_box> font::glyph_boxes(const std::u32string_view& text) 
         return boxes;
 
     font_face_t* face = m_face.get();
-    text_iterator_t it;
-    text_iterator_init(&it, text.data(), static_cast<int>(text.length()), NOVA_TEXT_ENCODING_UTF32);
-    float pen = 0.f;
-    codepoint_t previous = 0;
-    bool has_previous = false;
-    while(text_iterator_has_next(&it)) {
-        codepoint_t codepoint = text_iterator_next(&it);
-        codepoint = font_face_apply_ligature(face, &it, codepoint);
-        if(has_previous)
-            pen += font_face_get_kern_advance(face, m_size, previous, codepoint);
-        previous = codepoint;
-        has_previous = true;
-
+    std::vector<shaped_glyph_t> glyphs;
+    font_face_shape(face, m_size, text.data(), static_cast<int>(text.length()), NOVA_TEXT_ENCODING_UTF32, &glyphs);
+    for(const shaped_glyph_t& g : glyphs) {
         float advance = 0.f;
         rect_t extents = {0};
-        font_face_get_glyph_metrics(face, m_size, codepoint, &advance, nullptr, &extents);
+        font_face_get_glyph_index_metrics(face, m_size, g.glyph, &advance, nullptr, &extents);
         if(extents.w > 0.f || extents.h > 0.f)
-            boxes.push_back({pen, extents.x, extents.x + extents.w, extents.y, extents.y + extents.h});
-        pen += advance;
+            boxes.push_back({g.x, extents.x, extents.x + extents.w, extents.y + g.y, extents.y + extents.h + g.y});
     }
     return boxes;
 }

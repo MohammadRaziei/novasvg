@@ -255,7 +255,7 @@ NB_MODULE(novasvg_py, m) {
             return out;
         }, nb::is_method(), "text"_a,
         "Per-glyph (pen_x, ink_left, ink_right, ink_top, ink_bottom) in pixels (top/bottom relative to the baseline, y down) for every glyph that has an outline "
-        "(spaces are skipped), using the same ligature + kerning walk as measure_text().");
+        "(spaces are skipped), shaped by libstb, like measure_text().");
 
     m.def("measure_foreign_object", [](const std::string& html, const nova::vg::font& font, std::optional<float> max_width,
                                        std::optional<std::string> family, bool bold, bool italic) {

@@ -11,6 +11,13 @@
 - **`Bitmap` is `vg::pixmap`; the public image type is `stb::image`** (ADR-0003). Fonts and image codecs come from
   libstb (ADR-0005, ADR-0006).
 
+### Fixed
+
+- **Right-to-left and Arabic text.** Text is now laid out by libstb's `font::shape`: bidirectional order, joined
+  Arabic letters, ligatures, mirrored brackets and kerning come from one place, in the canvas, the PDF canvas and
+  `font::measure_text` / `glyph_boxes`. Before, Hebrew came out in reverse order and Arabic letters were not joined.
+  Latin text is unchanged (the 66 other golden images are bit-identical).
+
 ### Removed
 
 - **The C API `path_t`** (`path.cpp`, `path.h`, about 900 lines) and the bridges to it. The canvas builds and the

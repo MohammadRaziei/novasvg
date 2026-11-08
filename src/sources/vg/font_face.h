@@ -6,6 +6,8 @@
 #include "render.h"
 
 #include <stdint.h>
+#include <cstdint>
+#include <vector>
 
 namespace nova {
 namespace vg {
@@ -19,9 +21,22 @@ void font_face_enumerate_codepoints(const font_face_t* face, void (*callback)(ui
 // Kerning between two consecutive code points, in pixels at `size` (kern table or GPOS).
 float font_face_get_kern_advance(font_face_t* face, float size_, codepoint_t ch1, codepoint_t ch2);
 
-// `codepoint` was just read from `it`. If it starts an f-ligature the font applies (ffi, ffl, ff,
-// fi, fl) the rest of the sequence is consumed from `it` and the ligature's code point returned.
-codepoint_t font_face_apply_ligature(font_face_t* face, text_iterator_t* it, codepoint_t codepoint);
+// A text shaped by libstb (font::shape): the glyphs to draw, in visual order, with the pen already placed (kerning,
+// ligatures, joined and mirrored letters, marks), in pixels at the font size, y down.
+struct shaped_glyph_t {
+    std::uint32_t glyph; // glyph index of the font
+    float x;             // where the glyph is drawn, from the start of the text
+    float y;             // offset from the baseline (mark placement)
+};
+
+// Shapes `text`; fills `glyphs` (when not null) and returns the advance of the whole text. UTF-8, UTF-16 or UTF-32.
+float font_face_shape(font_face_t* face, float size_, const void* text, int length_, text_encoding_t encoding, std::vector<shaped_glyph_t>* glyphs);
+
+void font_face_get_glyph_index_metrics(font_face_t* face, float size_, std::uint32_t glyph_index, float* advance_width, float* left_side_bearing, rect_t* extents);
+
+// The outline of a glyph by index (what font_face_shape returns), at (x, y); returns its own advance.
+float font_face_get_glyph_index_path(font_face_t* face, float size_, float x, float y, std::uint32_t glyph, stb::outline& path_);
+float font_face_traverse_glyph_index_path(font_face_t* face, float size_, float x, float y, std::uint32_t glyph, path_traverse_func_t traverse_func, void* closure);
 
 } // namespace vg
 } // namespace nova

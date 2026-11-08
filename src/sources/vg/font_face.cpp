@@ -199,15 +199,6 @@ struct font_face_impl {
     std::unordered_map<codepoint_t, std::unique_ptr<glyph_entry>> cache;
     destroy_func_t destroy_func = nullptr;
     void* closure = nullptr;
-    // Ligatures the font's GSUB `liga`/`clig` applies to f-sequences (see
-    // font_face_apply_ligature()); built lazily, once, under `mutex`.
-    int ligatures_ready = 0;
-    int ligature_count = 0;
-    struct {
-        codepoint_t seq[3];
-        int len;
-        codepoint_t ligature;
-    } ligatures[5];
 
     explicit font_face_impl(stb::font f) : ft(std::move(f)), design(ft.design_metrics()) {}
 };
@@ -218,13 +209,13 @@ static uint32_t glyph_index_of(const font_face_t* face, codepoint_t codepoint)
     return codepoint > 0x10FFFFu ? 0u : face->ft.glyph_index(static_cast<char32_t>(codepoint));
 }
 
-static glyph_entry* font_face_get_glyph(font_face_t* face, codepoint_t codepoint)
+static glyph_entry* font_face_get_glyph_by_index(font_face_t* face, uint32_t index)
 {
     novasvg_mutex_lock(&face->mutex);
-    auto& slot = face->cache[codepoint];
+    auto& slot = face->cache[index];
     if(!slot) {
         auto glyph = std::make_unique<glyph_entry>();
-        glyph->index = glyph_index_of(face, codepoint);
+        glyph->index = index;
         stb::glyph_metrics info = face->ft.glyph_info(glyph->index);
         glyph->advance_width = info.advance;
         glyph->left_side_bearing = info.lsb;
@@ -238,6 +229,11 @@ static glyph_entry* font_face_get_glyph(font_face_t* face, codepoint_t codepoint
     glyph_entry* result = slot.get();
     novasvg_mutex_unlock(&face->mutex);
     return result;
+}
+
+static glyph_entry* font_face_get_glyph(font_face_t* face, codepoint_t codepoint)
+{
+    return font_face_get_glyph_by_index(face, glyph_index_of(face, codepoint));
 }
 
 font_face_t* font_face_load_from_file(const char* filename, int ttcindex)
@@ -356,8 +352,13 @@ void font_face_get_metrics(const font_face_t* face, float size_, float* ascent, 
 
 void font_face_get_glyph_metrics(font_face_t* face, float size_, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents)
 {
+    font_face_get_glyph_index_metrics(face, size_, glyph_index_of(face, codepoint), advance_width, left_side_bearing, extents);
+}
+
+void font_face_get_glyph_index_metrics(font_face_t* face, float size_, std::uint32_t glyph_index, float* advance_width, float* left_side_bearing, rect_t* extents)
+{
     float scale = font_face_get_scale(face, size_);
-    glyph_entry* glyph = font_face_get_glyph(face, codepoint);
+    glyph_entry* glyph = font_face_get_glyph_by_index(face, glyph_index);
     if(advance_width) *advance_width = glyph->advance_width * scale;
     if(left_side_bearing) *left_side_bearing = glyph->left_side_bearing * scale;
     if(extents) {
@@ -402,6 +403,16 @@ float font_face_get_glyph_path(font_face_t* face, float size_, float x, float y,
 
 float font_face_traverse_glyph_path(font_face_t* face, float size_, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure)
 {
+    return font_face_traverse_glyph_index_path(face, size_, x, y, glyph_index_of(face, codepoint), traverse_func, closure);
+}
+
+float font_face_get_glyph_index_path(font_face_t* face, float size_, float x, float y, std::uint32_t glyph, stb::outline& path_)
+{
+    return font_face_traverse_glyph_index_path(face, size_, x, y, glyph, glyph_traverse_func, &path_);
+}
+
+float font_face_traverse_glyph_index_path(font_face_t* face, float size_, float x, float y, std::uint32_t glyph_index, path_traverse_func_t traverse_func, void* closure)
+{
     float scale = font_face_get_scale(face, size_);
     matrix_t matrix;
     matrix_init_translate(&matrix, x, y);
@@ -409,7 +420,7 @@ float font_face_traverse_glyph_path(font_face_t* face, float size_, float x, flo
 
     point_t points[3];
     point_t current_point = {0, 0};
-    glyph_entry* glyph = font_face_get_glyph(face, codepoint);
+    glyph_entry* glyph = font_face_get_glyph_by_index(face, glyph_index);
     for(const stb::outline_command& cmd : glyph->outline) {
         switch(cmd.op) {
         case stb::outline_op::move_to:
@@ -458,125 +469,77 @@ float font_face_traverse_glyph_path(font_face_t* face, float size_, float x, flo
     return glyph->advance_width * scale;
 }
 
-// Builds (once) the list of f-ligatures this font's own GSUB applies. A sequence is only taken when the
-// glyph the shaper substitutes is the very glyph the Unicode presentation-form code point (U+FB00..FB04)
-// maps to, so both measuring and painting can simply swap in that code point: a font without a
-// `liga`/`clig` for the sequence (or whose ligature glyph has no such code point) is left as it was.
-static void font_face_init_ligatures(font_face_t* face)
+static std::string text_to_utf8(const void* text, int length_, text_encoding_t encoding)
 {
-    static const struct { codepoint_t seq[3]; int len; codepoint_t ligature; } candidates[5] = {
-        {{'f', 'f', 'i'}, 3, 0xFB03}, {{'f', 'f', 'l'}, 3, 0xFB04}, {{'f', 'f', 0}, 2, 0xFB00},
-        {{'f', 'i', 0}, 2, 0xFB01}, {{'f', 'l', 0}, 2, 0xFB02},
-    };
-    novasvg_mutex_lock(&face->mutex);
-    if(!face->ligatures_ready) {
-        face->ligature_count = 0;
-        for(int c = 0; c < 5; ++c) {
-            bool ok = true;
-            std::string text;
-            for(int i = 0; i < candidates[c].len; ++i) {
-                if(glyph_index_of(face, candidates[c].seq[i]) == 0)
-                    ok = false;
-                text.push_back(static_cast<char>(candidates[c].seq[i]));
-            }
-            uint32_t presentation = glyph_index_of(face, candidates[c].ligature);
-            if(!ok || presentation == 0)
-                continue;
-            try {
-                std::vector<uint32_t> shaped = face->ft.shape_glyphs(text);
-                if(shaped.size() != 1 || shaped[0] != presentation)
-                    continue;
-            } catch(...) {
-                continue;
-            }
-            auto& e = face->ligatures[face->ligature_count++];
-            for(int i = 0; i < 3; ++i)
-                e.seq[i] = candidates[c].seq[i];
-            e.len = candidates[c].len;
-            e.ligature = candidates[c].ligature;
+    std::string utf8;
+    text_iterator_t it;
+    text_iterator_init(&it, text, length_, encoding);
+    while(text_iterator_has_next(&it)) {
+        const codepoint_t c = text_iterator_next(&it);
+        if(c < 0x80) {
+            utf8.push_back(static_cast<char>(c));
+        } else if(c < 0x800) {
+            utf8.push_back(static_cast<char>(0xC0 | (c >> 6)));
+            utf8.push_back(static_cast<char>(0x80 | (c & 0x3F)));
+        } else if(c < 0x10000) {
+            utf8.push_back(static_cast<char>(0xE0 | (c >> 12)));
+            utf8.push_back(static_cast<char>(0x80 | ((c >> 6) & 0x3F)));
+            utf8.push_back(static_cast<char>(0x80 | (c & 0x3F)));
+        } else {
+            utf8.push_back(static_cast<char>(0xF0 | ((c >> 18) & 0x07)));
+            utf8.push_back(static_cast<char>(0x80 | ((c >> 12) & 0x3F)));
+            utf8.push_back(static_cast<char>(0x80 | ((c >> 6) & 0x3F)));
+            utf8.push_back(static_cast<char>(0x80 | (c & 0x3F)));
         }
-        face->ligatures_ready = 1;
     }
-    novasvg_mutex_unlock(&face->mutex);
+    return utf8;
 }
 
-codepoint_t font_face_apply_ligature(font_face_t* face, text_iterator_t* it, codepoint_t codepoint)
+float font_face_shape(font_face_t* face, float size_, const void* text, int length_, text_encoding_t encoding, std::vector<shaped_glyph_t>* glyphs)
 {
-    if(codepoint != 'f')
-        return codepoint;
-    if(!face->ligatures_ready)
-        font_face_init_ligatures(face);
-    for(int k = 0; k < face->ligature_count; ++k) {
-        const auto& e = face->ligatures[k];
-        text_iterator_t peek = *it;
-        int matched = 1;
-        for(int i = 1; i < e.len; ++i) {
-            if(!text_iterator_has_next(&peek) || text_iterator_next(&peek) != e.seq[i]) {
-                matched = 0;
-                break;
-            }
-        }
-        if(matched) {
-            *it = peek;
-            return e.ligature;
-        }
+    if(glyphs)
+        glyphs->clear();
+    const float scale = font_face_get_scale(face, size_);
+    std::vector<stb::shaped_glyph> shaped;
+    try {
+        shaped = face->ft.shape(text_to_utf8(text, length_, encoding));
+    } catch(...) {
+        return 0.f;
     }
-    return codepoint;
+    float pen = 0.f;
+    for(const stb::shaped_glyph& g : shaped) {
+        if(glyphs)
+            glyphs->push_back({g.glyph, pen + g.x_offset * scale, -g.y_offset * scale});
+        pen += g.x_advance * scale;
+    }
+    return pen;
 }
 
 float font_face_text_extents(font_face_t* face, float size_, const void* text, int length_, text_encoding_t encoding, rect_t* extents)
 {
-    text_iterator_t it;
-    text_iterator_init(&it, text, length_, encoding);
-    rect_t* text_extents = NULL;
-    float total_advance_width = 0.f;
-    codepoint_t previous = 0;
-    bool has_previous = false;
-    while(text_iterator_has_next(&it)) {
-        codepoint_t codepoint = text_iterator_next(&it);
-        codepoint = font_face_apply_ligature(face, &it, codepoint);
-        if(has_previous)
-            total_advance_width += font_face_get_kern_advance(face, size_, previous, codepoint);
-        previous = codepoint;
-        has_previous = true;
+    std::vector<shaped_glyph_t> glyphs;
+    const float advance = font_face_shape(face, size_, text, length_, encoding, extents ? &glyphs : nullptr);
+    if(!extents)
+        return advance;
 
-        float advance_width;
-        if(extents == NULL) {
-            font_face_get_glyph_metrics(face, size_, codepoint, &advance_width, NULL, NULL);
-            total_advance_width += advance_width;
+    const float scale = font_face_get_scale(face, size_);
+    bool first = true;
+    float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+    for(const shaped_glyph_t& g : glyphs) {
+        const glyph_entry* entry = font_face_get_glyph_by_index(face, g.glyph);
+        const float gx1 = g.x + entry->x1 * scale, gx2 = g.x + entry->x2 * scale;
+        const float gy1 = g.y - entry->y2 * scale, gy2 = g.y - entry->y1 * scale;
+        if(first) {
+            x1 = gx1; x2 = gx2; y1 = gy1; y2 = gy2; first = false;
             continue;
         }
-
-        rect_t glyph_extents;
-        font_face_get_glyph_metrics(face, size_, codepoint, &advance_width, NULL, &glyph_extents);
-
-        glyph_extents.x += total_advance_width;
-        total_advance_width += advance_width;
-        if(text_extents == NULL) {
-            text_extents = extents;
-            *text_extents = glyph_extents;
-            continue;
-        }
-
-        float x1 = STB_MIN(text_extents->x, glyph_extents.x);
-        float y1 = STB_MIN(text_extents->y, glyph_extents.y);
-        float x2 = STB_MAX(text_extents->x + text_extents->w, glyph_extents.x + glyph_extents.w);
-        float y2 = STB_MAX(text_extents->y + text_extents->h, glyph_extents.y + glyph_extents.h);
-
-        text_extents->x = x1;
-        text_extents->y = y1;
-        text_extents->w = x2 - x1;
-        text_extents->h = y2 - y1;
+        x1 = STB_MIN(x1, gx1); y1 = STB_MIN(y1, gy1); x2 = STB_MAX(x2, gx2); y2 = STB_MAX(y2, gy2);
     }
-
-    if(extents && !text_extents) {
-        extents->x = 0;
-        extents->y = 0;
-        extents->w = 0;
-        extents->h = 0;
-    }
-
-    return total_advance_width;
+    extents->x = first ? 0.f : x1;
+    extents->y = first ? 0.f : y1;
+    extents->w = first ? 0.f : x2 - x1;
+    extents->h = first ? 0.f : y2 - y1;
+    return advance;
 }
 
 typedef struct font_face_entry {
