@@ -39,6 +39,10 @@
 - ADR-0011 step 1: the eight C enums in `render.h` (`fill_rule_t`, `line_cap_t`, `line_join_t`, `spread_method_t`,
   `texture_type_t`, `text_encoding_t`, `path_command_t`, `operator_t`) are now `enum class`; the duplicate enum classes in
   `canvas.h` and their cast code are gone. `operator_t` became `blend_mode` (all Porter-Duff and CSS modes); `xor` is `exclusive_or` (`xor` is a C++ keyword; also `porter_duff::exclusive_or`).
+- ADR-0011 step 2 (part 1): `matrix_t` and `point_t` are `stb::matrix` and `stb::point`. The 17 `matrix_*` C functions are gone:
+  call sites use `stb::matrix::translation/scaling/rotation/shearing`, `.translate/.scale/.rotate/.shear`, `.then`, `.map` and
+  `.inverse()`; three helpers remain in `render.h` (`map_points`, `mapped_bounds`, `parse_matrix`). `transform::inverse()`
+  of a singular matrix now gives the identity instead of an uninitialised matrix. `to_matrix` (a copy) is removed.
 
 ## [0.11.5] - 2026-11-05
 

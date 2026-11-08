@@ -22,7 +22,9 @@ Where it is still used (calls / type uses, outside `render.h`):
 Remove the layer in four steps, each one gated (tests, golden 0 diff, ASAN), none changing behaviour:
 1. **Enums** `*_t` -> `enum class` in the style of ADR-0004. DONE: 8 enums; `operator_t` merged into `blend_mode`,
    the duplicate enum classes in `canvas.h` removed; golden 0 diff.
-2. **Value types**: `point_t`, `rect_t`, `matrix_t`, `color_t` -> `stb::outline` point, a local `rect`, `stb::matrix`,
+2. **Value types** (matrix and point DONE 2026-11-08, golden 0 diff; the arithmetic of `stb::matrix` equals the old C one,
+   so no pixel moved). `color_t` is a float RGBA used only for gradient stops (not `stb::color`, which is 8-bit), and `rect_t`
+   has no libstb type: both go with step 3 (`paint`, and the existing `vg::rect`). Original plan: `point_t`, `rect_t`, `matrix_t`, `color_t` -> `stb::outline` point, a local `rect`, `stb::matrix`,
    `stb::color`. The golden set decides if `stb::matrix::map` (no fused multiply-add) changes any pixel.
 3. **Handles -> classes** with RAII: `surface`, `paint`, `font_face`, `font_face_cache` get member functions
    instead of `surface_*(h, ...)`; `canvas_t` goes away because `raster_canvas` already is the canvas.
