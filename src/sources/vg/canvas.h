@@ -33,7 +33,7 @@ namespace nova::vg {
 class point {
 public:
     constexpr point() = default;
-    constexpr point(const point_t& point_) : point(point_.x, point_.y) {}
+    constexpr point(const stb::point& point_) : point(point_.x, point_.y) {}
     constexpr point(float x, float y) : x(x), y(y) {}
 
     constexpr void move(float dx, float dy) { x += dx; y += dy; }

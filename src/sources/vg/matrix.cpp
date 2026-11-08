@@ -103,12 +103,12 @@ void matrix_map(const matrix_t* matrix, float x, float y, float* xx, float* yy)
     *yy = x * matrix->b + y * matrix->d + matrix->f;
 }
 
-void matrix_map_point(const matrix_t* matrix, const point_t* src, point_t* dst)
+void matrix_map_point(const matrix_t* matrix, const stb::point* src, stb::point* dst)
 {
     matrix_map(matrix, src->x, src->y, &dst->x, &dst->y);
 }
 
-void matrix_map_points(const matrix_t* matrix, const point_t* src, point_t* dst, int count)
+void matrix_map_points(const matrix_t* matrix, const stb::point* src, stb::point* dst, int count)
 {
     for(int i = 0; i < count; ++i) {
         matrix_map_point(matrix, &src[i], &dst[i]);
@@ -117,7 +117,7 @@ void matrix_map_points(const matrix_t* matrix, const point_t* src, point_t* dst,
 
 void matrix_map_rect(const matrix_t* matrix, const rect_t* src, rect_t* dst)
 {
-    point_t p[4];
+    stb::point p[4];
     p[0].x = src->x;
     p[0].y = src->y;
     p[1].x = src->x + src->w;

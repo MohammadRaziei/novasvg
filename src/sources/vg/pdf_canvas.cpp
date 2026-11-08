@@ -316,9 +316,9 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const font& fon
         const matrix_t* transform_;
     } s{this, transform_};
 
-    auto traverse = [](void* closure, path_command command, const point_t* points, int) {
+    auto traverse = [](void* closure, path_command command, const stb::point* points, int) {
         auto* s = static_cast<sink*>(closure);
-        auto pt = [&](const point_t& p) {
+        auto pt = [&](const stb::point& p) {
             point q = s->transform_ ? apply(*s->transform_, p.x, p.y) : point(p.x, p.y);
             return num(q.x) + " " + num(q.y);
         };

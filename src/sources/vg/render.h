@@ -89,17 +89,6 @@ typedef void (*write_func_t)(void* closure, void* data, int size_);
 #define NOVA_RAD2DEG(x) ((x) * (180.0f / NOVA_PI))
 
 /**
- * @brief A structure representing a point in 2D space.
- */
-typedef struct {
-    float x; ///< The x-coordinate of the point.
-    float y; ///< The y-coordinate of the point.
-} point_t;
-
-#define NOVA_MAKE_POINT(x, y) (point_t{x, y})
-#define NOVA_EMPTY_POINT NOVA_MAKE_POINT(0, 0)
-
-/**
  * @brief A structure representing a rectangle in 2D space.
  */
 typedef struct {
@@ -244,20 +233,20 @@ NOVA_API void matrix_map(const matrix_t* matrix, float x, float y, float* xx, fl
  * @brief Transforms the `src` point using `matrix` and stores the result in `dst`.
  * @note `src` and `dst` can be identical.
  * @param matrix A pointer to a `matrix_t` object.
- * @param src A pointer to the `point_t` object to transform.
- * @param dst A pointer to the `point_t` to store the transformed point.
+ * @param src A pointer to the `stb::point` object to transform.
+ * @param dst A pointer to the `stb::point` to store the transformed point.
  */
-NOVA_API void matrix_map_point(const matrix_t* matrix, const point_t* src, point_t* dst);
+NOVA_API void matrix_map_point(const matrix_t* matrix, const stb::point* src, stb::point* dst);
 
 /**
  * @brief Transforms an array of `src` points using `matrix` and stores the results in `dst`.
  * @note `src` and `dst` can be identical.
  * @param matrix A pointer to a `matrix_t` object.
- * @param src A pointer to the array of `point_t` objects to transform.
- * @param dst A pointer to the array of `point_t` to store the transformed points.
+ * @param src A pointer to the array of `stb::point` objects to transform.
+ * @param dst A pointer to the array of `stb::point` to store the transformed points.
  * @param count The number of points to transform.
  */
-NOVA_API void matrix_map_points(const matrix_t* matrix, const point_t* src, point_t* dst, int count);
+NOVA_API void matrix_map_points(const matrix_t* matrix, const stb::point* src, stb::point* dst, int count);
 
 /**
  * @brief Transforms the `src` rectangle using `matrix` and stores the result in `dst`.
@@ -299,7 +288,7 @@ enum class path_command : int {
  * @param points An array of points associated with the command.
  * @param npoints The number of points in the array.
  */
-typedef void (*path_traverse_func_t)(void* closure, path_command command, const point_t* points, int npoints);
+typedef void (*path_traverse_func_t)(void* closure, path_command command, const stb::point* points, int npoints);
 
 /**
  * @brief Text encodings used for converting text data to code points.
@@ -1562,10 +1551,10 @@ NOVA_API void canvas_map(const canvas_t* canvas, float x, float y, float* xx, fl
  * @brief Transforms the `src` point using the current transformation matrix and stores the result in `dst`.
  * @note `src` and `dst` can be identical.
  * @param canvas A pointer to a `canvas_t` object.
- * @param src A pointer to the `point_t` point to transform.
- * @param dst A pointer to the `point_t` to store the transformed point.
+ * @param src A pointer to the `stb::point` point to transform.
+ * @param dst A pointer to the `stb::point` to store the transformed point.
  */
-NOVA_API void canvas_map_point(const canvas_t* canvas, const point_t* src, point_t* dst);
+NOVA_API void canvas_map_point(const canvas_t* canvas, const stb::point* src, stb::point* dst);
 
 /**
  * @brief Transforms the `src` rectangle using the current transformation matrix and stores the result in `dst`.

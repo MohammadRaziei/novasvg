@@ -423,7 +423,7 @@ void canvas_map(const canvas_t* canvas, float x, float y, float* xx, float* yy)
     matrix_map(&canvas->state->matrix, x, y, xx, yy);
 }
 
-void canvas_map_point(const canvas_t* canvas, const point_t* src, point_t* dst)
+void canvas_map_point(const canvas_t* canvas, const stb::point* src, stb::point* dst)
 {
     matrix_map_point(&canvas->state->matrix, src, dst);
 }

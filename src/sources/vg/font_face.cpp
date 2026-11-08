@@ -378,7 +378,7 @@ float font_face_get_kern_advance(font_face_t* face, float size_, codepoint_t ch1
     return face->ft.glyph_kerning(a, b) * scale;
 }
 
-static void glyph_traverse_func(void* closure, path_command command, const point_t* points, int npoints)
+static void glyph_traverse_func(void* closure, path_command command, const stb::point* points, int npoints)
 {
     stb::outline* path_ = static_cast<stb::outline*>(closure);
     switch(command) {
@@ -418,8 +418,8 @@ float font_face_traverse_glyph_index_path(font_face_t* face, float size_, float 
     matrix_init_translate(&matrix, x, y);
     matrix_scale(&matrix, scale, -scale);
 
-    point_t points[3];
-    point_t current_point = {0, 0};
+    stb::point points[3];
+    stb::point current_point = {0, 0};
     glyph_entry* glyph = font_face_get_glyph_by_index(face, glyph_index);
     for(const stb::outline_command& cmd : glyph->outline) {
         switch(cmd.op) {
