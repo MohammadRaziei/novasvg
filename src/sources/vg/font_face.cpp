@@ -414,9 +414,9 @@ float font_face_get_glyph_index_path(font_face_t* face, float size_, float x, fl
 float font_face_traverse_glyph_index_path(font_face_t* face, float size_, float x, float y, std::uint32_t glyph_index, path_traverse_func_t traverse_func, void* closure)
 {
     float scale = font_face_get_scale(face, size_);
-    matrix_t matrix;
-    matrix_init_translate(&matrix, x, y);
-    matrix_scale(&matrix, scale, -scale);
+    stb::matrix matrix;
+    matrix = stb::matrix::translation(x, y);
+    matrix.scale(scale, -scale);
 
     stb::point points[3];
     stb::point current_point = {0, 0};
@@ -427,14 +427,14 @@ float font_face_traverse_glyph_index_path(font_face_t* face, float size_, float 
             points[0].x = cmd.p[0].x;
             points[0].y = cmd.p[0].y;
             current_point = points[0];
-            matrix_map_points(&matrix, points, points, 1);
+            map_points(matrix, points, points, 1);
             traverse_func(closure, path_command::move_to, points, 1);
             break;
         case stb::outline_op::line_to:
             points[0].x = cmd.p[0].x;
             points[0].y = cmd.p[0].y;
             current_point = points[0];
-            matrix_map_points(&matrix, points, points, 1);
+            map_points(matrix, points, points, 1);
             traverse_func(closure, path_command::line_to, points, 1);
             break;
         case stb::outline_op::quad_to: // TrueType: raised to a cubic, as the renderer only knows cubics
@@ -445,7 +445,7 @@ float font_face_traverse_glyph_index_path(font_face_t* face, float size_, float 
             points[2].x = cmd.p[1].x;
             points[2].y = cmd.p[1].y;
             current_point = points[2];
-            matrix_map_points(&matrix, points, points, 3);
+            map_points(matrix, points, points, 3);
             traverse_func(closure, path_command::cubic_to, points, 3);
             break;
         case stb::outline_op::cubic_to: // CFF
@@ -456,7 +456,7 @@ float font_face_traverse_glyph_index_path(font_face_t* face, float size_, float 
             points[2].x = cmd.p[2].x;
             points[2].y = cmd.p[2].y;
             current_point = points[2];
-            matrix_map_points(&matrix, points, points, 3);
+            map_points(matrix, points, points, 3);
             traverse_func(closure, path_command::cubic_to, points, 3);
             break;
         case stb::outline_op::close:

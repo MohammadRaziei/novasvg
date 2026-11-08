@@ -11,7 +11,7 @@ namespace vg {
 
 #define COLOR_TABLE_SIZE 1024
 typedef struct {
-    matrix_t matrix;
+    stb::matrix matrix;
     spread_method spread;
     uint32_t colortable[COLOR_TABLE_SIZE];
     union {
@@ -27,7 +27,7 @@ typedef struct {
 } gradient_data_t;
 
 typedef struct {
-    matrix_t matrix;
+    stb::matrix matrix;
     uint8_t* data;
     int width;
     int height;

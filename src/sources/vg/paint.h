@@ -74,7 +74,7 @@ static void* paint_create(paint_type_t type_, size_t size_)
     return paint_;
 }
 
-static gradient_paint_t* gradient_create(gradient_type_t type_, spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
+static gradient_paint_t* gradient_create(gradient_type_t type_, spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
 {
     gradient_paint_t* gradient = static_cast<gradient_paint_t*>(paint_create(
         NOVA_PAINT_TYPE_GRADIENT,
@@ -82,7 +82,7 @@ static gradient_paint_t* gradient_create(gradient_type_t type_, spread_method sp
     ));
     gradient->type_ = type_;
     gradient->spread = spread;
-    gradient->matrix = matrix ? *matrix : NOVA_IDENTITY_MATRIX;
+    gradient->matrix = matrix ? *matrix : stb::matrix{};
     gradient->stops = (gradient_stop_t*)(gradient + 1);
     gradient->nstops = nstops;
 

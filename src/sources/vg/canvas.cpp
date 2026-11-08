@@ -25,7 +25,7 @@ static state_t* state_create(void)
     state->paint_ = NULL;
     state->font_face_ = NULL;
     state->color_ = NOVA_BLACK_COLOR;
-    state->matrix = NOVA_IDENTITY_MATRIX;
+    state->matrix = stb::matrix{};
     state->stroke.style = NOVA_DEFAULT_STROKE_STYLE;
     state->stroke.dash.offset = 0.f;
     novasvg_array_init(state->stroke.dash.array);
@@ -46,7 +46,7 @@ static void state_reset(state_t* state)
     state->paint_ = NULL;
     state->font_face_ = NULL;
     state->color_ = NOVA_BLACK_COLOR;
-    state->matrix = NOVA_IDENTITY_MATRIX;
+    state->matrix = stb::matrix{};
     state->stroke.style = NOVA_DEFAULT_STROKE_STYLE;
     state->stroke.dash.offset = 0.f;
     novasvg_array_clear(state->stroke.dash.array);
@@ -179,21 +179,21 @@ void canvas_set_color(canvas_t* canvas, const color_t* color_)
     canvas_set_rgba(canvas, color_->r, color_->g, color_->b, color_->a);
 }
 
-void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2, spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
+void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2, spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
 {
     paint_t* paint_ = paint_create_linear_gradient(x1, y1, x2, y2, spread, stops, nstops, matrix);
     canvas_set_paint(canvas, paint_);
     paint_destroy(paint_);
 }
 
-void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr, spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix)
+void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr, spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
 {
     paint_t* paint_ = paint_create_radial_gradient(cx, cy, cr, fx, fy, fr, spread, stops, nstops, matrix);
     canvas_set_paint(canvas, paint_);
     paint_destroy(paint_);
 }
 
-void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type type_, float opacity, const matrix_t* matrix)
+void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type type_, float opacity, const stb::matrix* matrix)
 {
     paint_t* paint_ = paint_create_texture(surface, type_, opacity, matrix);
     canvas_set_paint(canvas, paint_);
@@ -380,57 +380,57 @@ int canvas_get_dash_array(const canvas_t* canvas, const float** dashes)
 
 void canvas_translate(canvas_t* canvas, float tx, float ty)
 {
-    matrix_translate(&canvas->state->matrix, tx, ty);
+    canvas->state->matrix.translate(tx, ty);
 }
 
 void canvas_scale(canvas_t* canvas, float sx, float sy)
 {
-    matrix_scale(&canvas->state->matrix, sx, sy);
+    canvas->state->matrix.scale(sx, sy);
 }
 
 void canvas_shear(canvas_t* canvas, float shx, float shy)
 {
-    matrix_shear(&canvas->state->matrix, shx, shy);
+    canvas->state->matrix.shear(shx, shy);
 }
 
 void canvas_rotate(canvas_t* canvas, float angle)
 {
-    matrix_rotate(&canvas->state->matrix, angle);
+    canvas->state->matrix.rotate(angle);
 }
 
-void canvas_transform(canvas_t* canvas, const matrix_t* matrix)
+void canvas_transform(canvas_t* canvas, const stb::matrix* matrix)
 {
-    matrix_multiply(&canvas->state->matrix, matrix, &canvas->state->matrix);
+    canvas->state->matrix = (*matrix).then(canvas->state->matrix);
 }
 
 void canvas_reset_matrix(canvas_t* canvas)
 {
-    matrix_init_identity(&canvas->state->matrix);
+    canvas->state->matrix = stb::matrix{};
 }
 
-void canvas_set_matrix(canvas_t* canvas, const matrix_t* matrix)
+void canvas_set_matrix(canvas_t* canvas, const stb::matrix* matrix)
 {
-    canvas->state->matrix = matrix ? *matrix : NOVA_IDENTITY_MATRIX;
+    canvas->state->matrix = matrix ? *matrix : stb::matrix{};
 }
 
-void canvas_get_matrix(const canvas_t* canvas, matrix_t* matrix)
+void canvas_get_matrix(const canvas_t* canvas, stb::matrix* matrix)
 {
     *matrix = canvas->state->matrix;
 }
 
 void canvas_map(const canvas_t* canvas, float x, float y, float* xx, float* yy)
 {
-    matrix_map(&canvas->state->matrix, x, y, xx, yy);
+    { const stb::point p_ = canvas->state->matrix.map(x, y); (*xx) = p_.x; (*yy) = p_.y; }
 }
 
 void canvas_map_point(const canvas_t* canvas, const stb::point* src, stb::point* dst)
 {
-    matrix_map_point(&canvas->state->matrix, src, dst);
+    (*dst) = canvas->state->matrix.map((*src));
 }
 
 void canvas_map_rect(const canvas_t* canvas, const rect_t* src, rect_t* dst)
 {
-    matrix_map_rect(&canvas->state->matrix, src, dst);
+    mapped_bounds(canvas->state->matrix, src, dst);
 }
 
 void canvas_move_to(canvas_t* canvas, float x, float y)

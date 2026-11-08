@@ -876,9 +876,11 @@ void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const sp
     gradient_data_t data;
     data.spread = gradient->spread;
     data.matrix = gradient->matrix;
-    matrix_multiply(&data.matrix, &data.matrix, &state->matrix);
-    if(!matrix_invert(&data.matrix, &data.matrix))
+    data.matrix = data.matrix.then(state->matrix);
+    const auto inverse = data.matrix.inverse();
+    if(!inverse)
         return;
+    data.matrix = *inverse;
     int i, pos = 0, nstops = gradient->nstops;
     const gradient_stop_t *curr, *next, *start, *last;
     uint32_t curr_color, next_color, last_color;
@@ -955,10 +957,12 @@ void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_
     data.stride = texture->surface->stride;
     data.const_alpha = lroundf(state->opacity * texture->opacity * 256);
 
-    matrix_multiply(&data.matrix, &data.matrix, &state->matrix);
-    if(!matrix_invert(&data.matrix, &data.matrix))
+    data.matrix = data.matrix.then(state->matrix);
+    const auto inverse = data.matrix.inverse();
+    if(!inverse)
         return;
-    const matrix_t* matrix = &data.matrix;
+    data.matrix = *inverse;
+    const stb::matrix* matrix = &data.matrix;
     if(matrix->a == 1 && matrix->b == 0 && matrix->c == 0 && matrix->d == 1) {
         if(texture->type_ == texture_type::plain) {
             blend_untransformed_argb(canvas->surface, state->op, &data, span_buffer);

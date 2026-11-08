@@ -5,18 +5,18 @@ namespace nova::vg {
 
 transform::transform()
 {
-    matrix_init_identity(&m_matrix);
+    m_matrix = stb::matrix{};
 }
 
 transform::transform(float a, float b, float c, float d, float e, float f)
 {
-    matrix_init(&m_matrix, a, b, c, d, e, f);
+    m_matrix = stb::matrix{a, b, c, d, e, f};
 }
 
 transform transform::operator*(const transform& transform_) const
 {
-    matrix_t result;
-    matrix_multiply(&result, &transform_.m_matrix, &m_matrix);
+    stb::matrix result;
+    result = transform_.m_matrix.then(m_matrix);
     return result;
 }
 
@@ -77,25 +77,25 @@ transform& transform::post_shear(float shx, float shy)
 
 transform transform::inverse() const
 {
-    matrix_t inverse;
-    matrix_invert(&m_matrix, &inverse);
-    return inverse;
+    // A matrix that cannot be inverted gives the identity (it used to give an uninitialised matrix).
+    return m_matrix.inverse().value_or(stb::matrix{});
 }
 
 transform& transform::invert()
 {
-    matrix_invert(&m_matrix, &m_matrix);
+    if(const auto inverse = m_matrix.inverse())
+        m_matrix = *inverse;
     return *this;
 }
 
 void transform::reset()
 {
-    matrix_init_identity(&m_matrix);
+    m_matrix = stb::matrix{};
 }
 
 point transform::map_point(float x, float y) const
 {
-    matrix_map(&m_matrix, x, y, &x, &y);
+    { const stb::point p_ = m_matrix.map(x, y); x = p_.x; y = p_.y; }
     return point(x, y);
 }
 
@@ -111,7 +111,7 @@ rect transform::map_rect(const rect& rect_) const
     }
 
     rect_t result = {rect_.x, rect_.y, rect_.w, rect_.h};
-    matrix_map_rect(&m_matrix, &result, &result);
+    mapped_bounds(m_matrix, &result, &result);
     return result;
 }
 
@@ -127,18 +127,18 @@ float transform::y_scale() const
 
 bool transform::parse(const char* data, size_t length_)
 {
-    return matrix_parse(&m_matrix, data, length_);
+    return parse_matrix(&m_matrix, data, length_);
 }
 
 transform transform::rotated(float angle, float cx, float cy)
 {
-    matrix_t matrix;
+    stb::matrix matrix;
     if(cx == 0.f && cy == 0.f) {
-        matrix_init_rotate(&matrix, NOVA_DEG2RAD(angle));
+        matrix = stb::matrix::rotation(NOVA_DEG2RAD(angle));
     } else {
-        matrix_init_translate(&matrix, cx, cy);
-        matrix_rotate(&matrix, NOVA_DEG2RAD(angle));
-        matrix_translate(&matrix, -cx, -cy);
+        matrix = stb::matrix::translation(cx, cy);
+        matrix.rotate(NOVA_DEG2RAD(angle));
+        matrix.translate(-cx, -cy);
     }
 
     return matrix;
@@ -146,22 +146,22 @@ transform transform::rotated(float angle, float cx, float cy)
 
 transform transform::scaled(float sx, float sy)
 {
-    matrix_t matrix;
-    matrix_init_scale(&matrix, sx, sy);
+    stb::matrix matrix;
+    matrix = stb::matrix::scaling(sx, sy);
     return matrix;
 }
 
 transform transform::sheared(float shx, float shy)
 {
-    matrix_t matrix;
-    matrix_init_shear(&matrix, NOVA_DEG2RAD(shx), NOVA_DEG2RAD(shy));
+    stb::matrix matrix;
+    matrix = stb::matrix::shearing(NOVA_DEG2RAD(shx), NOVA_DEG2RAD(shy));
     return matrix;
 }
 
 transform transform::translated(float tx, float ty)
 {
-    matrix_t matrix;
-    matrix_init_translate(&matrix, tx, ty);
+    stb::matrix matrix;
+    matrix = stb::matrix::translation(tx, ty);
     return matrix;
 }
 
@@ -283,7 +283,7 @@ void raster_canvas::draw_image(const pixmap& image, const rect& dst_rect, const 
 {
     auto x_scale = dst_rect.w / src_rect.w;
     auto y_scale = dst_rect.h / src_rect.h;
-    matrix_t matrix = { x_scale, 0, 0, y_scale, -src_rect.x * x_scale, -src_rect.y * y_scale };
+    stb::matrix matrix = { x_scale, 0, 0, y_scale, -src_rect.x * x_scale, -src_rect.y * y_scale };
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform_.matrix());
     canvas_translate(m_canvas, dst_rect.x, dst_rect.y);
@@ -295,7 +295,7 @@ void raster_canvas::draw_image(const pixmap& image, const rect& dst_rect, const 
 
 void raster_canvas::blend_canvas(const raster_canvas& canvas, blend_mode blend_mode_, float opacity)
 {
-    matrix_t matrix = { 1, 0, 0, 1, static_cast<float>(canvas.x()), static_cast<float>(canvas.y()) };
+    stb::matrix matrix = { 1, 0, 0, 1, static_cast<float>(canvas.x()), static_cast<float>(canvas.y()) };
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_set_operator(m_canvas, static_cast<blend_mode>(blend_mode_));
     canvas_set_texture(m_canvas, canvas.surface(), texture_type::plain, opacity, &matrix);

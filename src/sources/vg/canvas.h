@@ -228,9 +228,8 @@ constexpr rect& rect::unite(const rect& o)
 class transform {
 public:
     transform();
-    transform(const stb::matrix& matrix);
     transform(float a, float b, float c, float d, float e, float f);
-    transform(const matrix_t& matrix) : m_matrix(matrix) {}
+    transform(const stb::matrix& matrix) : m_matrix(matrix) {}
 
     transform operator*(const transform& transform_) const;
     transform& operator*=(const transform& transform_);
@@ -259,8 +258,8 @@ public:
     float x_scale() const;
     float y_scale() const;
 
-    const matrix_t& matrix() const { return m_matrix; }
-    matrix_t& matrix() { return m_matrix; }
+    const stb::matrix& matrix() const { return m_matrix; }
+    stb::matrix& matrix() { return m_matrix; }
 
     bool parse(const char* data, size_t length_);
 
@@ -272,12 +271,9 @@ public:
     static const transform identity;
 
 private:
-    matrix_t m_matrix;
+    stb::matrix m_matrix;
 };
 
-// Conversions between the engine's Transform / the C API's matrix_t and the public stb::matrix.
-inline stb::matrix to_matrix(const matrix_t& m) { return stb::matrix{m.a, m.b, m.c, m.d, m.e, m.f}; }
-inline stb::matrix to_matrix(const transform& t) { return to_matrix(t.matrix()); }
 
 // A path is an stb::outline. The engine needs a few things on top of it (src/sources/vg/outline_util.cpp):
 //   arc_to      the SVG elliptical arc, as cubics, from the outline's current point
@@ -467,7 +463,7 @@ private:
     raster_canvas(int x, int y, int width, int height);
     surface_t* m_surface;
     canvas_t* m_canvas;
-    matrix_t m_translation;
+    stb::matrix m_translation;
     const int m_x;
     const int m_y;
 };

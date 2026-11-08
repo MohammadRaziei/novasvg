@@ -195,7 +195,7 @@ stb::outline cubics_only(const stb::outline& in)
 
 } // namespace
 
-void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const matrix_t* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data_, fill_rule winding)
+void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const stb::matrix* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data_, fill_rule winding)
 {
     span_buffer_reset(span_buffer);
 

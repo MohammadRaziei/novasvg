@@ -33,10 +33,10 @@ std::string num(float v)
     return s;
 }
 
-// `first` is applied first, then `second` (PDF row-vector convention, same as matrix_t).
-matrix_t then(const matrix_t& first, const matrix_t& second)
+// `first` is applied first, then `second` (PDF row-vector convention, same as stb::matrix).
+stb::matrix then(const stb::matrix& first, const stb::matrix& second)
 {
-    matrix_t r;
+    stb::matrix r;
     r.a = first.a * second.a + first.b * second.c;
     r.b = first.a * second.b + first.b * second.d;
     r.c = first.c * second.a + first.d * second.c;
@@ -46,12 +46,12 @@ matrix_t then(const matrix_t& first, const matrix_t& second)
     return r;
 }
 
-point apply(const matrix_t& m, float x, float y)
+point apply(const stb::matrix& m, float x, float y)
 {
     return point(m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f);
 }
 
-std::string matrix_str(const matrix_t& m)
+std::string matrix_str(const stb::matrix& m)
 {
     return num(m.a) + " " + num(m.b) + " " + num(m.c) + " " + num(m.d) + " " + num(m.e) + " " + num(m.f);
 }
@@ -73,7 +73,7 @@ pdf_canvas::pdf_canvas(float width, float height)
 {
     m_paints.emplace_back();
     // y points down in novasvg; one cm at the top of the page turns PDF space into that.
-    matrix_t base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
+    stb::matrix base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
     m_content += matrix_str(base) + " cm\n";
 }
 
@@ -187,7 +187,7 @@ void pdf_canvas::set_radial_gradient(float cx, float cy, float r, float fx, floa
 
 // A shading pattern for the current gradient paint, drawn through `transform` (the matrix of the operation).
 // Returns the pattern's object number, or 0 when the gradient has no stops (nothing to paint).
-int pdf_canvas::shading_pattern(const matrix_t& transform_)
+int pdf_canvas::shading_pattern(const stb::matrix& transform_)
 {
     const paint& p = m_paints.back();
     if(p.stops.empty())
@@ -235,8 +235,8 @@ int pdf_canvas::shading_pattern(const matrix_t& transform_)
     }
 
     // The pattern matrix maps pattern space to the *default page space*, not to the current CTM.
-    matrix_t base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
-    matrix_t m = then(then(p.matrix, transform_), base);
+    stb::matrix base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
+    stb::matrix m = then(then(p.matrix, transform_), base);
     int obj = add_object("<< /Type /Pattern /PatternType 2 /Shading " + shading + " /Matrix [" + matrix_str(m) + "] >>");
     std::string name = "P" + std::to_string(m_patterns.size());
     m_patterns.emplace_back(name, obj);
@@ -245,7 +245,7 @@ int pdf_canvas::shading_pattern(const matrix_t& transform_)
 
 // Selects the current paint as fill or stroke color in the content stream. `transform` is the operation's matrix
 // (only gradients need it). Returns false when there is nothing to paint.
-void pdf_canvas::begin_paint(bool stroke, const matrix_t& transform_)
+void pdf_canvas::begin_paint(bool stroke, const stb::matrix& transform_)
 {
     const paint& p = m_paints.back();
     if(p.type_ == paint::kind::solid) {
@@ -271,7 +271,7 @@ void pdf_canvas::begin_paint(bool stroke, const matrix_t& transform_)
     m_content += m_patterns.back().first + (stroke ? " SCN\n" : " scn\n");
 }
 
-void pdf_canvas::emit_path(const stb::outline& path_, const matrix_t* transform_)
+void pdf_canvas::emit_path(const stb::outline& path_, const stb::matrix* transform_)
 {
     if(path_.empty())
         return;
@@ -298,14 +298,14 @@ void pdf_canvas::emit_path(const stb::outline& path_, const matrix_t* transform_
     }
 }
 
-void pdf_canvas::emit_rect_path(const rect& rect_, const matrix_t* transform_)
+void pdf_canvas::emit_rect_path(const rect& rect_, const stb::matrix* transform_)
 {
     stb::outline path_;
     path_.add_rect(rect_.x, rect_.y, rect_.w, rect_.h);
     emit_path(path_, transform_);
 }
 
-void pdf_canvas::emit_text_path(const std::u32string_view& text, const font& font_, const point& origin, const matrix_t* transform_)
+void pdf_canvas::emit_text_path(const std::u32string_view& text, const font& font_, const point& origin, const stb::matrix* transform_)
 {
     font_face_t* face = font_.face().get();
     if(face == nullptr || font_.size_() <= 0.f)
@@ -313,7 +313,7 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const font& fon
 
     struct sink {
         pdf_canvas* self;
-        const matrix_t* transform_;
+        const stb::matrix* transform_;
     } s{this, transform_};
 
     auto traverse = [](void* closure, path_command command, const stb::point* points, int) {
@@ -436,7 +436,7 @@ int pdf_canvas::add_image(const pixmap& image, int* width, int* height)
 }
 
 // The whole image (w x h px) scaled so that `src` (in image pixels) lands on `dst`, clipped to `dst`.
-void pdf_canvas::place_image(int object, int w, int h, const rect& dst, const rect& src, const matrix_t* transform_, float alpha, blend_mode blend_mode_)
+void pdf_canvas::place_image(int object, int w, int h, const rect& dst, const rect& src, const stb::matrix* transform_, float alpha, blend_mode blend_mode_)
 {
     std::string name = "Im" + std::to_string(m_xobjects.size());
     m_xobjects.emplace_back(name, object);
@@ -493,11 +493,11 @@ void pdf_canvas::set_tiled_image(const pixmap& tile, const transform& transform_
 }
 
 // A tiling pattern for the current tiled paint, drawn through `transform` (the matrix of the operation).
-int pdf_canvas::tiling_pattern(const matrix_t& transform_)
+int pdf_canvas::tiling_pattern(const stb::matrix& transform_)
 {
     const paint& p = m_paints.back();
-    matrix_t base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
-    matrix_t m = then(then(p.matrix, transform_), base);
+    stb::matrix base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
+    stb::matrix m = then(then(p.matrix, transform_), base);
     const std::string w = std::to_string(p.tile_w), h = std::to_string(p.tile_h);
     // Tile space is y-down like the bitmap: the image's top row sits at y = 0.
     std::string content = w + " 0 0 -" + h + " 0 " + h + " cm\n/T Do\n";

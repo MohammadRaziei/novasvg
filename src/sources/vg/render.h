@@ -101,172 +101,17 @@ typedef struct {
 #define NOVA_MAKE_RECT(x, y, w, h) (rect_t{x, y, w, h})
 #define NOVA_EMPTY_RECT NOVA_MAKE_RECT(0, 0, 0, 0)
 
-/**
- * @brief A structure representing a 2D transformation matrix.
- */
-typedef struct matrix {
-    float a; ///< The horizontal scaling factor.
-    float b; ///< The vertical shearing factor.
-    float c; ///< The horizontal shearing factor.
-    float d; ///< The vertical scaling factor.
-    float e; ///< The horizontal translation offset.
-    float f; ///< The vertical translation offset.
-} matrix_t;
+// Matrices are stb::matrix and points are stb::point (<stb/outline.hpp>); the helpers below are what libstb does not have.
 
-#define NOVA_MAKE_MATRIX(a, b, c, d, e, f) (matrix_t{a, b, c, d, e, f})
-#define NOVA_MAKE_SCALE(x, y) NOVA_MAKE_MATRIX(x, 0, 0, y, 0, 0)
-#define NOVA_MAKE_TRANSLATE(x, y) NOVA_MAKE_MATRIX(1, 0, 0, 1, x, y)
-#define NOVA_IDENTITY_MATRIX NOVA_MAKE_MATRIX(1, 0, 0, 1, 0, 0)
+/// Maps `count` points through `matrix` (`src` and `dst` may be the same array).
+void map_points(const stb::matrix& matrix, const stb::point* src, stb::point* dst, int count);
 
-/**
- * @brief Initializes a 2D transformation matrix.
- * @param matrix A pointer to the `matrix_t` object to be initialized.
- * @param a The horizontal scaling factor.
- * @param b The vertical shearing factor.
- * @param c The horizontal shearing factor.
- * @param d The vertical scaling factor.
- * @param e The horizontal translation offset.
- * @param f The vertical translation offset.
- */
-NOVA_API void matrix_init(matrix_t* matrix, float a, float b, float c, float d, float e, float f);
+/// The bounding rectangle of `src` after `matrix` (`src` and `dst` may be the same rectangle).
+void mapped_bounds(const stb::matrix& matrix, const rect_t* src, rect_t* dst);
 
-/**
- * @brief Initializes a 2D transformation matrix to the identity matrix.
- * @param matrix A pointer to the `matrix_t` object to be initialized.
- */
-NOVA_API void matrix_init_identity(matrix_t* matrix);
-
-/**
- * @brief Initializes a 2D transformation matrix for translation.
- * @param matrix A pointer to the `matrix_t` object to be initialized.
- * @param tx The translation offset in the x-direction.
- * @param ty The translation offset in the y-direction.
- */
-NOVA_API void matrix_init_translate(matrix_t* matrix, float tx, float ty);
-
-/**
- * @brief Initializes a 2D transformation matrix for scaling.
- * @param matrix A pointer to the `matrix_t` object to be initialized.
- * @param sx The scaling factor in the x-direction.
- * @param sy The scaling factor in the y-direction.
- */
-NOVA_API void matrix_init_scale(matrix_t* matrix, float sx, float sy);
-
-/**
- * @brief Initializes a 2D transformation matrix for rotation.
- * @param matrix A pointer to the `matrix_t` object to be initialized.
- * @param angle The rotation angle in radians.
- */
-NOVA_API void matrix_init_rotate(matrix_t* matrix, float angle);
-
-/**
- * @brief Initializes a 2D transformation matrix for shearing.
- * @param matrix A pointer to the `matrix_t` object to be initialized.
- * @param shx The shearing factor in the x-direction.
- * @param shy The shearing factor in the y-direction.
- */
-NOVA_API void matrix_init_shear(matrix_t* matrix, float shx, float shy);
-
-/**
- * @brief Adds a translation with offsets `tx` and `ty` to the matrix.
- * @param matrix A pointer to the `matrix_t` object to be modified.
- * @param tx The translation offset in the x-direction.
- * @param ty The translation offset in the y-direction.
- */
-NOVA_API void matrix_translate(matrix_t* matrix, float tx, float ty);
-
-/**
- * @brief Scales the matrix by factors `sx` and `sy`
- * @param matrix A pointer to the `matrix_t` object to be modified.
- * @param sx The scaling factor in the x-direction.
- * @param sy The scaling factor in the y-direction.
- */
-NOVA_API void matrix_scale(matrix_t* matrix, float sx, float sy);
-
-/**
- * @brief Rotates the matrix by the specified angle (in radians).
- * @param matrix A pointer to the `matrix_t` object to be modified.
- * @param angle The rotation angle in radians.
- */
-NOVA_API void matrix_rotate(matrix_t* matrix, float angle);
-
-/**
- * @brief Shears the matrix by factors `shx` and `shy`.
- * @param matrix A pointer to the `matrix_t` object to be modified.
- * @param shx The shearing factor in the x-direction.
- * @param shy The shearing factor in the y-direction.
- */
-NOVA_API void matrix_shear(matrix_t* matrix, float shx, float shy);
-
-/**
- * @brief Multiplies `left` and `right` matrices and stores the result in `matrix`.
- * @note `matrix` can be identical to either `left` or `right`.
- * @param matrix A pointer to the `matrix_t` object to store the result.
- * @param left A pointer to the first `matrix_t` matrix.
- * @param right A pointer to the second `matrix_t` matrix.
- */
-NOVA_API void matrix_multiply(matrix_t* matrix, const matrix_t* left, const matrix_t* right);
-
-/**
- * @brief Calculates the inverse of `matrix` and stores it in `inverse`.
- *
- * If `inverse` is `NULL`, the function only checks if the matrix is invertible.
- *
- * @note `matrix` and `inverse` can be identical.
- * @param matrix A pointer to the `matrix_t` object to invert.
- * @param inverse A pointer to the `matrix_t` object to store the result, or `NULL`.
- * @return `true` if the matrix is invertible; `false` otherwise.
- */
-NOVA_API bool matrix_invert(const matrix_t* matrix, matrix_t* inverse);
-
-/**
- * @brief Transforms the point `(x, y)` using `matrix` and stores the result in `(xx, yy)`.
- * @param matrix A pointer to a `matrix_t` object.
- * @param x The x-coordinate of the point to transform.
- * @param y The y-coordinate of the point to transform.
- * @param xx A pointer to store the transformed x-coordinate.
- * @param yy A pointer to store the transformed y-coordinate.
- */
-NOVA_API void matrix_map(const matrix_t* matrix, float x, float y, float* xx, float* yy);
-
-/**
- * @brief Transforms the `src` point using `matrix` and stores the result in `dst`.
- * @note `src` and `dst` can be identical.
- * @param matrix A pointer to a `matrix_t` object.
- * @param src A pointer to the `stb::point` object to transform.
- * @param dst A pointer to the `stb::point` to store the transformed point.
- */
-NOVA_API void matrix_map_point(const matrix_t* matrix, const stb::point* src, stb::point* dst);
-
-/**
- * @brief Transforms an array of `src` points using `matrix` and stores the results in `dst`.
- * @note `src` and `dst` can be identical.
- * @param matrix A pointer to a `matrix_t` object.
- * @param src A pointer to the array of `stb::point` objects to transform.
- * @param dst A pointer to the array of `stb::point` to store the transformed points.
- * @param count The number of points to transform.
- */
-NOVA_API void matrix_map_points(const matrix_t* matrix, const stb::point* src, stb::point* dst, int count);
-
-/**
- * @brief Transforms the `src` rectangle using `matrix` and stores the result in `dst`.
- * @note `src` and `dst` can be identical.
- * @param matrix A pointer to a `matrix_t` object.
- * @param src A pointer to the `rect_t` object to transform.
- * @param dst A pointer to the `rect_t` to store the transformed rectangle.
- */
-NOVA_API void matrix_map_rect(const matrix_t* matrix, const rect_t* src, rect_t* dst);
-
-/**
- * @brief Parses an svg transform string into a matrix.
- * 
- * @param matrix A pointer to a `matrix_t` object to store the result.
- * @param data Input svg transform string.
- * @param length Length of the string, or `-1` if null-terminated.
- * 
- * @return `true` on success, `false` on failure.
- */
-NOVA_API bool matrix_parse(matrix_t* matrix, const char* data, int length_);
+/// Parses an SVG `transform` list (`matrix(...) translate(...) ...`) into `matrix`. Returns false on a syntax error.
+/// `length` is the byte length of `data`, or -1 for a NUL-terminated string.
+bool parse_matrix(stb::matrix* matrix, const char* data, int length);
 
 /**
  * @brief Enumeration defining path commands.
@@ -912,7 +757,7 @@ NOVA_API paint_t* paint_create_color(const color_t* color_);
  * @return A pointer to the created `paint_t` object.
  */
 NOVA_API paint_t* paint_create_linear_gradient(float x1, float y1, float x2, float y2,
-    spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
+    spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
 
 /**
  * @brief Creates a radial gradient paint.
@@ -930,7 +775,7 @@ NOVA_API paint_t* paint_create_linear_gradient(float x1, float y1, float x2, flo
  * @return A pointer to the created `paint_t` object.
  */
 NOVA_API paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr,
-    spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
+    spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
 
 /**
  * @brief Creates a texture paint from a surface.
@@ -941,7 +786,7 @@ NOVA_API paint_t* paint_create_radial_gradient(float cx, float cy, float cr, flo
  * @param matrix Optional transformation matrix.
  * @return A pointer to the created `paint_t` object.
  */
-NOVA_API paint_t* paint_create_texture(surface_t* surface, texture_type type_, float opacity, const matrix_t* matrix);
+NOVA_API paint_t* paint_create_texture(surface_t* surface, texture_type type_, float opacity, const stb::matrix* matrix);
 
 /**
  * @brief Increments the reference count of a paint object.
@@ -1127,7 +972,7 @@ NOVA_API void canvas_set_color(canvas_t* canvas, const color_t* color_);
  * @param matrix Optional transformation matrix.
  */
 NOVA_API void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2,
-    spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
+    spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
 
 /**
  * @brief Sets the current paint to a radial gradient.
@@ -1147,7 +992,7 @@ NOVA_API void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, f
  * @param matrix Optional transformation matrix.
  */
 NOVA_API void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr,
-    spread_method spread, const gradient_stop_t* stops, int nstops, const matrix_t* matrix);
+    spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
 
 /**
  * @brief Sets the current paint to a texture.
@@ -1160,7 +1005,7 @@ NOVA_API void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, f
  * @param opacity The opacity of the texture (0 to 1).
  * @param matrix Optional transformation matrix.
  */
-NOVA_API void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type type_, float opacity, const matrix_t* matrix);
+NOVA_API void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type type_, float opacity, const stb::matrix* matrix);
 
 /**
  * @brief Sets the current paint.
@@ -1513,9 +1358,9 @@ NOVA_API void canvas_rotate(canvas_t* canvas, float angle);
 /**
  * @brief Multiplies the current transformation matrix with the specified `matrix`.
  * @param canvas A pointer to a `canvas_t` object.
- * @param matrix A pointer to the `matrix_t` object.
+ * @param matrix A pointer to the `stb::matrix` object.
  */
-NOVA_API void canvas_transform(canvas_t* canvas, const matrix_t* matrix);
+NOVA_API void canvas_transform(canvas_t* canvas, const stb::matrix* matrix);
 
 /**
  * @brief Resets the current transformation matrix to the identity matrix.
@@ -1526,16 +1371,16 @@ NOVA_API void canvas_reset_matrix(canvas_t* canvas);
 /**
  * @brief Resets the current transformation matrix to the specified `matrix`.
  * @param canvas A pointer to a `canvas_t` object.
- * @param matrix A pointer to the `matrix_t` object.
+ * @param matrix A pointer to the `stb::matrix` object.
  */
-NOVA_API void canvas_set_matrix(canvas_t* canvas, const matrix_t* matrix);
+NOVA_API void canvas_set_matrix(canvas_t* canvas, const stb::matrix* matrix);
 
 /**
  * @brief Stores the current transformation matrix in `matrix`.
  * @param canvas A pointer to a `canvas_t` object.
- * @param A pointer to the `matrix_t` to store the matrix.
+ * @param A pointer to the `stb::matrix` to store the matrix.
  */
-NOVA_API void canvas_get_matrix(const canvas_t* canvas, matrix_t* matrix);
+NOVA_API void canvas_get_matrix(const canvas_t* canvas, stb::matrix* matrix);
 
 /**
  * @brief Transforms the point `(x, y)` using the current transformation matrix and stores the result in `(xx, yy)`.

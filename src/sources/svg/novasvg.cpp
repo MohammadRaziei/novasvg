@@ -196,7 +196,7 @@ stb::image element::render_to_image(int width, int height, const stb::color& bac
 stb::matrix element::local_matrix() const
 {
     if(m_node)
-        return to_matrix(el(true)->local_transform());
+        return el(true)->local_transform().matrix();
     return stb::matrix();
 }
 
@@ -207,7 +207,7 @@ stb::matrix element::global_matrix() const
     auto transform_ = el(true)->local_transform();
     for(auto parent = el()->parent_element(); parent; parent = parent->parent_element())
         transform_.post_multiply(parent->local_transform());
-    return to_matrix(transform_);
+    return transform_.matrix();
 }
 
 box element::local_bounding_box() const

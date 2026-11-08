@@ -28,9 +28,9 @@ void arc_to_radians(stb::outline& path_, float rx, float ry, float angle, bool l
     float dx = (current_x - x) * 0.5f;
     float dy = (current_y - y) * 0.5f;
 
-    matrix_t matrix;
-    matrix_init_rotate(&matrix, -angle);
-    matrix_map(&matrix, dx, dy, &dx, &dy);
+    stb::matrix matrix;
+    matrix = stb::matrix::rotation(-angle);
+    { const stb::point p_ = matrix.map(dx, dy); dx = p_.x; dy = p_.y; }
 
     float rxrx = rx * rx;
     float ryry = ry * ry;
@@ -42,13 +42,13 @@ void arc_to_radians(stb::outline& path_, float rx, float ry, float angle, bool l
         ry *= sqrtf(radius);
     }
 
-    matrix_init_scale(&matrix, 1.f / rx, 1.f / ry);
-    matrix_rotate(&matrix, -angle);
+    matrix = stb::matrix::scaling(1.f / rx, 1.f / ry);
+    matrix.rotate(-angle);
 
     float x1, y1;
     float x2, y2;
-    matrix_map(&matrix, current_x, current_y, &x1, &y1);
-    matrix_map(&matrix, x, y, &x2, &y2);
+    { const stb::point p_ = matrix.map(current_x, current_y); x1 = p_.x; y1 = p_.y; }
+    { const stb::point p_ = matrix.map(x, y); x2 = p_.x; y2 = p_.y; }
 
     float dx1 = x2 - x1;
     float dy1 = y2 - y1;
@@ -71,8 +71,8 @@ void arc_to_radians(stb::outline& path_, float rx, float ry, float angle, bool l
         th_arc += NOVA_TWO_PI;
     else if(th_arc > 0.f && !sweep_flag)
         th_arc -= NOVA_TWO_PI;
-    matrix_init_rotate(&matrix, angle);
-    matrix_scale(&matrix, rx, ry);
+    matrix = stb::matrix::rotation(angle);
+    matrix.scale(rx, ry);
     int segments = (int)(ceilf(fabsf(th_arc / (NOVA_HALF_PI + 0.001f))));
     for(int i = 0; i < segments; i++) {
         float th_start = th1 + i * th_arc / segments;
@@ -91,9 +91,9 @@ void arc_to_radians(stb::outline& path_, float rx, float ry, float angle, bool l
         cp1x += cx1;
         cp1y += cy1;
 
-        matrix_map(&matrix, cp1x, cp1y, &cp1x, &cp1y);
-        matrix_map(&matrix, cp2x, cp2y, &cp2x, &cp2y);
-        matrix_map(&matrix, x3, y3, &x3, &y3);
+        { const stb::point p_ = matrix.map(cp1x, cp1y); cp1x = p_.x; cp1y = p_.y; }
+        { const stb::point p_ = matrix.map(cp2x, cp2y); cp2x = p_.x; cp2y = p_.y; }
+        { const stb::point p_ = matrix.map(x3, y3); x3 = p_.x; y3 = p_.y; }
 
         path_.cubic_to(cp1x, cp1y, cp2x, cp2y, x3, y3);
     }

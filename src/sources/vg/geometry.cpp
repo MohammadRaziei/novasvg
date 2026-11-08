@@ -30,11 +30,6 @@ rect::rect(const box& box_)
 {
 }
 
-transform::transform(const stb::matrix& matrix)
-    : transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f)
-{
-}
-
 } // namespace nova::vg
 
 namespace nova::vg {

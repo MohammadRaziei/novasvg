@@ -74,7 +74,7 @@ private:
         float p[6] = {0, 0, 0, 0, 0, 0}; // linear: x1 y1 x2 y2; radial: cx cy r fx fy
         spread_method spread = spread_method::pad;
         gradient_stops stops;
-        matrix_t matrix = {1, 0, 0, 1, 0, 0};
+        stb::matrix matrix = {1, 0, 0, 1, 0, 0};
     };
 
     struct object {
@@ -85,16 +85,16 @@ private:
 
     int add_object(std::string dict);
     int add_stream(std::string dict, const std::string& bytes, bool compress);
-    void begin_paint(bool stroke, const matrix_t& transform_);
-    void emit_path(const stb::outline& path_, const matrix_t* transform_);
-    void emit_rect_path(const rect& rect_, const matrix_t* transform_);
-    void emit_text_path(const std::u32string_view& text, const font& font_, const point& origin, const matrix_t* transform_);
+    void begin_paint(bool stroke, const stb::matrix& transform_);
+    void emit_path(const stb::outline& path_, const stb::matrix* transform_);
+    void emit_rect_path(const rect& rect_, const stb::matrix* transform_);
+    void emit_text_path(const std::u32string_view& text, const font& font_, const point& origin, const stb::matrix* transform_);
     std::string alpha_state(float alpha, blend_mode blend_mode_ = blend_mode::src_over);
-    int shading_pattern(const matrix_t& transform_);
-    int tiling_pattern(const matrix_t& transform_);
+    int shading_pattern(const stb::matrix& transform_);
+    int tiling_pattern(const stb::matrix& transform_);
     // Adds `image` as an Image XObject (Flate RGB, plus an SMask when it has alpha). Returns its object number.
     int add_image(const pixmap& image, int* width, int* height);
-    void place_image(int object, int width, int height, const rect& dst, const rect& src, const matrix_t* transform_, float alpha, blend_mode blend_mode_);
+    void place_image(int object, int width, int height, const rect& dst, const rect& src, const stb::matrix* transform_, float alpha, blend_mode blend_mode_);
 
     float m_width, m_height;
     std::vector<object> m_objects; // object number = index + 1
