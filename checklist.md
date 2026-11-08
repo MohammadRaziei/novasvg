@@ -460,3 +460,8 @@
 ### یادآوری روش کار
 - جسورانه برو؛ تست وسط کار نه، گیت آخرِ ریفکتور. بعد از هر مرحله zip بفرست، هیچ‌وقت push نکن.
 - issue برای libstb فقط وقتی واقعاً در رسالت خودش است، وگرنه خودت در novasvg انجام بده.
+
+### جلوتر از ADR-0011 (بعد از گام ۲ و ۳)
+- [ ] **libstb issue ۵** (پیش‌نویس در `refactor/handoff.md` بخش ۷): عملگرهای Porter-Duff و `exclusion` روی `stb::image`. کارِ libstb است، چون خودش `blend_mode` و `composite` را دارد. تا وقتی نیامده، `blend.{h,cpp}` و `blend_mode` در `vg` می‌مانند. وقتی آمد: آن‌ها را حذف کن و به `stb::composite_op` برو.
+- [ ] **کار خودِ ما (نه libstb):** گرادیان، pattern و mask به‌عنوان paint؛ چون `stb/raster.hpp` عمداً coverage span می‌دهد و ترکیبشان را به صاحب‌کار می‌سپارد. در `paint.cpp` و `raster_canvas.cpp` می‌مانند.
+- [ ] اسم `vg::blend_mode` با `stb::blend_mode` یکی است ولی مجموعه‌ی دیگری دارد؛ تا آمدن libstb issue ۵ تصمیم بگیر بماند یا `composite_op` شود.
