@@ -36,6 +36,9 @@
   `attribute_selector`, `pseudo_class_selector`), the matching camelCase variables and members (with a trailing `_`
   where the name equals a type), and `property_id` enumerators. SVG attribute names in strings stay as the SVG spells them.
 - `NOVA_INLINE` is gone (it was `inline`); `include/nova/config.h` no longer defines it.
+- ADR-0011 step 1: the eight C enums in `render.h` (`fill_rule_t`, `line_cap_t`, `line_join_t`, `spread_method_t`,
+  `texture_type_t`, `text_encoding_t`, `path_command_t`, `operator_t`) are now `enum class`; the duplicate enum classes in
+  `canvas.h` and their cast code are gone. `operator_t` became `blend_mode` (all Porter-Duff and CSS modes); `xor` is `exclusive_or` (`xor` is a C++ keyword; also `porter_duff::exclusive_or`).
 
 ## [0.11.5] - 2026-11-05
 
