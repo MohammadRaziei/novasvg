@@ -1,6 +1,6 @@
 # ADR-0004: stl-like `snake_case` naming; namespace `novasvg`
 
-**Status:** Accepted for the naming rules (implementation is step 6, not started). The namespace decision (point 2) is superseded by [ADR-0009](0009-namespaces-nova-svg-and-nova-vg.md): `nova::svg` and `nova::vg`.
+**Status:** Accepted and implemented for the naming rules (2026-11-08: `snake_case` passes 1 and 2 done; the Python names are not part of it yet). The namespace decision (point 2) is superseded by [ADR-0009](0009-namespaces-nova-svg-and-nova-vg.md): `nova::svg` and `nova::vg`.
 **Date:** 2026-11-01
 **Deciders:** Mohammad Raziei (maintainer)
 

@@ -11,18 +11,10 @@ list(APPEND NOVA_TEST_SOURCES ${NOVA_REFACTOR_TEST_SOURCES})
 
 add_executable(test_novasvg_cpp ${NOVA_TEST_SOURCES})
 
-# Default: test against normal headers (source tree)
 set(NOVA_TEST_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 
-# test against amalgamated/single-header output
-if(NOVA_DIST_DIR)
-    message(STATUS "Testing against dist headers at: ${NOVA_DIST_DIR}")
-    set(NOVA_TEST_INCLUDE_DIR "${NOVA_DIST_DIR}")
-    add_dependencies(test_novasvg_cpp novasvg_dist_header)
-endif()
-
 target_include_directories(test_novasvg_cpp PRIVATE "${NOVA_TEST_INCLUDE_DIR}" "${PROJECT_SOURCE_DIR}/src/sources")
-# These two take their headers from NOVA_TEST_INCLUDE_DIR (which can be the dist header), so they link
+# These two take their headers from NOVA_TEST_INCLUDE_DIR, so they link
 # libstb directly instead of going through the novasvg target.
 target_link_libraries(test_novasvg_cpp PRIVATE novasvg::noflag)
 

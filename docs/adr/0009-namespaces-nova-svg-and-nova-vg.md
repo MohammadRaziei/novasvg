@@ -1,6 +1,6 @@
 # ADR-0009: namespaces `nova::svg` and `nova::vg`; the drawing layer is a library of its own
 
-**Status:** Accepted. Partly implemented (2026-11-05): namespaces `nova::svg` / `nova::vg` and the `NOVA_` macro prefix are done; directories, the `nova::vg` CMake target and `snake_case` are not. Supersedes the namespace decision of ADR-0004 (the `snake_case` rules there stay).
+**Status:** Accepted. Partly implemented (2026-11-08): namespaces `nova::svg` / `nova::vg`, the `NOVA_` macro prefix, the directories, the layering check and `snake_case` are done; the installable `nova::vg` CMake package (`find_package`) is not. Supersedes the namespace decision of ADR-0004 (the `snake_case` rules there stay).
 **Date:** 2026-11-05
 **Deciders:** Mohammad Raziei (maintainer)
 

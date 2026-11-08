@@ -23,7 +23,7 @@
 - **The C API `path_t`** (`path.cpp`, `path.h`, about 900 lines) and the bridges to it. The canvas builds and the
   rasterizer takes an `stb::outline` directly; SVG path data, arcs and the rounded-rect/ellipse shapes live in
   `outline_util.cpp` (same geometry as before: the 67 golden images are bit-identical).
-- The single-header build and the vendored stb sources.
+- The single-header (dist) build and the vendored stb sources (ADR-0001, ADR-0005).
 
 ### Internal
 
