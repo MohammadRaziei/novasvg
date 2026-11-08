@@ -4,6 +4,7 @@
 #include "../doctest.h"
 
 #include <nova/svg/svg.h>
+#include "woff_fixture.h"
 #include <vg/canvas.h>
 #include <vg/font.h>
 
@@ -32,6 +33,19 @@ std::string text_svg(const std::string& family)
 {
     return "<svg xmlns='http://www.w3.org/2000/svg' width='200' height='60'>"
            "<text x='5' y='40' font-size='32' font-family='" + family + "'>Hello</text></svg>";
+}
+std::string font_face_svg(const char* mime, const char* base64)
+{
+    return std::string("<svg xmlns='http://www.w3.org/2000/svg' width='300' height='80'><style>@font-face{font-family:'Probe';src:url(data:")
+        + mime + ";base64," + base64 + ")}</style><text x='10' y='50' font-size='36' font-family='Probe'>Woff Test 123</text></svg>";
+}
+
+std::string pixels_of(const std::string& svg)
+{
+    auto dom = nova::svg::document::load_data(svg);
+    REQUIRE(dom != nullptr);
+    auto image = dom->render_to_image();
+    return std::string(reinterpret_cast<const char*>(image.data()), size_t(image.height()) * image.stride());
 }
 } // namespace
 
@@ -127,4 +141,14 @@ TEST_CASE("bold and italic runs inside a foreignObject use the embedded faces")
     CHECK(inked_pixels(label("<b>Hello world</b>")) > plain * 11 / 10);
     CHECK(inked_pixels(label("<i>Hello world</i>")) != plain);
     CHECK(inked_pixels(label("Hello <b>world</b>")) > plain);
+}
+
+TEST_CASE("an @font-face font given as WOFF 1.0 is drawn exactly like the same font as TrueType")
+{
+    const std::string ttf = pixels_of(font_face_svg("font/ttf", woff_fixture::ttf_base64));
+    const std::string woff = pixels_of(font_face_svg("font/woff", woff_fixture::woff_base64));
+    CHECK(woff == ttf);
+    // and it is the embedded face, not the regular fallback (the fixture is the oblique one)
+    CHECK(woff != pixels_of("<svg xmlns='http://www.w3.org/2000/svg' width='300' height='80'><text x='10' y='50' font-size='36' "
+                            "font-family='sans-serif'>Woff Test 123</text></svg>"));
 }
