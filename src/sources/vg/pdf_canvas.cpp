@@ -144,10 +144,10 @@ void pdf_canvas::set_color(float r, float g, float b, float a)
 
 namespace {
 // Once per process: a document with many gradients would otherwise repeat the same message.
-void warn_gradient_limits(SpreadMethod spread, const GradientStops& stops)
+void warn_gradient_limits(spread_method spread, const gradient_stops& stops)
 {
     static std::atomic<bool> spread_said{false}, alpha_said{false};
-    if(spread != SpreadMethod::pad && !spread_said.exchange(true))
+    if(spread != spread_method::pad && !spread_said.exchange(true))
         pdf_log().warning("gradient spreadMethod reflect/repeat is written as pad in PDF output");
     if(!alpha_said.load()) {
         for(const auto& s : stops) {
@@ -161,7 +161,7 @@ void warn_gradient_limits(SpreadMethod spread, const GradientStops& stops)
 }
 }  // namespace
 
-void pdf_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const transform& transform_)
+void pdf_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, spread_method spread, const gradient_stops& stops, const transform& transform_)
 {
     paint& p = m_paints.back();
     p = paint();
@@ -173,7 +173,7 @@ void pdf_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, Spr
     p.matrix = transform_.matrix();
 }
 
-void pdf_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const transform& transform_)
+void pdf_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method spread, const gradient_stops& stops, const transform& transform_)
 {
     paint& p = m_paints.back();
     p = paint();
@@ -374,9 +374,9 @@ void pdf_canvas::stroke_path(const stb::outline& path_, const stroke_data& sd, c
     m_content += std::to_string(int(sd.line_cap_())) + " J\n";
     m_content += std::to_string(int(sd.line_join_())) + " j\n";
     m_content += num(sd.miter_limit() < 1.f ? 1.f : sd.miter_limit()) + " M\n";
-    if(!sd.dashArray().empty()) {
+    if(!sd.dash_array_().empty()) {
         m_content += "[";
-        for(float d : sd.dashArray())
+        for(float d : sd.dash_array_())
             m_content += num(d) + " ";
         m_content += "] " + num(sd.dash_offset()) + " d\n";
     }

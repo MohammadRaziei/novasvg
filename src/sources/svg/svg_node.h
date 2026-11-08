@@ -71,7 +71,7 @@ private:
 namespace specificity {
 constexpr int presentation_attribute = 0x1;
 constexpr int stylesheet = 0x10;
-constexpr int InlineStyle = 0x100;
+constexpr int inline_style = 0x100;
 constexpr int stylesheet_important = 0x1000;
 constexpr int inline_important = 0x2000;
 constexpr int api = 0x4000;
@@ -111,7 +111,7 @@ enum class element_id : uint8_t {
     fe_merge_node,
     fe_offset,
     filter,
-    ForeignObject,
+    foreign_object,
     G,
     image,
     line,
@@ -189,8 +189,8 @@ public:
     svg_element* next_element() const;
 
     svg_node* add_child(std::unique_ptr<svg_node> child);
-    svg_node* firstChild() const;
-    svg_node* lastChild() const;
+    svg_node* first_child() const;
+    svg_node* last_child() const;
 
     element_id id() const { return m_id; }
     const attribute_list& attributes() const { return m_attributes; }

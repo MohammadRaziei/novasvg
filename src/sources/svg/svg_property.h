@@ -33,7 +33,7 @@ enum class property_id : uint8_t {
     class_,
     clip_path,
     clip_rule,
-    ClipPathUnits,
+    clip_path_units,
     color,
     cx,
     cy,
@@ -47,16 +47,16 @@ enum class property_id : uint8_t {
     fill_opacity,
     fill_rule_,
     filter,
-    Flood_Color,
-    Flood_Opacity,
+    flood_color,
+    flood_opacity,
     font_family,
     font_size,
     font_style_,
     font_weight_,
     fx,
     fy,
-    GradientTransform,
-    GradientUnits,
+    gradient_transform,
+    gradient_units,
     height,
     href,
     id,
@@ -66,30 +66,30 @@ enum class property_id : uint8_t {
     K2,
     K3,
     K4,
-    LengthAdjust,
+    length_adjust,
     letter_spacing,
     marker_end,
     marker_mid,
     marker_start,
-    MarkerHeight,
-    MarkerUnits,
-    MarkerWidth,
+    marker_height,
+    marker_units,
+    marker_width,
     mask,
     mask_type_,
-    MaskContentUnits,
-    MaskUnits,
+    mask_content_units,
+    mask_units,
     mix_blend_mode_,
     offset,
     opacity,
     operator_,
     orient,
     overflow,
-    PatternContentUnits,
-    PatternTransform,
-    PatternUnits,
+    pattern_content_units,
+    pattern_transform,
+    pattern_units,
     pointer_events_,
     points,
-    PreserveAspectRatio,
+    preserve_aspect_ratio,
     R,
     RefX,
     RefY,
@@ -98,7 +98,7 @@ enum class property_id : uint8_t {
     rotate,
     rx,
     ry,
-    SpreadMethod,
+    spread_method,
     std_deviation,
     stop_color,
     stop_opacity,
@@ -114,11 +114,11 @@ enum class property_id : uint8_t {
     system_language,
     text_anchor_,
     text_orientation_,
-    TextLength,
+    text_length,
     transform,
     transform_box,
     transform_origin,
-    ViewBox,
+    view_box,
     visibility,
     white_space_,
     width,
@@ -300,12 +300,12 @@ enum class units : uint8_t {
     object_bounding_box
 };
 
-enum class MarkerUnits : uint8_t {
+enum class marker_units : uint8_t {
     stroke_width,
     user_space_on_use
 };
 
-enum class LengthAdjust : uint8_t {
+enum class length_adjust : uint8_t {
     spacing,
     spacing_and_glyphs
 };
@@ -332,7 +332,7 @@ private:
 
 class svg_angle final : public svg_property {
 public:
-    enum class OrientType {
+    enum class orient_type {
         auto_,
         auto_start_reverse,
         angle
@@ -343,12 +343,12 @@ public:
     {}
 
     float value() const { return m_value; }
-    OrientType orientType() const { return m_orient_type; }
+    orient_type orient_type_() const { return m_orient_type; }
     bool parse(std::string_view input) final;
 
 private:
     float m_value = 0;
-    OrientType m_orient_type = OrientType::angle;
+    orient_type m_orient_type = orient_type::angle;
 };
 
 enum class length_units : uint8_t {
@@ -409,9 +409,9 @@ private:
     length m_value;
 };
 
-class LengthContext {
+class length_context {
 public:
-    LengthContext(const svg_element* el, units units_ = units::user_space_on_use)
+    length_context(const svg_element* el, units units_ = units::user_space_on_use)
         : m_element(el), m_units(units_)
     {}
 
@@ -578,7 +578,7 @@ private:
 };
 
 enum class transform_box_type : uint8_t {
-    ViewBox,
+    view_box,
     fill_box
 };
 
@@ -597,7 +597,7 @@ public:
     bool parse(std::string_view input) final;
 
 private:
-    transform_box_type m_value = transform_box_type::ViewBox;
+    transform_box_type m_value = transform_box_type::view_box;
     bool m_specified = false;
 };
 
@@ -631,7 +631,7 @@ private:
 
 class svg_preserve_aspect_ratio final : public svg_property {
 public:
-    enum class AlignType {
+    enum class align_type {
         none,
         x_min_y_min,
         x_mid_y_min,
@@ -644,7 +644,7 @@ public:
         x_max_y_max
     };
 
-    enum class MeetOrSlice {
+    enum class meet_or_slice {
         meet,
         slice
     };
@@ -653,8 +653,8 @@ public:
         : svg_property(id)
     {}
 
-    AlignType alignType() const { return m_align_type; }
-    MeetOrSlice meetOrSlice() const { return m_meet_or_slice; }
+    align_type align_type_() const { return m_align_type; }
+    meet_or_slice meet_or_slice_() const { return m_meet_or_slice; }
     bool parse(std::string_view input) final;
 
     rect get_clip_rect(const rect& view_box_rect, const size& viewport_size) const;
@@ -662,8 +662,8 @@ public:
     void transform_rect(rect& dst_rect, rect& src_rect) const;
 
 private:
-    AlignType m_align_type = AlignType::x_mid_y_mid;
-    MeetOrSlice m_meet_or_slice = MeetOrSlice::meet;
+    align_type m_align_type = align_type::x_mid_y_mid;
+    meet_or_slice m_meet_or_slice = meet_or_slice::meet;
 };
 
 } // namespace nova::svg

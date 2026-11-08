@@ -119,7 +119,7 @@ void element_painter::draw_image(const stb::image& image, const box& dest)
 } // namespace
 
 svg_foreign_object_element::svg_foreign_object_element(document* dom)
-    : svg_graphics_element(dom, element_id::ForeignObject)
+    : svg_graphics_element(dom, element_id::foreign_object)
     , m_x(property_id::X, length_direction::horizontal, length_negative_mode::allow, 0.f, length_units::none)
     , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::none)
     , m_width(property_id::width, length_direction::horizontal, length_negative_mode::forbid, 0.f, length_units::none)
@@ -133,12 +133,12 @@ svg_foreign_object_element::svg_foreign_object_element(document* dom)
 
 rect svg_foreign_object_element::fill_bounding_box() const
 {
-    LengthContext lengthContext(this);
+    length_context length_context_(this);
     return rect(
-        lengthContext.value_for_length(m_x),
-        lengthContext.value_for_length(m_y),
-        lengthContext.value_for_length(m_width),
-        lengthContext.value_for_length(m_height)
+        length_context_.value_for_length(m_x),
+        length_context_.value_for_length(m_y),
+        length_context_.value_for_length(m_width),
+        length_context_.value_for_length(m_height)
     );
 }
 

@@ -81,8 +81,8 @@ public:
     const length_list& dy() const { return m_dy.values(); }
     const number_list& rotate() const { return m_rotate.values(); }
 
-    const svg_length& textLength() const { return m_text_length; }
-    LengthAdjust lengthAdjust() const { return m_length_adjust.value(); }
+    const svg_length& text_length() const { return m_text_length; }
+    length_adjust length_adjust_() const { return m_length_adjust.value(); }
 
     const font& font_() const { return m_font; }
     const svg_paint_server& fill() const { return m_fill; }
@@ -112,7 +112,7 @@ private:
     svg_number_list m_rotate;
 
     svg_length m_text_length;
-    svg_enumeration<LengthAdjust> m_length_adjust;
+    svg_enumeration<length_adjust> m_length_adjust;
 
     font m_font;
     svg_paint_server m_fill;

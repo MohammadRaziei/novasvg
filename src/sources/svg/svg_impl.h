@@ -19,12 +19,12 @@ property_id propertyid(std::string_view name);
 property_id csspropertyid(std::string_view name);
 
 template<>
-inline bool svg_enumeration<SpreadMethod>::parse(std::string_view input)
+inline bool svg_enumeration<spread_method>::parse(std::string_view input)
 {
-    static const svg_enumeration_entry<SpreadMethod> entries[] = {
-        {SpreadMethod::pad, "pad"},
-        {SpreadMethod::reflect, "reflect"},
-        {SpreadMethod::repeat, "repeat"}
+    static const svg_enumeration_entry<spread_method> entries[] = {
+        {spread_method::pad, "pad"},
+        {spread_method::reflect, "reflect"},
+        {spread_method::repeat, "repeat"}
     };
 
     return parse_enum(input, entries);
@@ -42,22 +42,22 @@ inline bool svg_enumeration<units>::parse(std::string_view input)
 }
 
 template<>
-inline bool svg_enumeration<MarkerUnits>::parse(std::string_view input)
+inline bool svg_enumeration<marker_units>::parse(std::string_view input)
 {
-    static const svg_enumeration_entry<MarkerUnits> entries[] = {
-        {MarkerUnits::stroke_width, "strokeWidth"},
-        {MarkerUnits::user_space_on_use, "userSpaceOnUse"}
+    static const svg_enumeration_entry<marker_units> entries[] = {
+        {marker_units::stroke_width, "strokeWidth"},
+        {marker_units::user_space_on_use, "userSpaceOnUse"}
     };
 
     return parse_enum(input, entries);
 }
 
 template<>
-inline bool svg_enumeration<LengthAdjust>::parse(std::string_view input)
+inline bool svg_enumeration<length_adjust>::parse(std::string_view input)
 {
-    static const svg_enumeration_entry<LengthAdjust> entries[] = {
-        {LengthAdjust::spacing, "spacing"},
-        {LengthAdjust::spacing_and_glyphs, "spacingAndGlyphs"}
+    static const svg_enumeration_entry<length_adjust> entries[] = {
+        {length_adjust::spacing, "spacing"},
+        {length_adjust::spacing_and_glyphs, "spacingAndGlyphs"}
     };
 
     return parse_enum(input, entries);
@@ -82,7 +82,7 @@ inline bool svg_enumeration<enum_>::parse_enum(std::string_view input, const svg
 
 // ---- svgpaintelement (impl) ----
 
-GradientStops build_gradient_stops(const svg_gradient_element* el, float opacity);
+gradient_stops build_gradient_stops(const svg_gradient_element* el, float opacity);
 
 // ---- svggeometryelement (impl) ----
 using namespace vg; // the drawing layer (nova::vg), the former plutovg
@@ -286,7 +286,7 @@ inline bool is_disallowed_element(const svg_element* el)
     switch(el->id()) {
     case element_id::circle:
     case element_id::ellipse:
-    case element_id::ForeignObject:
+    case element_id::foreign_object:
     case element_id::G:
     case element_id::image:
     case element_id::line:

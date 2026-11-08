@@ -16,8 +16,8 @@ class svg_fit_to_view_box {
 public:
     svg_fit_to_view_box(svg_element* el);
 
-    const svg_rect& viewBox() const { return m_view_box; }
-    const svg_preserve_aspect_ratio& preserveAspectRatio() const { return m_preserve_aspect_ratio; }
+    const svg_rect& view_box() const { return m_view_box; }
+    const svg_preserve_aspect_ratio& preserve_aspect_ratio() const { return m_preserve_aspect_ratio; }
     transform view_box_to_view_transform(const size& viewport_size) const;
     rect get_clip_rect(const size& viewport_size) const;
 
@@ -157,7 +157,7 @@ public:
     const svg_length& y() const { return m_y; }
     const svg_length& width() const { return m_width; }
     const svg_length& height() const { return m_height; }
-    const svg_preserve_aspect_ratio& preserveAspectRatio() const { return m_preserve_aspect_ratio; }
+    const svg_preserve_aspect_ratio& preserve_aspect_ratio() const { return m_preserve_aspect_ratio; }
     const pixmap& image() const { return m_image; }
 
     rect fill_bounding_box() const final;
@@ -266,9 +266,9 @@ public:
 
     const svg_length& refX() const { return m_ref_x; }
     const svg_length& refY() const { return m_ref_y; }
-    const svg_length& markerWidth() const { return m_marker_width; }
-    const svg_length& markerHeight() const { return m_marker_height; }
-    const svg_enumeration<MarkerUnits>& markerUnits() const { return m_marker_units; }
+    const svg_length& marker_width() const { return m_marker_width; }
+    const svg_length& marker_height() const { return m_marker_height; }
+    const svg_enumeration<marker_units>& marker_units_() const { return m_marker_units; }
     const svg_angle& orient() const { return m_orient; }
 
     point ref_point() const;
@@ -285,7 +285,7 @@ private:
     svg_length m_ref_y;
     svg_length m_marker_width;
     svg_length m_marker_height;
-    svg_enumeration<MarkerUnits> m_marker_units;
+    svg_enumeration<marker_units> m_marker_units;
     svg_angle m_orient;
 };
 
@@ -293,7 +293,7 @@ class svg_clip_path_element final : public svg_graphics_element {
 public:
     svg_clip_path_element(document* dom);
 
-    const svg_enumeration<units>& clipPathUnits() const { return m_clip_path_units; }
+    const svg_enumeration<units>& clip_path_units() const { return m_clip_path_units; }
     rect clip_bounding_box(const svg_element* el) const;
 
     void apply_clip_mask(svg_render_state& state) const;
@@ -313,8 +313,8 @@ public:
     const svg_length& y() const { return m_y; }
     const svg_length& width() const { return m_width; }
     const svg_length& height() const { return m_height; }
-    const svg_enumeration<units>& maskUnits() const { return m_mask_units; }
-    const svg_enumeration<units>& maskContentUnits() const { return m_mask_content_units; }
+    const svg_enumeration<units>& mask_units() const { return m_mask_units; }
+    const svg_enumeration<units>& mask_content_units() const { return m_mask_content_units; }
 
     rect mask_rect(const svg_element* el) const;
     rect mask_bounding_box(const svg_element* el) const;
@@ -447,13 +447,13 @@ public:
 
     std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
-        auto flood_color_attr = attribute_(property_id::Flood_Color);
-        stb::color floodColor = flood_color_attr.empty() ? stb::color(0, 0, 0) : stb::color(flood_color_attr);
-        auto floodOpacity = parse_first_float(attribute_(property_id::Flood_Opacity), 1.f);
+        auto flood_color_attr = attribute_(property_id::flood_color);
+        stb::color flood_color = flood_color_attr.empty() ? stb::color(0, 0, 0) : stb::color(flood_color_attr);
+        auto flood_opacity = parse_first_float(attribute_(property_id::flood_opacity), 1.f);
 
         auto output = context.new_canvas();
         output->fill_opaque_white();
-        output->tint_to_flood_color(floodColor, floodOpacity);
+        output->tint_to_flood_color(flood_color, flood_opacity);
         return output;
     }
 };
@@ -515,13 +515,13 @@ public:
         auto sigma = parse_first_float(attribute_(property_id::std_deviation), 2.f) * context.scale();
         auto dx = parse_first_float(attribute_(property_id::dx), 2.f) * context.scale();
         auto dy = parse_first_float(attribute_(property_id::dy), 2.f) * context.scale();
-        auto flood_color_attr = attribute_(property_id::Flood_Color);
-        stb::color floodColor = flood_color_attr.empty() ? stb::color(0, 0, 0) : stb::color(flood_color_attr);
-        auto floodOpacity = parse_first_float(attribute_(property_id::Flood_Opacity), 1.f);
+        auto flood_color_attr = attribute_(property_id::flood_color);
+        stb::color flood_color = flood_color_attr.empty() ? stb::color(0, 0, 0) : stb::color(flood_color_attr);
+        auto flood_opacity = parse_first_float(attribute_(property_id::flood_opacity), 1.f);
 
         auto input = context.resolve_input(attribute_(property_id::in));
         auto shadow = context.clone_canvas(*input);
-        shadow->tint_to_flood_color(floodColor, floodOpacity);
+        shadow->tint_to_flood_color(flood_color, flood_opacity);
         shadow->box_blur(sigma, sigma);
         shadow->shift(dx, dy);
         shadow->composite_over(*input);

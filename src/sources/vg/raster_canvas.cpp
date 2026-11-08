@@ -200,12 +200,12 @@ void raster_canvas::set_color(float r, float g, float b, float a)
     canvas_set_rgba(m_canvas, r, g, b, a);
 }
 
-void raster_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const transform& transform_)
+void raster_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, spread_method spread, const gradient_stops& stops, const transform& transform_)
 {
     canvas_set_linear_gradient(m_canvas, x1, y1, x2, y2, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform_.matrix());
 }
 
-void raster_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const transform& transform_)
+void raster_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method spread, const gradient_stops& stops, const transform& transform_)
 {
     canvas_set_radial_gradient(m_canvas, cx, cy, r, fx, fy, 0.f, static_cast<spread_method_t>(spread), stops.data(), stops.size(), &transform_.matrix());
 }
@@ -233,7 +233,7 @@ void raster_canvas::stroke_path(const stb::outline& path_, const stroke_data& st
     canvas_set_line_cap(m_canvas, static_cast<line_cap_t>(stroke_data_.line_cap_()));
     canvas_set_line_join(m_canvas, static_cast<line_join_t>(stroke_data_.line_join_()));
     canvas_set_dash_offset(m_canvas, stroke_data_.dash_offset());
-    canvas_set_dash_array(m_canvas, stroke_data_.dashArray().data(), stroke_data_.dashArray().size());
+    canvas_set_dash_array(m_canvas, stroke_data_.dash_array_().data(), stroke_data_.dash_array_().size());
     canvas_set_operator(m_canvas, NOVA_OPERATOR_SRC_OVER);
         canvas_stroke_path(m_canvas, path_);
 }
@@ -376,21 +376,21 @@ void raster_canvas::fill_opaque_white()
     }
 }
 
-void raster_canvas::tint_to_flood_color(const stb::color& floodColor, float floodOpacity)
+void raster_canvas::tint_to_flood_color(const stb::color& flood_color, float flood_opacity)
 {
     auto width = surface_get_width(m_surface);
     auto height = surface_get_height(m_surface);
     auto stride = surface_get_stride(m_surface);
     auto data = surface_get_data(m_surface);
 
-    auto r = uint32_t(floodColor.r());
-    auto g = uint32_t(floodColor.g());
-    auto b = uint32_t(floodColor.b());
+    auto r = uint32_t(flood_color.r());
+    auto g = uint32_t(flood_color.g());
+    auto b = uint32_t(flood_color.b());
     for(int y = 0; y < height; ++y) {
         auto* pixels = reinterpret_cast<uint32_t*>(data + stride * y);
         for(int x = 0; x < width; ++x) {
             auto src_alpha = (pixels[x] >> 24) & 0xFF;
-            auto alpha = uint32_t(src_alpha * floodOpacity);
+            auto alpha = uint32_t(src_alpha * flood_opacity);
             // premultiplied: scale color channels by (alpha / 255)
             pixels[x] = (alpha << 24) | (((r * alpha) / 255) << 16) | (((g * alpha) / 255) << 8) | ((b * alpha) / 255);
         }

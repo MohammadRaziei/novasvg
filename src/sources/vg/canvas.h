@@ -43,7 +43,7 @@ enum class fill_rule : uint8_t {
     even_odd = NOVA_FILL_RULE_EVEN_ODD
 };
 
-enum class SpreadMethod : uint8_t {
+enum class spread_method : uint8_t {
     pad = NOVA_SPREAD_METHOD_PAD,
     reflect = NOVA_SPREAD_METHOD_REFLECT,
     repeat = NOVA_SPREAD_METHOD_REPEAT
@@ -354,7 +354,7 @@ enum class blend_mode {
     exclusion = NOVA_OPERATOR_EXCLUSION
 };
 
-using DashArray = std::vector<float>;
+using dash_array = std::vector<float>;
 
 class stroke_data {
 public:
@@ -369,8 +369,8 @@ public:
     void set_dash_offset(float dash_offset) { m_dash_offset = dash_offset; }
     float dash_offset() const { return m_dash_offset; }
 
-    void set_dash_array(DashArray dashArray) { m_dash_array = std::move(dashArray); }
-    const DashArray& dashArray() const { return m_dash_array; }
+    void set_dash_array(dash_array dash_array_) { m_dash_array = std::move(dash_array_); }
+    const dash_array& dash_array_() const { return m_dash_array; }
 
     void set_line_cap(line_cap line_cap_) { m_line_cap = line_cap_; }
     line_cap line_cap_() const { return m_line_cap; }
@@ -384,11 +384,11 @@ private:
     float m_dash_offset{0.f};
     line_cap m_line_cap{line_cap::butt};
     line_join m_line_join{line_join::miter};
-    DashArray m_dash_array;
+    dash_array m_dash_array;
 };
 
-using GradientStop = gradient_stop_t;
-using GradientStops = std::vector<GradientStop>;
+using gradient_stop = gradient_stop_t;
+using gradient_stops = std::vector<gradient_stop>;
 
 class pixmap;
 
@@ -404,8 +404,8 @@ public:
 
     virtual void set_color(const stb::color& color_) = 0;
     virtual void set_color(float r, float g, float b, float a) = 0;
-    virtual void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const transform& transform_) = 0;
-    virtual void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const transform& transform_) = 0;
+    virtual void set_linear_gradient(float x1, float y1, float x2, float y2, spread_method spread, const gradient_stops& stops, const transform& transform_) = 0;
+    virtual void set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method spread, const gradient_stops& stops, const transform& transform_) = 0;
 
     virtual void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) = 0;
     virtual void stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_) = 0;
@@ -430,8 +430,8 @@ public:
 
     void set_color(const stb::color& color_) override;
     void set_color(float r, float g, float b, float a) override;
-    void set_linear_gradient(float x1, float y1, float x2, float y2, SpreadMethod spread, const GradientStops& stops, const transform& transform_) override;
-    void set_radial_gradient(float cx, float cy, float r, float fx, float fy, SpreadMethod spread, const GradientStops& stops, const transform& transform_) override;
+    void set_linear_gradient(float x1, float y1, float x2, float y2, spread_method spread, const gradient_stops& stops, const transform& transform_) override;
+    void set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method spread, const gradient_stops& stops, const transform& transform_) override;
     void set_texture(const raster_canvas& source, texture_type type_, float opacity, const transform& transform_);
 
     void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) override;
@@ -458,14 +458,14 @@ public:
     // if profiling ever shows this mattering for very large canvases.
     void box_blur(float std_deviation_x, float std_deviation_y);
 
-    // Composites `this` (already blurred, tinted to floodColor/floodOpacity
+    // Composites `this` (already blurred, tinted to flood_color/flood_opacity
     // by the caller) as a drop shadow: offsets by (dx, dy) and draws
     // `original` on top of it, replacing this canvas's contents in place.
     void composite_drop_shadow_under(const raster_canvas& original, float dx, float dy);
 
-    // Recolors every pixel to floodColor while preserving its alpha
-    // (scaled by floodOpacity), for feDropShadow/feFlood.
-    void tint_to_flood_color(const stb::color& floodColor, float floodOpacity);
+    // Recolors every pixel to flood_color while preserving its alpha
+    // (scaled by flood_opacity), for feDropShadow/feFlood.
+    void tint_to_flood_color(const stb::color& flood_color, float flood_opacity);
 
     // Fills every pixel fully opaque white; paired with tint_to_flood_color()
     // this gives feFlood's "solid flood-color rectangle" result.
@@ -518,7 +518,7 @@ private:
 
 // ---------------------------------------------------------------
 // Implementation (formerly graphics.hpp, merged in -- everything
-// here is NOVA_INLINE, so there is no more reason to keep
+// here is inline, so there is no more reason to keep
 // declarations and definitions in separate files).
 // ---------------------------------------------------------------
 

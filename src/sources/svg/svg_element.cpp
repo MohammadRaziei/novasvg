@@ -83,7 +83,7 @@ std::unique_ptr<svg_element> svg_element::create(document* dom, element_id id)
         return std::make_unique<svg_marker_element>(dom);
     case element_id::image:
         return std::make_unique<svg_image_element>(dom);
-    case element_id::ForeignObject:
+    case element_id::foreign_object:
         return std::make_unique<svg_foreign_object_element>(dom);
     case element_id::style:
         return std::make_unique<svg_style_element>(dom);
@@ -311,14 +311,14 @@ svg_node* svg_element::add_child(std::unique_ptr<svg_node> child)
     return &*m_children.back();
 }
 
-svg_node* svg_element::firstChild() const
+svg_node* svg_element::first_child() const
 {
     if(m_children.empty())
         return nullptr;
     return &*m_children.front();
 }
 
-svg_node* svg_element::lastChild() const
+svg_node* svg_element::last_child() const
 {
     if(m_children.empty())
         return nullptr;
@@ -452,20 +452,20 @@ size svg_element::current_viewport_size() const
     auto parent = parent_element();
     if(parent == nullptr) {
         auto el = static_cast<const svg_svg_element*>(this);
-        const auto& viewBox = el->viewBox();
-        if(viewBox.value().is_valid())
-            return viewBox.value().size_();
+        const auto& view_box = el->view_box();
+        if(view_box.value().is_valid())
+            return view_box.value().size_();
         return size(300, 150);
     }
 
     if(parent->id() == element_id::svg) {
         auto el = static_cast<const svg_svg_element*>(parent);
-        const auto& viewBox = el->viewBox();
-        if(viewBox.value().is_valid())
-            return viewBox.value().size_();
-        LengthContext lengthContext(el);
-        auto width = lengthContext.value_for_length(el->width());
-        auto height = lengthContext.value_for_length(el->height());
+        const auto& view_box = el->view_box();
+        if(view_box.value().is_valid())
+            return view_box.value().size_();
+        length_context length_context_(el);
+        auto width = length_context_.value_for_length(el->width());
+        auto height = length_context_.value_for_length(el->height());
         return size(width, height);
     }
 
@@ -586,7 +586,7 @@ bool svg_element::is_pointable_element() const
         case element_id::path:
         case element_id::text:
         case element_id::image:
-        case element_id::ForeignObject:
+        case element_id::foreign_object:
             return true;
         default:
             break;
@@ -602,8 +602,8 @@ svg_style_element::svg_style_element(document* dom)
 }
 
 svg_fit_to_view_box::svg_fit_to_view_box(svg_element* el)
-    : m_view_box(property_id::ViewBox)
-    , m_preserve_aspect_ratio(property_id::PreserveAspectRatio)
+    : m_view_box(property_id::view_box)
+    , m_preserve_aspect_ratio(property_id::preserve_aspect_ratio)
 {
     el->add_property(m_view_box);
     el->add_property(m_preserve_aspect_ratio);
@@ -695,17 +695,17 @@ svg_paint_server svg_graphics_element::get_paint_server(const paint& paint_, flo
 
 stroke_data svg_graphics_element::get_stroke_data(const svg_layout_state& state) const
 {
-    LengthContext lengthContext(this);
-    stroke_data stroke_data_(lengthContext.value_for_length(state.stroke_width(), length_direction::diagonal));
+    length_context length_context_(this);
+    stroke_data stroke_data_(length_context_.value_for_length(state.stroke_width(), length_direction::diagonal));
     stroke_data_.set_miter_limit(state.stroke_miterlimit());
     stroke_data_.set_line_cap(state.stroke_linecap());
     stroke_data_.set_line_join(state.stroke_linejoin());
-    stroke_data_.set_dash_offset(lengthContext.value_for_length(state.stroke_dashoffset(), length_direction::diagonal));
+    stroke_data_.set_dash_offset(length_context_.value_for_length(state.stroke_dashoffset(), length_direction::diagonal));
 
-    DashArray dashArray;
+    dash_array dash_array_;
     for(const auto& dash : state.stroke_dasharray())
-        dashArray.push_back(lengthContext.value_for_length(dash, length_direction::diagonal));
-    stroke_data_.set_dash_array(std::move(dashArray));
+        dash_array_.push_back(length_context_.value_for_length(dash, length_direction::diagonal));
+    stroke_data_.set_dash_array(std::move(dash_array_));
     return stroke_data_;
 }
 
@@ -725,12 +725,12 @@ svg_svg_element::svg_svg_element(document* dom)
 
 transform svg_svg_element::local_transform() const
 {
-    LengthContext lengthContext(this);
+    length_context length_context_(this);
     const rect viewport_rect = {
-        lengthContext.value_for_length(m_x),
-        lengthContext.value_for_length(m_y),
-        lengthContext.value_for_length(m_width),
-        lengthContext.value_for_length(m_height)
+        length_context_.value_for_length(m_x),
+        length_context_.value_for_length(m_y),
+        length_context_.value_for_length(m_width),
+        length_context_.value_for_length(m_height)
     };
 
     if(is_root_element())
@@ -742,10 +742,10 @@ void svg_svg_element::render(svg_render_state& state) const
 {
     if(is_display_none())
         return;
-    LengthContext lengthContext(this);
+    length_context length_context_(this);
     const size viewport_size = {
-        lengthContext.value_for_length(m_width),
-        lengthContext.value_for_length(m_height)
+        length_context_.value_for_length(m_width),
+        length_context_.value_for_length(m_height)
     };
 
     if(viewport_size.empty())
@@ -788,20 +788,20 @@ void svg_root_element::layout(svg_layout_state& state)
 {
     svg_svg_element::layout(state);
 
-    LengthContext lengthContext(this);
+    length_context length_context_(this);
     if(!width().is_percent()) {
-        m_intrinsic_width = lengthContext.value_for_length(width());
+        m_intrinsic_width = length_context_.value_for_length(width());
     } else {
         m_intrinsic_width = 0.f;
     }
 
     if(!height().is_percent()) {
-        m_intrinsic_height = lengthContext.value_for_length(height());
+        m_intrinsic_height = length_context_.value_for_length(height());
     } else {
         m_intrinsic_height = 0.f;
     }
 
-    const auto& view_box_rect = viewBox().value();
+    const auto& view_box_rect = view_box().value();
     if(!view_box_rect.empty() && (!m_intrinsic_width || !m_intrinsic_height)) {
         auto intrinsic_ratio = view_box_rect.w / view_box_rect.h;
         if(!m_intrinsic_width && m_intrinsic_height)
@@ -848,10 +848,10 @@ svg_use_element::svg_use_element(document* dom)
 
 transform svg_use_element::local_transform() const
 {
-    LengthContext lengthContext(this);
+    length_context length_context_(this);
     const point translation = {
-        lengthContext.value_for_length(m_x),
-        lengthContext.value_for_length(m_y)
+        length_context_.value_for_length(m_x),
+        length_context_.value_for_length(m_y)
     };
 
     return svg_graphics_element::local_transform() * transform::translated(translation.x, translation.y);

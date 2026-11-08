@@ -745,7 +745,7 @@ bool document::parse(const char* data, size_t length_)
 
         if(skip_delimiter(input, '>')) {
             if(el != nullptr) {
-                if(el->id() == element_id::ForeignObject) {
+                if(el->id() == element_id::foreign_object) {
                     // foreignObject content is arbitrary HTML/XML, not svg --
                     // capture it verbatim instead of trying (and failing) to
                     // parse div/span/p/etc. as svg elements. Mirrors the
@@ -819,7 +819,7 @@ void document::apply_style_sheet(const std::string& content)
     rule_data_list html_rules;
     bool have_html_rules = false;
     m_root_element->transverse([&](svg_element* el) {
-        if(el->id() != element_id::ForeignObject)
+        if(el->id() != element_id::foreign_object)
             return;
         if(!have_html_rules) {
             const auto& sheets = m_root_element->style_sheets();
@@ -843,7 +843,7 @@ void document::set_foreign_object_renderer(std::shared_ptr<foreign_object_render
     rule_data_list rules;
     bool have_rules = false;
     m_root_element->transverse([&](svg_element* el) {
-        if(el->id() != element_id::ForeignObject)
+        if(el->id() != element_id::foreign_object)
             return;
         if(!have_rules) {
             rules = parse_style_sheets(m_root_element->style_sheets());

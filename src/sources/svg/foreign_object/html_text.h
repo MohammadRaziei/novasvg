@@ -167,14 +167,14 @@ inline unsigned char foreign_object_style_of_opening(const std::string& tag, std
     else if(tag == "i" || tag == "em" || tag == "cite" || tag == "var" || tag == "dfn")
         style |= foreign_object_fonts::italic;
 
-    auto inlineStyle = foreign_object_style_attribute(attributes);
-    if(!inlineStyle.empty()) {
-        if(auto weight = foreign_object_declaration(inlineStyle, "font-weight"); !weight.empty()) {
+    auto inline_style = foreign_object_style_attribute(attributes);
+    if(!inline_style.empty()) {
+        if(auto weight = foreign_object_declaration(inline_style, "font-weight"); !weight.empty()) {
             style &= (unsigned char)~foreign_object_fonts::bold;
             if(parse_font_weight(weight) == font_weight::bold)
                 style |= foreign_object_fonts::bold;
         }
-        if(auto font_style_ = foreign_object_declaration(inlineStyle, "font-style"); !font_style_.empty()) {
+        if(auto font_style_ = foreign_object_declaration(inline_style, "font-style"); !font_style_.empty()) {
             style &= (unsigned char)~foreign_object_fonts::italic;
             if(parse_font_style(font_style_) == font_style::italic)
                 style |= foreign_object_fonts::italic;

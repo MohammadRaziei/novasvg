@@ -149,19 +149,19 @@ void handle_text_chunk(svg_text_fragment_iterator begin, svg_text_fragment_itera
 {
     const svg_text_fragment& first_fragment = *begin;
     const auto is_vertical_text = first_fragment.el->is_vertical_writing_mode();
-    if(first_fragment.el->has_attribute(property_id::TextLength)) {
-        LengthContext lengthContext(first_fragment.el);
-        auto textLength = lengthContext.value_for_length(first_fragment.el->textLength());
+    if(first_fragment.el->has_attribute(property_id::text_length)) {
+        length_context length_context_(first_fragment.el);
+        auto text_length = length_context_.value_for_length(first_fragment.el->text_length());
         auto chunk_length = calculate_text_chunk_length(begin, end, is_vertical_text);
-        if(textLength > 0.f && chunk_length > 0.f) {
+        if(text_length > 0.f && chunk_length > 0.f) {
             size_t num_characters = 0;
             for(auto it = begin; it != end; ++it) {
                 const svg_text_fragment& fragment = *it;
                 num_characters += fragment.length_;
             }
 
-            if(first_fragment.el->lengthAdjust() == LengthAdjust::spacing_and_glyphs) {
-                auto text_length_scale = textLength / chunk_length;
+            if(first_fragment.el->length_adjust_() == length_adjust::spacing_and_glyphs) {
+                auto text_length_scale = text_length / chunk_length;
                 auto length_adjust_transform = transform::translated(first_fragment.x, first_fragment.y);
                 if(is_vertical_text) {
                     length_adjust_transform.scale(1.f, text_length_scale);
@@ -175,9 +175,9 @@ void handle_text_chunk(svg_text_fragment_iterator begin, svg_text_fragment_itera
                     fragment.length_adjust_transform = length_adjust_transform;
                 }
             } else if(num_characters > 1) {
-                assert(first_fragment.el->lengthAdjust() == LengthAdjust::spacing);
+                assert(first_fragment.el->length_adjust_() == length_adjust::spacing);
                 size_t character_offset = 0;
-                auto text_length_shift = (textLength - chunk_length) / (num_characters - 1);
+                auto text_length_shift = (text_length - chunk_length) / (num_characters - 1);
                 for(auto it = begin; it != end; ++it) {
                     svg_text_fragment& fragment = *it;
                     if(is_vertical_text) {
@@ -245,7 +245,7 @@ void svg_text_fragments_builder::build(const svg_text_element* text_element)
             m_fragments.push_back(fragment);
         };
 
-        auto needs_text_length_spacing = el->lengthAdjust() == LengthAdjust::spacing && el->has_attribute(property_id::TextLength);
+        auto needs_text_length_spacing = el->length_adjust_() == length_adjust::spacing && el->has_attribute(property_id::text_length);
         auto baseline_offset = calculate_baseline_offset(el);
         auto start_offset = text_position.start_offset;
         auto text_offset = text_position.start_offset;
@@ -400,7 +400,7 @@ void svg_text_fragments_builder::fill_character_positions(const svg_text_positio
         return;
     }
 
-    LengthContext lengthContext(el);
+    length_context length_context_(el);
     std::optional<float> last_rotation;
     for(auto offset = position.start_offset; offset < position.end_offset; ++offset) {
         auto index = offset - position.start_offset;
@@ -408,13 +408,13 @@ void svg_text_fragments_builder::fill_character_positions(const svg_text_positio
             break;
         auto& character_position = m_character_positions[offset];
         if(index < x_list_size)
-            character_position.x = lengthContext.value_for_length(x_list[index], length_direction::horizontal);
+            character_position.x = length_context_.value_for_length(x_list[index], length_direction::horizontal);
         if(index < y_list_size)
-            character_position.y = lengthContext.value_for_length(y_list[index], length_direction::vertical);
+            character_position.y = length_context_.value_for_length(y_list[index], length_direction::vertical);
         if(index < dx_list_size)
-            character_position.dx = lengthContext.value_for_length(dx_list[index], length_direction::horizontal);
+            character_position.dx = length_context_.value_for_length(dx_list[index], length_direction::horizontal);
         if(index < dy_list_size)
-            character_position.dy = lengthContext.value_for_length(dy_list[index], length_direction::vertical);
+            character_position.dy = length_context_.value_for_length(dy_list[index], length_direction::vertical);
         if(index < rotate_list_size) {
             character_position.rotate = rotate_list[index];
             last_rotation = character_position.rotate;
@@ -436,8 +436,8 @@ svg_text_positioning_element::svg_text_positioning_element(document* dom, elemen
     , m_dx(property_id::dx, length_direction::horizontal, length_negative_mode::allow)
     , m_dy(property_id::dy, length_direction::vertical, length_negative_mode::allow)
     , m_rotate(property_id::rotate)
-    , m_text_length(property_id::TextLength, length_direction::horizontal, length_negative_mode::forbid)
-    , m_length_adjust(property_id::LengthAdjust, LengthAdjust::spacing)
+    , m_text_length(property_id::text_length, length_direction::horizontal, length_negative_mode::forbid)
+    , m_length_adjust(property_id::length_adjust, length_adjust::spacing)
 {
     add_property(m_x);
     add_property(m_y);
@@ -455,10 +455,10 @@ void svg_text_positioning_element::layout_element(const svg_layout_state& state)
     m_stroke = get_paint_server(state.stroke(), state.stroke_opacity());
     svg_graphics_element::layout_element(state);
 
-    LengthContext lengthContext(this);
-    m_stroke_width = lengthContext.value_for_length(state.stroke_width(), length_direction::diagonal);
-    m_letter_spacing = lengthContext.value_for_length(state.letter_spacing(), length_direction::diagonal);
-    m_word_spacing = lengthContext.value_for_length(state.word_spacing(), length_direction::diagonal);
+    length_context length_context_(this);
+    m_stroke_width = length_context_.value_for_length(state.stroke_width(), length_direction::diagonal);
+    m_letter_spacing = length_context_.value_for_length(state.letter_spacing(), length_direction::diagonal);
+    m_word_spacing = length_context_.value_for_length(state.word_spacing(), length_direction::diagonal);
 
     m_baseline_offset = convert_baseline_offset(state.baseline_shift_());
     m_alignment_baseline = state.alignment_baseline_();

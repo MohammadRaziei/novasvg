@@ -95,7 +95,7 @@ public:
 
     void layout_element(const svg_layout_state& state) final;
     const svg_number_percentage& offset() const { return m_offset; }
-    GradientStop gradientStop(float opacity) const;
+    gradient_stop gradient_stop_(float opacity) const;
 
 private:
     svg_number_percentage m_offset;
@@ -109,24 +109,24 @@ class svg_gradient_element : public svg_paint_element, public svg_uri_reference 
 public:
     svg_gradient_element(document* dom, element_id id);
 
-    const svg_transform& gradientTransform() const { return m_gradient_transform; }
-    const svg_enumeration<units>& gradientUnits() const { return m_gradient_units; }
-    const svg_enumeration<SpreadMethod>& spreadMethod() const { return m_spread_method; }
+    const svg_transform& gradient_transform() const { return m_gradient_transform; }
+    const svg_enumeration<units>& gradient_units() const { return m_gradient_units; }
+    const svg_enumeration<spread_method>& spread_method_() const { return m_spread_method; }
     void collect_gradient_attributes(svg_gradient_attributes& attributes) const;
 
 private:
     svg_transform m_gradient_transform;
     svg_enumeration<units> m_gradient_units;
-    svg_enumeration<SpreadMethod> m_spread_method;
+    svg_enumeration<spread_method> m_spread_method;
 };
 
 class svg_gradient_attributes {
 public:
     svg_gradient_attributes() = default;
 
-    const transform& gradientTransform() const { return m_gradient_transform->gradientTransform().value(); }
-    SpreadMethod spreadMethod() const { return m_spread_method->spreadMethod().value(); }
-    units gradientUnits() const { return m_gradient_units->gradientUnits().value(); }
+    const transform& gradient_transform() const { return m_gradient_transform->gradient_transform().value(); }
+    spread_method spread_method_() const { return m_spread_method->spread_method_().value(); }
+    units gradient_units() const { return m_gradient_units->gradient_units().value(); }
     const svg_gradient_element* gradient_content_element() const { return m_gradient_content_element; }
 
     bool has_gradient_transform() const { return m_gradient_transform; }
@@ -278,9 +278,9 @@ public:
     const svg_length& y() const { return m_y; }
     const svg_length& width() const { return m_width; }
     const svg_length& height() const { return m_height; }
-    const svg_transform& patternTransform() const { return m_pattern_transform; }
-    const svg_enumeration<units>& patternUnits() const { return m_pattern_units; }
-    const svg_enumeration<units>& patternContentUnits() const { return m_pattern_content_units; }
+    const svg_transform& pattern_transform() const { return m_pattern_transform; }
+    const svg_enumeration<units>& pattern_units() const { return m_pattern_units; }
+    const svg_enumeration<units>& pattern_content_units() const { return m_pattern_content_units; }
 
     bool apply_paint(svg_render_state& state, float opacity) const final;
 
@@ -303,11 +303,11 @@ public:
     const svg_length& y() const { return m_y->y(); }
     const svg_length& width() const { return m_width->width(); }
     const svg_length& height() const { return m_height->height(); }
-    const transform& patternTransform() const { return m_pattern_transform->patternTransform().value(); }
-    units patternUnits() const { return m_pattern_units->patternUnits().value(); }
-    units patternContentUnits() const { return m_pattern_content_units->patternContentUnits().value(); }
-    const rect& viewBox() const { return m_view_box->viewBox().value(); }
-    const svg_preserve_aspect_ratio& preserveAspectRatio() const { return m_preserve_aspect_ratio->preserveAspectRatio(); }
+    const transform& pattern_transform() const { return m_pattern_transform->pattern_transform().value(); }
+    units pattern_units() const { return m_pattern_units->pattern_units().value(); }
+    units pattern_content_units() const { return m_pattern_content_units->pattern_content_units().value(); }
+    const rect& view_box() const { return m_view_box->view_box().value(); }
+    const svg_preserve_aspect_ratio& preserve_aspect_ratio() const { return m_preserve_aspect_ratio->preserve_aspect_ratio(); }
     const svg_pattern_element* pattern_content_element() const { return m_pattern_content_element; }
 
     bool has_x() const { return m_x; }

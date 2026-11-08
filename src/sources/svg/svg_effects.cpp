@@ -10,9 +10,9 @@ svg_marker_element::svg_marker_element(document* dom)
     , svg_fit_to_view_box(this)
     , m_ref_x(property_id::RefX, length_direction::horizontal, length_negative_mode::allow, 0.f, length_units::none)
     , m_ref_y(property_id::RefY, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::none)
-    , m_marker_width(property_id::MarkerWidth, length_direction::horizontal, length_negative_mode::forbid, 3.f, length_units::none)
-    , m_marker_height(property_id::MarkerHeight, length_direction::vertical, length_negative_mode::forbid, 3.f, length_units::none)
-    , m_marker_units(property_id::MarkerUnits, MarkerUnits::stroke_width)
+    , m_marker_width(property_id::marker_width, length_direction::horizontal, length_negative_mode::forbid, 3.f, length_units::none)
+    , m_marker_height(property_id::marker_height, length_direction::vertical, length_negative_mode::forbid, 3.f, length_units::none)
+    , m_marker_units(property_id::marker_units, marker_units::stroke_width)
     , m_orient(property_id::orient)
 {
     add_property(m_ref_x);
@@ -25,10 +25,10 @@ svg_marker_element::svg_marker_element(document* dom)
 
 point svg_marker_element::ref_point() const
 {
-    LengthContext lengthContext(this);
+    length_context length_context_(this);
     const point ref_point = {
-        lengthContext.value_for_length(m_ref_x),
-        lengthContext.value_for_length(m_ref_y)
+        length_context_.value_for_length(m_ref_x),
+        length_context_.value_for_length(m_ref_y)
     };
 
     return ref_point;
@@ -36,10 +36,10 @@ point svg_marker_element::ref_point() const
 
 size svg_marker_element::marker_size() const
 {
-    LengthContext lengthContext(this);
+    length_context length_context_(this);
     const size marker_size = {
-        lengthContext.value_for_length(m_marker_width),
-        lengthContext.value_for_length(m_marker_height)
+        length_context_.value_for_length(m_marker_width),
+        length_context_.value_for_length(m_marker_height)
     };
 
     return marker_size;
@@ -48,7 +48,7 @@ size svg_marker_element::marker_size() const
 transform svg_marker_element::marker_transform(const point& origin, float angle, float stroke_width) const
 {
     auto transform_ = transform::translated(origin.x, origin.y);
-    if(m_orient.orientType() == svg_angle::OrientType::angle) {
+    if(m_orient.orient_type_() == svg_angle::orient_type::angle) {
         transform_.rotate(m_orient.value());
     } else {
         transform_.rotate(angle);
@@ -56,7 +56,7 @@ transform svg_marker_element::marker_transform(const point& origin, float angle,
 
     auto view_transform = view_box_to_view_transform(marker_size());
     auto ref_origin = view_transform.map_point(ref_point());
-    if(m_marker_units.value() == MarkerUnits::stroke_width)
+    if(m_marker_units.value() == marker_units::stroke_width)
         transform_.scale(stroke_width, stroke_width);
     transform_.translate(-ref_origin.x, -ref_origin.y);
     return transform_ * view_transform;
@@ -87,7 +87,7 @@ transform svg_marker_element::local_transform() const
 
 svg_clip_path_element::svg_clip_path_element(document* dom)
     : svg_graphics_element(dom, element_id::clip_path)
-    , m_clip_path_units(property_id::ClipPathUnits, units::user_space_on_use)
+    , m_clip_path_units(property_id::clip_path_units, units::user_space_on_use)
 {
     add_property(m_clip_path_units);
 }
@@ -146,7 +146,7 @@ void svg_clip_path_element::apply_clip_path(svg_render_state& state) const
             if(el->id() != element_id::use)
                 continue;
             clip_transform.multiply(el->local_transform());
-            shape_element = to_svg_geometry_element(el->firstChild());
+            shape_element = to_svg_geometry_element(el->first_child());
         }
 
         if(shape_element == nullptr || !shape_element->is_renderable())
@@ -175,7 +175,7 @@ bool svg_clip_path_element::requires_masking() const
                 continue;
             if(el->clipper())
                 return true;
-            shape_element = to_svg_geometry_element(el->firstChild());
+            shape_element = to_svg_geometry_element(el->first_child());
         }
 
         if(shape_element == nullptr || !shape_element->is_renderable())
@@ -194,8 +194,8 @@ svg_mask_element::svg_mask_element(document* dom)
     , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow, -10.f, length_units::percent)
     , m_width(property_id::width, length_direction::horizontal, length_negative_mode::forbid, 120.f, length_units::percent)
     , m_height(property_id::height, length_direction::vertical, length_negative_mode::forbid, 120.f, length_units::percent)
-    , m_mask_units(property_id::MaskUnits, units::object_bounding_box)
-    , m_mask_content_units(property_id::MaskContentUnits, units::user_space_on_use)
+    , m_mask_units(property_id::mask_units, units::object_bounding_box)
+    , m_mask_content_units(property_id::mask_content_units, units::user_space_on_use)
 {
     add_property(m_x);
     add_property(m_y);
@@ -207,12 +207,12 @@ svg_mask_element::svg_mask_element(document* dom)
 
 rect svg_mask_element::mask_rect(const svg_element* el) const
 {
-    LengthContext lengthContext(this, m_mask_units.value());
+    length_context length_context_(this, m_mask_units.value());
     rect mask_rect = {
-        lengthContext.value_for_length(m_x),
-        lengthContext.value_for_length(m_y),
-        lengthContext.value_for_length(m_width),
-        lengthContext.value_for_length(m_height)
+        length_context_.value_for_length(m_x),
+        length_context_.value_for_length(m_y),
+        length_context_.value_for_length(m_width),
+        length_context_.value_for_length(m_height)
     };
 
     if(m_mask_units.value() == units::object_bounding_box) {

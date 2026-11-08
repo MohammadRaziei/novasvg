@@ -11,7 +11,7 @@ svg_image_element::svg_image_element(document* dom)
     , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::none)
     , m_width(property_id::width, length_direction::horizontal, length_negative_mode::forbid, 100.f, length_units::percent)
     , m_height(property_id::height, length_direction::vertical, length_negative_mode::forbid, 100.f, length_units::percent)
-    , m_preserve_aspect_ratio(property_id::PreserveAspectRatio)
+    , m_preserve_aspect_ratio(property_id::preserve_aspect_ratio)
 {
     add_property(m_x);
     add_property(m_y);
@@ -22,12 +22,12 @@ svg_image_element::svg_image_element(document* dom)
 
 rect svg_image_element::fill_bounding_box() const
 {
-    LengthContext lengthContext(this);
+    length_context length_context_(this);
     const rect viewport_rect = {
-        lengthContext.value_for_length(m_x),
-        lengthContext.value_for_length(m_y),
-        lengthContext.value_for_length(m_width),
-        lengthContext.value_for_length(m_height)
+        length_context_.value_for_length(m_x),
+        length_context_.value_for_length(m_y),
+        length_context_.value_for_length(m_width),
+        length_context_.value_for_length(m_height)
     };
 
     return viewport_rect;

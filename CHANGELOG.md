@@ -24,6 +24,10 @@
   vg layers instead of per-function lambdas.
 - Private C struct tags no longer share a name with a class (`font_face_impl`, `font_face_cache_impl`); a clash made
   `delete face` recurse into the class destructor.
+- snake_case pass 3: the last PascalCase types (`align_type`, `spread_method`, `length_context`, `simple_selector`,
+  `match_type`, `gradient_stop(s)`, `length_adjust`, `marker_units`, `meet_or_slice`, `orient_type`, `dash_array`,
+  `attribute_selector`, `pseudo_class_selector`), the matching camelCase variables and members (with a trailing `_`
+  where the name equals a type), and `property_id` enumerators. SVG attribute names in strings stay as the SVG spells them.
 - `NOVA_INLINE` is gone (it was `inline`); `include/nova/config.h` no longer defines it.
 
 ## [0.11.5] - 2026-11-05

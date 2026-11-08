@@ -110,7 +110,7 @@ void svg_geometry_element::update_marker_positions(svg_marker_position_list& pos
                 auto slope = outslope_points[1] - outslope_points[0];
                 auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVA_PI;
                 const auto& orient = marker_start->orient();
-                if(orient.orientType() == svg_angle::OrientType::auto_start_reverse)
+                if(orient.orient_type_() == svg_angle::orient_type::auto_start_reverse)
                     angle -= 180.f;
                 positions.emplace_back(marker_start, origin, angle);
             }
@@ -177,11 +177,11 @@ svg_line_element::svg_line_element(document* dom)
 
 rect svg_line_element::update_shape(stb::outline& path_)
 {
-    LengthContext lengthContext(this);
-    auto x1 = lengthContext.value_for_length(m_x1);
-    auto y1 = lengthContext.value_for_length(m_y1);
-    auto x2 = lengthContext.value_for_length(m_x2);
-    auto y2 = lengthContext.value_for_length(m_y2);
+    length_context length_context_(this);
+    auto x1 = length_context_.value_for_length(m_x1);
+    auto y1 = length_context_.value_for_length(m_y1);
+    auto x2 = length_context_.value_for_length(m_x2);
+    auto y2 = length_context_.value_for_length(m_y2);
 
     path_.move_to(x1, y1);
     path_.line_to(x2, y2);
@@ -207,18 +207,18 @@ svg_rect_element::svg_rect_element(document* dom)
 
 rect svg_rect_element::update_shape(stb::outline& path_)
 {
-    LengthContext lengthContext(this);
-    auto width = lengthContext.value_for_length(m_width);
-    auto height = lengthContext.value_for_length(m_height);
+    length_context length_context_(this);
+    auto width = length_context_.value_for_length(m_width);
+    auto height = length_context_.value_for_length(m_height);
     if(width <= 0.f || height <= 0.f) {
         return rect::empty_rect;
     }
 
-    auto x = lengthContext.value_for_length(m_x);
-    auto y = lengthContext.value_for_length(m_y);
+    auto x = length_context_.value_for_length(m_x);
+    auto y = length_context_.value_for_length(m_y);
 
-    auto rx = lengthContext.value_for_length(m_rx);
-    auto ry = lengthContext.value_for_length(m_ry);
+    auto rx = length_context_.value_for_length(m_rx);
+    auto ry = length_context_.value_for_length(m_ry);
 
     if(rx <= 0.f) rx = ry;
     if(ry <= 0.f) ry = rx;
@@ -245,15 +245,15 @@ svg_ellipse_element::svg_ellipse_element(document* dom)
 
 rect svg_ellipse_element::update_shape(stb::outline& path_)
 {
-    LengthContext lengthContext(this);
-    auto rx = lengthContext.value_for_length(m_rx);
-    auto ry = lengthContext.value_for_length(m_ry);
+    length_context length_context_(this);
+    auto rx = length_context_.value_for_length(m_rx);
+    auto ry = length_context_.value_for_length(m_ry);
     if(rx <= 0.f || ry <= 0.f) {
         return rect::empty_rect;
     }
 
-    auto cx = lengthContext.value_for_length(m_cx);
-    auto cy = lengthContext.value_for_length(m_cy);
+    auto cx = length_context_.value_for_length(m_cx);
+    auto cy = length_context_.value_for_length(m_cy);
     path_.add_ellipse(cx, cy, rx, ry);
     return rect(cx - rx, cy - ry, rx + rx, ry + ry);
 }
@@ -271,14 +271,14 @@ svg_circle_element::svg_circle_element(document* dom)
 
 rect svg_circle_element::update_shape(stb::outline& path_)
 {
-    LengthContext lengthContext(this);
-    auto r = lengthContext.value_for_length(m_r);
+    length_context length_context_(this);
+    auto r = length_context_.value_for_length(m_r);
     if(r <= 0.f) {
         return rect::empty_rect;
     }
 
-    auto cx = lengthContext.value_for_length(m_cx);
-    auto cy = lengthContext.value_for_length(m_cy);
+    auto cx = length_context_.value_for_length(m_cx);
+    auto cy = length_context_.value_for_length(m_cy);
     path_.add_ellipse(cx, cy, r, r);
     return rect(cx - r, cy - r, r + r, r + r);
 }

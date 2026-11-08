@@ -142,22 +142,22 @@ void svg_stop_element::layout_element(const svg_layout_state& state)
     svg_element::layout_element(state);
 }
 
-GradientStop svg_stop_element::gradientStop(float opacity) const
+gradient_stop svg_stop_element::gradient_stop_(float opacity) const
 {
     stb::color stop_color = with_alpha(m_stop_color, m_stop_opacity * opacity);
-    GradientStop gradientStop = {
+    gradient_stop gradient_stop_ = {
         m_offset.value(), { red_f(stop_color), green_f(stop_color), blue_f(stop_color), alpha_f(stop_color) }
     };
 
-    return gradientStop;
+    return gradient_stop_;
 }
 
 svg_gradient_element::svg_gradient_element(document* dom, element_id id)
     : svg_paint_element(dom, id)
     , svg_uri_reference(this)
-    , m_gradient_transform(property_id::GradientTransform)
-    , m_gradient_units(property_id::GradientUnits, units::object_bounding_box)
-    , m_spread_method(property_id::SpreadMethod, SpreadMethod::pad)
+    , m_gradient_transform(property_id::gradient_transform)
+    , m_gradient_units(property_id::gradient_units, units::object_bounding_box)
+    , m_spread_method(property_id::spread_method, spread_method::pad)
 {
     add_property(m_gradient_transform);
     add_property(m_gradient_units);
@@ -166,11 +166,11 @@ svg_gradient_element::svg_gradient_element(document* dom, element_id id)
 
 void svg_gradient_element::collect_gradient_attributes(svg_gradient_attributes& attributes) const
 {
-    if(!attributes.has_gradient_transform() && has_attribute(property_id::GradientTransform))
+    if(!attributes.has_gradient_transform() && has_attribute(property_id::gradient_transform))
         attributes.set_gradient_transform(this);
-    if(!attributes.has_spread_method() && has_attribute(property_id::SpreadMethod))
+    if(!attributes.has_spread_method() && has_attribute(property_id::spread_method))
         attributes.set_spread_method(this);
-    if(!attributes.has_gradient_units() && has_attribute(property_id::GradientUnits))
+    if(!attributes.has_gradient_units() && has_attribute(property_id::gradient_units))
         attributes.set_gradient_units(this);
     if(!attributes.has_gradient_content_element()) {
         for(const auto& child : children()) {
@@ -229,50 +229,50 @@ svg_linear_gradient_attributes svg_linear_gradient_element::collect_gradient_att
     return attributes;
 }
 
-GradientStops build_gradient_stops(const svg_gradient_element* el, float opacity)
+gradient_stops build_gradient_stops(const svg_gradient_element* el, float opacity)
 {
-    GradientStops gradientStops;
+    gradient_stops gradient_stops_;
 
     const auto& children = el->children();
-    gradientStops.reserve(children.size());
+    gradient_stops_.reserve(children.size());
     for(const auto& child : children) {
         auto child_element = to_svg_element(child);
         if(child_element && child_element->id() == element_id::stop) {
             auto stop_element = static_cast<svg_stop_element*>(child_element);
-            gradientStops.push_back(stop_element->gradientStop(opacity));
+            gradient_stops_.push_back(stop_element->gradient_stop_(opacity));
         }
     }
 
-    return gradientStops;
+    return gradient_stops_;
 }
 
 bool svg_linear_gradient_element::apply_paint(svg_render_state& state, float opacity) const
 {
     auto attributes = collect_gradient_attributes();
     auto gradient_content_element = attributes.gradient_content_element();
-    auto gradientStops = build_gradient_stops(gradient_content_element, opacity);
-    if(gradientStops.empty())
+    auto gradient_stops_ = build_gradient_stops(gradient_content_element, opacity);
+    if(gradient_stops_.empty())
         return false;
-    LengthContext lengthContext(this, attributes.gradientUnits());
-    auto x1 = lengthContext.value_for_length(attributes.x1());
-    auto y1 = lengthContext.value_for_length(attributes.y1());
-    auto x2 = lengthContext.value_for_length(attributes.x2());
-    auto y2 = lengthContext.value_for_length(attributes.y2());
-    if(gradientStops.size() == 1 || (x1 == x2 && y1 == y2)) {
-        const auto& last_stop = gradientStops.back();
+    length_context length_context_(this, attributes.gradient_units());
+    auto x1 = length_context_.value_for_length(attributes.x1());
+    auto y1 = length_context_.value_for_length(attributes.y1());
+    auto x2 = length_context_.value_for_length(attributes.x2());
+    auto y2 = length_context_.value_for_length(attributes.y2());
+    if(gradient_stops_.size() == 1 || (x1 == x2 && y1 == y2)) {
+        const auto& last_stop = gradient_stops_.back();
         state->set_color(last_stop.color_.r, last_stop.color_.g, last_stop.color_.b, last_stop.color_.a);
         return true;
     }
 
-    auto spreadMethod = attributes.spreadMethod();
-    auto gradientUnits = attributes.gradientUnits();
-    auto gradientTransform = attributes.gradientTransform();
-    if(gradientUnits == units::object_bounding_box) {
+    auto spread_method_ = attributes.spread_method_();
+    auto gradient_units = attributes.gradient_units();
+    auto gradient_transform = attributes.gradient_transform();
+    if(gradient_units == units::object_bounding_box) {
         auto bbox = state.fill_bounding_box();
-        gradientTransform.post_multiply(transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
+        gradient_transform.post_multiply(transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
     }
 
-    state->set_linear_gradient(x1, y1, x2, y2, spreadMethod, gradientStops, gradientTransform);
+    state->set_linear_gradient(x1, y1, x2, y2, spread_method_, gradient_stops_, gradient_transform);
     return true;
 }
 
@@ -295,31 +295,31 @@ bool svg_radial_gradient_element::apply_paint(svg_render_state& state, float opa
 {
     auto attributes = collect_gradient_attributes();
     auto gradient_content_element = attributes.gradient_content_element();
-    auto gradientStops = build_gradient_stops(gradient_content_element, opacity);
-    if(gradientStops.empty())
+    auto gradient_stops_ = build_gradient_stops(gradient_content_element, opacity);
+    if(gradient_stops_.empty())
         return false;
-    LengthContext lengthContext(this, attributes.gradientUnits());
-    auto r = lengthContext.value_for_length(attributes.r());
-    if(r == 0.f || gradientStops.size() == 1) {
-        const auto& last_stop = gradientStops.back();
+    length_context length_context_(this, attributes.gradient_units());
+    auto r = length_context_.value_for_length(attributes.r());
+    if(r == 0.f || gradient_stops_.size() == 1) {
+        const auto& last_stop = gradient_stops_.back();
         state->set_color(last_stop.color_.r, last_stop.color_.g, last_stop.color_.b, last_stop.color_.a);
         return true;
     }
 
-    auto fx = lengthContext.value_for_length(attributes.fx());
-    auto fy = lengthContext.value_for_length(attributes.fy());
-    auto cx = lengthContext.value_for_length(attributes.cx());
-    auto cy = lengthContext.value_for_length(attributes.cy());
+    auto fx = length_context_.value_for_length(attributes.fx());
+    auto fy = length_context_.value_for_length(attributes.fy());
+    auto cx = length_context_.value_for_length(attributes.cx());
+    auto cy = length_context_.value_for_length(attributes.cy());
 
-    auto spreadMethod = attributes.spreadMethod();
-    auto gradientUnits = attributes.gradientUnits();
-    auto gradientTransform = attributes.gradientTransform();
-    if(gradientUnits == units::object_bounding_box) {
+    auto spread_method_ = attributes.spread_method_();
+    auto gradient_units = attributes.gradient_units();
+    auto gradient_transform = attributes.gradient_transform();
+    if(gradient_units == units::object_bounding_box) {
         auto bbox = state.fill_bounding_box();
-        gradientTransform.post_multiply(transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
+        gradient_transform.post_multiply(transform(bbox.w, 0, 0, bbox.h, bbox.x, bbox.y));
     }
 
-    state->set_radial_gradient(cx, cy, r, fx, fy, spreadMethod, gradientStops, gradientTransform);
+    state->set_radial_gradient(cx, cy, r, fx, fy, spread_method_, gradient_stops_, gradient_transform);
     return true;
 }
 
@@ -367,9 +367,9 @@ svg_pattern_element::svg_pattern_element(document* dom)
     , m_y(property_id::Y, length_direction::vertical, length_negative_mode::allow)
     , m_width(property_id::width, length_direction::horizontal, length_negative_mode::forbid)
     , m_height(property_id::height, length_direction::vertical, length_negative_mode::forbid)
-    , m_pattern_transform(property_id::PatternTransform)
-    , m_pattern_units(property_id::PatternUnits, units::object_bounding_box)
-    , m_pattern_content_units(property_id::PatternContentUnits, units::user_space_on_use)
+    , m_pattern_transform(property_id::pattern_transform)
+    , m_pattern_units(property_id::pattern_units, units::object_bounding_box)
+    , m_pattern_content_units(property_id::pattern_content_units, units::user_space_on_use)
 {
     add_property(m_x);
     add_property(m_y);
@@ -388,15 +388,15 @@ bool svg_pattern_element::apply_paint(svg_render_state& state, float opacity) co
     auto pattern_content_element = attributes.pattern_content_element();
     if(pattern_content_element == nullptr)
         return false;
-    LengthContext lengthContext(this, attributes.patternUnits());
+    length_context length_context_(this, attributes.pattern_units());
     rect pattern_rect = {
-        lengthContext.value_for_length(attributes.x()),
-        lengthContext.value_for_length(attributes.y()),
-        lengthContext.value_for_length(attributes.width()),
-        lengthContext.value_for_length(attributes.height())
+        length_context_.value_for_length(attributes.x()),
+        length_context_.value_for_length(attributes.y()),
+        length_context_.value_for_length(attributes.width()),
+        length_context_.value_for_length(attributes.height())
     };
 
-    if(attributes.patternUnits() == units::object_bounding_box) {
+    if(attributes.pattern_units() == units::object_bounding_box) {
         auto bbox = state.fill_bounding_box();
         pattern_rect.x = pattern_rect.x * bbox.w + bbox.x;
         pattern_rect.y = pattern_rect.y * bbox.h + bbox.y;
@@ -404,7 +404,7 @@ bool svg_pattern_element::apply_paint(svg_render_state& state, float opacity) co
         pattern_rect.h = pattern_rect.h * bbox.h;
     }
 
-    auto current_transform = attributes.patternTransform() * state.current_transform();
+    auto current_transform = attributes.pattern_transform() * state.current_transform();
     // On a vector page the tile is a bitmap too; make it sharp at the page's raster scale.
     auto* pdf = dynamic_cast<pdf_canvas*>(&*state);
     const float tile_scale = pdf ? pdf->raster_scale() : 1.f;
@@ -414,11 +414,11 @@ bool svg_pattern_element::apply_paint(svg_render_state& state, float opacity) co
     auto pattern_image = raster_canvas::create(0, 0, pattern_rect.w * x_scale, pattern_rect.h * y_scale);
     auto pattern_image_transform = transform::scaled(x_scale, y_scale);
 
-    const auto& view_box_rect = attributes.viewBox();
+    const auto& view_box_rect = attributes.view_box();
     if(view_box_rect.is_valid()) {
-        const auto& preserveAspectRatio = attributes.preserveAspectRatio();
-        pattern_image_transform.multiply(preserveAspectRatio.get_transform(view_box_rect, pattern_rect.size_()));
-    } else if(attributes.patternContentUnits() == units::object_bounding_box) {
+        const auto& preserve_aspect_ratio = attributes.preserve_aspect_ratio();
+        pattern_image_transform.multiply(preserve_aspect_ratio.get_transform(view_box_rect, pattern_rect.size_()));
+    } else if(attributes.pattern_content_units() == units::object_bounding_box) {
         auto bbox = state.fill_bounding_box();
         pattern_image_transform.scale(bbox.w, bbox.h);
     }
@@ -426,13 +426,13 @@ bool svg_pattern_element::apply_paint(svg_render_state& state, float opacity) co
     svg_render_state new_state(this, &state, pattern_image_transform, svg_render_mode::painting, pattern_image);
     pattern_content_element->render_children(new_state);
 
-    auto patternTransform = attributes.patternTransform();
-    patternTransform.translate(pattern_rect.x, pattern_rect.y);
-    patternTransform.scale(pattern_rect.w / pattern_image->width(), pattern_rect.h / pattern_image->height());
+    auto pattern_transform = attributes.pattern_transform();
+    pattern_transform.translate(pattern_rect.x, pattern_rect.y);
+    pattern_transform.scale(pattern_rect.w / pattern_image->width(), pattern_rect.h / pattern_image->height());
     if(pdf)
-        pdf->set_tiled_image(pixmap(surface_reference(pattern_image->surface())), patternTransform, opacity);
+        pdf->set_tiled_image(pixmap(surface_reference(pattern_image->surface())), pattern_transform, opacity);
     else
-        state.raster()->set_texture(*pattern_image, texture_type::tiled, opacity, patternTransform);
+        state.raster()->set_texture(*pattern_image, texture_type::tiled, opacity, pattern_transform);
     return true;
 }
 
@@ -450,15 +450,15 @@ svg_pattern_attributes svg_pattern_element::collect_pattern_attributes() const
             attributes.set_width(current);
         if(!attributes.has_height() && current->has_attribute(property_id::height))
             attributes.set_height(current);
-        if(!attributes.has_pattern_transform() && current->has_attribute(property_id::PatternTransform))
+        if(!attributes.has_pattern_transform() && current->has_attribute(property_id::pattern_transform))
             attributes.set_pattern_transform(current);
-        if(!attributes.has_pattern_units() && current->has_attribute(property_id::PatternUnits))
+        if(!attributes.has_pattern_units() && current->has_attribute(property_id::pattern_units))
             attributes.set_pattern_units(current);
-        if(!attributes.has_pattern_content_units() && current->has_attribute(property_id::PatternContentUnits))
+        if(!attributes.has_pattern_content_units() && current->has_attribute(property_id::pattern_content_units))
             attributes.set_pattern_content_units(current);
-        if(!attributes.has_view_box() && current->has_attribute(property_id::ViewBox))
+        if(!attributes.has_view_box() && current->has_attribute(property_id::view_box))
             attributes.set_view_box(current);
-        if(!attributes.has_preserve_aspect_ratio() && current->has_attribute(property_id::PreserveAspectRatio))
+        if(!attributes.has_preserve_aspect_ratio() && current->has_attribute(property_id::preserve_aspect_ratio))
             attributes.set_preserve_aspect_ratio(current);
         if(!attributes.has_pattern_content_element()) {
             for(const auto& child : current->children()) {

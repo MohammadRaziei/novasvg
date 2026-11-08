@@ -38,7 +38,7 @@ namespace novasvg_py_interop {
 using nova::vg::pixmap;
 
 // surface_create() refuses sizes at or above this.
-constexpr std::int64_t kMaxSide = (1 << 15) - 1;
+constexpr std::int64_t max_side = (1 << 15) - 1;
 
 // ---- pixel conversion -------------------------------------------------------
 
@@ -94,7 +94,7 @@ inline pixmap bitmap_from_pixels(const std::uint8_t* p, std::int64_t h, std::int
                                  std::int64_t s0, std::int64_t s1, std::int64_t s2, bool raw) {
     if (c < 1 || c > 4) throw std::invalid_argument("expected shape (H, W) or (H, W, 1..4)");
     if (h < 1 || w < 1) throw std::invalid_argument("the array is empty");
-    if (h > kMaxSide || w > kMaxSide)
+    if (h > max_side || w > max_side)
         throw std::invalid_argument("image too large: width and height must be below 32768");
     if (raw && c != 4)
         throw std::invalid_argument("raw=True needs shape (H, W, 4): premultiplied BGRA, the Bitmap's own layout");

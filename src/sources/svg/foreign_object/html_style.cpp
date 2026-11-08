@@ -188,7 +188,7 @@ static void offer_inline_style(std::string_view style, cascaded_value& color_, c
         strip_leading_and_trailing_spaces(name_text);
         auto name = lower_case(name_text);
         std::string value(declaration_.substr(colon + 1));
-        const int priority = strip_important_flag(value) ? specificity::inline_important : specificity::InlineStyle;
+        const int priority = strip_important_flag(value) ? specificity::inline_important : specificity::inline_style;
         std::string_view trimmed(value);
         strip_leading_and_trailing_spaces(trimmed);
         if(name == "color")

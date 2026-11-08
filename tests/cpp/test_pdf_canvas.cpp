@@ -30,10 +30,10 @@ TEST_CASE("pdf_canvas: a page with shapes, a gradient, a clip and text")
     circle.add_ellipse(140, 40, 40, 30);
     pdf->stroke_path(circle, stroke, transform());
 
-    GradientStops stops = {{0.f, {1.f, 1.f, 0.f, 1.f}}, {0.5f, {0.f, 0.7f, 0.2f, 1.f}}, {1.f, {0.f, 0.2f, 0.9f, 1.f}}};
+    gradient_stops stops = {{0.f, {1.f, 1.f, 0.f, 1.f}}, {0.5f, {0.f, 0.7f, 0.2f, 1.f}}, {1.f, {0.f, 0.2f, 0.9f, 1.f}}};
     pdf->save();
     pdf->clip_rect(rect(10, 70, 180, 40), fill_rule::non_zero, transform());
-    pdf->set_linear_gradient(10, 0, 190, 0, SpreadMethod::pad, stops, transform());
+    pdf->set_linear_gradient(10, 0, 190, 0, spread_method::pad, stops, transform());
     stb::outline wide;
     wide.add_rect(0, 60, 200, 60);
     pdf->fill_path(wide, fill_rule::non_zero, transform());
