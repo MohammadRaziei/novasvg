@@ -50,7 +50,7 @@ set(NOVA_SOURCE_DIR ${PROJECT_SOURCE_DIR})
 include(FetchContent)
 set(NOVA_LIBSTB_GIT_REPOSITORY "https://github.com/mohammadraziei/libstb.git" CACHE STRING
     "libstb repository to fetch")
-set(NOVA_LIBSTB_GIT_TAG "v0.10.0" CACHE STRING
+set(NOVA_LIBSTB_GIT_TAG "7ede1f42e9872fcd3ce042845b40d6583301045f" CACHE STRING
     "libstb commit, tag or branch to fetch")
 
 # libstb is always built as a shared library here, and none of its extras are wanted.
