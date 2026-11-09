@@ -22,14 +22,14 @@ public:
 
     void set_color(const stb::color& color_) override;
     void set_color(float r, float g, float b, float a) override;
-    void set_linear_gradient(float x1, float y1, float x2, float y2, spread_method spread, const gradient_stops& stops, const transform& transform_) override;
-    void set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method spread, const gradient_stops& stops, const transform& transform_) override;
+    void set_linear_gradient(float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stops& stops, const transform& transform_) override;
+    void set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method_value spread, const gradient_stops& stops, const transform& transform_) override;
 
     void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) override;
     void stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_) override;
 
-    void fill_text(const std::u32string_view& text, const font& font_, const point& origin, const transform& transform_) override;
-    void stroke_text(const std::u32string_view& text, float stroke_width, const font& font_, const point& origin, const transform& transform_) override;
+    void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_) override;
+    void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_) override;
 
     void clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_) override;
     void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) override;
@@ -72,7 +72,7 @@ private:
         int tile_w = 0, tile_h = 0;
         float r = 0, g = 0, b = 0, a = 1;
         float p[6] = {0, 0, 0, 0, 0, 0}; // linear: x1 y1 x2 y2; radial: cx cy r fx fy
-        spread_method spread = spread_method::pad;
+        spread_method_value spread = spread_method_value::pad;
         gradient_stops stops;
         stb::matrix matrix = {1, 0, 0, 1, 0, 0};
     };
@@ -88,7 +88,7 @@ private:
     void begin_paint(bool stroke, const stb::matrix& transform_);
     void emit_path(const stb::outline& path_, const stb::matrix* transform_);
     void emit_rect_path(const rect& rect_, const stb::matrix* transform_);
-    void emit_text_path(const std::u32string_view& text, const font& font_, const point& origin, const stb::matrix* transform_);
+    void emit_text_path(const std::u32string_view& text, const sized_font& font_, const point& origin, const stb::matrix* transform_);
     std::string alpha_state(float alpha, blend_mode blend_mode_ = blend_mode::src_over);
     int shading_pattern(const stb::matrix& transform_);
     int tiling_pattern(const stb::matrix& transform_);

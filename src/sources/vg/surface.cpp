@@ -181,12 +181,10 @@ int surface_get_stride(const surface_t* surface)
     return surface->stride;
 }
 
-void surface_clear(surface_t* surface, const color_t* color_)
+void surface_clear(surface_t* surface, const stb::color* color_)
 {
     // libstb's straight-RGBA -> premultiplied-ARGB32 conversion (c * a / 255, packed 0xAARRGGBB), on one pixel.
-    const uint32_t argb = color_to_argb32(color_);
-    const uint8_t rgba[4] = {static_cast<uint8_t>(novasvg_red(argb)), static_cast<uint8_t>(novasvg_green(argb)),
-                             static_cast<uint8_t>(novasvg_blue(argb)), static_cast<uint8_t>(novasvg_alpha(argb))};
+    const uint8_t rgba[4] = {color_->r(), color_->g(), color_->b(), color_->a()};
     uint32_t pixel = 0;
     stb::rgba_to_premultiplied_argb(reinterpret_cast<uint8_t*>(&pixel), sizeof(pixel), rgba, sizeof(rgba), 1, 1);
     for(int y = 0; y < surface->height; y++) {

@@ -48,7 +48,7 @@ public:
     bool is_renderable() const { return m_opacity > 0.f && (m_element || m_color.a() > 0); }
 
     const svg_paint_element* el() const { return m_element; }
-    const stb::color& color_() const { return  m_color; }
+    const stb::color& color() const { return  m_color; }
     float opacity() const { return m_opacity; }
 
     bool apply_paint(svg_render_state& state) const;
@@ -65,8 +65,8 @@ public:
 
     bool is_graphics_element() const final { return true; }
 
-    const svg_transform& transform_() const { return m_transform; }
-    transform local_transform() const override;
+    const svg_transform& transform() const { return m_transform; }
+    vg::transform local_transform() const override;
 
     svg_paint_server get_paint_server(const paint& paint_, float opacity) const;
     stroke_data get_stroke_data(const svg_layout_state& state) const;
@@ -86,7 +86,7 @@ public:
     const svg_length& width() const { return m_width; }
     const svg_length& height() const { return m_height; }
 
-    transform local_transform() const override;
+    vg::transform local_transform() const override;
     void render(svg_render_state& state) const override;
 
 private:
@@ -137,7 +137,7 @@ public:
     const svg_length& width() const { return m_width; }
     const svg_length& height() const { return m_height; }
 
-    transform local_transform() const final;
+    vg::transform local_transform() const final;
     void render(svg_render_state& state) const final;
     void build() final;
 
@@ -189,7 +189,7 @@ public:
     const svg_length& y() const { return m_y; }
     const svg_length& width() const { return m_width; }
     const svg_length& height() const { return m_height; }
-    const font& font_() const { return m_font; }
+    const sized_font& font() const { return m_font; }
     const std::string& font_family() const { return m_font_family; }
     const svg_paint_server& fill() const { return m_fill; }
 
@@ -214,7 +214,7 @@ private:
     svg_length m_y;
     svg_length m_width;
     svg_length m_height;
-    font m_font;
+    sized_font m_font;
     std::string m_font_family;
     unsigned char m_base_font_style = 0;
     svg_paint_server m_fill;
@@ -224,7 +224,7 @@ private:
 
 /// What `renderer` says the markup measures when drawn with `base` (and, with a `family`, the bold / italic variants of
 /// it), without rendering anything. For callers that size their own layout from it (the Python binding).
-std::optional<foreign_object_size> measure_foreign_object(const foreign_object_renderer& renderer, std::string_view markup, const font& base,
+std::optional<foreign_object_size> measure_foreign_object(const foreign_object_renderer& renderer, std::string_view markup, const sized_font& base,
                                                           const std::string& family, bool bold, bool italic, float max_width);
 
 class svg_symbol_element final : public svg_graphics_element, public svg_fit_to_view_box {
@@ -268,7 +268,7 @@ public:
     const svg_length& refY() const { return m_ref_y; }
     const svg_length& marker_width() const { return m_marker_width; }
     const svg_length& marker_height() const { return m_marker_height; }
-    const svg_enumeration<marker_units>& marker_units_() const { return m_marker_units; }
+    const svg_enumeration<svg_marker_units>& marker_units() const { return m_marker_units; }
     const svg_angle& orient() const { return m_orient; }
 
     point ref_point() const;
@@ -285,7 +285,7 @@ private:
     svg_length m_ref_y;
     svg_length m_marker_width;
     svg_length m_marker_height;
-    svg_enumeration<marker_units> m_marker_units;
+    svg_enumeration<svg_marker_units> m_marker_units;
     svg_angle m_orient;
 };
 
@@ -329,7 +329,7 @@ private:
     svg_length m_height;
     svg_enumeration<units> m_mask_units;
     svg_enumeration<units> m_mask_content_units;
-    mask_type m_mask_type = mask_type::luminance;
+    css_mask_type m_mask_type = css_mask_type::luminance;
 };
 
 // ---- svgfilterelement ----
@@ -420,8 +420,8 @@ public:
 
     std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
-        auto sigma = parse_first_float(attribute_(property_id::std_deviation), 0.f) * context.scale();
-        auto output = context.clone_canvas(*context.resolve_input(attribute_(property_id::in)));
+        auto sigma = parse_first_float(attribute(property_id::std_deviation), 0.f) * context.scale();
+        auto output = context.clone_canvas(*context.resolve_input(attribute(property_id::in)));
         output->box_blur(sigma, sigma);
         return output;
     }
@@ -433,9 +433,9 @@ public:
 
     std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
-        auto dx = parse_first_float(attribute_(property_id::dx), 0.f) * context.scale();
-        auto dy = parse_first_float(attribute_(property_id::dy), 0.f) * context.scale();
-        auto output = context.clone_canvas(*context.resolve_input(attribute_(property_id::in)));
+        auto dx = parse_first_float(attribute(property_id::dx), 0.f) * context.scale();
+        auto dy = parse_first_float(attribute(property_id::dy), 0.f) * context.scale();
+        auto output = context.clone_canvas(*context.resolve_input(attribute(property_id::in)));
         output->shift(dx, dy);
         return output;
     }
@@ -447,9 +447,9 @@ public:
 
     std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
-        auto flood_color_attr = attribute_(property_id::flood_color);
+        auto flood_color_attr = attribute(property_id::flood_color);
         stb::color flood_color = flood_color_attr.empty() ? stb::color(0, 0, 0) : stb::color(flood_color_attr);
-        auto flood_opacity = parse_first_float(attribute_(property_id::flood_opacity), 1.f);
+        auto flood_opacity = parse_first_float(attribute(property_id::flood_opacity), 1.f);
 
         auto output = context.new_canvas();
         output->fill_opaque_white();
@@ -468,7 +468,7 @@ public:
         for(const auto& child : children()) {
             auto el = to_svg_element(child);
             if(el && el->id() == element_id::fe_merge_node)
-                output->composite_over(*context.resolve_input(el->attribute_(property_id::in)));
+                output->composite_over(*context.resolve_input(el->attribute(property_id::in)));
         }
 
         return output;
@@ -481,16 +481,16 @@ public:
 
     std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
-        auto input = context.resolve_input(attribute_(property_id::in));
-        auto input2 = context.resolve_input(attribute_(property_id::in2));
+        auto input = context.resolve_input(attribute(property_id::in));
+        auto input2 = context.resolve_input(attribute(property_id::in2));
         auto output = context.clone_canvas(*input2);
 
-        auto op = attribute_(property_id::operator_);
+        auto op = attribute(property_id::operator_);
         if(op == "arithmetic") {
-            auto k1 = parse_first_float(attribute_(property_id::K1), 0.f);
-            auto k2 = parse_first_float(attribute_(property_id::K2), 0.f);
-            auto k3 = parse_first_float(attribute_(property_id::K3), 0.f);
-            auto k4 = parse_first_float(attribute_(property_id::K4), 0.f);
+            auto k1 = parse_first_float(attribute(property_id::K1), 0.f);
+            auto k2 = parse_first_float(attribute(property_id::K2), 0.f);
+            auto k3 = parse_first_float(attribute(property_id::K3), 0.f);
+            auto k4 = parse_first_float(attribute(property_id::K4), 0.f);
             output->composite_arithmetic(*input, k1, k2, k3, k4);
             return output;
         }
@@ -512,14 +512,14 @@ public:
 
     std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
-        auto sigma = parse_first_float(attribute_(property_id::std_deviation), 2.f) * context.scale();
-        auto dx = parse_first_float(attribute_(property_id::dx), 2.f) * context.scale();
-        auto dy = parse_first_float(attribute_(property_id::dy), 2.f) * context.scale();
-        auto flood_color_attr = attribute_(property_id::flood_color);
+        auto sigma = parse_first_float(attribute(property_id::std_deviation), 2.f) * context.scale();
+        auto dx = parse_first_float(attribute(property_id::dx), 2.f) * context.scale();
+        auto dy = parse_first_float(attribute(property_id::dy), 2.f) * context.scale();
+        auto flood_color_attr = attribute(property_id::flood_color);
         stb::color flood_color = flood_color_attr.empty() ? stb::color(0, 0, 0) : stb::color(flood_color_attr);
-        auto flood_opacity = parse_first_float(attribute_(property_id::flood_opacity), 1.f);
+        auto flood_opacity = parse_first_float(attribute(property_id::flood_opacity), 1.f);
 
-        auto input = context.resolve_input(attribute_(property_id::in));
+        auto input = context.resolve_input(attribute(property_id::in));
         auto shadow = context.clone_canvas(*input);
         shadow->tint_to_flood_color(flood_color, flood_opacity);
         shadow->box_blur(sigma, sigma);

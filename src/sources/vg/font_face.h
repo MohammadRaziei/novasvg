@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
+#include <mutex>
 #include <vector>
 
 #if defined(_WIN32)
@@ -22,35 +23,6 @@
 
 namespace nova {
 namespace vg {
-
-#if defined(_WIN32)
-
-typedef CRITICAL_SECTION mutex_t;
-
-#define novasvg_mutex_init(mutex) initialize_critical_section(mutex)
-#define novasvg_mutex_lock(mutex) enter_critical_section(mutex)
-#define novasvg_mutex_unlock(mutex) leave_critical_section(mutex)
-#define novasvg_mutex_destroy(mutex) delete_critical_section(mutex)
-
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && defined(HAVE_THREADS_H) && !defined(__STDC_NO_THREADS__)
-
-typedef mtx_t mutex_t;
-
-#define novasvg_mutex_init(mutex) mtx_init(mutex, mtx_plain | mtx_recursive)
-#define novasvg_mutex_lock(mutex) mtx_lock(mutex)
-#define novasvg_mutex_unlock(mutex) mtx_unlock(mutex)
-#define novasvg_mutex_destroy(mutex) mtx_destroy(mutex)
-
-#else
-
-typedef int mutex_t;
-
-#define novasvg_mutex_init(mutex) ((void)(mutex))
-#define novasvg_mutex_lock(mutex) ((void)(mutex))
-#define novasvg_mutex_unlock(mutex) ((void)(mutex))
-#define novasvg_mutex_destroy(mutex) ((void)(mutex))
-
-#endif
 
 // A text shaped by libstb (font::shape): the glyphs to draw, in visual order, with the pen already placed (kerning,
 // ligatures, joined and mirrored letters, marks), in pixels at the font size, y down.
@@ -123,7 +95,7 @@ private:
     mutable ref_count_t ref_count;
     stb::font ft;
     stb::font_design_metrics design;
-    mutable mutex_t mutex;
+    mutable std::mutex mutex;
     mutable std::unordered_map<codepoint_t, std::unique_ptr<glyph_entry>> cache;
     destroy_func_t destroy_func = nullptr;
     void* closure = nullptr;

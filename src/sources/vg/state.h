@@ -6,7 +6,7 @@
 namespace nova {
 namespace vg {
 
-#define NOVA_DEFAULT_STROKE_STYLE (stroke_style_t{1.f, line_cap::butt, line_join::miter, 10.f})
+#define NOVA_DEFAULT_STROKE_STYLE (stb::stroke_style{1.f, stb::line_cap::butt, stb::line_join::miter, 10.f})
 
 } // namespace vg
 } // namespace nova

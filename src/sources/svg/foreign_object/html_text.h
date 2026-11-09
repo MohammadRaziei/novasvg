@@ -17,7 +17,7 @@ struct foreign_object_face {
 
     /// No usable face (the machine has no font at all): text in it is not drawn.
     bool is_null() const { return painter == nullptr || painter->metrics(spec).height <= 0.f; }
-    float size_() const { return spec.size; }
+    float size() const { return spec.size; }
     float ascent() const { return painter->metrics(spec).ascent; }
     float height() const { return painter->metrics(spec).height; }
     float measure_text(std::u32string_view text) const { return painter->measure_text(text, spec); }
@@ -171,12 +171,12 @@ inline unsigned char foreign_object_style_of_opening(const std::string& tag, std
     if(!inline_style.empty()) {
         if(auto weight = foreign_object_declaration(inline_style, "font-weight"); !weight.empty()) {
             style &= (unsigned char)~foreign_object_fonts::bold;
-            if(parse_font_weight(weight) == font_weight::bold)
+            if(parse_font_weight(weight) == css_font_weight::bold)
                 style |= foreign_object_fonts::bold;
         }
         if(auto font_style_ = foreign_object_declaration(inline_style, "font-style"); !font_style_.empty()) {
             style &= (unsigned char)~foreign_object_fonts::italic;
-            if(parse_font_style(font_style_) == font_style::italic)
+            if(parse_font_style(font_style_) == css_font_style::italic)
                 style |= foreign_object_fonts::italic;
         }
     }
@@ -736,7 +736,7 @@ inline foreign_object_metrics measure_foreign_object_segments(std::string_view r
     }
     auto lines = layout_foreign_object_text(segments, fonts, wrap_width);
     metrics.line_count = int(lines.size());
-    metrics.line_height = foreign_object_line_height(raw_html, font_.size_()).value_or(font_.height() * 1.2f);
+    metrics.line_height = foreign_object_line_height(raw_html, font_.size()).value_or(font_.height() * 1.2f);
     metrics.height = metrics.line_height * float(metrics.line_count);
     for(const auto& line : lines)
         // STB_MAX(), not std::max(): see novasvg.h's own

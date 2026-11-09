@@ -4,6 +4,8 @@
 // algorithms (through plutovg) that used to be vendored here in src/sources/vg/vendor.
 #include <stb/raster.hpp>
 
+#include <algorithm>
+
 namespace nova {
 namespace vg {
 
@@ -19,7 +21,7 @@ void span_buffer_init_rect(span_buffer_t* span_buffer, int x, int y, int width, 
 {
     novasvg_array_clear(span_buffer->spans);
     novasvg_array_ensure(span_buffer->spans, height);
-    span_t* spans = span_buffer->spans.data;
+    stb::span* spans = span_buffer->spans.data;
     for(int i = 0; i < height; i++) {
         spans[i].x = x;
         spans[i].y = y + i;
@@ -64,7 +66,7 @@ bool span_buffer_contains(const span_buffer_t* span_buffer, float x, float y)
     const int iy = (int)floorf(y);
 
     for(int i = 0; i < span_buffer->spans.size_; i++) {
-        span_t* span = &span_buffer->spans.data[i];
+        stb::span* span = &span_buffer->spans.data[i];
         if(span->y != iy)
             continue;
         if(ix >= span->x && ix < (span->x + span->len)) {
@@ -87,7 +89,7 @@ static void span_buffer_update_extents(span_buffer_t* span_buffer)
         return;
     }
 
-    span_t* spans = span_buffer->spans.data;
+    stb::span* spans = span_buffer->spans.data;
     int x1 = INT_MAX;
     int y1 = spans[0].y;
     int x2 = 0;
@@ -117,11 +119,11 @@ void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, c
     span_buffer_reset(span_buffer);
     novasvg_array_ensure(span_buffer->spans, STB_MAX(a->spans.size_, b->spans.size_));
 
-    span_t* a_spans = a->spans.data;
-    span_t* a_end = a_spans + a->spans.size_;
+    stb::span* a_spans = a->spans.data;
+    stb::span* a_end = a_spans + a->spans.size_;
 
-    span_t* b_spans = b->spans.data;
-    span_t* b_end = b_spans + b->spans.size_;
+    stb::span* b_spans = b->spans.data;
+    stb::span* b_end = b_spans + b->spans.size_;
     while(a_spans < a_end && b_spans < b_end) {
         if(b_spans->y > a_spans->y) {
             ++a_spans;
@@ -151,7 +153,7 @@ void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, c
         int len = STB_MIN(ax2, bx2) - x;
         if(len) {
             novasvg_array_ensure(span_buffer->spans, 1);
-            span_t* span = span_buffer->spans.data + span_buffer->spans.size_;
+            stb::span* span = span_buffer->spans.data + span_buffer->spans.size_;
             span->x = x;
             span->len = len;
             span->y = a_spans->y;
@@ -195,17 +197,11 @@ stb::outline cubics_only(const stb::outline& in)
 
 } // namespace
 
-void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const stb::matrix* matrix, const rect_t* clip_rect, const stroke_data_t* stroke_data_, fill_rule winding)
+void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const stb::matrix* matrix, const rect_t* clip_rect, const stb::stroke_style* stroke_, fill_rule winding)
 {
     span_buffer_reset(span_buffer);
 
-    stb::matrix m;
-    m.a = matrix->a;
-    m.b = matrix->b;
-    m.c = matrix->c;
-    m.d = matrix->d;
-    m.e = matrix->e;
-    m.f = matrix->f;
+    const stb::matrix& m = *matrix;
 
     stb::clip_rect clip;
     if(clip_rect) {
@@ -224,54 +220,17 @@ void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const stb:
     auto sink = [span_buffer](stb::span_view view) {
         const int count = (int)view.size;
         novasvg_array_ensure(span_buffer->spans, count);
-        span_t* out = span_buffer->spans.data + span_buffer->spans.size_;
-        for(int i = 0; i < count; ++i) {
-            out[i].x = view.data[i].x;
-            out[i].y = view.data[i].y;
-            out[i].len = view.data[i].len;
-            out[i].coverage = view.data[i].coverage;
-        }
+        stb::span* out = span_buffer->spans.data + span_buffer->spans.size_;
+        std::copy(view.data, view.data + count, out);
 
         span_buffer->spans.size_ += count;
     };
 
     const stb::outline outline = cubics_only(path_);
-    if(stroke_data_) {
-        stb::stroke_style style;
-        style.width = stroke_data_->style.width;
-        switch(stroke_data_->style.cap) {
-        case line_cap::square:
-            style.cap = stb::line_cap::square;
-            break;
-        case line_cap::round:
-            style.cap = stb::line_cap::round;
-            break;
-        default:
-            style.cap = stb::line_cap::butt;
-            break;
-        }
-
-        switch(stroke_data_->style.join) {
-        case line_join::bevel:
-            style.join = stb::line_join::bevel;
-            break;
-        case line_join::round:
-            style.join = stb::line_join::round;
-            break;
-        default:
-            style.join = stb::line_join::miter;
-            break;
-        }
-
-        style.miter_limit = stroke_data_->style.miter_limit;
-        if(stroke_data_->dash.array.size_ > 0) {
-            style.dashes.assign(stroke_data_->dash.array.data, stroke_data_->dash.array.data + stroke_data_->dash.array.size_);
-            style.dash_offset = stroke_data_->dash.offset;
-        }
-
-        stb::rasterize_stroke(outline, style, m, clip, sink);
+    if(stroke_) {
+        stb::rasterize_stroke(outline, *stroke_, m, clip, sink);
     } else {
-        stb::rasterize_fill(outline, winding == fill_rule::even_odd ? stb::fill_rule::even_odd : stb::fill_rule::non_zero, m, clip, sink);
+        stb::rasterize_fill(outline, winding, m, clip, sink);
     }
 }
 

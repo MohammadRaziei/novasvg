@@ -123,15 +123,15 @@ public:
 private:
     font_face_cache();
     font_face_cache_t* m_cache;
-    friend font_face_cache* font_face_cache_();
+    friend font_face_cache* global_font_face_cache();
 };
 
-font_face_cache* font_face_cache_();
+font_face_cache* global_font_face_cache();
 
-class font {
+class sized_font {
 public:
-    font() = default;
-    font(const font_face& face, float size_);
+    sized_font() = default;
+    sized_font(const font_face& face, float size_);
 
     float ascent() const { return m_ascent; }
     float descent() const { return m_descent; }
@@ -160,7 +160,7 @@ public:
     std::vector<glyph_box> glyph_boxes(const std::u32string_view& text) const;
 
     const font_face& face() const { return m_face; }
-    float size_() const { return m_size; }
+    float size() const { return m_size; }
 
     bool is_null() const { return m_size <= 0.f || m_face.is_null(); }
 
@@ -220,7 +220,7 @@ namespace nova::vg {
 
 
 
-font_face_cache* font_face_cache_();
+font_face_cache* global_font_face_cache();
 
 
 

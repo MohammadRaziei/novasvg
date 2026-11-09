@@ -19,15 +19,15 @@ public:
 
     bool is_renderable() const { return !m_path.empty() && !is_display_none() && !is_visibility_hidden(); }
 
-    fill_rule fill_rule_() const { return m_fill_rule; }
-    fill_rule clip_rule() const { return m_clip_rule; }
+    stb::fill_rule fill_rule() const { return m_fill_rule; }
+    stb::fill_rule clip_rule() const { return m_clip_rule; }
 
     virtual rect update_shape(stb::outline& path_) = 0;
 
     void update_marker_positions(svg_marker_position_list& positions, const svg_layout_state& state);
     void render(svg_render_state& state) const override;
 
-    const stb::outline& path_() const { return m_path; }
+    const stb::outline& path() const { return m_path; }
 
 private:
     stb::outline m_path;
@@ -38,8 +38,8 @@ private:
     svg_paint_server m_stroke;
     svg_marker_position_list m_marker_positions;
 
-    fill_rule m_fill_rule = fill_rule::non_zero;
-    fill_rule m_clip_rule = fill_rule::non_zero;
+    stb::fill_rule m_fill_rule = stb::fill_rule::non_zero;
+    stb::fill_rule m_clip_rule = stb::fill_rule::non_zero;
 };
 
 class svg_line_element final : public svg_geometry_element {

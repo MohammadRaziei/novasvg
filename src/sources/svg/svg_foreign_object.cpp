@@ -15,7 +15,7 @@ namespace {
 /// `state` may be null: such a painter only measures.
 class element_painter final : public foreign_object_painter {
 public:
-    element_painter(const font& base, std::string family, unsigned char base_style, svg_render_state* state, bool variants = true)
+    element_painter(const sized_font& base, std::string family, unsigned char base_style, svg_render_state* state, bool variants = true)
         : m_base(base), m_family(std::move(family)), m_base_style(base_style), m_state(state), m_variants(variants) {}
 
     void fill_rect(const box& box_, const stb::color& color_) override;
@@ -26,14 +26,14 @@ public:
     float measure_text(std::u32string_view text, const foreign_object_font& font_) const override;
 
 private:
-    const font& resolve(const foreign_object_font& spec) const;
+    const sized_font& resolve(const foreign_object_font& spec) const;
 
     struct cached {
         foreign_object_font spec;
-        font font_;
+        sized_font font_;
     };
 
-    font m_base;
+    sized_font m_base;
     std::string m_family;
     unsigned char m_base_style;
     svg_render_state* m_state;
@@ -43,13 +43,13 @@ private:
 
 // ---- element_painter -------------------------------------------------------------------------------
 
-const font& element_painter::resolve(const foreign_object_font& spec) const
+const sized_font& element_painter::resolve(const foreign_object_font& spec) const
 {
     if(!m_variants)
         return m_base;
     const unsigned char style = (unsigned char)((spec.bold ? svg_foreign_object_element::style_bold : 0)
                                               | (spec.italic ? svg_foreign_object_element::style_italic : 0));
-    if(style == m_base_style && spec.size == m_base.size_() && spec.family == m_family)
+    if(style == m_base_style && spec.size == m_base.size() && spec.family == m_family)
         return m_base;
     for(const auto& entry : m_cache) {
         if(entry.spec.family == spec.family && entry.spec.size == spec.size && entry.spec.bold == spec.bold && entry.spec.italic == spec.italic)
@@ -149,10 +149,10 @@ rect svg_foreign_object_element::stroke_bounding_box() const
 
 void svg_foreign_object_element::layout_element(const svg_layout_state& state)
 {
-    m_font = state.font_();
+    m_font = state.font();
     m_font_family = state.font_family();
-    m_base_font_style = (unsigned char)((state.font_weight_() == font_weight::bold ? style_bold : 0)
-                                      | (state.font_style_() == font_style::italic ? style_italic : 0));
+    m_base_font_style = (unsigned char)((state.font_weight() == css_font_weight::bold ? style_bold : 0)
+                                      | (state.font_style() == css_font_style::italic ? style_italic : 0));
     m_fill = get_paint_server(state.fill(), state.fill_opacity());
     svg_graphics_element::layout_element(state);
 }
@@ -174,7 +174,7 @@ void svg_foreign_object_element::render(svg_render_state& state) const
     context.markup = m_raw_content;
     context.box = box(box_);
     context.font.family = m_font_family;
-    context.font.size = m_font.size_();
+    context.font.size = m_font.size();
     context.font.bold = (m_base_font_style & style_bold) != 0;
     context.font.italic = (m_base_font_style & style_italic) != 0;
     const auto transform_ = new_state.current_transform();
@@ -186,7 +186,7 @@ void svg_foreign_object_element::render(svg_render_state& state) const
     new_state.end_group(blend_info);
 }
 
-std::optional<foreign_object_size> measure_foreign_object(const foreign_object_renderer& renderer, std::string_view markup, const font& base,
+std::optional<foreign_object_size> measure_foreign_object(const foreign_object_renderer& renderer, std::string_view markup, const sized_font& base,
                                                           const std::string& family, bool bold, bool italic, float max_width)
 {
     // `base` is the face of the base style (bold / italic say which). With a family the other variants are looked up in
@@ -197,7 +197,7 @@ std::optional<foreign_object_size> measure_foreign_object(const foreign_object_r
     foreign_object_context context;
     context.markup = markup;
     context.font.family = family;
-    context.font.size = base.size_();
+    context.font.size = base.size();
     context.font.bold = bold;
     context.font.italic = italic;
     return renderer.measure(context, painter, max_width);

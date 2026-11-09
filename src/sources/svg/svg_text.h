@@ -82,29 +82,29 @@ public:
     const number_list& rotate() const { return m_rotate.values(); }
 
     const svg_length& text_length() const { return m_text_length; }
-    length_adjust length_adjust_() const { return m_length_adjust.value(); }
+    svg_length_adjust length_adjust() const { return m_length_adjust.value(); }
 
-    const font& font_() const { return m_font; }
+    const sized_font& font() const { return m_font; }
     const svg_paint_server& fill() const { return m_fill; }
     const svg_paint_server& stroke() const { return m_stroke; }
 
-    bool is_vertical_writing_mode() const { return m_writing_mode == writing_mode::vertical; }
-    bool is_upright_text_orientation() const { return m_text_orientation == text_orientation::upright; }
+    bool is_vertical_writing_mode() const { return m_writing_mode == css_writing_mode::vertical; }
+    bool is_upright_text_orientation() const { return m_text_orientation == css_text_orientation::upright; }
 
     float stroke_width() const { return m_stroke_width; }
     float letter_spacing() const { return m_letter_spacing; }
     float word_spacing() const { return m_word_spacing; }
     float baseline_offset() const { return m_baseline_offset; }
-    alignment_baseline alignment_baseline_() const { return m_alignment_baseline; }
-    dominant_baseline dominant_baseline_() const { return m_dominant_baseline; }
-    text_anchor text_anchor_() const { return m_text_anchor; }
-    white_space white_space_() const { return m_white_space; }
-    direction direction_() const { return m_direction; }
+    css_alignment_baseline alignment_baseline() const { return m_alignment_baseline; }
+    css_dominant_baseline dominant_baseline() const { return m_dominant_baseline; }
+    svg_text_anchor text_anchor() const { return m_text_anchor; }
+    css_white_space white_space() const { return m_white_space; }
+    css_direction direction() const { return m_direction; }
 
     void layout_element(const svg_layout_state& state) override;
 
 private:
-    float convert_baseline_offset(const baseline_shift& baseline_shift_) const;
+    float convert_baseline_offset(const css_baseline_shift& baseline_shift_) const;
     svg_length_list m_x;
     svg_length_list m_y;
     svg_length_list m_dx;
@@ -112,9 +112,9 @@ private:
     svg_number_list m_rotate;
 
     svg_length m_text_length;
-    svg_enumeration<length_adjust> m_length_adjust;
+    svg_enumeration<svg_length_adjust> m_length_adjust;
 
-    font m_font;
+    sized_font m_font;
     svg_paint_server m_fill;
     svg_paint_server m_stroke;
 
@@ -122,13 +122,13 @@ private:
     float m_letter_spacing = 0.f;
     float m_word_spacing = 0.f;
     float m_baseline_offset = 0.f;
-    alignment_baseline m_alignment_baseline = alignment_baseline::auto_;
-    dominant_baseline m_dominant_baseline = dominant_baseline::auto_;
-    text_anchor m_text_anchor = text_anchor::start;
-    white_space m_white_space = white_space::default_;
-    writing_mode m_writing_mode = writing_mode::horizontal;
-    text_orientation m_text_orientation = text_orientation::mixed;
-    direction m_direction = direction::ltr;
+    css_alignment_baseline m_alignment_baseline = css_alignment_baseline::auto_;
+    css_dominant_baseline m_dominant_baseline = css_dominant_baseline::auto_;
+    svg_text_anchor m_text_anchor = svg_text_anchor::start;
+    css_white_space m_white_space = css_white_space::default_;
+    css_writing_mode m_writing_mode = css_writing_mode::horizontal;
+    css_text_orientation m_text_orientation = css_text_orientation::mixed;
+    css_direction m_direction = css_direction::ltr;
 };
 
 class svg_t_span_element final : public svg_text_positioning_element {

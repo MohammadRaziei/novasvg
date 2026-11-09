@@ -11,7 +11,7 @@ using namespace vg; // the drawing layer (nova::vg)
 inline bool switch_child_passes(const svg_element* child)
 {
     if(child->has_attribute(property_id::required_extensions)) {
-        std::string_view value = utils::trim(child->attribute_(property_id::required_extensions));
+        std::string_view value = utils::trim(child->attribute(property_id::required_extensions));
         bool supported = false;
         size_t pos = 0;
         while(pos < value.size() && !supported) {
@@ -27,7 +27,7 @@ inline bool switch_child_passes(const svg_element* child)
             return false;
     }
     if(child->has_attribute(property_id::system_language)) {
-        std::string_view value = child->attribute_(property_id::system_language);
+        std::string_view value = child->attribute(property_id::system_language);
         bool matches = false;
         size_t pos = 0;
         while(pos <= value.size() && !matches) {

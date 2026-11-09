@@ -112,12 +112,12 @@ bool svg_element::has_attribute(std::string_view name) const
     return has_attribute(id);
 }
 
-const std::string& svg_element::attribute_(std::string_view name) const
+const std::string& svg_element::attribute(std::string_view name) const
 {
     auto id = propertyid(name);
     if(id == property_id::unknown)
         return empty_string;
-    return attribute_(id);
+    return attribute(id);
 }
 
 const std::string* svg_element::find_custom_attribute(const std::string& name) const
@@ -139,7 +139,7 @@ bool svg_element::set_attribute(std::string_view name, const std::string& value)
     return set_attribute(specificity::api, id, value);
 }
 
-const attribute* svg_element::find_attribute(property_id id) const
+const attribute_entry* svg_element::find_attribute(property_id id) const
 {
     for(const auto& attribute : m_attributes) {
         if(id == attribute.id()) {
@@ -161,7 +161,7 @@ bool svg_element::has_attribute(property_id id) const
     return false;
 }
 
-const std::string& svg_element::attribute_(property_id id) const
+const std::string& svg_element::attribute(property_id id) const
 {
     for(const auto& attribute : m_attributes) {
         if(id == attribute.id()) {
@@ -187,7 +187,7 @@ bool svg_element::set_attribute(int specificity, property_id id, const std::stri
                 m_variable_sources.erase(id);
                 parse_attribute(id, value);
             }
-            attribute_ = attribute(specificity, id, value);
+            attribute_ = attribute_entry(specificity, id, value);
             return true;
         }
     }
@@ -234,7 +234,7 @@ void svg_element::resolve_variables()
             continue;
         for(auto& attribute_ : m_attributes) {
             if(attribute_.id() == id) {
-                attribute_ = attribute(attribute_.specificity(), id, resolved);
+                attribute_ = attribute_entry(attribute_.specificity(), id, resolved);
                 break;
             }
         }
@@ -249,7 +249,7 @@ void svg_element::set_attributes(const attribute_list& attributes)
     }
 }
 
-bool svg_element::set_attribute(const attribute& attribute_)
+bool svg_element::set_attribute(const attribute_entry& attribute_)
 {
     return set_attribute(attribute_.specificity(), attribute_.id(), attribute_.value());
 }
@@ -454,7 +454,7 @@ size svg_element::current_viewport_size() const
         auto el = static_cast<const svg_svg_element*>(this);
         const auto& view_box = el->view_box();
         if(view_box.value().is_valid())
-            return view_box.value().size_();
+            return view_box.value().size();
         return size(300, 150);
     }
 
@@ -462,7 +462,7 @@ size svg_element::current_viewport_size() const
         auto el = static_cast<const svg_svg_element*>(parent);
         const auto& view_box = el->view_box();
         if(view_box.value().is_valid())
-            return view_box.value().size_();
+            return view_box.value().size();
         length_context length_context_(el);
         auto width = length_context_.value_for_length(el->width());
         auto height = length_context_.value_for_length(el->height());
@@ -504,13 +504,13 @@ void svg_element::layout_element(const svg_layout_state& state)
     m_masker = get_masker(state.mask());
     m_filter = get_filter_element(state.filter());
     m_opacity = state.opacity();
-    m_mix_blend_mode = state.mix_blend_mode_();
+    m_mix_blend_mode = state.mix_blend_mode();
 
     m_font_size = state.font_size();
-    m_display = state.display_();
-    m_overflow = state.overflow_();
-    m_visibility = state.visibility_();
-    m_pointer_events = state.pointer_events_();
+    m_display = state.display();
+    m_overflow = state.overflow();
+    m_visibility = state.visibility();
+    m_pointer_events = state.pointer_events();
 }
 
 void svg_element::layout_children(svg_layout_state& state)
@@ -572,9 +572,9 @@ bool svg_element::is_hidden_element() const
 
 bool svg_element::is_pointable_element() const
 {
-    if(m_pointer_events != pointer_events::none
-        && m_visibility != visibility::hidden
-        && m_display != display::none
+    if(m_pointer_events != css_pointer_events::none
+        && m_visibility != css_visibility::hidden
+        && m_display != css_display::none
         && m_opacity != 0.f) {
         switch(m_id) {
         case element_id::line:
@@ -689,8 +689,8 @@ svg_paint_server svg_graphics_element::get_paint_server(const paint& paint_, flo
     if(paint_.is_none())
         return svg_paint_server();
     if(auto el = get_painter(paint_.id()))
-        return svg_paint_server(el, paint_.color_(), opacity);
-    return svg_paint_server(nullptr, paint_.color_(), opacity);
+        return svg_paint_server(el, paint_.color(), opacity);
+    return svg_paint_server(nullptr, paint_.color(), opacity);
 }
 
 stroke_data svg_graphics_element::get_stroke_data(const svg_layout_state& state) const
@@ -702,7 +702,7 @@ stroke_data svg_graphics_element::get_stroke_data(const svg_layout_state& state)
     stroke_data_.set_line_join(state.stroke_linejoin());
     stroke_data_.set_dash_offset(length_context_.value_for_length(state.stroke_dashoffset(), length_direction::diagonal));
 
-    dash_array dash_array_;
+    dash_pattern dash_array_;
     for(const auto& dash : state.stroke_dasharray())
         dash_array_.push_back(length_context_.value_for_length(dash, length_direction::diagonal));
     stroke_data_.set_dash_array(std::move(dash_array_));
@@ -734,8 +734,8 @@ transform svg_svg_element::local_transform() const
     };
 
     if(is_root_element())
-        return view_box_to_view_transform(viewport_rect.size_());
-    return svg_graphics_element::local_transform() * transform::translated(viewport_rect.x, viewport_rect.y) * view_box_to_view_transform(viewport_rect.size_());
+        return view_box_to_view_transform(viewport_rect.size());
+    return svg_graphics_element::local_transform() * transform::translated(viewport_rect.x, viewport_rect.y) * view_box_to_view_transform(viewport_rect.size());
 }
 
 void svg_svg_element::render(svg_render_state& state) const
@@ -883,7 +883,7 @@ std::unique_ptr<svg_element> svg_use_element::clone_target_element(svg_element* 
 {
     if(target_element == this || is_disallowed_element(target_element))
         return nullptr;
-    const auto& id_attr = target_element->attribute_(property_id::id);
+    const auto& id_attr = target_element->attribute(property_id::id);
     auto parent = parent_element();
     while(parent) {
         auto attribute_ = parent->find_attribute(property_id::id);

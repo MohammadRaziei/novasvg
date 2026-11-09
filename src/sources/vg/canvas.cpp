@@ -21,14 +21,12 @@ const char* render_version_string(void)
 
 static state_t* state_create(void)
 {
-    state_t* state = static_cast<state_t*>(malloc(sizeof(state_t)));
+    state_t* state = new state_t();
     state->paint_ = NULL;
     state->font_face_ = NULL;
-    state->color_ = NOVA_BLACK_COLOR;
+    state->color_ = stb::color(0, 0, 0, 255);
     state->matrix = stb::matrix{};
-    state->stroke.style = NOVA_DEFAULT_STROKE_STYLE;
-    state->stroke.dash.offset = 0.f;
-    novasvg_array_init(state->stroke.dash.array);
+    state->stroke = NOVA_DEFAULT_STROKE_STYLE;
     span_buffer_init(&state->clip_spans);
     state->winding = fill_rule::non_zero;
     state->op = blend_mode::src_over;
@@ -45,11 +43,9 @@ static void state_reset(state_t* state)
     font_face_data::release(state->font_face_);
     state->paint_ = NULL;
     state->font_face_ = NULL;
-    state->color_ = NOVA_BLACK_COLOR;
+    state->color_ = stb::color(0, 0, 0, 255);
     state->matrix = stb::matrix{};
-    state->stroke.style = NOVA_DEFAULT_STROKE_STYLE;
-    state->stroke.dash.offset = 0.f;
-    novasvg_array_clear(state->stroke.dash.array);
+    state->stroke = NOVA_DEFAULT_STROKE_STYLE;
     span_buffer_reset(&state->clip_spans);
     state->winding = fill_rule::non_zero;
     state->op = blend_mode::src_over;
@@ -64,10 +60,7 @@ static void state_copy(state_t* state, const state_t* source)
     state->font_face_ = font_face_data::reference(source->font_face_);
     state->color_ = source->color_;
     state->matrix = source->matrix;
-    state->stroke.style = source->stroke.style;
-    state->stroke.dash.offset = source->stroke.dash.offset;
-    novasvg_array_clear(state->stroke.dash.array);
-    novasvg_array_append(state->stroke.dash.array, source->stroke.dash.array);
+    state->stroke = source->stroke;
     span_buffer_copy(&state->clip_spans, &source->clip_spans);
     state->winding = source->winding;
     state->op = source->op;
@@ -80,9 +73,8 @@ static void state_destroy(state_t* state)
 {
     paint_destroy(state->paint_);
     font_face_data::release(state->font_face_);
-    novasvg_array_destroy(state->stroke.dash.array);
     span_buffer_destroy(&state->clip_spans);
-    free(state);
+    delete state;
 }
 
 canvas_t* canvas_create(surface_t* surface)
@@ -170,23 +162,24 @@ void canvas_set_rgb(canvas_t* canvas, float r, float g, float b)
 
 void canvas_set_rgba(canvas_t* canvas, float r, float g, float b, float a)
 {
-    color_init_rgba(&canvas->state->color_, r, g, b, a);
+    canvas->state->color_ = color_from_floats(r, g, b, a);
     canvas_set_paint(canvas, NULL);
 }
 
-void canvas_set_color(canvas_t* canvas, const color_t* color_)
+void canvas_set_color(canvas_t* canvas, const stb::color* color_)
 {
-    canvas_set_rgba(canvas, color_->r, color_->g, color_->b, color_->a);
+    canvas->state->color_ = *color_;
+    canvas_set_paint(canvas, NULL);
 }
 
-void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2, spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
+void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
 {
     paint_t* paint_ = paint_create_linear_gradient(x1, y1, x2, y2, spread, stops, nstops, matrix);
     canvas_set_paint(canvas, paint_);
     paint_destroy(paint_);
 }
 
-void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr, spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
+void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr, spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
 {
     paint_t* paint_ = paint_create_radial_gradient(cx, cy, cr, fx, fy, fr, spread, stops, nstops, matrix);
     canvas_set_paint(canvas, paint_);
@@ -207,7 +200,7 @@ void canvas_set_paint(canvas_t* canvas, paint_t* paint_)
     canvas->state->paint_ = paint_;
 }
 
-paint_t* canvas_get_paint(const canvas_t* canvas, color_t* color_)
+paint_t* canvas_get_paint(const canvas_t* canvas, stb::color* color_)
 {
     if(color_)
         *color_ = canvas->state->color_;
@@ -311,42 +304,42 @@ float canvas_get_opacity(const canvas_t* canvas)
 
 void canvas_set_line_width(canvas_t* canvas, float line_width)
 {
-    canvas->state->stroke.style.width = line_width;
+    canvas->state->stroke.width = line_width;
 }
 
 float canvas_get_line_width(const canvas_t* canvas)
 {
-    return canvas->state->stroke.style.width;
+    return canvas->state->stroke.width;
 }
 
 void canvas_set_line_cap(canvas_t* canvas, line_cap line_cap_)
 {
-    canvas->state->stroke.style.cap = line_cap_;
+    canvas->state->stroke.cap = line_cap_;
 }
 
 line_cap canvas_get_line_cap(const canvas_t* canvas)
 {
-    return canvas->state->stroke.style.cap;
+    return canvas->state->stroke.cap;
 }
 
 void canvas_set_line_join(canvas_t* canvas, line_join line_join_)
 {
-    canvas->state->stroke.style.join = line_join_;
+    canvas->state->stroke.join = line_join_;
 }
 
 line_join canvas_get_line_join(const canvas_t* canvas)
 {
-    return canvas->state->stroke.style.join;
+    return canvas->state->stroke.join;
 }
 
 void canvas_set_miter_limit(canvas_t* canvas, float miter_limit)
 {
-    canvas->state->stroke.style.miter_limit = miter_limit;
+    canvas->state->stroke.miter_limit = miter_limit;
 }
 
 float canvas_get_miter_limit(const canvas_t* canvas)
 {
-    return canvas->state->stroke.style.miter_limit;
+    return canvas->state->stroke.miter_limit;
 }
 
 void canvas_set_dash(canvas_t* canvas, float offset, const float* dashes, int ndashes)
@@ -357,25 +350,24 @@ void canvas_set_dash(canvas_t* canvas, float offset, const float* dashes, int nd
 
 void canvas_set_dash_offset(canvas_t* canvas, float offset)
 {
-    canvas->state->stroke.dash.offset = offset;
+    canvas->state->stroke.dash_offset = offset;
 }
 
 float canvas_get_dash_offset(const canvas_t* canvas)
 {
-    return canvas->state->stroke.dash.offset;
+    return canvas->state->stroke.dash_offset;
 }
 
 void canvas_set_dash_array(canvas_t* canvas, const float* dashes, int ndashes)
 {
-    novasvg_array_clear(canvas->state->stroke.dash.array);
-    novasvg_array_append_data(canvas->state->stroke.dash.array, dashes, ndashes);
+    canvas->state->stroke.dashes.assign(dashes, dashes + ndashes);
 }
 
 int canvas_get_dash_array(const canvas_t* canvas, const float** dashes)
 {
     if(dashes)
-        *dashes = canvas->state->stroke.dash.array.data;
-    return canvas->state->stroke.dash.array.size_;
+        *dashes = canvas->state->stroke.dashes.data();
+    return static_cast<int>(canvas->state->stroke.dashes.size());
 }
 
 void canvas_translate(canvas_t* canvas, float tx, float ty)
@@ -430,7 +422,11 @@ void canvas_map_point(const canvas_t* canvas, const stb::point* src, stb::point*
 
 void canvas_map_rect(const canvas_t* canvas, const rect_t* src, rect_t* dst)
 {
-    mapped_bounds(canvas->state->matrix, src, dst);
+    const stb::outline_bounds b = canvas->state->matrix.map_rect({src->x, src->y, src->x + src->w, src->y + src->h});
+    dst->x = b.x0;
+    dst->y = b.y0;
+    dst->w = b.width();
+    dst->h = b.height();
 }
 
 void canvas_move_to(canvas_t* canvas, float x, float y)
@@ -455,27 +451,27 @@ void canvas_cubic_to(canvas_t* canvas, float x1, float y1, float x2, float y2, f
 
 void canvas_arc_to(canvas_t* canvas, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y)
 {
-    arc_to_radians(*canvas->path_, rx, ry, angle, large_arc_flag, sweep_flag, x, y);
+    canvas->path_->arc_to(rx, ry, NOVA_RAD2DEG(angle), large_arc_flag, sweep_flag, x, y);
 }
 
 void canvas_rect(canvas_t* canvas, float x, float y, float w, float h)
 {
-    add_rect_path(*canvas->path_, x, y, w, h);
+    canvas->path_->add_rect(x, y, w, h);
 }
 
 void canvas_round_rect(canvas_t* canvas, float x, float y, float w, float h, float rx, float ry)
 {
-    add_round_rect_path(*canvas->path_, x, y, w, h, rx, ry);
+    canvas->path_->add_rounded_rect(x, y, w, h, rx, ry);
 }
 
 void canvas_ellipse(canvas_t* canvas, float cx, float cy, float rx, float ry)
 {
-    add_ellipse_path(*canvas->path_, cx, cy, rx, ry);
+    canvas->path_->add_ellipse(cx, cy, rx, ry);
 }
 
 void canvas_circle(canvas_t* canvas, float cx, float cy, float r)
 {
-    add_ellipse_path(*canvas->path_, cx, cy, r, r);
+    canvas->path_->add_circle(cx, cy, r);
 }
 
 void canvas_add_path(canvas_t* canvas, const stb::outline& path_)

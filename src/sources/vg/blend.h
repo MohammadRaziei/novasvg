@@ -12,7 +12,7 @@ namespace vg {
 #define COLOR_TABLE_SIZE 1024
 typedef struct {
     stb::matrix matrix;
-    spread_method spread;
+    spread_method_value spread;
     uint32_t colortable[COLOR_TABLE_SIZE];
     union {
         struct {
@@ -51,7 +51,7 @@ typedef struct {
     bool extended;
 } radial_gradient_values_t;
 
-uint32_t premultiply_color_with_opacity(const color_t* color_, float opacity);
+uint32_t premultiply_color_with_opacity(const stb::color* color_, float opacity);
 
 uint32_t INTERPOLATE_PIXEL_255(uint32_t x, uint32_t a, uint32_t y, uint32_t b);
 
@@ -325,7 +325,7 @@ uint32_t interpolate_4_pixels(uint32_t tl, uint32_t tr, uint32_t bl, uint32_t br
 #define HALF_POINT (1 << 15)
 void blend_transformed_bilinear_tiled_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer);
 
-void blend_color(canvas_t* canvas, const color_t* color_, const span_buffer_t* span_buffer);
+void blend_color(canvas_t* canvas, const stb::color* color_, const span_buffer_t* span_buffer);
 
 void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const span_buffer_t* span_buffer);
 

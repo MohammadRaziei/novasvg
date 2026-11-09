@@ -19,12 +19,12 @@ property_id propertyid(std::string_view name);
 property_id csspropertyid(std::string_view name);
 
 template<>
-inline bool svg_enumeration<spread_method>::parse(std::string_view input)
+inline bool svg_enumeration<spread_method_value>::parse(std::string_view input)
 {
-    static const svg_enumeration_entry<spread_method> entries[] = {
-        {spread_method::pad, "pad"},
-        {spread_method::reflect, "reflect"},
-        {spread_method::repeat, "repeat"}
+    static const svg_enumeration_entry<spread_method_value> entries[] = {
+        {spread_method_value::pad, "pad"},
+        {spread_method_value::reflect, "reflect"},
+        {spread_method_value::repeat, "repeat"}
     };
 
     return parse_enum(input, entries);
@@ -42,22 +42,22 @@ inline bool svg_enumeration<units>::parse(std::string_view input)
 }
 
 template<>
-inline bool svg_enumeration<marker_units>::parse(std::string_view input)
+inline bool svg_enumeration<svg_marker_units>::parse(std::string_view input)
 {
-    static const svg_enumeration_entry<marker_units> entries[] = {
-        {marker_units::stroke_width, "strokeWidth"},
-        {marker_units::user_space_on_use, "userSpaceOnUse"}
+    static const svg_enumeration_entry<svg_marker_units> entries[] = {
+        {svg_marker_units::stroke_width, "strokeWidth"},
+        {svg_marker_units::user_space_on_use, "userSpaceOnUse"}
     };
 
     return parse_enum(input, entries);
 }
 
 template<>
-inline bool svg_enumeration<length_adjust>::parse(std::string_view input)
+inline bool svg_enumeration<svg_length_adjust>::parse(std::string_view input)
 {
-    static const svg_enumeration_entry<length_adjust> entries[] = {
-        {length_adjust::spacing, "spacing"},
-        {length_adjust::spacing_and_glyphs, "spacingAndGlyphs"}
+    static const svg_enumeration_entry<svg_length_adjust> entries[] = {
+        {svg_length_adjust::spacing, "spacing"},
+        {svg_length_adjust::spacing_and_glyphs, "spacingAndGlyphs"}
     };
 
     return parse_enum(input, entries);
@@ -102,7 +102,7 @@ inline const svg_text_positioning_element* to_svg_text_positioning_element(const
     return static_cast<const svg_text_positioning_element*>(nd);
 }
 
-alignment_baseline resolve_dominant_baseline(const svg_text_positioning_element* el);
+css_alignment_baseline resolve_dominant_baseline(const svg_text_positioning_element* el);
 
 float calculate_baseline_offset(const svg_text_positioning_element* el);
 
@@ -129,13 +129,13 @@ paint parse_paint(std::string_view input, const svg_layout_state* state, const s
 
 float parse_number_or_percentage(std::string_view input, bool allow_percentage, float default_value);
 
-length parse_length(std::string_view input, length_negative_mode mode, const length& default_value);
+css_length parse_length(std::string_view input, length_negative_mode mode, const css_length& default_value);
 
-baseline_shift parse_baseline_shift(std::string_view input);
+css_baseline_shift parse_baseline_shift(std::string_view input);
 
 length_list parse_dash_array(std::string_view input);
 
-length parse_length_or_normal(std::string_view input);
+css_length parse_length_or_normal(std::string_view input);
 
 float parse_font_size(std::string_view input, const svg_layout_state* state);
 
@@ -151,35 +151,35 @@ inline enum_ parse_enum_value(std::string_view input, const svg_enumeration_entr
     return default_value;
 }
 
-display parse_display(std::string_view input);
+css_display parse_display(std::string_view input);
 
-visibility parse_visibility(std::string_view input);
+css_visibility parse_visibility(std::string_view input);
 
-overflow parse_overflow(std::string_view input);
+css_overflow parse_overflow(std::string_view input);
 
-pointer_events parse_pointer_events(std::string_view input);
+css_pointer_events parse_pointer_events(std::string_view input);
 
-font_weight parse_font_weight(std::string_view input);
+css_font_weight parse_font_weight(std::string_view input);
 
-font_style parse_font_style(std::string_view input);
+css_font_style parse_font_style(std::string_view input);
 
-alignment_baseline parse_alignment_baseline(std::string_view input);
+css_alignment_baseline parse_alignment_baseline(std::string_view input);
 
-dominant_baseline parse_dominant_baseline(std::string_view input);
+css_dominant_baseline parse_dominant_baseline(std::string_view input);
 
-direction parse_direction(std::string_view input);
+css_direction parse_direction(std::string_view input);
 
-writing_mode parse_writing_mode(std::string_view input);
+css_writing_mode parse_writing_mode(std::string_view input);
 
-text_orientation parse_text_orientation(std::string_view input);
+css_text_orientation parse_text_orientation(std::string_view input);
 
-text_anchor parse_text_anchor(std::string_view input);
+svg_text_anchor parse_text_anchor(std::string_view input);
 
-white_space parse_white_space(std::string_view input);
+css_white_space parse_white_space(std::string_view input);
 
-mix_blend_mode parse_mix_blend_mode(std::string_view input);
+css_mix_blend_mode parse_mix_blend_mode(std::string_view input);
 
-mask_type parse_mask_type(std::string_view input);
+css_mask_type parse_mask_type(std::string_view input);
 
 fill_rule parse_fill_rule(std::string_view input);
 
@@ -190,7 +190,7 @@ line_join parse_line_join(std::string_view input);
 // The one place a (font-family stack, weight, style) triple becomes a Font, shared by svg <text>
 // (svg_layout_state::font()) and by the bold/italic runs inside a <foreignObject>, so both always
 // pick the very same face for the same request.
-font make_font(const std::string& family, float size_, bool bold, bool italic);
+sized_font make_font(const std::string& family, float size_, bool bold, bool italic);
 
 // ---- svgelement (impl) ----
 using namespace vg; // the drawing layer (nova::vg), the former plutovg

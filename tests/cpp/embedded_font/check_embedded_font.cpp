@@ -59,7 +59,7 @@ TEST_CASE("text is drawn although the machine has no fonts")
 TEST_CASE("the embedded font lays text out exactly like the full DejaVu Sans")
 {
     REQUIRE(nova::vg::add_font_face_from_file("Full Probe", false, false, NOVA_TEST_FONT_PATH));
-    auto* cache = nova::vg::font_face_cache_();
+    auto* cache = nova::vg::global_font_face_cache();
     auto full = cache->get_font_face("Full Probe", false, false);
     auto embedded = cache->get_font_face("sans-serif", false, false);
     REQUIRE(!full.is_null());
@@ -78,7 +78,7 @@ TEST_CASE("the embedded font lays text out exactly like the full DejaVu Sans")
         for(float size : {10.0f, 16.0f, 31.0f}) {
             CAPTURE(index);
             CAPTURE(size);
-            CHECK(nova::vg::font(embedded, size).measure_text(text) == nova::vg::font(full, size).measure_text(text));
+            CHECK(nova::vg::sized_font(embedded, size).measure_text(text) == nova::vg::sized_font(full, size).measure_text(text));
         }
     }
 }
@@ -100,7 +100,7 @@ TEST_CASE("bold and italic requests get the bold / oblique embedded faces, laid 
         {"DejaVuSans-Oblique.ttf", false, true},
         {"DejaVuSans-BoldOblique.ttf", true, true},
     };
-    auto* cache = nova::vg::font_face_cache_();
+    auto* cache = nova::vg::global_font_face_cache();
     const auto regular = cache->get_font_face("sans-serif", false, false);
     REQUIRE(!regular.is_null());
     const std::u32string samples[] = {U"Hello World", U"AV To LT Ty Yo WA", U"fi fl ffi ffl office", U"The quick brown fox jumps over the lazy dog"};
@@ -115,9 +115,9 @@ TEST_CASE("bold and italic requests get the bold / oblique embedded faces, laid 
         REQUIRE(!embedded.is_null());
         CHECK(embedded.get() != regular.get()); // not just the regular face under another request
         for(const auto& text : samples)
-            CHECK(nova::vg::font(embedded, 16.f).measure_text(text) == nova::vg::font(full, 16.f).measure_text(text));
+            CHECK(nova::vg::sized_font(embedded, 16.f).measure_text(text) == nova::vg::sized_font(full, 16.f).measure_text(text));
         // and it is a different design from the regular face (bold is wider, oblique has other advances)
-        CHECK(nova::vg::font(embedded, 16.f).measure_text(samples[3]) != nova::vg::font(regular, 16.f).measure_text(samples[3]));
+        CHECK(nova::vg::sized_font(embedded, 16.f).measure_text(samples[3]) != nova::vg::sized_font(regular, 16.f).measure_text(samples[3]));
     }
 }
 

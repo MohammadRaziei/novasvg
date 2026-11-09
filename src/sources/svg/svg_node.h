@@ -77,10 +77,10 @@ constexpr int inline_important = 0x2000;
 constexpr int api = 0x4000;
 } // namespace Specificity
 
-class attribute {
+class attribute_entry {
 public:
-    attribute() = default;
-    attribute(int specificity, property_id id, std::string value)
+    attribute_entry() = default;
+    attribute_entry(int specificity, property_id id, std::string value)
         : m_specificity(specificity), m_id(id), m_value(std::move(value))
     {}
 
@@ -94,7 +94,7 @@ private:
     std::string m_value;
 };
 
-using attribute_list = std::forward_list<attribute>;
+using attribute_list = std::forward_list<attribute_entry>;
 
 enum class element_id : uint8_t {
     unknown = 0,
@@ -158,12 +158,12 @@ public:
     virtual ~svg_element() = default;
 
     bool has_attribute(std::string_view name) const;
-    const std::string& attribute_(std::string_view name) const;
+    const std::string& attribute(std::string_view name) const;
     bool set_attribute(std::string_view name, const std::string& value);
 
-    const attribute* find_attribute(property_id id) const;
+    const attribute_entry* find_attribute(property_id id) const;
     bool has_attribute(property_id id) const;
-    const std::string& attribute_(property_id id) const;
+    const std::string& attribute(property_id id) const;
 
     // Attributes novasvg does not know (`data-*`, `aria-*`, ...). They paint nothing, but CSS attribute
     // selectors (`[data-k]`, `[data-k="1"]`) match on them.
@@ -171,7 +171,7 @@ public:
     void set_custom_attribute(const std::string& name, const std::string& value);
     bool set_attribute(int specificity, property_id id, const std::string& value);
     void set_attributes(const attribute_list& attributes);
-    bool set_attribute(const attribute& attribute_);
+    bool set_attribute(const attribute_entry& attribute_);
 
     virtual void parse_attribute(property_id id, const std::string& value);
 
@@ -239,9 +239,9 @@ public:
     // pipeline simply skips over.
     virtual std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const { return nullptr; }
 
-    bool is_display_none() const { return m_display == display::none; }
-    bool is_overflow_hidden() const { return m_overflow == overflow::hidden; }
-    bool is_visibility_hidden() const { return m_visibility != visibility::visible; }
+    bool is_display_none() const { return m_display == css_display::none; }
+    bool is_overflow_hidden() const { return m_overflow == css_overflow::hidden; }
+    bool is_visibility_hidden() const { return m_visibility != css_visibility::visible; }
 
     bool is_hidden_element() const;
     bool is_pointable_element() const;
@@ -250,7 +250,7 @@ public:
     const svg_mask_element* masker() const { return m_masker; }
     const svg_filter_element* filter_element() const { return m_filter; }
     float opacity() const { return m_opacity; }
-    mix_blend_mode mix_blend_mode_() const { return m_mix_blend_mode; }
+    css_mix_blend_mode mix_blend_mode() const { return m_mix_blend_mode; }
 
     bool is_element() const final { return true; }
 
@@ -260,13 +260,13 @@ private:
     const svg_mask_element* m_masker = nullptr;
     const svg_filter_element* m_filter = nullptr;
     float m_opacity = 1.f;
-    mix_blend_mode m_mix_blend_mode = mix_blend_mode::normal;
+    css_mix_blend_mode m_mix_blend_mode = css_mix_blend_mode::normal;
 
     float m_font_size = 12.f;
-    display m_display = display::inline_;
-    overflow m_overflow = overflow::visible;
-    visibility m_visibility = visibility::visible;
-    pointer_events m_pointer_events = pointer_events::auto_;
+    css_display m_display = css_display::inline_;
+    css_overflow m_overflow = css_overflow::visible;
+    css_visibility m_visibility = css_visibility::visible;
+    css_pointer_events m_pointer_events = css_pointer_events::auto_;
 
     element_id m_id;
     attribute_list m_attributes;

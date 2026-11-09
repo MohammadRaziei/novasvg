@@ -1,37 +1,39 @@
-# ADR-0011: Retire the C-style layer in `render.h`
+# ADR-0011: `vg` builds on libstb instead of duplicating it
 
-**Status:** Accepted (maintainer: go ahead, order 1 -> 2 -> 3); step 1 done (2026-11-08)
-**Date:** 2026-11-08
+**Status:** Accepted (2026-11-08). The file name keeps the first draft's title.
 **Deciders:** Mohammad Raziei (maintainer)
 
 ## Context
-`src/sources/vg/render.h` (2063 lines) is the old plutovg C API: 174 `NOVA_API` functions and 25 `_t` types
-(`canvas_t`, `surface_t`, `paint_t`, `font_face_t`, `matrix_t`, `color_t`, `point_t`, `rect_t`, enums like
-`operator_t`). ADR-0008 kept it "until C and E replace it". C (abstract `canvas`) is done, and libstb now ships
-the pieces E needs: `stb::matrix` and `stb::outline` (`stb/outline.hpp`), `stb::color`, and `stb::fill` /
-`stb::stroke` with coverage spans (`stb/raster.hpp`).
+`src/sources/vg` began as a vendored plutovg (a C library) and kept its C-shaped layer in `render.h`: types with
+a `_t` suffix, `function(handle, ...)` functions, its own matrix, point, enums and span structs. libstb now
+ships most of what that layer implemented. The maintainer's rule for this refactor is only two things: names in
+snake_case, and nothing that libstb already has is written a second time here. A `_t` suffix is fine (it is the
+STL style too); it is not a goal either way.
 
-Where it is still used (calls / type uses, outside `render.h`):
-- `canvas_*` 294 calls, almost all in `canvas.cpp` and `raster_canvas.cpp`; `canvas_t` 206 uses.
-- `matrix_*` 116 calls, `matrix_t` 117 uses (`matrix.cpp`, `pdf_canvas`, `raster_canvas`, `outline_util`).
-- `font_face_*` 172 calls and `font_face_cache_*` 53 (`font_face.cpp`, `font.cpp`).
-- `surface_*` 102 calls (`raster_canvas.cpp`, `surface.cpp`, `pixmap.cpp`); `paint_*` 51; `color_init*` 30.
-- The enums (`operator_t`, `spread_method_t`, `fill_rule_t`, `line_cap_t`, ...) are small: 7-27 uses each.
+The first draft of this ADR was about "retiring the C style". That was a wrong reading of the goal: it renamed
+and re-shaped things without removing any duplicate. The steps below are what actually removes duplicates.
 
-## Decision (proposed)
-Remove the layer in four steps, each one gated (tests, golden 0 diff, ASAN), none changing behaviour:
-1. **Enums** `*_t` -> `enum class` in the style of ADR-0004. DONE: 8 enums; `operator_t` merged into `blend_mode`,
-   the duplicate enum classes in `canvas.h` removed; golden 0 diff.
-2. **Value types** (matrix and point DONE 2026-11-08, golden 0 diff; the arithmetic of `stb::matrix` equals the old C one,
-   so no pixel moved). `color_t` is a float RGBA used only for gradient stops (not `stb::color`, which is 8-bit), and `rect_t`
-   has no libstb type: both go with step 3 (`paint`, and the existing `vg::rect`). Original plan: `point_t`, `rect_t`, `matrix_t`, `color_t` -> `stb::outline` point, a local `rect`, `stb::matrix`,
-   `stb::color`. The golden set decides if `stb::matrix::map` (no fused multiply-add) changes any pixel.
-3. **Handles -> classes** (`font_face_data` DONE 2026-11-08: members instead of `font_face_*(face, ...)`; `font_face_cache_t` is next
-   and needs its malloc'd entry array rewritten with `std::vector`) with RAII: `surface`, `paint`, `font_face`, `font_face_cache` get member functions
-   instead of `surface_*(h, ...)`; `canvas_t` goes away because `raster_canvas` already is the canvas.
-4. Delete `render.h`, `NOVA_API` on the C functions, and `src/gfx/vendor` leftovers; rasterizer swap to `stb::fill`
-   / `stb::stroke` is a separate step after this one.
+## Decision: use libstb's type, delete ours
+Done (each with tests, golden 0 diff, ASAN):
+- `matrix_t` and `point_t` -> `stb::matrix`, `stb::point`; the 17 `matrix_*` functions are gone (the arithmetic is
+  identical, checked line by line). Three helpers libstb lacks stay (`map_points`, `mapped_bounds`, `parse_matrix`).
+- `fill_rule`, `line_cap`, `line_join` -> `stb::fill_rule`, `stb::line_cap`, `stb::line_join` (`using` in `vg`).
+- `stroke_style_t`, `stroke_dash_t`, `stroke_data_t` -> `stb::stroke_style` (width, cap, join, miter limit, dashes,
+  dash offset are exactly its fields); the drawing state owns it by value.
+- `span_t` -> `stb::span` (the rasterizer's sink copies spans with `std::copy` now).
+- The eight C enums became `enum class` earlier; those not in libstb (`blend_mode`, `spread_method`, `texture_type`,
+  `text_encoding`, `path_command`) stay ours. `font_face_t` became the class `font_face_data` (a style change, kept).
 
-## Consequences
-No public API change (`render.h` is private). Every step is a rename or a type swap, so the golden set stays the
-oracle. Step 2 is the only one that can move pixels.
+## Still duplicated, in order of size
+1. `blend.{h,cpp}` (1006 lines, Porter-Duff operators): waits for the libstb issue (`composite_op` and `exclusion`).
+2. `surface.cpp` / `pixmap.cpp` (337 lines): `stb::image` with a `pixel_format`.
+3. ~~`color_t`~~ DONE: gradient stops were already 8-bit (`with_alpha`), so `stb::color` is exact. `color_parse` (CSS syntax,
+   148 names) stays until libstb accepts CSS syntax and all keywords: see `refactor/libstb-issues.md` (issues 2 to 5).
+4. `font_face_data`: what it adds over `stb::font` is the glyph cache and the size scale; the rest (metrics, outline,
+   kerning, shaping) should call `stb::font` directly. The updated libstb (6af6df8: GPOS marks, `glyph_kind`, shaping
+   of a text range) makes this possible for text drawn in pieces.
+5. `font_face_cache`: check what libstb's font discovery covers before rewriting the malloc'd entry array.
+
+## Not duplicates (stay)
+Paints (gradients, patterns, masks as spans), the canvas interface (`canvas`, `raster_canvas`, `pdf_canvas`), SVG
+parsing and layout, and the span buffer (storage and intersection of spans): libstb leaves these to the caller.

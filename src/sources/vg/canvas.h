@@ -135,9 +135,9 @@ class box;
 class rect {
 public:
     constexpr rect() = default;
-    constexpr explicit rect(const size& size_) : rect(size_.w, size_.h) {}
+    constexpr explicit rect(const vg::size& size_) : rect(size_.w, size_.h) {}
     constexpr rect(float width, float height) : rect(0, 0, width, height) {}
-    constexpr rect(const point& origin, const size& size_) : rect(origin.x, origin.y, size_.w, size_.h) {}
+    constexpr rect(const point& origin, const vg::size& size_) : rect(origin.x, origin.y, size_.w, size_.h) {}
     constexpr rect(const rect_t& rect_) : rect(rect_.x, rect_.y, rect_.w, rect_.h) {}
     constexpr rect(float x, float y, float w, float h) : x(x), y(y), w(w), h(h) {}
 
@@ -164,7 +164,7 @@ public:
     constexpr rect& unite(const rect& o);
 
     constexpr point origin() const { return point(x, y); }
-    constexpr size size_() const { return size(w, h); }
+    constexpr vg::size size() const { return vg::size(w, h); }
 
     constexpr float right() const { return x + w; }
     constexpr float bottom() const { return y + h; }
@@ -275,17 +275,10 @@ private:
 };
 
 
-// A path is an stb::outline. The engine needs a few things on top of it (src/sources/vg/outline_util.cpp):
-//   arc_to      the SVG elliptical arc, as cubics, from the outline's current point
+// A path is an stb::outline. Arcs (`outline::arc_to`) and boxes (`outline::tight_bounds`) are libstb's; the engine adds
+// one thing on top (src/sources/vg/outline_util.cpp):
 //   parse_path  SVG path data ("M 0 0 L ..."), replaces the content; partial data stays on error, as in SVG
-//   bounding_rect  the box of all points of the outline (what the svg layer calls the fill box)
-void arc_to(stb::outline& path_, float rx, float ry, float x_axis_rotation_deg, bool large_arc, bool sweep, float x, float y);
 bool parse_path(stb::outline& path_, const char* data, size_t length_);
-void arc_to_radians(stb::outline& path_, float rx, float ry, float angle, bool large_arc, bool sweep, float x, float y);
-void add_rect_path(stb::outline& path_, float x, float y, float w, float h);
-void add_round_rect_path(stb::outline& path_, float x, float y, float w, float h, float rx, float ry);
-void add_ellipse_path(stb::outline& path_, float cx, float cy, float rx, float ry);
-rect bounding_rect(const stb::outline& path_);
 
 enum class segment_kind { move_to, line_to, cubic_to, close };
 
@@ -309,7 +302,7 @@ private:
 
 namespace nova::vg {
 
-using dash_array = std::vector<float>;
+using dash_pattern = std::vector<float>;
 
 class stroke_data {
 public:
@@ -324,22 +317,22 @@ public:
     void set_dash_offset(float dash_offset) { m_dash_offset = dash_offset; }
     float dash_offset() const { return m_dash_offset; }
 
-    void set_dash_array(dash_array dash_array_) { m_dash_array = std::move(dash_array_); }
-    const dash_array& dash_array_() const { return m_dash_array; }
+    void set_dash_array(dash_pattern dash_array_) { m_dash_array = std::move(dash_array_); }
+    const dash_pattern& dash_array() const { return m_dash_array; }
 
-    void set_line_cap(line_cap line_cap_) { m_line_cap = line_cap_; }
-    line_cap line_cap_() const { return m_line_cap; }
+    void set_line_cap(stb::line_cap line_cap_) { m_line_cap = line_cap_; }
+    stb::line_cap line_cap() const { return m_line_cap; }
 
-    void set_line_join(line_join line_join_) { m_line_join = line_join_; }
-    line_join line_join_() const { return m_line_join; }
+    void set_line_join(stb::line_join line_join_) { m_line_join = line_join_; }
+    stb::line_join line_join() const { return m_line_join; }
 
 private:
     float m_line_width;
     float m_miter_limit{4.f};
     float m_dash_offset{0.f};
-    line_cap m_line_cap{line_cap::butt};
-    line_join m_line_join{line_join::miter};
-    dash_array m_dash_array;
+    stb::line_cap m_line_cap{stb::line_cap::butt};
+    stb::line_join m_line_join{stb::line_join::miter};
+    dash_pattern m_dash_array;
 };
 
 using gradient_stop = gradient_stop_t;
@@ -359,14 +352,14 @@ public:
 
     virtual void set_color(const stb::color& color_) = 0;
     virtual void set_color(float r, float g, float b, float a) = 0;
-    virtual void set_linear_gradient(float x1, float y1, float x2, float y2, spread_method spread, const gradient_stops& stops, const transform& transform_) = 0;
-    virtual void set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method spread, const gradient_stops& stops, const transform& transform_) = 0;
+    virtual void set_linear_gradient(float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stops& stops, const transform& transform_) = 0;
+    virtual void set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method_value spread, const gradient_stops& stops, const transform& transform_) = 0;
 
     virtual void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) = 0;
     virtual void stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_) = 0;
 
-    virtual void fill_text(const std::u32string_view& text, const font& font_, const point& origin, const transform& transform_) = 0;
-    virtual void stroke_text(const std::u32string_view& text, float stroke_width, const font& font_, const point& origin, const transform& transform_) = 0;
+    virtual void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_) = 0;
+    virtual void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_) = 0;
 
     virtual void clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_) = 0;
     virtual void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) = 0;
@@ -385,15 +378,15 @@ public:
 
     void set_color(const stb::color& color_) override;
     void set_color(float r, float g, float b, float a) override;
-    void set_linear_gradient(float x1, float y1, float x2, float y2, spread_method spread, const gradient_stops& stops, const transform& transform_) override;
-    void set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method spread, const gradient_stops& stops, const transform& transform_) override;
+    void set_linear_gradient(float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stops& stops, const transform& transform_) override;
+    void set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method_value spread, const gradient_stops& stops, const transform& transform_) override;
     void set_texture(const raster_canvas& source, texture_type type_, float opacity, const transform& transform_);
 
     void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) override;
     void stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_) override;
 
-    void fill_text(const std::u32string_view& text, const font& font_, const point& origin, const transform& transform_) override;
-    void stroke_text(const std::u32string_view& text, float stroke_width, const font& font_, const point& origin, const transform& transform_) override;
+    void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_) override;
+    void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_) override;
 
     void clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_) override;
     void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) override;

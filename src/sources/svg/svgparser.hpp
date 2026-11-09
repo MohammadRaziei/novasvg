@@ -10,10 +10,10 @@
 
 namespace nova::svg {
 
-struct simple_selector;
+struct css_simple_selector;
 
-using selector = std::vector<simple_selector>;
-using selector_list = std::vector<selector>;
+using css_selector = std::vector<css_simple_selector>;
+using selector_list = std::vector<css_selector>;
 
 struct attribute_selector {
     enum class match_type {
@@ -57,7 +57,7 @@ struct pseudo_class_selector {
     selector_list sub_selectors;
 };
 
-struct simple_selector {
+struct css_simple_selector {
     enum class combinator {
         none,
         descendant,
@@ -66,7 +66,7 @@ struct simple_selector {
         in_direct_adjacent
     };
 
-    explicit simple_selector(combinator combinator_) : combinator_(combinator_) {}
+    explicit css_simple_selector(combinator combinator_) : combinator_(combinator_) {}
 
     combinator combinator_{combinator::descendant};
     element_id id{element_id::star};
@@ -91,13 +91,13 @@ struct rule {
 
 class rule_data {
 public:
-    rule_data(const selector& selector_, const declaration_list& declarations, size_t specificity, size_t position)
+    rule_data(const css_selector& selector_, const declaration_list& declarations, size_t specificity, size_t position)
         : m_selector(selector_), m_declarations(declarations), m_specificity(specificity), m_position(position)
     {}
 
     bool is_less_than(const rule_data& rule_) const { return std::tie(m_specificity, m_position) < std::tie(rule_.m_specificity, rule_.m_position); }
 
-    const selector& selector_() const { return m_selector; }
+    const css_selector& selector() const { return m_selector; }
     const declaration_list& declarations() const { return m_declarations; }
     size_t specificity() const { return m_specificity; }
     size_t position() const { return m_position; }
@@ -105,7 +105,7 @@ public:
     bool match(const svg_element* el) const;
 
 private:
-    selector m_selector;
+    css_selector m_selector;
     declaration_list m_declarations;
     size_t m_specificity;
     size_t m_position;
@@ -194,10 +194,10 @@ static bool match_attribute_selector(const attribute_selector& selector, const s
         return match_attribute_value(selector, *value);
     }
 
-    return match_attribute_value(selector, el->attribute_(selector.id));
+    return match_attribute_value(selector, el->attribute(selector.id));
 }
 
-static bool match_simple_selector(const simple_selector& selector, const svg_element* el);
+static bool match_simple_selector(const css_simple_selector& selector, const svg_element* el);
 
 static bool match_pseudo_class_selector(const pseudo_class_selector& selector, const svg_element* el)
 {
@@ -284,7 +284,7 @@ static bool match_pseudo_class_selector(const pseudo_class_selector& selector, c
     return false;
 }
 
-static bool match_simple_selector(const simple_selector& selector, const svg_element* el)
+static bool match_simple_selector(const css_simple_selector& selector, const svg_element* el)
 {
     if(selector.id != element_id::star && selector.id != el->id())
         return false;
@@ -303,7 +303,7 @@ static bool match_simple_selector(const simple_selector& selector, const svg_ele
     return true;
 }
 
-static bool match_selector(const selector& selector, const svg_element* el)
+static bool match_selector(const css_selector& selector, const svg_element* el)
 {
     if(selector.empty())
         return false;
@@ -318,15 +318,15 @@ static bool match_selector(const selector& selector, const svg_element* el)
 
     while(it != end) {
         switch(combinator_) {
-        case simple_selector::combinator::child:
-        case simple_selector::combinator::descendant:
+        case css_simple_selector::combinator::child:
+        case css_simple_selector::combinator::descendant:
             el = el->parent_element();
             break;
-        case simple_selector::combinator::direct_adjacent:
-        case simple_selector::combinator::in_direct_adjacent:
+        case css_simple_selector::combinator::direct_adjacent:
+        case css_simple_selector::combinator::in_direct_adjacent:
             el = el->previous_element();
             break;
-        case simple_selector::combinator::none:
+        case css_simple_selector::combinator::none:
             assert(false);
         }
 
@@ -335,8 +335,8 @@ static bool match_selector(const selector& selector, const svg_element* el)
         if(match_simple_selector(*it, el)) {
             combinator_ = it->combinator_;
             ++it;
-        } else if(combinator_ != simple_selector::combinator::descendant
-            && combinator_ != simple_selector::combinator::in_direct_adjacent) {
+        } else if(combinator_ != css_simple_selector::combinator::descendant
+            && combinator_ != css_simple_selector::combinator::in_direct_adjacent) {
             return false;
         }
     }
@@ -357,7 +357,7 @@ inline bool read_css_identifier(std::string_view& input, std::string& output)
     return true;
 }
 
-static bool parse_tag_selector(std::string_view& input, simple_selector& simple_selector_)
+static bool parse_tag_selector(std::string_view& input, css_simple_selector& simple_selector_)
 {
     std::string name;
     if(skip_delimiter(input, '*'))
@@ -373,7 +373,7 @@ static bool parse_tag_selector(std::string_view& input, simple_selector& simple_
     return true;
 }
 
-static bool parse_id_selector(std::string_view& input, simple_selector& simple_selector_)
+static bool parse_id_selector(std::string_view& input, css_simple_selector& simple_selector_)
 {
     attribute_selector a;
     a.id = property_id::id;
@@ -384,7 +384,7 @@ static bool parse_id_selector(std::string_view& input, simple_selector& simple_s
     return true;
 }
 
-static bool parse_class_selector(std::string_view& input, simple_selector& simple_selector_)
+static bool parse_class_selector(std::string_view& input, css_simple_selector& simple_selector_)
 {
     attribute_selector a;
     a.id = property_id::class_;
@@ -395,7 +395,7 @@ static bool parse_class_selector(std::string_view& input, simple_selector& simpl
     return true;
 }
 
-static bool parse_attribute_selector(std::string_view& input, simple_selector& simple_selector_)
+static bool parse_attribute_selector(std::string_view& input, css_simple_selector& simple_selector_)
 {
     std::string name;
     skip_optional_spaces(input);
@@ -506,7 +506,7 @@ static bool parse_nth_formula(std::string_view text, int& a, int& b)
     return parse_int(b_part, b);
 }
 
-static bool parse_pseudo_class_selector(std::string_view& input, simple_selector& simple_selector_)
+static bool parse_pseudo_class_selector(std::string_view& input, css_simple_selector& simple_selector_)
 {
     std::string name;
     if(!read_css_identifier(input, name))
@@ -570,7 +570,7 @@ static bool parse_pseudo_class_selector(std::string_view& input, simple_selector
     return true;
 }
 
-static bool parse_simple_selector(std::string_view& input, simple_selector& simple_selector_, bool& failed)
+static bool parse_simple_selector(std::string_view& input, css_simple_selector& simple_selector_, bool& failed)
 {
     auto consumed = parse_tag_selector(input, simple_selector_);
     do {
@@ -589,31 +589,31 @@ static bool parse_simple_selector(std::string_view& input, simple_selector& simp
     return consumed && !failed;
 }
 
-static bool parse_combinator(std::string_view& input, simple_selector::combinator& combinator_)
+static bool parse_combinator(std::string_view& input, css_simple_selector::combinator& combinator_)
 {
-    combinator_ = simple_selector::combinator::none;
+    combinator_ = css_simple_selector::combinator::none;
     while(!input.empty() && IS_WS(input.front())) {
-        combinator_ = simple_selector::combinator::descendant;
+        combinator_ = css_simple_selector::combinator::descendant;
         input.remove_prefix(1);
     }
 
     if(skip_delimiter_and_optional_spaces(input, '>'))
-        combinator_ = simple_selector::combinator::child;
+        combinator_ = css_simple_selector::combinator::child;
     else if(skip_delimiter_and_optional_spaces(input, '+'))
-        combinator_ = simple_selector::combinator::direct_adjacent;
+        combinator_ = css_simple_selector::combinator::direct_adjacent;
     else if(skip_delimiter_and_optional_spaces(input, '~'))
-        combinator_ = simple_selector::combinator::in_direct_adjacent;
-    return combinator_ != simple_selector::combinator::none;
+        combinator_ = css_simple_selector::combinator::in_direct_adjacent;
+    return combinator_ != css_simple_selector::combinator::none;
 }
 
-static bool parse_selector(std::string_view& input, selector& selector)
+static bool parse_selector(std::string_view& input, css_selector& selector)
 {
-    auto combinator_ = simple_selector::combinator::none;
+    auto combinator_ = css_simple_selector::combinator::none;
     do {
         bool failed = false;
-        simple_selector simple_selector_(combinator_);
+        css_simple_selector simple_selector_(combinator_);
         if(!parse_simple_selector(input, simple_selector_, failed))
-            return !failed && (combinator_ == simple_selector::combinator::descendant);
+            return !failed && (combinator_ == css_simple_selector::combinator::descendant);
         selector.push_back(std::move(simple_selector_));
     } while(parse_combinator(input, combinator_));
     return true;
@@ -622,7 +622,7 @@ static bool parse_selector(std::string_view& input, selector& selector)
 static bool parse_selectors(std::string_view& input, selector_list& selectors)
 {
     do {
-        selector selector;
+        css_selector selector;
         if(!parse_selector(input, selector))
             return false;
         selectors.push_back(std::move(selector));
@@ -812,7 +812,7 @@ static void parse_font_face_rule(std::string_view block)
         if(face.is_null())
             continue; // malformed, or a format libstb does not read (WOFF2) -- try the next alternative
 
-        font_face_cache_()->add_font_face(std::string(family), bold, italic, face);
+        global_font_face_cache()->add_font_face(std::string(family), bold, italic, face);
         return; // first successfully-loaded alternative wins
     }
 }
@@ -1092,7 +1092,7 @@ struct style_node {
     explicit operator bool() const { return html || svg; }
 };
 
-static bool match_html_simple_selector(const simple_selector& selector, const html_node& nd)
+static bool match_html_simple_selector(const css_simple_selector& selector, const html_node& nd)
 {
     if(selector.id != element_id::star && (selector.tag.empty() || selector.tag != nd.tag))
         return false;
@@ -1116,7 +1116,7 @@ static bool match_html_simple_selector(const simple_selector& selector, const ht
 // matchSelector() for an HTML nd: the rightmost compound must match the nd, the ones before it its
 // ancestors -- HTML elements first, then `owner` (the foreignObject) and the svg elements above it.
 // Sibling combinators (+ ~) are not modelled for HTML, so a selector using one never matches.
-static bool match_html_selector(const selector& selector, const std::vector<html_node>& nodes, int index, const svg_element* owner)
+static bool match_html_selector(const css_selector& selector, const std::vector<html_node>& nodes, int index, const svg_element* owner)
 {
     if(selector.empty())
         return false;
@@ -1129,7 +1129,7 @@ static bool match_html_selector(const selector& selector, const std::vector<html
 
         return style_node{nullptr, nd.svg->parent_element()};
     };
-    auto matches = [](const simple_selector& simple, const style_node& nd) {
+    auto matches = [](const css_simple_selector& simple, const style_node& nd) {
         return nd.html ? match_html_simple_selector(simple, *nd.html) : match_simple_selector(simple, nd.svg);
     };
 
@@ -1141,7 +1141,7 @@ static bool match_html_selector(const selector& selector, const std::vector<html
     auto combinator_ = it->combinator_;
     ++it;
     while(it != end) {
-        if(combinator_ != simple_selector::combinator::child && combinator_ != simple_selector::combinator::descendant)
+        if(combinator_ != css_simple_selector::combinator::child && combinator_ != css_simple_selector::combinator::descendant)
             return false;
         nd = parent_of(nd);
         if(!nd)
@@ -1149,7 +1149,7 @@ static bool match_html_selector(const selector& selector, const std::vector<html
         if(matches(*it, nd)) {
             combinator_ = it->combinator_;
             ++it;
-        } else if(combinator_ != simple_selector::combinator::descendant) {
+        } else if(combinator_ != css_simple_selector::combinator::descendant) {
             return false;
         }
     }
@@ -1165,7 +1165,7 @@ static rule_data_list parse_style_sheets(const std::vector<std::string>& sheets)
     rule_data_list all;
     for(const auto& sheet : sheets) {
         for(auto& rule : parse_style_sheet(sheet))
-            all.emplace_back(rule.selector_(), rule.declarations(), rule.specificity(), all.size());
+            all.emplace_back(rule.selector(), rule.declarations(), rule.specificity(), all.size());
     }
 
     std::sort(all.begin(), all.end());
@@ -1183,7 +1183,7 @@ public:
     explicit rule_index(const rule_data_list& rules) : m_by_tag(256)
     {
         for(size_t i = 0; i < rules.size(); ++i) {
-            const auto& selector = rules[i].selector_();
+            const auto& selector = rules[i].selector();
             if(selector.empty())
                 continue; // can never match
             const auto& last = selector.back();
@@ -1216,7 +1216,7 @@ public:
         out.insert(out.end(), tagged.begin(), tagged.end());
         out.insert(out.end(), m_other.begin(), m_other.end());
         if(!m_by_class.empty()) {
-            std::string_view classes(el->attribute_(property_id::class_));
+            std::string_view classes(el->attribute(property_id::class_));
             while(!classes.empty()) {
                 skip_optional_spaces(classes);
                 size_t n = 0;

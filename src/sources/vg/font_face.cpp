@@ -13,7 +13,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -25,7 +28,6 @@
 #else
 #include <fcntl.h>
 #include <unistd.h>
-#include <dirent.h>
 #ifdef __linux__
 #include <linux/limits.h>
 #else
@@ -152,12 +154,10 @@ font_face_data::font_face_data(stb::font f)
     : ft(std::move(f)), design(ft.design_metrics())
 {
     novasvg_init_reference(this);
-    novasvg_mutex_init(&mutex);
 }
 
 font_face_data::~font_face_data()
 {
-    novasvg_mutex_destroy(&mutex);
     if(destroy_func)
         destroy_func(closure);
 }
@@ -170,7 +170,7 @@ uint32_t font_face_data::glyph_index_of(codepoint_t codepoint) const
 
 glyph_entry* font_face_data::glyph_by_index(uint32_t index) const
 {
-    novasvg_mutex_lock(&mutex);
+    std::lock_guard<std::mutex> lock(mutex);
     auto& slot = cache[index];
     if(!slot) {
         auto glyph = std::make_unique<glyph_entry>();
@@ -185,9 +185,7 @@ glyph_entry* font_face_data::glyph_by_index(uint32_t index) const
         ft.outline(glyph->index, glyph->outline);
         slot = std::move(glyph);
     }
-    glyph_entry* result = slot.get();
-    novasvg_mutex_unlock(&mutex);
-    return result;
+    return slot.get();
 }
 
 glyph_entry* font_face_data::glyph(codepoint_t codepoint) const
@@ -380,14 +378,14 @@ float font_face_data::traverse_glyph_index_path(float size_, float x, float y, s
             points[0].x = cmd.p[0].x;
             points[0].y = cmd.p[0].y;
             current_point = points[0];
-            map_points(matrix, points, points, 1);
+            matrix.map(points, points, 1);
             traverse_func(closure, path_command::move_to, points, 1);
             break;
         case stb::outline_op::line_to:
             points[0].x = cmd.p[0].x;
             points[0].y = cmd.p[0].y;
             current_point = points[0];
-            map_points(matrix, points, points, 1);
+            matrix.map(points, points, 1);
             traverse_func(closure, path_command::line_to, points, 1);
             break;
         case stb::outline_op::quad_to: // TrueType: raised to a cubic, as the renderer only knows cubics
@@ -398,7 +396,7 @@ float font_face_data::traverse_glyph_index_path(float size_, float x, float y, s
             points[2].x = cmd.p[1].x;
             points[2].y = cmd.p[1].y;
             current_point = points[2];
-            map_points(matrix, points, points, 3);
+            matrix.map(points, points, 3);
             traverse_func(closure, path_command::cubic_to, points, 3);
             break;
         case stb::outline_op::cubic_to: // CFF
@@ -409,7 +407,7 @@ float font_face_data::traverse_glyph_index_path(float size_, float x, float y, s
             points[2].x = cmd.p[2].x;
             points[2].y = cmd.p[2].y;
             current_point = points[2];
-            map_points(matrix, points, points, 3);
+            matrix.map(points, points, 3);
             traverse_func(closure, path_command::cubic_to, points, 3);
             break;
         case stb::outline_op::close:
@@ -495,34 +493,25 @@ float font_face_data::text_extents(float size_, const void* text, int length_, t
     return advance;
 }
 
-typedef struct font_face_entry {
-    font_face_data* face;
-    char* family;
-    char* filename;
-    int ttcindex;
-    bool bold;
-    bool italic;
-    struct font_face_entry* next;
-} font_face_entry_t;
+// One face of a family: either loaded already (`face` holds one reference) or only known by its file, loaded on first use.
+struct font_face_entry {
+    font_face_data* face = nullptr;
+    std::string filename;   // empty for a face that was added directly
+    int ttcindex = 0;
+    bool bold = false;
+    bool italic = false;
+};
 
 struct font_face_cache_impl {
     ref_count_t ref_count;
-    mutex_t mutex;
-    font_face_entry_t** entries;
-    int size_;
-    int capacity;
-    bool is_sorted;
+    std::mutex mutex;
+    std::map<std::string, std::vector<font_face_entry>> families;   // the faces of a family, oldest first
 };
 
 font_face_cache_t* font_face_cache_create(void)
 {
-    font_face_cache_t* cache = static_cast<font_face_cache_t*>(malloc(sizeof(font_face_cache_t)));
+    font_face_cache_t* cache = new font_face_cache_impl;
     novasvg_init_reference(cache);
-    novasvg_mutex_init(&cache->mutex);
-    cache->entries = NULL;
-    cache->size_ = 0;
-    cache->capacity = 0;
-    cache->is_sorted = false;
     return cache;
 }
 
@@ -536,8 +525,7 @@ void font_face_cache_destroy(font_face_cache_t* cache)
 {
     if(novasvg_destroy_reference(cache)) {
         font_face_cache_reset(cache);
-        novasvg_mutex_destroy(&cache->mutex);
-        free(cache);
+        delete cache;
     }
 }
 
@@ -548,68 +536,26 @@ int font_face_cache_reference_count(const font_face_cache_t* cache)
 
 void font_face_cache_reset(font_face_cache_t* cache)
 {
-    novasvg_mutex_lock(&cache->mutex);
-
-    for(int i = 0; i < cache->size_; ++i) {
-        font_face_entry_t* entry = cache->entries[i];
-        do {
-            font_face_entry_t* next = entry->next;
-            font_face_data::release(entry->face);
-            free(entry);
-            entry = next;
-        } while(entry);
-    }
-
-    free(cache->entries);
-    cache->entries = NULL;
-    cache->size_ = 0;
-    cache->capacity = 0;
-    cache->is_sorted = false;
-
-    novasvg_mutex_unlock(&cache->mutex);
+    std::lock_guard<std::mutex> lock(cache->mutex);
+    for(auto& family : cache->families)
+        for(font_face_entry& entry : family.second)
+            font_face_data::release(entry.face);
+    cache->families.clear();
 }
 
-static void font_face_cache_add_entry(font_face_cache_t* cache, font_face_entry_t* entry)
+static void font_face_cache_add_entry(font_face_cache_t* cache, const std::string& family, font_face_entry entry)
 {
-    novasvg_mutex_lock(&cache->mutex);
-
-    for(int i = 0; i < cache->size_; ++i) {
-        if(strcmp(entry->family, cache->entries[i]->family) == 0) {
-            entry->next = cache->entries[i];
-            cache->entries[i] = entry;
-            goto unlock;
-        }
-    }
-
-    if(cache->size_ >= cache->capacity) {
-        cache->capacity = cache->capacity == 0 ? 8 : cache->capacity << 2;
-        cache->entries = static_cast<decltype(cache->entries)>(realloc(cache->entries, cache->capacity * sizeof(font_face_entry_t*)));
-    }
-
-    entry->next = NULL;
-    cache->entries[cache->size_++] = entry;
-    cache->is_sorted = false;
-
-unlock:
-    novasvg_mutex_unlock(&cache->mutex);
+    std::lock_guard<std::mutex> lock(cache->mutex);
+    cache->families[family].push_back(std::move(entry));
 }
 
 void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold, bool italic, font_face_data* face)
 {
-    if(family == NULL) family = "";
-    size_t family_length = strlen(family) + 1;
-
-    font_face_entry_t* entry = static_cast<font_face_entry_t*>(malloc(family_length + sizeof(font_face_entry_t)));
-    entry->face = font_face_data::reference(face);
-    entry->family = (char*)(entry + 1);
-    memcpy(entry->family, family, family_length);
-
-    entry->filename = NULL;
-    entry->ttcindex = 0;
-    entry->bold = bold;
-    entry->italic = italic;
-
-    font_face_cache_add_entry(cache, entry);
+    font_face_entry entry;
+    entry.face = font_face_data::reference(face);
+    entry.bold = bold;
+    entry.italic = italic;
+    font_face_cache_add_entry(cache, family ? family : "", std::move(entry));
 }
 
 bool font_face_cache_add_file(font_face_cache_t* cache, const char* family, bool bold, bool italic, const char* filename, int ttcindex)
@@ -624,59 +570,31 @@ bool font_face_cache_add_file(font_face_cache_t* cache, const char* family, bool
     return true;
 }
 
-static font_face_entry_t* font_face_entry_select(font_face_entry_t* a, font_face_entry_t* b, bool bold, bool italic)
+static font_face_entry* font_face_entry_select(font_face_entry* a, font_face_entry* b, bool bold, bool italic)
 {
     int a_score = (bold == a->bold) + (italic == a->italic);
     int b_score = (bold == b->bold) + (italic == b->italic);
     return a_score > b_score ? a : b;
 }
 
-static int font_face_entry_compare(const void* a, const void* b)
-{
-    const font_face_entry_t* a_entry = *(const font_face_entry_t**)a;
-    const font_face_entry_t* b_entry = *(const font_face_entry_t**)b;
-    return strcmp(a_entry->family, b_entry->family);
-}
-
 font_face_data* font_face_cache_get(font_face_cache_t* cache, const char* family, bool bold, bool italic)
 {
-    novasvg_mutex_lock(&cache->mutex);
+    std::lock_guard<std::mutex> lock(cache->mutex);
 
-    if(!cache->is_sorted && cache->size_ > 0) {
-        qsort(cache->entries, cache->size_, sizeof(cache->entries[0]), font_face_entry_compare);
-        cache->is_sorted = true;
-    }
+    auto found = cache->families.find(family);
+    if(found == cache->families.end())
+        return NULL;
 
-    font_face_entry_t entry_key;
-    entry_key.family = (char*)(family);
+    // The newest face wins a tie, so walk from the newest to the oldest and replace only on a better score.
+    std::vector<font_face_entry>& faces = found->second;
+    font_face_entry* selected = &faces.back();
+    for(std::size_t i = faces.size() - 1; i-- > 0;)
+        selected = font_face_entry_select(&faces[i], selected, bold, italic);
 
-    font_face_entry_t* entry_key_ptr = &entry_key;
-    font_face_entry_t** entry_result = static_cast<font_face_entry_t**>(bsearch(
-        &entry_key_ptr,
-        cache->entries,
-        cache->size_,
-        sizeof(cache->entries[0]),
-        font_face_entry_compare
-    ));
-
-    font_face_data* face = NULL;
-    if(entry_result) {
-        font_face_entry_t* selected = *entry_result;
-        font_face_entry_t* entry = selected->next;
-        while(entry) {
-            selected = font_face_entry_select(entry, selected, bold, italic);
-            entry = entry->next;
-        }
-
-        if(selected->filename && selected->face == NULL)
-            selected->face = font_face_data::load_from_file(selected->filename, selected->ttcindex);
-        face = selected->face;
-    }
-
-    novasvg_mutex_unlock(&cache->mutex);
-    return face;
+    if(!selected->filename.empty() && selected->face == NULL)
+        selected->face = font_face_data::load_from_file(selected->filename.c_str(), selected->ttcindex);
+    return selected->face;
 }
-
 
 #ifndef NOVA_DISABLE_FONT_FACE_CACHE_LOAD
 
@@ -847,46 +765,37 @@ int font_face_cache_load_file(font_face_cache_t* cache, const char* filename)
 
         if(unicode_family_name == NULL && roman_family_name == NULL)
             continue;
-        size_t filename_length = strlen(filename) + 1;
-        size_t max_family_length = (unicode_family_name ? 3 * (family_length / 2) : family_length * 3) + 1;
-
-        font_face_entry_t* entry = static_cast<font_face_entry_t*>(malloc(max_family_length + filename_length + sizeof(font_face_entry_t)));
-        entry->family = (char*)(entry + 1);
-        entry->filename = entry->family + max_family_length;
-        memcpy(entry->filename, filename, filename_length);
-
-        size_t family_index = 0;
+        std::string family;
         if(unicode_family_name) {
             const tt_uint8* family_name = unicode_family_name;
             while(family_length) {
                 tt_uint16 ch = family_name[0] * 256 + family_name[1];
                 if(ch < 0x80) {
-                    entry->family[family_index++] = ch;
+                    family.push_back(static_cast<char>(ch));
                 } else if(ch < 0x800) {
-                    entry->family[family_index++] = (0xc0 + (ch >> 6));
-                    entry->family[family_index++] = (0x80 + (ch & 0x3f));
+                    family.push_back(static_cast<char>((0xc0 + (ch >> 6))));
+                    family.push_back(static_cast<char>((0x80 + (ch & 0x3f))));
                 } else if(ch >= 0xd800 && ch < 0xdc00) {
                     tt_uint16 ch2 = family_name[2] * 256 + family_name[3];
                     tt_uint32 c = ((ch - 0xd800) << 10) + (ch2 - 0xdc00) + 0x10000;
 
-                    entry->family[family_index++] = (0xf0 + (c >> 18));
-                    entry->family[family_index++] = (0x80 + ((c >> 12) & 0x3f));
-                    entry->family[family_index++] = (0x80 + ((c >> 6) & 0x3f));
-                    entry->family[family_index++] = (0x80 + ((c) & 0x3f));
+                    family.push_back(static_cast<char>((0xf0 + (c >> 18))));
+                    family.push_back(static_cast<char>((0x80 + ((c >> 12) & 0x3f))));
+                    family.push_back(static_cast<char>((0x80 + ((c >> 6) & 0x3f))));
+                    family.push_back(static_cast<char>((0x80 + ((c) & 0x3f))));
 
                     family_name += 2;
                     family_length -= 2;
                 } else {
-                    entry->family[family_index++] = (0xe0 + (ch >> 12));
-                    entry->family[family_index++] = (0x80 + ((ch >> 6) & 0x3f));
-                    entry->family[family_index++] = (0x80 + ((ch) & 0x3f));
+                    family.push_back(static_cast<char>((0xe0 + (ch >> 12))));
+                    family.push_back(static_cast<char>((0x80 + ((ch >> 6) & 0x3f))));
+                    family.push_back(static_cast<char>((0x80 + ((ch) & 0x3f))));
                 }
 
                 family_name += 2;
                 family_length -= 2;
             }
 
-            entry->family[family_index] = '\0';
         } else {
             static const tt_uint16 MAC_ROMAN_TABLE[256] = {
                 0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
@@ -927,37 +836,32 @@ int font_face_cache_load_file(font_face_cache_t* cache, const char* filename)
             while(family_length) {
                 tt_uint16 ch = MAC_ROMAN_TABLE[family_name[0]];
                 if(ch < 0x80) {
-                    entry->family[family_index++] = ch;
+                    family.push_back(static_cast<char>(ch));
                 } else if(ch < 0x800) {
-                    entry->family[family_index++] = (0xc0 + (ch >> 6));
-                    entry->family[family_index++] = (0x80 + (ch & 0x3f));
+                    family.push_back(static_cast<char>((0xc0 + (ch >> 6))));
+                    family.push_back(static_cast<char>((0x80 + (ch & 0x3f))));
                 } else {
-                    entry->family[family_index++] = (0xe0 + (ch >> 12));
-                    entry->family[family_index++] = (0x80 + ((ch >> 6) & 0x3f));
-                    entry->family[family_index++] = (0x80 + ((ch) & 0x3f));
+                    family.push_back(static_cast<char>((0xe0 + (ch >> 12))));
+                    family.push_back(static_cast<char>((0x80 + ((ch >> 6) & 0x3f))));
+                    family.push_back(static_cast<char>((0x80 + ((ch) & 0x3f))));
                 }
 
                 family_name += 1;
                 family_length -= 1;
             }
 
-            entry->family[family_index] = '\0';
         }
 
-        entry->face = NULL;
-        entry->bold = false;
-        entry->italic = false;
-        entry->ttcindex = index;
+        font_face_entry entry;
+        entry.filename = filename;
+        entry.ttcindex = index;
 
         tt_uint32 hd = tt_find_table(data, offset, "head");
         tt_uint16 style = tt_ushort(data + hd + 44);
-        if(style & 0x1)
-            entry->bold = true;
-        if(style & 0x2) {
-            entry->italic = true;
-        }
+        entry.bold = (style & 0x1) != 0;
+        entry.italic = (style & 0x2) != 0;
 
-        font_face_cache_add_entry(cache, entry);
+        font_face_cache_add_entry(cache, family, std::move(entry));
         num_faces++;
     }
 
@@ -965,92 +869,35 @@ int font_face_cache_load_file(font_face_cache_t* cache, const char* filename)
     return num_faces;
 }
 
-static bool font_face_supports_file(const char* filename)
+static bool font_face_supports_file(const std::filesystem::path& file)
 {
-    const char* extension = strrchr(filename, '.');
-    if(extension) {
-        char ext[5];
-        size_t length_ = strlen(extension);
-        if(length_ == 4) {
-            for(size_t i = 0; i < length_; ++i)
-                ext[i] = tolower(extension[i]);
-            ext[length_] = '\0';
-            return strcmp(ext, ".ttf") == 0
-                || strcmp(ext, ".otf") == 0
-                || strcmp(ext, ".ttc") == 0
-                || strcmp(ext, ".otc") == 0;
-        }
-    }
-
-    return false;
+    std::string extension = file.extension().string();
+    for(char& ch : extension)
+        ch = static_cast<char>(tolower(static_cast<unsigned char>(ch)));
+    return extension == ".ttf" || extension == ".otf" || extension == ".ttc" || extension == ".otc";
 }
-
-#ifdef _WIN32
 
 int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirname)
 {
-    char search_path[MAX_PATH];
-    snprintf(search_path, sizeof(search_path), "%s\\*", dirname);
+    namespace fs = std::filesystem;
+    const fs::directory_options options = fs::directory_options::skip_permission_denied | fs::directory_options::follow_directory_symlink;
 
-    WIN32_FIND_DATAA find_data;
-    HANDLE handle = find_first_file_a(search_path, &find_data);
-    if(handle == INVALID_HANDLE_VALUE) {
+    std::error_code error;
+    fs::recursive_directory_iterator it(dirname, options, error);
+    if(error)
         return 0;
-    }
 
     int num_faces = 0;
-
-    do {
-        const char* name = find_data.c_file_name;
-        if(strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
-            continue;
-        char path[MAX_PATH * 2];
-        snprintf(path, sizeof(path), "%s\\%s", dirname, name);
-
-        if(find_data.dw_file_attributes & FILE_ATTRIBUTE_DIRECTORY) {
-            num_faces += font_face_cache_load_dir(cache, path);
-        } else if(font_face_supports_file(path)) {
-            num_faces += font_face_cache_load_file(cache, path);
-        }
-    } while(find_next_file_a(handle, &find_data));
-
-    find_close(handle);
+    fs::recursive_directory_iterator end;
+    for(; it != end; it.increment(error)) {
+        if(error)
+            break;
+        std::error_code status_error;
+        if(it->is_regular_file(status_error) && !status_error && font_face_supports_file(it->path()))
+            num_faces += font_face_cache_load_file(cache, it->path().string().c_str());
+    }
     return num_faces;
 }
-
-#else
-
-int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirname)
-{
-    DIR* dir = opendir(dirname);
-    if(dir == NULL) {
-        return 0;
-    }
-
-    int num_faces = 0;
-
-    struct dirent* entry;
-    while((entry = readdir(dir)) != NULL) {
-        if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-            continue;
-        char path_[PATH_MAX];
-        snprintf(path_, sizeof(path_), "%s/%s", dirname, entry->d_name);
-
-        struct stat st;
-        if(stat(path_, &st) == -1)
-            continue;
-        if(S_ISDIR(st.st_mode)) {
-            num_faces += font_face_cache_load_dir(cache, path_);
-        } else if(S_ISREG(st.st_mode) && font_face_supports_file(path_)) {
-            num_faces += font_face_cache_load_file(cache, path_);
-        }
-    }
-
-    closedir(dir);
-    return num_faces;
-}
-
-#endif // _WIN32
 
 int font_face_cache_load_sys(font_face_cache_t* cache)
 {

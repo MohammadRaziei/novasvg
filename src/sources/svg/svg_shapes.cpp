@@ -5,6 +5,13 @@
 namespace nova::svg {
 using namespace vg;
 
+// The fill box of a shape: the exact box of what it draws (SVG objectBoundingBox), libstb's outline::tight_bounds.
+static rect fill_box(const stb::outline& outline)
+{
+    const auto b = outline.tight_bounds();
+    return b ? rect(b->x0, b->y0, b->width(), b->height()) : rect::empty_rect;
+}
+
 rect svg_marker_position::marker_bounding_box(float stroke_width) const
 {
     return m_element->marker_bounding_box(m_origin, m_angle, stroke_width);
@@ -25,10 +32,10 @@ rect svg_geometry_element::stroke_bounding_box() const
     auto stroke_bounding_box = fill_bounding_box();
     if(m_stroke.is_renderable()) {
         float cap_limit = m_stroke_data.line_width() / 2.f;
-        if(m_stroke_data.line_cap_() == line_cap::square)
+        if(m_stroke_data.line_cap() == line_cap::square)
             cap_limit *= NOVA_SQRT2;
         float join_limit = m_stroke_data.line_width() / 2.f;
-        if(m_stroke_data.line_join_() == line_join::miter) {
+        if(m_stroke_data.line_join() == line_join::miter) {
             join_limit *= m_stroke_data.miter_limit();
         }
 
@@ -42,7 +49,7 @@ rect svg_geometry_element::stroke_bounding_box() const
 
 void svg_geometry_element::layout_element(const svg_layout_state& state)
 {
-    m_fill_rule = state.fill_rule_();
+    m_fill_rule = state.fill_rule();
     m_clip_rule = state.clip_rule();
     m_fill = get_paint_server(state.fill(), state.fill_opacity());
     m_stroke = get_paint_server(state.stroke(), state.stroke_opacity());
@@ -110,7 +117,7 @@ void svg_geometry_element::update_marker_positions(svg_marker_position_list& pos
                 auto slope = outslope_points[1] - outslope_points[0];
                 auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVA_PI;
                 const auto& orient = marker_start->orient();
-                if(orient.orient_type_() == svg_angle::orient_type::auto_start_reverse)
+                if(orient.orient_type() == svg_angle::orient_type_value::auto_start_reverse)
                     angle -= 180.f;
                 positions.emplace_back(marker_start, origin, angle);
             }
@@ -304,7 +311,7 @@ rect svg_poly_element::update_shape(stb::outline& path_)
 
     if(id() == element_id::polygon)
         path_.close();
-    return bounding_rect(path_);
+    return fill_box(path_);
 }
 
 svg_path_element::svg_path_element(document* dom)
@@ -317,7 +324,7 @@ svg_path_element::svg_path_element(document* dom)
 rect svg_path_element::update_shape(stb::outline& path_)
 {
     path_ = m_d.value();
-    return bounding_rect(path_);
+    return fill_box(path_);
 }
 
 } // namespace nova::svg

@@ -12,7 +12,7 @@ svg_marker_element::svg_marker_element(document* dom)
     , m_ref_y(property_id::RefY, length_direction::vertical, length_negative_mode::allow, 0.f, length_units::none)
     , m_marker_width(property_id::marker_width, length_direction::horizontal, length_negative_mode::forbid, 3.f, length_units::none)
     , m_marker_height(property_id::marker_height, length_direction::vertical, length_negative_mode::forbid, 3.f, length_units::none)
-    , m_marker_units(property_id::marker_units, marker_units::stroke_width)
+    , m_marker_units(property_id::marker_units, svg_marker_units::stroke_width)
     , m_orient(property_id::orient)
 {
     add_property(m_ref_x);
@@ -48,7 +48,7 @@ size svg_marker_element::marker_size() const
 transform svg_marker_element::marker_transform(const point& origin, float angle, float stroke_width) const
 {
     auto transform_ = transform::translated(origin.x, origin.y);
-    if(m_orient.orient_type_() == svg_angle::orient_type::angle) {
+    if(m_orient.orient_type() == svg_angle::orient_type_value::angle) {
         transform_.rotate(m_orient.value());
     } else {
         transform_.rotate(angle);
@@ -56,7 +56,7 @@ transform svg_marker_element::marker_transform(const point& origin, float angle,
 
     auto view_transform = view_box_to_view_transform(marker_size());
     auto ref_origin = view_transform.map_point(ref_point());
-    if(m_marker_units.value() == marker_units::stroke_width)
+    if(m_marker_units.value() == svg_marker_units::stroke_width)
         transform_.scale(stroke_width, stroke_width);
     transform_.translate(-ref_origin.x, -ref_origin.y);
     return transform_ * view_transform;
@@ -140,7 +140,7 @@ void svg_clip_path_element::apply_clip_path(svg_render_state& state) const
         auto el = to_svg_element(child);
         if(el == nullptr || el->is_display_none())
             continue;
-        transform clip_transform(current_transform);
+        vg::transform clip_transform(current_transform);
         auto shape_element = to_svg_geometry_element(el);
         if(shape_element == nullptr) {
             if(el->id() != element_id::use)
@@ -151,7 +151,7 @@ void svg_clip_path_element::apply_clip_path(svg_render_state& state) const
 
         if(shape_element == nullptr || !shape_element->is_renderable())
             continue;
-        state->clip_path(shape_element->path_(), shape_element->clip_rule(), clip_transform * shape_element->local_transform());
+        state->clip_path(shape_element->path(), shape_element->clip_rule(), clip_transform * shape_element->local_transform());
         return;
     }
 
@@ -262,7 +262,7 @@ void svg_mask_element::apply_mask(svg_render_state& state) const
         masker()->apply_mask(new_state);
     }
 
-    if(m_mask_type == mask_type::luminance)
+    if(m_mask_type == css_mask_type::luminance)
         mask_image->convert_to_luminance_mask();
     state.raster()->blend_canvas(*mask_image, blend_mode::dst_in, 1.f);
 }
@@ -280,16 +280,16 @@ float svg_filter_element::pixel_margin() const
         if(!el)
             continue;
         if(el->id() == element_id::fe_gaussian_blur) {
-            auto sigma = parse_first_float(el->attribute_(property_id::std_deviation), 0.f);
+            auto sigma = parse_first_float(el->attribute(property_id::std_deviation), 0.f);
             margin = STB_MAX(margin, sigma * 3.f);
         } else if(el->id() == element_id::fe_drop_shadow) {
-            auto sigma = parse_first_float(el->attribute_(property_id::std_deviation), 2.f);
-            auto dx = parse_first_float(el->attribute_(property_id::dx), 2.f);
-            auto dy = parse_first_float(el->attribute_(property_id::dy), 2.f);
+            auto sigma = parse_first_float(el->attribute(property_id::std_deviation), 2.f);
+            auto dx = parse_first_float(el->attribute(property_id::dx), 2.f);
+            auto dy = parse_first_float(el->attribute(property_id::dy), 2.f);
             margin = STB_MAX(margin, sigma * 3.f + STB_MAX(std::abs(dx), std::abs(dy)));
         } else if(el->id() == element_id::fe_offset) {
-            auto dx = parse_first_float(el->attribute_(property_id::dx), 0.f);
-            auto dy = parse_first_float(el->attribute_(property_id::dy), 0.f);
+            auto dx = parse_first_float(el->attribute(property_id::dx), 0.f);
+            auto dy = parse_first_float(el->attribute(property_id::dy), 0.f);
             margin = STB_MAX(margin, STB_MAX(std::abs(dx), std::abs(dy)));
         }
         // feFlood/feComposite/feMerge don't themselves need extra margin;
@@ -310,7 +310,7 @@ void svg_filter_element::apply_filter(svg_render_state& state, float scale) cons
         auto output = el->apply_filter_primitive(context);
         if(!output)
             continue; // not a primitive (e.g. a stray feMergeNode outside feMerge)
-        context.set_result(el->attribute_(property_id::result), std::move(output));
+        context.set_result(el->attribute(property_id::result), std::move(output));
     }
 
     state.raster()->copy_pixels_from(*context.last_result());
@@ -318,7 +318,7 @@ void svg_filter_element::apply_filter(svg_render_state& state, float scale) cons
 
 void svg_mask_element::layout_element(const svg_layout_state& state)
 {
-    m_mask_type = state.mask_type_();
+    m_mask_type = state.mask_type();
     svg_element::layout_element(state);
 }
 

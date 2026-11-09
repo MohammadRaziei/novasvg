@@ -16,7 +16,7 @@ class svg_blend_info {
 public:
     explicit svg_blend_info(const svg_element* el);
     svg_blend_info(const svg_clip_path_element* clipper, const svg_mask_element* masker, const svg_filter_element* filter, float opacity,
-                 mix_blend_mode mix_blend_mode_ = mix_blend_mode::normal)
+                 css_mix_blend_mode mix_blend_mode_ = css_mix_blend_mode::normal)
         : m_clipper(clipper), m_masker(masker), m_filter(filter), m_opacity(opacity), m_mix_blend_mode(mix_blend_mode_)
     {}
 
@@ -25,14 +25,14 @@ public:
     const svg_mask_element* masker() const { return m_masker; }
     const svg_filter_element* filter_element() const { return m_filter; }
     float opacity() const { return m_opacity; }
-    mix_blend_mode mix_blend_mode_() const { return m_mix_blend_mode; }
+    css_mix_blend_mode mix_blend_mode() const { return m_mix_blend_mode; }
 
 private:
     const svg_clip_path_element* m_clipper;
     const svg_mask_element* m_masker;
     const svg_filter_element* m_filter;
     const float m_opacity;
-    const mix_blend_mode m_mix_blend_mode;
+    const css_mix_blend_mode m_mix_blend_mode;
 };
 
 class svg_render_state {
@@ -95,7 +95,7 @@ public:
 
     void layout_element(const svg_layout_state& state) final;
     const svg_number_percentage& offset() const { return m_offset; }
-    gradient_stop gradient_stop_(float opacity) const;
+    gradient_stop make_gradient_stop(float opacity) const;
 
 private:
     svg_number_percentage m_offset;
@@ -111,13 +111,13 @@ public:
 
     const svg_transform& gradient_transform() const { return m_gradient_transform; }
     const svg_enumeration<units>& gradient_units() const { return m_gradient_units; }
-    const svg_enumeration<spread_method>& spread_method_() const { return m_spread_method; }
+    const svg_enumeration<spread_method_value>& spread_method() const { return m_spread_method; }
     void collect_gradient_attributes(svg_gradient_attributes& attributes) const;
 
 private:
     svg_transform m_gradient_transform;
     svg_enumeration<units> m_gradient_units;
-    svg_enumeration<spread_method> m_spread_method;
+    svg_enumeration<spread_method_value> m_spread_method;
 };
 
 class svg_gradient_attributes {
@@ -125,7 +125,7 @@ public:
     svg_gradient_attributes() = default;
 
     const transform& gradient_transform() const { return m_gradient_transform->gradient_transform().value(); }
-    spread_method spread_method_() const { return m_spread_method->spread_method_().value(); }
+    spread_method_value spread_method() const { return m_spread_method->spread_method().value(); }
     units gradient_units() const { return m_gradient_units->gradient_units().value(); }
     const svg_gradient_element* gradient_content_element() const { return m_gradient_content_element; }
 

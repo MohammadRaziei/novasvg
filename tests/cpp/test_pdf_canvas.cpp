@@ -30,17 +30,17 @@ TEST_CASE("pdf_canvas: a page with shapes, a gradient, a clip and text")
     circle.add_ellipse(140, 40, 40, 30);
     pdf->stroke_path(circle, stroke, transform());
 
-    gradient_stops stops = {{0.f, {1.f, 1.f, 0.f, 1.f}}, {0.5f, {0.f, 0.7f, 0.2f, 1.f}}, {1.f, {0.f, 0.2f, 0.9f, 1.f}}};
+    gradient_stops stops = {{0.f, stb::color(255, 255, 0)}, {0.5f, stb::color(0, 179, 51)}, {1.f, stb::color(0, 51, 230)}};
     pdf->save();
     pdf->clip_rect(rect(10, 70, 180, 40), fill_rule::non_zero, transform());
-    pdf->set_linear_gradient(10, 0, 190, 0, spread_method::pad, stops, transform());
+    pdf->set_linear_gradient(10, 0, 190, 0, spread_method_value::pad, stops, transform());
     stb::outline wide;
     wide.add_rect(0, 60, 200, 60);
     pdf->fill_path(wide, fill_rule::non_zero, transform());
     pdf->restore();
 
     pdf->set_color(0.f, 0.f, 0.f, 1.f);
-    pdf->fill_text(U"Hello, PDF ffi", font(embedded_fallback_font(), 16.f), point(14, 100), transform());
+    pdf->fill_text(U"Hello, PDF ffi", sized_font(embedded_fallback_font(), 16.f), point(14, 100), transform());
 
     auto bytes = pdf->data();
     std::string s = text_of(bytes);

@@ -25,6 +25,10 @@
 
 #include <stdbool.h>
 #include <stb/outline.hpp>
+#include <algorithm>
+#include <cmath>
+#include <stb/color.hpp>
+#include <stb/raster.hpp>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -41,6 +45,12 @@
 // instead.
 namespace nova {
 namespace vg {
+
+// Fill rule, line cap and line join are libstb's (stb/raster.hpp).
+using stb::fill_rule;
+using stb::line_cap;
+using stb::line_join;
+
 
 #define NOVA_RENDER_VERSION_MAJOR 1
 #define NOVA_RENDER_VERSION_MINOR 3
@@ -101,13 +111,7 @@ typedef struct {
 #define NOVA_MAKE_RECT(x, y, w, h) (rect_t{x, y, w, h})
 #define NOVA_EMPTY_RECT NOVA_MAKE_RECT(0, 0, 0, 0)
 
-// Matrices are stb::matrix and points are stb::point (<stb/outline.hpp>); the helpers below are what libstb does not have.
-
-/// Maps `count` points through `matrix` (`src` and `dst` may be the same array).
-void map_points(const stb::matrix& matrix, const stb::point* src, stb::point* dst, int count);
-
-/// The bounding rectangle of `src` after `matrix` (`src` and `dst` may be the same rectangle).
-void mapped_bounds(const stb::matrix& matrix, const rect_t* src, rect_t* dst);
+// Matrices are stb::matrix and points are stb::point (<stb/outline.hpp>); mapping points and boxes is `stb::matrix::map` / `map_rect`; the helper below is what libstb does not have.
 
 /// Parses an SVG `transform` list (`matrix(...) translate(...) ...`) into `matrix`. Returns false on a syntax error.
 /// `length` is the byte length of `data`, or -1 for a NUL-terminated string.
@@ -298,134 +302,18 @@ NOVA_API int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirn
  */
 NOVA_API int font_face_cache_load_sys(font_face_cache_t* cache);
 
-/**
- * @brief Represents a color with red, green, blue, and alpha components.
- */
-typedef struct color {
-    float r; ///< Red component (0 to 1).
-    float g; ///< Green component (0 to 1).
-    float b; ///< Blue component (0 to 1).
-    float a; ///< Alpha (opacity) component (0 to 1).
-} color_t;
+/// A colour with float channels (0 to 1, clamped) rounded to the 8-bit stb::color.
+inline stb::color color_from_floats(float r, float g, float b, float a = 1.f)
+{
+    auto channel = [](float v) { return static_cast<uint8_t>(lroundf(std::clamp(v, 0.f, 1.f) * 255.f)); };
+    return stb::color(channel(r), channel(g), channel(b), channel(a));
+}
 
-#define NOVA_MAKE_COLOR(r, g, b, a) (color_t{r, g, b, a})
-
-#define NOVA_BLACK_COLOR   NOVA_MAKE_COLOR(0, 0, 0, 1)
-#define NOVA_WHITE_COLOR   NOVA_MAKE_COLOR(1, 1, 1, 1)
-#define NOVA_RED_COLOR     NOVA_MAKE_COLOR(1, 0, 0, 1)
-#define NOVA_GREEN_COLOR   NOVA_MAKE_COLOR(0, 1, 0, 1)
-#define NOVA_BLUE_COLOR    NOVA_MAKE_COLOR(0, 0, 1, 1)
-#define NOVA_YELLOW_COLOR  NOVA_MAKE_COLOR(1, 1, 0, 1)
-#define NOVA_CYAN_COLOR    NOVA_MAKE_COLOR(0, 1, 1, 1)
-#define NOVA_MAGENTA_COLOR NOVA_MAKE_COLOR(1, 0, 1, 1)
-
-/**
- * @brief Initializes a color using RGB components in the 0-1 range.
- * 
- * @param color A pointer to a `color_t` object.
- * @param r Red component (0 to 1).
- * @param g Green component (0 to 1).
- * @param b Blue component (0 to 1).
- */
-NOVA_API void color_init_rgb(color_t* color_, float r, float g, float b);
-
-/**
- * @brief Initializes a color using RGBA components in the 0-1 range.
- * 
- * @param color A pointer to a `color_t` object.
- * @param r Red component (0 to 1).
- * @param g Green component (0 to 1).
- * @param b Blue component (0 to 1).
- * @param a Alpha component (0 to 1).
- */
-NOVA_API void color_init_rgba(color_t* color_, float r, float g, float b, float a);
-
-/**
- * @brief Initializes a color using RGB components in the 0-255 range.
- * 
- * @param color A pointer to a `color_t` object.
- * @param r Red component (0 to 255).
- * @param g Green component (0 to 255).
- * @param b Blue component (0 to 255).
- */
-NOVA_API void color_init_rgb8(color_t* color_, int r, int g, int b);
-
-/**
- * @brief Initializes a color using RGBA components in the 0-255 range.
- * 
- * @param color A pointer to a `color_t` object.
- * @param r Red component (0 to 255).
- * @param g Green component (0 to 255).
- * @param b Blue component (0 to 255).
- * @param a Alpha component (0 to 255).
- */
-NOVA_API void color_init_rgba8(color_t* color_, int r, int g, int b, int a);
-
-/**
- * @brief Initializes a color from a 32-bit unsigned RGBA value.
- * 
- * @param color A pointer to a `color_t` object.
- * @param value 32-bit unsigned RGBA value.
- */
-NOVA_API void color_init_rgba32(color_t* color_, unsigned int value);
-
-/**
- * @brief Initializes a color from a 32-bit unsigned ARGB value.
- * 
- * @param color A pointer to a `color_t` object.
- * @param value 32-bit unsigned ARGB value.
- */
-NOVA_API void color_init_argb32(color_t* color_, unsigned int value);
-
-/**
- * @brief Initializes a color with the specified HSL color values.
- *
- * @param color A pointer to a `color_t` object.
- * @param h Hue component in degrees (0 to 360).
- * @param s Saturation component (0 to 1).
- * @param l Lightness component (0 to 1).
- */
-NOVA_API void color_init_hsl(color_t* color_, float h, float s, float l);
-
-/**
- * @brief Initializes a color with the specified HSLA color values.
- *
- * @param color A pointer to a `color_t` object.
- * @param h Hue component in degrees (0 to 360).
- * @param s Saturation component (0 to 1).
- * @param l Lightness component (0 to 1).
- * @param a Alpha component (0 to 1).
- */
-NOVA_API void color_init_hsla(color_t* color_, float h, float s, float l, float a);
-
-/**
- * @brief Converts a color to a 32-bit unsigned RGBA value.
- * 
- * @param color A pointer to a `color_t` object.
- * 
- * @return 32-bit unsigned RGBA value.
- */
-NOVA_API unsigned int color_to_rgba32(const color_t* color_);
-
-/**
- * @brief Converts a color to a 32-bit unsigned ARGB value.
- * 
- * @param color A pointer to a `color_t` object.
- * 
- * @return 32-bit unsigned ARGB value.
- */
-NOVA_API unsigned int color_to_argb32(const color_t* color_);
-
-/**
- * @brief Parses a color from a string using CSS color syntax.
- * 
- * @param color A pointer to a `color_t` object to store the parsed color.
- * @param data A pointer to the input string containing the color data.
- * @param length The length of the input string in bytes, or `-1` if the string is null-terminated.
- * 
- * @return The number of characters consumed on success (including leading/trailing spaces), or 0 on failure.
- */
-NOVA_API int color_parse(color_t* color_, const char* data, int length_);
+/// The colour packed as 0xAARRGGBB (alpha in the high byte; stb::color::value() is 0xRRGGBBAA).
+inline uint32_t color_to_argb32(const stb::color& c)
+{
+    return (uint32_t(c.a()) << 24) | (uint32_t(c.r()) << 16) | (uint32_t(c.g()) << 8) | uint32_t(c.b());
+}
 
 /**
  * @brief Represents an image surface for drawing operations.
@@ -546,7 +434,7 @@ NOVA_API int surface_get_stride(const surface_t* surface);
  * @param surface Pointer to the target surface.
  * @param color Pointer to the color used for clearing.
  */
-NOVA_API void surface_clear(surface_t* surface, const color_t* color_);
+NOVA_API void surface_clear(surface_t* surface, const stb::color* color_);
 
 /**
  * @brief Converts pixel data from premultiplied ARGB to RGBA format.
@@ -587,7 +475,7 @@ enum class texture_type : int {
 /**
  * @brief Defines the spread method for gradients.
  */
-enum class spread_method : uint8_t {
+enum class spread_method_value : uint8_t {
     pad, ///< Pad the gradient's edges.
     reflect, ///< Reflect the gradient beyond its bounds.
     repeat ///< Repeat the gradient pattern.
@@ -598,7 +486,7 @@ enum class spread_method : uint8_t {
  */
 typedef struct {
     float offset; ///< The offset of the gradient stop, as a value between 0 and 1.
-    color_t color_; ///< The color of the gradient stop.
+    stb::color color_; ///< The color of the gradient stop.
 } gradient_stop_t;
 
 /**
@@ -630,10 +518,10 @@ NOVA_API paint_t* paint_create_rgba(float r, float g, float b, float a);
 /**
  * @brief Creates a solid color paint.
  *
- * @param color A pointer to the `color_t` object.
+ * @param color A pointer to the `stb::color` object.
  * @return A pointer to the created `paint_t` object.
  */
-NOVA_API paint_t* paint_create_color(const color_t* color_);
+NOVA_API paint_t* paint_create_color(const stb::color* color_);
 
 /**
  * @brief Creates a linear gradient paint.
@@ -649,7 +537,7 @@ NOVA_API paint_t* paint_create_color(const color_t* color_);
  * @return A pointer to the created `paint_t` object.
  */
 NOVA_API paint_t* paint_create_linear_gradient(float x1, float y1, float x2, float y2,
-    spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
+    spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
 
 /**
  * @brief Creates a radial gradient paint.
@@ -667,7 +555,7 @@ NOVA_API paint_t* paint_create_linear_gradient(float x1, float y1, float x2, flo
  * @return A pointer to the created `paint_t` object.
  */
 NOVA_API paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr,
-    spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
+    spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
 
 /**
  * @brief Creates a texture paint from a surface.
@@ -704,14 +592,6 @@ NOVA_API void paint_destroy(paint_t* paint_);
 NOVA_API int paint_get_reference_count(const paint_t* paint_);
 
 /**
- * @brief Defines fill rule types for filling paths.
- */
-enum class fill_rule : uint8_t {
-    non_zero, ///< Non-zero winding fill rule.
-    even_odd ///< Even-odd fill rule.
-};
-
-/**
  * @brief Defines compositing operations.
  */
 enum class blend_mode : int {
@@ -735,24 +615,6 @@ enum class blend_mode : int {
     lighten,     ///< The lighter of backdrop and source, per channel.
     difference,  ///< Absolute difference of backdrop and source, per channel.
     exclusion    ///< Like difference, with lower contrast.
-};
-
-/**
- * @brief Defines the shape used at the ends of open subpaths.
- */
-enum class line_cap : uint8_t {
-    butt, ///< Flat edge at the end of the stroke.
-    round, ///< Rounded ends at the end of the stroke.
-    square ///< Square ends at the end of the stroke.
-};
-
-/**
- * @brief Defines the shape used at the corners of paths.
- */
-enum class line_join : uint8_t {
-    miter, ///< Miter join with sharp corners.
-    round, ///< Rounded join.
-    bevel ///< Beveled join with a flattened corner.
 };
 
 /**
@@ -844,9 +706,9 @@ NOVA_API void canvas_set_rgba(canvas_t* canvas, float r, float g, float b, float
  * If not set, the default paint is opaque black color.
  *
  * @param canvas A pointer to a `canvas_t` object.
- * @param color A pointer to a `color_t` object.
+ * @param color A pointer to a `stb::color` object.
  */
-NOVA_API void canvas_set_color(canvas_t* canvas, const color_t* color_);
+NOVA_API void canvas_set_color(canvas_t* canvas, const stb::color* color_);
 
 /**
  * @brief Sets the current paint to a linear gradient.
@@ -864,7 +726,7 @@ NOVA_API void canvas_set_color(canvas_t* canvas, const color_t* color_);
  * @param matrix Optional transformation matrix.
  */
 NOVA_API void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2,
-    spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
+    spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
 
 /**
  * @brief Sets the current paint to a radial gradient.
@@ -884,7 +746,7 @@ NOVA_API void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, f
  * @param matrix Optional transformation matrix.
  */
 NOVA_API void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr,
-    spread_method spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
+    spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
 
 /**
  * @brief Sets the current paint to a texture.
@@ -915,10 +777,10 @@ NOVA_API void canvas_set_paint(canvas_t* canvas, paint_t* paint_);
  * If not set, the default paint is opaque black color.
  *
  * @param canvas A pointer to a `canvas_t` object.
- * @param color A pointer to a `color_t` object where the current color will be stored.
+ * @param color A pointer to a `stb::color` object where the current color will be stored.
  * @return The current `paint_t` used for drawing operations. If no paint is set, `NULL` is returned.
  */
-NOVA_API paint_t* canvas_get_paint(const canvas_t* canvas, color_t* color_);
+NOVA_API paint_t* canvas_get_paint(const canvas_t* canvas, stb::color* color_);
 
 /**
  * @brief Assigns a font-face cache to the canvas for font management.

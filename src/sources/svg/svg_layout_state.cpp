@@ -10,7 +10,7 @@ svg_layout_state::svg_layout_state(const svg_layout_state& parent, const svg_ele
     , m_element(el)
     , m_fill(parent.fill())
     , m_stroke(parent.stroke())
-    , m_color(parent.color_())
+    , m_color(parent.color())
     , m_fill_opacity(parent.fill_opacity())
     , m_stroke_opacity(parent.stroke_opacity())
     , m_stroke_miterlimit(parent.stroke_miterlimit())
@@ -22,19 +22,19 @@ svg_layout_state::svg_layout_state(const svg_layout_state& parent, const svg_ele
     , m_stroke_dasharray(parent.stroke_dasharray())
     , m_stroke_linecap(parent.stroke_linecap())
     , m_stroke_linejoin(parent.stroke_linejoin())
-    , m_fill_rule(parent.fill_rule_())
+    , m_fill_rule(parent.fill_rule())
     , m_clip_rule(parent.clip_rule())
-    , m_font_weight(parent.font_weight_())
-    , m_font_style(parent.font_style_())
-    , m_dominant_baseline(parent.dominant_baseline_())
-    , m_text_anchor(parent.text_anchor_())
-    , m_white_space(parent.white_space_())
-    , m_writing_mode(parent.writing_mode_())
-    , m_text_orientation(parent.text_orientation_())
-    , m_direction(parent.direction_())
-    , m_visibility(parent.visibility_())
-    , m_overflow(el->is_root_element() ? overflow::visible : overflow::hidden)
-    , m_pointer_events(parent.pointer_events_())
+    , m_font_weight(parent.font_weight())
+    , m_font_style(parent.font_style())
+    , m_dominant_baseline(parent.dominant_baseline())
+    , m_text_anchor(parent.text_anchor())
+    , m_white_space(parent.white_space())
+    , m_writing_mode(parent.writing_mode())
+    , m_text_orientation(parent.text_orientation())
+    , m_direction(parent.direction())
+    , m_visibility(parent.visibility())
+    , m_overflow(el->is_root_element() ? css_overflow::visible : css_overflow::hidden)
+    , m_pointer_events(parent.pointer_events())
     , m_marker_start(parent.marker_start())
     , m_marker_mid(parent.marker_mid())
     , m_marker_end(parent.marker_end())
@@ -89,10 +89,10 @@ svg_layout_state::svg_layout_state(const svg_layout_state& parent, const svg_ele
             m_baseline_shift = parse_baseline_shift(input);
             break;
         case property_id::stroke_width:
-            m_stroke_width = parse_length(input, length_negative_mode::forbid, length(1.f, length_units::none));
+            m_stroke_width = parse_length(input, length_negative_mode::forbid, css_length(1.f, length_units::none));
             break;
         case property_id::stroke_dashoffset:
-            m_stroke_dashoffset = parse_length(input, length_negative_mode::allow, length(0.f, length_units::none));
+            m_stroke_dashoffset = parse_length(input, length_negative_mode::allow, css_length(0.f, length_units::none));
             break;
         case property_id::stroke_dasharray:
             m_stroke_dasharray = parse_dash_array(input);
@@ -178,23 +178,23 @@ svg_layout_state::svg_layout_state(const svg_layout_state& parent, const svg_ele
     }
 }
 
-font make_font(const std::string& family, float size_, bool bold, bool italic)
+sized_font make_font(const std::string& family, float size_, bool bold, bool italic)
 {
     // Walk the font-family stack name by name (see
     // FontFaceCache::getFontFaceForFamilyStack()): an @font-face-embedded
     // font wins under its exact declared name, an uninstalled name falls
     // back to a metric-compatible substitute, unresolvable names are skipped.
-    font_face face = font_face_cache_()->get_font_face_for_family_stack(family, bold, italic);
+    font_face face = global_font_face_cache()->get_font_face_for_family_stack(family, bold, italic);
 
     // Absolute last resort: the hardcoded generic-family table.
     if(face.is_null())
-        face = font_face_cache_()->get_font_face(empty_string, bold, italic);
-    return font(face, size_);
+        face = global_font_face_cache()->get_font_face(empty_string, bold, italic);
+    return sized_font(face, size_);
 }
 
-font svg_layout_state::font_() const
+sized_font svg_layout_state::font() const
 {
-    return make_font(m_font_family, m_font_size, m_font_weight == font_weight::bold, m_font_style == font_style::italic);
+    return make_font(m_font_family, m_font_size, m_font_weight == css_font_weight::bold, m_font_style == css_font_style::italic);
 }
 
 } // namespace nova::svg

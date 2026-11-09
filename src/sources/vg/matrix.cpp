@@ -5,44 +5,6 @@ namespace vg {
 
 static int parse_matrix_parameters(const char** begin, const char* end, float values[6], int required, int optional);
 
-void map_points(const stb::matrix& matrix, const stb::point* src, stb::point* dst, int count)
-{
-    for(int i = 0; i < count; ++i) {
-        dst[i] = matrix.map(src[i]);
-    }
-}
-
-void mapped_bounds(const stb::matrix& matrix, const rect_t* src, rect_t* dst)
-{
-    stb::point p[4];
-    p[0].x = src->x;
-    p[0].y = src->y;
-    p[1].x = src->x + src->w;
-    p[1].y = src->y;
-    p[2].x = src->x + src->w;
-    p[2].y = src->y + src->h;
-    p[3].x = src->x;
-    p[3].y = src->y + src->h;
-    map_points(matrix, p, p, 4);
-
-    float l = p[0].x;
-    float t = p[0].y;
-    float r = p[0].x;
-    float b = p[0].y;
-
-    for(int i = 1; i < 4; i++) {
-        if(p[i].x < l) l = p[i].x;
-        if(p[i].x > r) r = p[i].x;
-        if(p[i].y < t) t = p[i].y;
-        if(p[i].y > b) b = p[i].y;
-    }
-
-    dst->x = l;
-    dst->y = t;
-    dst->w = r - l;
-    dst->h = b - t;
-}
-
 static int parse_matrix_parameters(const char** begin, const char* end, float values[6], int required, int optional)
 {
     if(!skip_ws_and_delim(begin, end, '('))

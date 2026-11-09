@@ -172,7 +172,7 @@ public:
         : m_id(id), m_color(color_)
     {}
 
-    const stb::color& color_() const { return m_color; }
+    const stb::color& color() const { return m_color; }
     const std::string& id() const { return m_id; }
     bool is_none() const { return m_id.empty() && !is_visible(m_color); }
 
@@ -181,18 +181,18 @@ private:
     stb::color m_color = stb::color::transparent();
 };
 
-enum class display : uint8_t {
+enum class css_display : uint8_t {
     inline_,
     none
 };
 
-enum class visibility : uint8_t {
+enum class css_visibility : uint8_t {
     visible,
     hidden,
     collapse
 };
 
-enum class overflow : uint8_t {
+enum class css_overflow : uint8_t {
     visible,
     hidden
 };
@@ -200,7 +200,7 @@ enum class overflow : uint8_t {
 // CSS mix-blend-mode. Normal = ordinary painting. Of the other keywords the separable modes below are
 // supported; overlay, color-dodge, color-burn, hard-light, soft-light and the non-separable ones (hue,
 // saturation, color, luminosity) are not yet and paint as Normal, like a value this library doesn't know.
-enum class mix_blend_mode : uint8_t {
+enum class css_mix_blend_mode : uint8_t {
     normal,
     multiply,
     screen,
@@ -210,7 +210,7 @@ enum class mix_blend_mode : uint8_t {
     exclusion
 };
 
-enum class pointer_events : uint8_t {
+enum class css_pointer_events : uint8_t {
     none,
     auto_,
     stroke,
@@ -224,17 +224,17 @@ enum class pointer_events : uint8_t {
     all
 };
 
-enum class font_style : uint8_t {
+enum class css_font_style : uint8_t {
     normal,
     italic
 };
 
-enum class font_weight : uint8_t {
+enum class css_font_weight : uint8_t {
     normal,
     bold
 };
 
-enum class alignment_baseline : uint8_t {
+enum class css_alignment_baseline : uint8_t {
     auto_,
     baseline,
     before_edge,
@@ -249,7 +249,7 @@ enum class alignment_baseline : uint8_t {
     mathematical
 };
 
-enum class dominant_baseline : uint8_t {
+enum class css_dominant_baseline : uint8_t {
     auto_,
     use_script,
     no_change,
@@ -264,33 +264,33 @@ enum class dominant_baseline : uint8_t {
     text_before_edge
 };
 
-enum class text_anchor : uint8_t {
+enum class svg_text_anchor : uint8_t {
     start,
     middle,
     end
 };
 
-enum class white_space : uint8_t {
+enum class css_white_space : uint8_t {
     default_,
     preserve
 };
 
-enum class writing_mode : uint8_t {
+enum class css_writing_mode : uint8_t {
     horizontal,
     vertical
 };
 
-enum class text_orientation : uint8_t {
+enum class css_text_orientation : uint8_t {
     mixed,
     upright
 };
 
-enum class direction : uint8_t {
+enum class css_direction : uint8_t {
     ltr,
     rtl
 };
 
-enum class mask_type : uint8_t {
+enum class css_mask_type : uint8_t {
     luminance,
     alpha
 };
@@ -300,12 +300,12 @@ enum class units : uint8_t {
     object_bounding_box
 };
 
-enum class marker_units : uint8_t {
+enum class svg_marker_units : uint8_t {
     stroke_width,
     user_space_on_use
 };
 
-enum class length_adjust : uint8_t {
+enum class svg_length_adjust : uint8_t {
     spacing,
     spacing_and_glyphs
 };
@@ -332,7 +332,7 @@ private:
 
 class svg_angle final : public svg_property {
 public:
-    enum class orient_type {
+    enum class orient_type_value {
         auto_,
         auto_start_reverse,
         angle
@@ -343,12 +343,12 @@ public:
     {}
 
     float value() const { return m_value; }
-    orient_type orient_type_() const { return m_orient_type; }
+    orient_type_value orient_type() const { return m_orient_type; }
     bool parse(std::string_view input) final;
 
 private:
     float m_value = 0;
-    orient_type m_orient_type = orient_type::angle;
+    orient_type_value m_orient_type = orient_type_value::angle;
 };
 
 enum class length_units : uint8_t {
@@ -370,15 +370,15 @@ enum class length_negative_mode : uint8_t {
     forbid
 };
 
-class length {
+class css_length {
 public:
-    length() = default;
-    length(float value, length_units units_)
+    css_length() = default;
+    css_length(float value, length_units units_)
         : m_value(value), m_units(units_)
     {}
 
     float value() const { return m_value; }
-    length_units units_() const { return m_units; }
+    length_units units() const { return m_units; }
 
     bool parse(std::string_view input, length_negative_mode mode);
 
@@ -396,17 +396,17 @@ public:
         , m_value(value, units_)
     {}
 
-    bool is_percent() const { return m_value.units_() == length_units::percent; }
+    bool is_percent() const { return m_value.units() == length_units::percent; }
 
-    length_direction direction_() const { return m_direction; }
+    length_direction direction() const { return m_direction; }
     length_negative_mode negative_mode() const { return m_negative_mode; }
-    const length& value() const { return m_value; }
+    const css_length& value() const { return m_value; }
     bool parse(std::string_view input) final;
 
 private:
     const length_direction m_direction;
     const length_negative_mode m_negative_mode;
-    length m_value;
+    css_length m_value;
 };
 
 class length_context {
@@ -415,8 +415,8 @@ public:
         : m_element(el), m_units(units_)
     {}
 
-    float value_for_length(const length& length_, length_direction direction_) const;
-    float value_for_length(const svg_length& length_) const { return value_for_length(length_.value(), length_.direction_()); }
+    float value_for_length(const css_length& length_, length_direction direction_) const;
+    float value_for_length(const svg_length& length_) const { return value_for_length(length_.value(), length_.direction()); }
 
 private:
     float viewport_dimension(length_direction direction_) const;
@@ -424,7 +424,7 @@ private:
     const units m_units;
 };
 
-using length_list = std::vector<length>;
+using length_list = std::vector<css_length>;
 
 class svg_length_list final : public svg_property {
 public:
@@ -434,7 +434,7 @@ public:
         , m_negative_mode(negative_mode)
     {}
 
-    length_direction direction_() const { return m_direction; }
+    length_direction direction() const { return m_direction; }
     length_negative_mode negative_mode() const { return m_negative_mode; }
     const length_list& values() const { return m_values; }
     bool parse(std::string_view input) final;
@@ -445,25 +445,25 @@ private:
     length_list m_values;
 };
 
-class baseline_shift {
+class css_baseline_shift {
 public:
-    enum class type {
+    enum class shift_type {
         baseline,
         sub,
         super,
         length
     };
 
-    baseline_shift() = default;
-    baseline_shift(type type_) : m_type(type_) {}
-    baseline_shift(const length& length_) : m_type(type::length), m_length(length_) {}
+    css_baseline_shift() = default;
+    css_baseline_shift(shift_type type_) : m_type(type_) {}
+    css_baseline_shift(const css_length& length_) : m_type(shift_type::length), m_length(length_) {}
 
-    type type_() const { return m_type; }
-    const length& length_() const { return m_length; }
+    shift_type type() const { return m_type; }
+    const css_length& length() const { return m_length; }
 
 private:
-    type m_type{type::baseline};
-    length m_length;
+    shift_type m_type{shift_type::baseline};
+    css_length m_length;
 };
 
 class svg_number : public svg_property {
@@ -631,7 +631,7 @@ private:
 
 class svg_preserve_aspect_ratio final : public svg_property {
 public:
-    enum class align_type {
+    enum class align_type_value {
         none,
         x_min_y_min,
         x_mid_y_min,
@@ -644,7 +644,7 @@ public:
         x_max_y_max
     };
 
-    enum class meet_or_slice {
+    enum class meet_or_slice_value {
         meet,
         slice
     };
@@ -653,8 +653,8 @@ public:
         : svg_property(id)
     {}
 
-    align_type align_type_() const { return m_align_type; }
-    meet_or_slice meet_or_slice_() const { return m_meet_or_slice; }
+    align_type_value align_type() const { return m_align_type; }
+    meet_or_slice_value meet_or_slice() const { return m_meet_or_slice; }
     bool parse(std::string_view input) final;
 
     rect get_clip_rect(const rect& view_box_rect, const size& viewport_size) const;
@@ -662,8 +662,8 @@ public:
     void transform_rect(rect& dst_rect, rect& src_rect) const;
 
 private:
-    align_type m_align_type = align_type::x_mid_y_mid;
-    meet_or_slice m_meet_or_slice = meet_or_slice::meet;
+    align_type_value m_align_type = align_type_value::x_mid_y_mid;
+    meet_or_slice_value m_meet_or_slice = meet_or_slice_value::meet;
 };
 
 } // namespace nova::svg

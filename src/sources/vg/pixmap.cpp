@@ -71,9 +71,7 @@ void pixmap::clear(const stb::color& value)
 {
     if(m_surface == nullptr)
         return;
-    color_t color_;
-    color_init_rgba32(&color_, value.value());
-    surface_clear(m_surface, &color_);
+    surface_clear(m_surface, &value);
 }
 
 void pixmap::convert_to_rgba()

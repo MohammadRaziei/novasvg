@@ -129,7 +129,7 @@ bool element::has_attribute(const std::string& name) const
 const std::string& element::attribute(const std::string& name) const
 {
     if(m_node)
-        return el()->attribute_(name);
+        return el()->attribute(name);
     return empty_string;
 }
 
@@ -338,16 +338,15 @@ void document::render(pixmap& bitmap, const stb::matrix& matrix) const
     // (this runs after that clear) since that argument means "what to
     // show through transparent content", and content here isn't actually
     // transparent -- it explicitly asked for this color.
-    if(const auto& bg = root_element(true)->attribute_(property_id::background_color); !bg.empty()) {
-        color_t color_;
-        if(color_parse(&color_, bg.data(), static_cast<int>(bg.length())) > 0) {
-            auto argb = color_to_argb32(&color_);
+    if(const auto& bg = root_element(true)->attribute(property_id::background_color); !bg.empty()) {
+        if(const auto parsed = stb::color::try_parse(bg)) {
+            const stb::color color_ = *parsed;
             // A fully transparent `background-color` (Mermaid emits `transparent`) paints nothing, so it must
             // not wipe the caller's `backgroundColor` argument -- that made every PNG come out transparent.
             // ponytail: a *semi*-transparent root color still replaces the argument instead of compositing
             // over it; upgrade path is to fill a rect through the canvas instead of clear().
-            if((argb >> 24) & 0xff)
-                bitmap.clear(stb::color((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >> 24) & 0xff));
+            if(color_.a() > 0)
+                bitmap.clear(color_);
         }
     }
 
@@ -407,14 +406,13 @@ std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
     }
 
     // Same rule as render(pixmap&): a root `background-color` sits under everything.
-    if(const auto& bg = root_element(true)->attribute_(property_id::background_color); !bg.empty()) {
-        color_t color_;
-        if(color_parse(&color_, bg.data(), static_cast<int>(bg.length())) > 0) {
-            auto argb = color_to_argb32(&color_);
-            if((argb >> 24) & 0xff) {
+    if(const auto& bg = root_element(true)->attribute(property_id::background_color); !bg.empty()) {
+        if(const auto parsed = stb::color::try_parse(bg)) {
+            const stb::color color_ = *parsed;
+            if(color_.a() > 0) {
                 stb::outline page;
                 page.add_rect(0, 0, width, height);
-                pdf->set_color(((argb >> 16) & 0xff) / 255.f, ((argb >> 8) & 0xff) / 255.f, (argb & 0xff) / 255.f, ((argb >> 24) & 0xff) / 255.f);
+                pdf->set_color(red_f(color_), green_f(color_), blue_f(color_), alpha_f(color_));
                 pdf->fill_path(page, fill_rule::non_zero, transform());
             }
         }
@@ -518,7 +516,7 @@ public:
                     wanted = &declaration.name;
             }
 
-            if(wanted == nullptr || !match_html_selector(rule.selector_(), nodes, index, m_owner))
+            if(wanted == nullptr || !match_html_selector(rule.selector(), nodes, index, m_owner))
                 continue;
             for(const auto& declaration : rule.declarations()) {
                 if(declaration.name != property)

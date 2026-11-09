@@ -53,7 +53,7 @@ void foreign_object_simple::render(const foreign_object_context& context, foreig
     // Real line-height from the HTML's own `line-height:` (mermaid's content usually says 1.5) when present and
     // parseable; falls back to a 1.2x default (roughly a browser's own "normal") otherwise -- e.g. for %/em
     // values or "normal" itself, which aren't handled.
-    auto line_height = foreign_object_line_height(std::string(context.markup), font_.size_()).value_or(font_.height() * 1.2f);
+    auto line_height = foreign_object_line_height(std::string(context.markup), font_.size()).value_or(font_.height() * 1.2f);
     auto total_height = line_height * float(lines.size());
     auto top_y = box_.y + (box_.h - total_height) / 2.f;
 

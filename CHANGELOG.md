@@ -46,6 +46,14 @@
 - ADR-0011 step 3 (part 1): `font_face_t` is the class `font_face_data` (`font_face.h`); the twelve `font_face_*(face, ...)` functions
   are its member functions (`face->shape(...)`, `face->get_metrics(...)`), the loaders are `font_face_data::load_from_file/data`, and
   `render.h` lost ten declarations. Reference counting stays intrusive until the C canvas layer goes.
+- Less duplication with libstb (ADR-0011): `fill_rule`, `line_cap`, `line_join` are libstb's; `stroke_style_t`, `stroke_dash_t` and
+  `stroke_data_t` are `stb::stroke_style`; `span_t` is `stb::span`; the drawing state is allocated with `new` (it holds a `std::vector`).
+- `color_t` (a float RGBA, plus `color_init_*`, `color_to_*` and the `NOVA_*_COLOR` macros) is gone: colours are `stb::color` everywhere,
+  gradient stops included (their colour was already 8-bit through `with_alpha`; golden 0 diff). `color_parse` now fills a `stb::color`
+  and the SVG code no longer round-trips colours through a packed ARGB value.
+- `add_rect_path`, `add_round_rect_path`, `add_ellipse_path` are gone: `stb::outline::add_rect`, `add_rounded_rect`, `add_ellipse`
+  draw the same shapes.
+- Builds against libstb 6af6df8 (GPOS mark placement, `glyph_kind`, shaping of a text range): no code change was needed, golden 0 diff.
 
 ## [0.11.5] - 2026-11-05
 

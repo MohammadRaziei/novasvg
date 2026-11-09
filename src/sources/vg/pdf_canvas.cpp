@@ -144,14 +144,14 @@ void pdf_canvas::set_color(float r, float g, float b, float a)
 
 namespace {
 // Once per process: a document with many gradients would otherwise repeat the same message.
-void warn_gradient_limits(spread_method spread, const gradient_stops& stops)
+void warn_gradient_limits(spread_method_value spread, const gradient_stops& stops)
 {
     static std::atomic<bool> spread_said{false}, alpha_said{false};
-    if(spread != spread_method::pad && !spread_said.exchange(true))
+    if(spread != spread_method_value::pad && !spread_said.exchange(true))
         pdf_log().warning("gradient spreadMethod reflect/repeat is written as pad in PDF output");
     if(!alpha_said.load()) {
         for(const auto& s : stops) {
-            if(s.color_.a < 1.f) {
+            if(s.color_.a() < 255) {
                 if(!alpha_said.exchange(true))
                     pdf_log().warning("per-stop alpha of a gradient is ignored in PDF output");
                 break;
@@ -161,7 +161,7 @@ void warn_gradient_limits(spread_method spread, const gradient_stops& stops)
 }
 }  // namespace
 
-void pdf_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, spread_method spread, const gradient_stops& stops, const transform& transform_)
+void pdf_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stops& stops, const transform& transform_)
 {
     paint& p = m_paints.back();
     p = paint();
@@ -173,7 +173,7 @@ void pdf_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, spr
     p.matrix = transform_.matrix();
 }
 
-void pdf_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method spread, const gradient_stops& stops, const transform& transform_)
+void pdf_canvas::set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method_value spread, const gradient_stops& stops, const transform& transform_)
 {
     paint& p = m_paints.back();
     p = paint();
@@ -205,13 +205,13 @@ int pdf_canvas::shading_pattern(const stb::matrix& transform_)
 
     std::string function;
     if(stops.size() == 2) {
-        function = "<< /FunctionType 2 /Domain [0 1] /N 1 /C0 [" + rgb_str(stops[0].color_.r, stops[0].color_.g, stops[0].color_.b)
-            + "] /C1 [" + rgb_str(stops[1].color_.r, stops[1].color_.g, stops[1].color_.b) + "] >>";
+        function = "<< /FunctionType 2 /Domain [0 1] /N 1 /C0 [" + rgb_str(red_f(stops[0].color_), green_f(stops[0].color_), blue_f(stops[0].color_))
+            + "] /C1 [" + rgb_str(red_f(stops[1].color_), green_f(stops[1].color_), blue_f(stops[1].color_)) + "] >>";
     } else {
         std::string functions, bounds, encode;
         for(size_t i = 0; i + 1 < stops.size(); ++i) {
-            functions += "<< /FunctionType 2 /Domain [0 1] /N 1 /C0 [" + rgb_str(stops[i].color_.r, stops[i].color_.g, stops[i].color_.b)
-                + "] /C1 [" + rgb_str(stops[i + 1].color_.r, stops[i + 1].color_.g, stops[i + 1].color_.b) + "] >> ";
+            functions += "<< /FunctionType 2 /Domain [0 1] /N 1 /C0 [" + rgb_str(red_f(stops[i].color_), green_f(stops[i].color_), blue_f(stops[i].color_))
+                + "] /C1 [" + rgb_str(red_f(stops[i + 1].color_), green_f(stops[i + 1].color_), blue_f(stops[i + 1].color_)) + "] >> ";
             encode += "0 1 ";
             if(i + 2 < stops.size()) {
                 float bound = stops[i + 1].offset;
@@ -305,10 +305,10 @@ void pdf_canvas::emit_rect_path(const rect& rect_, const stb::matrix* transform_
     emit_path(path_, transform_);
 }
 
-void pdf_canvas::emit_text_path(const std::u32string_view& text, const font& font_, const point& origin, const stb::matrix* transform_)
+void pdf_canvas::emit_text_path(const std::u32string_view& text, const sized_font& font_, const point& origin, const stb::matrix* transform_)
 {
     font_face_data* face = font_.face().get();
-    if(face == nullptr || font_.size_() <= 0.f)
+    if(face == nullptr || font_.size() <= 0.f)
         return;
 
     struct sink {
@@ -340,9 +340,9 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const font& fon
 
     // Same layout as canvas_add_text(): the shaped glyphs, each with its outline.
     std::vector<shaped_glyph_t> glyphs;
-    face->shape(font_.size_(), text.data(), int(text.length()), text_encoding::utf32, &glyphs);
+    face->shape(font_.size(), text.data(), int(text.length()), text_encoding::utf32, &glyphs);
     for(const shaped_glyph_t& g : glyphs)
-        face->traverse_glyph_index_path(font_.size_(), origin.x + g.x, origin.y + g.y, g.glyph, traverse, &s);
+        face->traverse_glyph_index_path(font_.size(), origin.x + g.x, origin.y + g.y, g.glyph, traverse, &s);
 }
 
 void pdf_canvas::fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_)
@@ -361,12 +361,12 @@ void pdf_canvas::stroke_path(const stb::outline& path_, const stroke_data& sd, c
     // The path stays in its own space and goes through `cm`, so the line width scales with the matrix, anisotropically if need be.
     m_content += matrix_str(transform_.matrix()) + " cm\n";
     m_content += num(sd.line_width()) + " w\n";
-    m_content += std::to_string(int(sd.line_cap_())) + " J\n";
-    m_content += std::to_string(int(sd.line_join_())) + " j\n";
+    m_content += std::to_string(int(sd.line_cap())) + " J\n";
+    m_content += std::to_string(int(sd.line_join())) + " j\n";
     m_content += num(sd.miter_limit() < 1.f ? 1.f : sd.miter_limit()) + " M\n";
-    if(!sd.dash_array_().empty()) {
+    if(!sd.dash_array().empty()) {
         m_content += "[";
-        for(float d : sd.dash_array_())
+        for(float d : sd.dash_array())
             m_content += num(d) + " ";
         m_content += "] " + num(sd.dash_offset()) + " d\n";
     }
@@ -374,7 +374,7 @@ void pdf_canvas::stroke_path(const stb::outline& path_, const stroke_data& sd, c
     m_content += "S\nQ\n";
 }
 
-void pdf_canvas::fill_text(const std::u32string_view& text, const font& font_, const point& origin, const transform& transform_)
+void pdf_canvas::fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_)
 {
     m_content += "q\n";
     begin_paint(false, transform_.matrix());
@@ -382,7 +382,7 @@ void pdf_canvas::fill_text(const std::u32string_view& text, const font& font_, c
     m_content += "f\nQ\n";
 }
 
-void pdf_canvas::stroke_text(const std::u32string_view& text, float stroke_width, const font& font_, const point& origin, const transform& transform_)
+void pdf_canvas::stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_)
 {
     m_content += "q\n";
     begin_paint(true, transform_.matrix());

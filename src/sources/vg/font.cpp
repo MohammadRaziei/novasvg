@@ -243,13 +243,13 @@ font_face_cache::font_face_cache()
 #endif
 }
 
-font_face_cache* font_face_cache_()
+font_face_cache* global_font_face_cache()
 {
     static font_face_cache cache;
     return &cache;
 }
 
-font::font(const font_face& face, float size_)
+sized_font::sized_font(const font_face& face, float size_)
     : m_face(face), m_size(size_)
 {
     if(m_size > 0.f && !m_face.is_null()) {
@@ -257,7 +257,7 @@ font::font(const font_face& face, float size_)
     }
 }
 
-float font::x_height() const
+float sized_font::x_height() const
 {
     rect_t extents = {0};
     if(m_size > 0.f && !m_face.is_null())
@@ -265,14 +265,14 @@ float font::x_height() const
     return extents.h;
 }
 
-float font::measure_text(const std::u32string_view& text) const
+float sized_font::measure_text(const std::u32string_view& text) const
 {
     if(m_size > 0.f && !m_face.is_null())
         return m_face.get()->text_extents(m_size, text.data(), text.length(), text_encoding::utf32, nullptr);
     return 0;
 }
 
-std::vector<font::glyph_box> font::glyph_boxes(const std::u32string_view& text) const
+std::vector<sized_font::glyph_box> sized_font::glyph_boxes(const std::u32string_view& text) const
 {
     std::vector<glyph_box> boxes;
     if(m_size <= 0.f || m_face.is_null())
@@ -293,12 +293,12 @@ std::vector<font::glyph_box> font::glyph_boxes(const std::u32string_view& text) 
 
 bool add_font_face_from_file(const char* family, bool bold, bool italic, const char* filename)
 {
-    return font_face_cache_()->add_font_face(family, bold, italic, font_face(filename));
+    return global_font_face_cache()->add_font_face(family, bold, italic, font_face(filename));
 }
 
 bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length_, destroy_func_t destroy_func, void* closure)
 {
-    return font_face_cache_()->add_font_face(family, bold, italic, font_face(data, length_, destroy_func, closure));
+    return global_font_face_cache()->add_font_face(family, bold, italic, font_face(data, length_, destroy_func, closure));
 }
 
 } // namespace nova::vg
