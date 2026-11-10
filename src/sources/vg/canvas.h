@@ -446,7 +446,7 @@ public:
 
     rect extents() const { return rect(m_x, m_y, width(), height()); }
 
-    surface_t* surface() const { return m_surface; }
+    const std::shared_ptr<surface_t>& surface() const { return m_surface; }
     canvas_t* handle() const { return m_canvas; }
 
     ~raster_canvas();
@@ -454,7 +454,7 @@ public:
 private:
     raster_canvas(const pixmap& bitmap);
     raster_canvas(int x, int y, int width, int height);
-    surface_t* m_surface;
+    std::shared_ptr<surface_t> m_surface;
     canvas_t* m_canvas;
     stb::matrix m_translation;
     const int m_x;

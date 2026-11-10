@@ -2,13 +2,13 @@
 
 // pixmap (INTERNAL; the public pixel type is stb::image): a premultiplied-ARGB32 pixel buffer -- novasvg's
 // drawable surface, texture source, and render target all in one. Self-contained:
-// needs only stb::color and the low-level vg::surface_t it wraps, nothing
+// needs only stb::color and the surface_t (stb::premultiplied_image) it shares, nothing
 // from the svg/raster_canvas/Font layers, so it can be used entirely on its own
 // (e.g. to build up an image and write it out) without pulling in the
 // rest of novasvg.
 
 #include <stb/color.hpp>
-#include "render.h"  // memfill32, surface_t
+#include "render.h"  // surface_t
 
 #include <cstdint>
 #include <cstdio>
@@ -56,37 +56,32 @@ public:
      * @brief Copy constructor.
      * @param bitmap The bitmap to copy.
      */
-    pixmap(const pixmap& bitmap);
+    pixmap(const pixmap& bitmap) = default;
 
     /**
      * @brief Move constructor.
      * @param bitmap The bitmap to move.
      */
-    pixmap(pixmap&& bitmap);
+    pixmap(pixmap&& bitmap) = default;
 
     /**
-     * @internal
+     * @internal Shares `surface`.
      */
-    pixmap(surface_t* surface) : m_surface(surface) {}
-
-    /**
-     * @brief Cleans up any resources associated with the bitmap.
-     */
-    ~pixmap();
+    pixmap(std::shared_ptr<surface_t> surface) : m_surface(std::move(surface)) {}
 
     /**
      * @brief Copy assignment operator.
      * @param bitmap The bitmap to copy.
      * @return A reference to this bitmap.
      */
-    pixmap& operator=(const pixmap& bitmap);
+    pixmap& operator=(const pixmap& bitmap) = default;
 
     /**
      * @brief Move assignment operator.
      * @param bitmap The bitmap to move.
      * @return A reference to this bitmap.
      */
-    pixmap& operator=(pixmap&& bitmap);
+    pixmap& operator=(pixmap&& bitmap) = default;
 
     /**
      * @brief Swaps the content of this bitmap with another.
@@ -145,11 +140,10 @@ public:
     /**
      * @internal
      */
-    surface_t* surface() const { return m_surface; }
+    const std::shared_ptr<surface_t>& surface() const { return m_surface; }
 
 private:
-    surface_t* release();
-    surface_t* m_surface{nullptr};
+    std::shared_ptr<surface_t> m_surface;
 };
 
 
@@ -177,6 +171,8 @@ private:
 // bitmap alive. This is what render() hands to callers. A bitmap whose rows are padded (stride > width * 4)
 // cannot be wrapped (stb::image has no stride), so that case takes the copying path above.
 stb::image bitmap_to_rgba_image(const pixmap& bitmap);
+// The other direction: `image` premultiplied into a new pixmap. Empty, or a side of 32768 or more, gives a null pixmap.
+pixmap pixmap_from_image(const stb::image& image);
 stb::image pixmap_release_to_image(pixmap&& bitmap);
 
 } // namespace nova::vg

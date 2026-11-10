@@ -58,16 +58,27 @@ void svg_image_element::render(svg_render_state& state) const
 
 pixmap load_image_resource(const std::string& href)
 {
-    if(nova::utils::starts_with(href, "data:")) {
-        std::string_view input(href);
-        auto index = input.find(',', 5);
-        if(index == std::string_view::npos)
-            return pixmap();
-        input.remove_prefix(index + 1);
-        return surface_load_from_image_base64(input.data(), input.length());
+    // libstb decodes to straight-alpha RGBA; pixmap_from_image premultiplies it. Any decode problem (unknown
+    // format, corrupt data, too large) is an exception from libstb and an empty pixmap here.
+    stb::load_options options;
+    options.format = stb::pixel_format::rgba;
+    try {
+        if(nova::utils::starts_with(href, "data:")) {
+            std::string_view input(href);
+            auto index = input.find(',', 5);
+            if(index == std::string_view::npos)
+                return pixmap();
+            input.remove_prefix(index + 1);
+            size_t length = 0;
+            std::unique_ptr<uint8_t, decltype(&free)> bytes(base64_decode(input.data(), int(input.length()), &length), free);
+            if(!bytes)
+                return pixmap();
+            return pixmap_from_image(stb::image::decode(bytes.get(), length, options));
+        }
+        return pixmap_from_image(stb::image::open(href.c_str(), options));
+    } catch(const std::exception&) {
+        return pixmap();
     }
-
-    return surface_load_from_image_file(href.data());
 }
 
 void svg_image_element::parse_attribute(property_id id, const std::string& value)

@@ -20,14 +20,6 @@ typedef std::atomic<int> ref_count_t;
 #define novasvg_destroy_reference(ob) (ob && (ob)->ref_count.fetch_sub(1) == 1)
 #define novasvg_get_reference_count(ob) ((ob) ? (ob)->ref_count.load() : 0)
 
-struct surface {
-    ref_count_t ref_count;
-    float width;
-    float height;
-    int stride;
-    unsigned char* data;
-};
-
 typedef enum {
     NOVA_PAINT_TYPE_COLOR,
     NOVA_PAINT_TYPE_GRADIENT,
@@ -64,7 +56,7 @@ typedef struct {
     texture_type type_;
     float opacity;
     stb::matrix matrix;
-    surface_t* surface;
+    std::shared_ptr<surface_t> surface;  // constructed in place: the paint is malloc'd
 } texture_paint_t;
 
 typedef struct {
@@ -97,7 +89,7 @@ typedef struct state {
 
 struct canvas_context {
     ref_count_t ref_count;
-    surface_t* surface;
+    std::shared_ptr<surface_t> surface;  // constructed in place: the canvas is malloc'd
     stb::outline* path_;
     state_t* state;
     state_t* freed_state;

@@ -116,7 +116,7 @@ void svg_render_state::end_group(const svg_blend_info& blend_info)
         auto& layer = static_cast<raster_canvas&>(*m_canvas);
         auto& page = static_cast<pdf_canvas&>(*m_parent->m_canvas);
         const rect e = layer.extents();
-        page.draw_raster_group(pixmap(surface_reference(layer.surface())), rect(e.x / m_layer_scale, e.y / m_layer_scale, e.w / m_layer_scale, e.h / m_layer_scale), blend_mode_, opacity);
+        page.draw_raster_group(pixmap(layer.surface()), rect(e.x / m_layer_scale, e.y / m_layer_scale, e.w / m_layer_scale, e.h / m_layer_scale), blend_mode_, opacity);
         return;
     }
 
@@ -428,7 +428,7 @@ bool svg_pattern_element::apply_paint(svg_render_state& state, float opacity) co
     pattern_transform.translate(pattern_rect.x, pattern_rect.y);
     pattern_transform.scale(pattern_rect.w / pattern_image->width(), pattern_rect.h / pattern_image->height());
     if(pdf)
-        pdf->set_tiled_image(pixmap(surface_reference(pattern_image->surface())), pattern_transform, opacity);
+        pdf->set_tiled_image(pixmap(pattern_image->surface()), pattern_transform, opacity);
     else
         state.raster()->set_texture(*pattern_image, texture_type::tiled, opacity, pattern_transform);
     return true;

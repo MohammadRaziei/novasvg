@@ -37,7 +37,7 @@ namespace novasvg_py_interop {
 
 using nova::vg::pixmap;
 
-// surface_create() refuses sizes at or above this.
+// pixmap(width, height) refuses sizes at or above this.
 constexpr std::int64_t max_side = (1 << 15) - 1;
 
 // ---- pixel conversion -------------------------------------------------------

@@ -77,16 +77,16 @@ static void state_destroy(state_t* state)
     delete state;
 }
 
-canvas_t* canvas_create(surface_t* surface)
+canvas_t* canvas_create(std::shared_ptr<surface_t> surface)
 {
     canvas_t* canvas = static_cast<canvas_t*>(malloc(sizeof(canvas_t)));
     novasvg_init_reference(canvas);
-    canvas->surface = surface_reference(surface);
+    new (&canvas->surface) std::shared_ptr<surface_t>(surface);
     canvas->path_ = new stb::outline;
     canvas->state = state_create();
     canvas->freed_state = NULL;
     canvas->face_cache = NULL;
-    canvas->clip_rect = NOVA_MAKE_RECT(0, 0, surface->width, surface->height);
+    canvas->clip_rect = NOVA_MAKE_RECT(0, 0, surface->width(), surface->height());
     span_buffer_init(&canvas->clip_spans);
     span_buffer_init(&canvas->fill_spans);
     return canvas;
@@ -116,7 +116,7 @@ void canvas_destroy(canvas_t* canvas)
         font_face_cache_destroy(canvas->face_cache);
         span_buffer_destroy(&canvas->fill_spans);
         span_buffer_destroy(&canvas->clip_spans);
-        surface_destroy(canvas->surface);
+        canvas->surface.~shared_ptr();
         delete canvas->path_;
         free(canvas);
     }
@@ -129,7 +129,7 @@ int canvas_get_reference_count(const canvas_t* canvas)
 
 surface_t* canvas_get_surface(const canvas_t* canvas)
 {
-    return canvas->surface;
+    return canvas->surface.get();
 }
 
 void canvas_save(canvas_t* canvas)
@@ -186,7 +186,7 @@ void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, 
     paint_destroy(paint_);
 }
 
-void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type type_, float opacity, const stb::matrix* matrix)
+void canvas_set_texture(canvas_t* canvas, std::shared_ptr<surface_t> surface, texture_type type_, float opacity, const stb::matrix* matrix)
 {
     paint_t* paint_ = paint_create_texture(surface, type_, opacity, matrix);
     canvas_set_paint(canvas, paint_);
@@ -567,7 +567,7 @@ void canvas_paint(canvas_t* canvas)
     if(canvas->state->clipping) {
         blend(canvas, &canvas->state->clip_spans);
     } else {
-        span_buffer_init_rect(&canvas->clip_spans, 0, 0, canvas->surface->width, canvas->surface->height);
+        span_buffer_init_rect(&canvas->clip_spans, 0, 0, canvas->surface->width(), canvas->surface->height());
         blend(canvas, &canvas->clip_spans);
     }
 }

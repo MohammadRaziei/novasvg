@@ -50,7 +50,7 @@ paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, fl
     return &gradient->base;
 }
 
-paint_t* paint_create_texture(surface_t* surface, texture_type type_, float opacity, const stb::matrix* matrix)
+paint_t* paint_create_texture(std::shared_ptr<surface_t> surface, texture_type type_, float opacity, const stb::matrix* matrix)
 {
     texture_paint_t* texture = static_cast<texture_paint_t*>(paint_create(
         NOVA_PAINT_TYPE_TEXTURE,
@@ -59,7 +59,7 @@ paint_t* paint_create_texture(surface_t* surface, texture_type type_, float opac
     texture->type_ = type_;
     texture->opacity = std::clamp(opacity, 0.f, 1.f);
     texture->matrix = matrix ? *matrix : stb::matrix{};
-    texture->surface = surface_reference(surface);
+    new (&texture->surface) std::shared_ptr<surface_t>(std::move(surface));
     return &texture->base;
 }
 
@@ -74,7 +74,7 @@ void paint_destroy(paint_t* paint_)
     if(novasvg_destroy_reference(paint_)) {
         if(paint_->type_ == NOVA_PAINT_TYPE_TEXTURE) {
             texture_paint_t* texture = (texture_paint_t*)(paint_);
-            surface_destroy(texture->surface);
+            texture->surface.~shared_ptr();
         }
 
         free(paint_);

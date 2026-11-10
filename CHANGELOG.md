@@ -60,6 +60,10 @@
   and `outline::tight_bounds` are used. Three golden images (`01-venn`, `34-venn`, `42-mindmap-shapes`) changed on arc edge pixels only
   (libstb splits a semicircle into three cubics, we used two); the old images are in `refactor/golden-baseline-step32/`.
 - `ref_count_t` is `std::atomic<int>` on every platform (the three per-compiler variants are gone).
+- `surface_t` is `stb::premultiplied_image` (libstb issue 9): `surface.{h,cpp}` (the malloc'd, intrusively counted surface, its
+  loaders and `surface_clear`) are gone. `pixmap`, `raster_canvas`, the canvas and texture paints share one through `std::shared_ptr`;
+  images are decoded by `stb::image` and premultiplied with `premultiplied_image::from_image` (`pixmap_from_image`);
+  `convert_argb_to_rgba` / `convert_rgba_to_argb` (unused) are removed; `base64_decode` moved to `vg/utils.cpp`. Golden 0 diff.
 - `NOVA_LIBSTB_GIT_TAG` is `master` again. Checked against libstb e9702c0 (`premultiplied_image`, `image::premultiplied()`, GSUB/GPOS for
   left-to-right text): no code change was needed, golden 0 diff.
 - `nova::utils` has `starts_with` and `iequals` (C++17 has neither on `string_view`); the angle-unit lambda in `vg/utils.cpp`, the `!important`

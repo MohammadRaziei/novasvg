@@ -28,6 +28,8 @@
 #include <algorithm>
 #include <cmath>
 #include <stb/color.hpp>
+#include <stb/image.hpp>
+#include <memory>
 #include <stb/raster.hpp>
 #include <stdint.h>
 #include <stddef.h>
@@ -316,153 +318,14 @@ inline uint32_t color_to_argb32(const stb::color& c)
 }
 
 /**
- * @brief Represents an image surface for drawing operations.
+ * @brief The drawing surface: 32-bit premultiplied ARGB pixels (0xAARRGGBB), libstb's type.
  *
- * Stores pixel data in a 32-bit premultiplied ARGB format (0xAARRGGBB),
- * where red, green, and blue channels are multiplied by the alpha channel
- * and divided by 255.
+ * Pixmaps, canvases and texture paints share one through std::shared_ptr.
  */
-typedef struct surface surface_t;
+typedef stb::premultiplied_image surface_t;
 
-/**
- * @brief Creates a new image surface with the specified dimensions.
- *
- * @param width The width of the surface in pixels.
- * @param height The height of the surface in pixels.
- * @return A pointer to the newly created `surface_t` object.
- */
 /** @brief Decodes base64 text (used for data: URIs). Returns a malloc'd buffer the caller frees, or NULL. */
 NOVA_API uint8_t* base64_decode(const char* data, int length_, size_t* out_length);
-
-NOVA_API surface_t* surface_create(int width, int height);
-
-/**
- * @brief Creates an image surface using existing pixel data.
- *
- * @param data Pointer to the pixel data.
- * @param width The width of the surface in pixels.
- * @param height The height of the surface in pixels.
- * @param stride The number of bytes per row in the pixel data.
- * @return A pointer to the newly created `surface_t` object.
- */
-NOVA_API surface_t* surface_create_for_data(unsigned char* data, int width, int height, int stride);
-
-/**
- * @brief Loads an image surface from a file.
- *
- * @param filename Path to the image file.
- * @return Pointer to the surface, or `NULL` on failure.
- */
-NOVA_API surface_t* surface_load_from_image_file(const char* filename);
-
-/**
- * @brief Loads an image surface from raw image data.
- *
- * @param data Pointer to the image data.
- * @param length Length of the data in bytes.
- * @return Pointer to the surface, or `NULL` on failure.
- */
-NOVA_API surface_t* surface_load_from_image_data(const void* data, int length_);
-
-/**
- * @brief Loads an image surface from base64-encoded data.
- *
- * @param data Pointer to the base64-encoded image data.
- * @param length Length of the data in bytes, or `-1` if null-terminated.
- * @return Pointer to the surface, or `NULL` on failure.
- */
-NOVA_API surface_t* surface_load_from_image_base64(const char* data, int length_);
-
-/**
- * @brief Increments the reference count for a surface.
- *
- * @param surface Pointer to the `surface_t` object.
- * @return Pointer to the `surface_t` object.
- */
-NOVA_API surface_t* surface_reference(surface_t* surface);
-
-/**
- * @brief Decrements the reference count and destroys the surface if the count reaches zero.
- *
- * @param surface Pointer to the `surface_t` object .
- */
-NOVA_API void surface_destroy(surface_t* surface);
-
-/**
- * @brief Gets the current reference count of a surface.
- *
- * @param surface Pointer to the `surface_t` object.
- * @return The reference count of the surface.
- */
-NOVA_API int surface_get_reference_count(const surface_t* surface);
-
-/**
- * @brief Gets the pixel data of the surface.
- *
- * @param surface Pointer to the `surface_t` object.
- * @return Pointer to the pixel data.
- */
-NOVA_API unsigned char* surface_get_data(const surface_t* surface);
-
-/**
- * @brief Gets the width of the surface.
- *
- * @param surface Pointer to the `surface_t` object.
- * @return Width of the surface in pixels.
- */
-NOVA_API int surface_get_width(const surface_t* surface);
-
-/**
- * @brief Gets the height of the surface.
- *
- * @param surface Pointer to the `surface_t` object.
- * @return Height of the surface in pixels.
- */
-NOVA_API int surface_get_height(const surface_t* surface);
-
-/**
- * @brief Gets the stride of the surface.
- *
- * @param surface Pointer to the `surface_t` object.
- * @return Number of bytes per row.
- */
-NOVA_API int surface_get_stride(const surface_t* surface);
-
-/**
- * @brief Clears the entire surface with the specified color.
- *
- * @param surface Pointer to the target surface.
- * @param color Pointer to the color used for clearing.
- */
-NOVA_API void surface_clear(surface_t* surface, const stb::color* color_);
-
-/**
- * @brief Converts pixel data from premultiplied ARGB to RGBA format.
- *
- * Transforms pixel data from native-endian 32-bit ARGB premultiplied format
- * to a non-premultiplied RGBA byte sequence.
- *
- * @param dst Pointer to the destination buffer (the same buffer as `src` for in-place use, otherwise not overlapping it).
- * @param src Pointer to the source buffer in ARGB premultiplied format.
- * @param width Image width in pixels.
- * @param height Image height in pixels.
- * @param stride Number of bytes per image row in the buffers.
- */
-NOVA_API void convert_argb_to_rgba(unsigned char* dst, const unsigned char* src, int width, int height, int stride);
-
-/**
- * @brief Converts pixel data from RGBA to premultiplied ARGB format.
- *
- * Transforms pixel data from a non-premultiplied RGBA byte sequence
- * to a native-endian 32-bit ARGB premultiplied format.
- *
- * @param dst Pointer to the destination buffer (the same buffer as `src` for in-place use, otherwise not overlapping it).
- * @param src Pointer to the source buffer in RGBA format.
- * @param width Image width in pixels.
- * @param height Image height in pixels.
- * @param stride Number of bytes per image row in the buffers.
- */
-NOVA_API void convert_rgba_to_argb(unsigned char* dst, const unsigned char* src, int width, int height, int stride);
 
 /**
  * @brief Defines the type of texture, either plain or tiled.
@@ -566,7 +429,7 @@ NOVA_API paint_t* paint_create_radial_gradient(float cx, float cy, float cr, flo
  * @param matrix Optional transformation matrix.
  * @return A pointer to the created `paint_t` object.
  */
-NOVA_API paint_t* paint_create_texture(surface_t* surface, texture_type type_, float opacity, const stb::matrix* matrix);
+NOVA_API paint_t* paint_create_texture(std::shared_ptr<surface_t> surface, texture_type type_, float opacity, const stb::matrix* matrix);
 
 /**
  * @brief Increments the reference count of a paint object.
@@ -628,7 +491,7 @@ typedef struct canvas_context canvas_t;
  * @param surface A pointer to a `surface_t` object.
  * @return A pointer to the newly created `canvas_t` object.
  */
-NOVA_API canvas_t* canvas_create(surface_t* surface);
+NOVA_API canvas_t* canvas_create(std::shared_ptr<surface_t> surface);
 
 /**
  * @brief Increases the reference count of the canvas.
@@ -759,7 +622,7 @@ NOVA_API void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, f
  * @param opacity The opacity of the texture (0 to 1).
  * @param matrix Optional transformation matrix.
  */
-NOVA_API void canvas_set_texture(canvas_t* canvas, surface_t* surface, texture_type type_, float opacity, const stb::matrix* matrix);
+NOVA_API void canvas_set_texture(canvas_t* canvas, std::shared_ptr<surface_t> surface, texture_type type_, float opacity, const stb::matrix* matrix);
 
 /**
  * @brief Sets the current paint.

@@ -313,20 +313,20 @@ void raster_canvas::restore()
 
 int raster_canvas::width() const
 {
-    return surface_get_width(m_surface);
+    return m_surface->width();
 }
 
 int raster_canvas::height() const
 {
-    return surface_get_height(m_surface);
+    return m_surface->height();
 }
 
 void raster_canvas::convert_to_luminance_mask()
 {
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
+    auto width = m_surface->width();
+    auto height = m_surface->height();
+    auto stride = int(m_surface->stride());
+    auto data = m_surface->data();
     for(int y = 0; y < height; y++) {
         auto pixels = reinterpret_cast<uint32_t*>(data + stride * y);
         for(int x = 0; x < width; x++) {
@@ -349,10 +349,10 @@ void raster_canvas::convert_to_luminance_mask()
 
 void raster_canvas::box_blur(float std_deviation_x, float std_deviation_y)
 {
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
+    auto width = m_surface->width();
+    auto height = m_surface->height();
+    auto stride = int(m_surface->stride());
+    auto data = m_surface->data();
 
     auto rx = gaussian_radius_for_sigma(std_deviation_x);
     auto ry = gaussian_radius_for_sigma(std_deviation_y);
@@ -364,10 +364,10 @@ void raster_canvas::box_blur(float std_deviation_x, float std_deviation_y)
 
 void raster_canvas::fill_opaque_white()
 {
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
+    auto width = m_surface->width();
+    auto height = m_surface->height();
+    auto stride = int(m_surface->stride());
+    auto data = m_surface->data();
     for(int y = 0; y < height; ++y) {
         auto* pixels = reinterpret_cast<uint32_t*>(data + stride * y);
         for(int x = 0; x < width; ++x)
@@ -377,10 +377,10 @@ void raster_canvas::fill_opaque_white()
 
 void raster_canvas::tint_to_flood_color(const stb::color& flood_color, float flood_opacity)
 {
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
+    auto width = m_surface->width();
+    auto height = m_surface->height();
+    auto stride = int(m_surface->stride());
+    auto data = m_surface->data();
 
     auto r = uint32_t(flood_color.r());
     auto g = uint32_t(flood_color.g());
@@ -398,10 +398,10 @@ void raster_canvas::tint_to_flood_color(const stb::color& flood_color, float flo
 
 void raster_canvas::shift(float dx, float dy)
 {
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
+    auto width = m_surface->width();
+    auto height = m_surface->height();
+    auto stride = int(m_surface->stride());
+    auto data = m_surface->data();
     auto idx = int(dx);
     auto idy = int(dy);
     if(idx == 0 && idy == 0)
@@ -428,15 +428,15 @@ void raster_canvas::shift(float dx, float dy)
 
 void raster_canvas::composite_with(const raster_canvas& src, porter_duff mode)
 {
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
+    auto width = m_surface->width();
+    auto height = m_surface->height();
+    auto stride = int(m_surface->stride());
+    auto data = m_surface->data();
 
-    auto s_width = surface_get_width(src.m_surface);
-    auto s_height = surface_get_height(src.m_surface);
-    auto s_stride = surface_get_stride(src.m_surface);
-    auto s_data = surface_get_data(src.m_surface);
+    auto s_width = src.m_surface->width();
+    auto s_height = src.m_surface->height();
+    auto s_stride = int(src.m_surface->stride());
+    auto s_data = src.m_surface->data();
 
     for(int y = 0; y < height && y < s_height; ++y) {
         auto* dst = reinterpret_cast<uint32_t*>(data + y * stride);
@@ -475,15 +475,15 @@ void raster_canvas::composite_over(const raster_canvas& src)
 
 void raster_canvas::composite_arithmetic(const raster_canvas& src, float k1, float k2, float k3, float k4)
 {
-    auto width = surface_get_width(m_surface);
-    auto height = surface_get_height(m_surface);
-    auto stride = surface_get_stride(m_surface);
-    auto data = surface_get_data(m_surface);
+    auto width = m_surface->width();
+    auto height = m_surface->height();
+    auto stride = int(m_surface->stride());
+    auto data = m_surface->data();
 
-    auto s_width = surface_get_width(src.m_surface);
-    auto s_height = surface_get_height(src.m_surface);
-    auto s_stride = surface_get_stride(src.m_surface);
-    auto s_data = surface_get_data(src.m_surface);
+    auto s_width = src.m_surface->width();
+    auto s_height = src.m_surface->height();
+    auto s_stride = int(src.m_surface->stride());
+    auto s_data = src.m_surface->data();
 
     auto solve = [&](int i1, int i2) -> int {
         auto f1 = float(i1) / 255.f;
@@ -515,19 +515,18 @@ void raster_canvas::composite_drop_shadow_under(const raster_canvas& original, f
 
 void raster_canvas::copy_pixels_from(const raster_canvas& other)
 {
-    auto stride = surface_get_stride(m_surface);
-    auto height = surface_get_height(m_surface);
-    memcpy(surface_get_data(m_surface), surface_get_data(other.m_surface), size_t(stride) * size_t(height));
+    auto stride = int(m_surface->stride());
+    auto height = m_surface->height();
+    memcpy(m_surface->data(), other.m_surface->data(), size_t(stride) * size_t(height));
 }
 
 raster_canvas::~raster_canvas()
 {
     canvas_destroy(m_canvas);
-    surface_destroy(m_surface);
 }
 
 raster_canvas::raster_canvas(const pixmap& bitmap)
-    : m_surface(surface_reference(bitmap.surface()))
+    : m_surface(bitmap.surface())
     , m_canvas(canvas_create(m_surface))
     , m_translation({1, 0, 0, 1, 0, 0})
     , m_x(0), m_y(0)
@@ -535,7 +534,7 @@ raster_canvas::raster_canvas(const pixmap& bitmap)
 }
 
 raster_canvas::raster_canvas(int x, int y, int width, int height)
-    : m_surface(surface_create(width, height))
+    : m_surface(pixmap(width, height).surface())
     , m_canvas(canvas_create(m_surface))
     , m_translation({1, 0, 0, 1, -static_cast<float>(x), -static_cast<float>(y)})
     , m_x(x), m_y(y)
