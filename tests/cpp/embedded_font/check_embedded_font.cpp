@@ -8,6 +8,7 @@
 #include <vg/canvas.h>
 #include <vg/font.h>
 
+#include <cstring>
 #include <string>
 
 #ifndef NOVA_DISABLE_LOAD_SYSTEM_FONTS
@@ -151,4 +152,67 @@ TEST_CASE("an @font-face font given as WOFF 1.0 is drawn exactly like the same f
     // and it is the embedded face, not the regular fallback (the fixture is the oblique one)
     CHECK(woff != pixels_of("<svg xmlns='http://www.w3.org/2000/svg' width='300' height='80'><text x='10' y='50' font-size='36' "
                             "font-family='sans-serif'>Woff Test 123</text></svg>"));
+}
+
+namespace {
+const char base64_alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+std::string base64_decode(const std::string& text)
+{
+    std::string out;
+    unsigned bits = 0;
+    int count = 0;
+    for(char c : text) {
+        const char* at = c == '\0' ? nullptr : std::strchr(base64_alphabet, c);
+        if(!at)
+            continue;   // '=' and anything else
+        bits = (bits << 6) | unsigned(at - base64_alphabet);
+        count += 6;
+        if(count >= 8) {
+            count -= 8;
+            out.push_back(char((bits >> count) & 0xFF));
+        }
+    }
+    return out;
+}
+
+std::string base64_encode(const std::string& bytes)
+{
+    std::string out;
+    for(size_t i = 0; i < bytes.size(); i += 3) {
+        const unsigned b0 = (unsigned char)bytes[i];
+        const unsigned b1 = i + 1 < bytes.size() ? (unsigned char)bytes[i + 1] : 0;
+        const unsigned b2 = i + 2 < bytes.size() ? (unsigned char)bytes[i + 2] : 0;
+        out.push_back(base64_alphabet[b0 >> 2]);
+        out.push_back(base64_alphabet[((b0 & 3) << 4) | (b1 >> 4)]);
+        out.push_back(i + 1 < bytes.size() ? base64_alphabet[((b1 & 15) << 2) | (b2 >> 6)] : '=');
+        out.push_back(i + 2 < bytes.size() ? base64_alphabet[b2 & 63] : '=');
+    }
+    return out;
+}
+} // namespace
+
+TEST_CASE("a WOFF whose table directory lies about a length is dropped, and the text falls back")
+{
+    std::string woff = base64_decode(woff_fixture::woff_base64);
+    REQUIRE(woff.size() > 64);
+    // WOFF 1.0: a 44-byte header, then 20-byte table entries (tag, offset, compLength, origLength, checksum).
+    // Make the first table claim 16 MiB of compressed data, far past the end of the file.
+    woff[44 + 8] = 0x01; woff[44 + 9] = 0x00; woff[44 + 10] = 0x00; woff[44 + 11] = 0x00;
+    const std::string broken = pixels_of(font_face_svg("font/woff", base64_encode(woff).c_str()));
+    // no embedded face: 'Probe' is an unknown family, so it is drawn like any other unknown family
+    const std::string unknown = pixels_of("<svg xmlns='http://www.w3.org/2000/svg' width='300' height='80'><text x='10' y='50' font-size='36' "
+                                          "font-family='Probe'>Woff Test 123</text></svg>");
+    CHECK(broken == unknown);
+}
+
+TEST_CASE("a WOFF cut off in the middle is dropped, and the text falls back")
+{
+    std::string woff = base64_decode(woff_fixture::woff_base64);
+    REQUIRE(woff.size() > 200);
+    woff.resize(woff.size() / 2);
+    const std::string cut = pixels_of(font_face_svg("font/woff", base64_encode(woff).c_str()));
+    const std::string unknown = pixels_of("<svg xmlns='http://www.w3.org/2000/svg' width='300' height='80'><text x='10' y='50' font-size='36' "
+                                          "font-family='Probe'>Woff Test 123</text></svg>");
+    CHECK(cut == unknown);
 }

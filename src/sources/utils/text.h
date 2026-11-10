@@ -45,4 +45,22 @@ inline std::string to_lower(std::string_view v)
     return result;
 }
 
+/// Whether `v` begins with `prefix` (std::string_view::starts_with is C++20).
+inline bool starts_with(std::string_view v, std::string_view prefix) noexcept
+{
+    return v.size() >= prefix.size() && v.compare(0, prefix.size(), prefix) == 0;
+}
+
+/// Whether `a` and `b` are equal when ASCII case is ignored.
+inline bool iequals(std::string_view a, std::string_view b) noexcept
+{
+    if(a.size() != b.size())
+        return false;
+    for(size_t i = 0; i < a.size(); ++i) {
+        if(to_lower(a[i]) != to_lower(b[i]))
+            return false;
+    }
+    return true;
+}
+
 } // namespace nova::utils

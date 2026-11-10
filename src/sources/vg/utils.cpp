@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <string_view>
 
 namespace nova {
 namespace vg {
@@ -151,17 +152,12 @@ void skip_css_unit(const char** begin, const char* end, float* number)
     if(it == unit_start)
         return;
 
-    auto length_ = size_t(it - unit_start);
-    auto matches = [&](const char* unit) {
-        auto unit_length = strlen(unit);
-        return length_ == unit_length && strncmp(unit_start, unit, unit_length) == 0;
-    };
-
-    if(matches("rad"))
+    const std::string_view unit(unit_start, size_t(it - unit_start));
+    if(unit == "rad")
         *number *= 180.f / 3.14159265f;
-    else if(matches("grad"))
+    else if(unit == "grad")
         *number *= 0.9f;
-    else if(matches("turn"))
+    else if(unit == "turn")
         *number *= 360.f;
     // "deg", "px", "pt", "%", and anything else: value already usable as-is.
 

@@ -1,6 +1,7 @@
 #include "vg/pixmap.h"
 #include "vg/pdf_canvas.h"
 #include "svgelement.h"
+#include "utils/text.h"
 
 namespace nova::svg {
 using namespace vg;
@@ -57,7 +58,7 @@ void svg_image_element::render(svg_render_state& state) const
 
 pixmap load_image_resource(const std::string& href)
 {
-    if(href.compare(0, 5, "data:") == 0) {
+    if(nova::utils::starts_with(href, "data:")) {
         std::string_view input(href);
         auto index = input.find(',', 5);
         if(index == std::string_view::npos)

@@ -264,8 +264,8 @@ class svg_marker_element final : public svg_element, public svg_fit_to_view_box 
 public:
     svg_marker_element(document* dom);
 
-    const svg_length& refX() const { return m_ref_x; }
-    const svg_length& refY() const { return m_ref_y; }
+    const svg_length& ref_x() const { return m_ref_x; }
+    const svg_length& ref_y() const { return m_ref_y; }
     const svg_length& marker_width() const { return m_marker_width; }
     const svg_length& marker_height() const { return m_marker_height; }
     const svg_enumeration<svg_marker_units>& marker_units() const { return m_marker_units; }

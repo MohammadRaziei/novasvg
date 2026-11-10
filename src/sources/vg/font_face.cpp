@@ -5,6 +5,7 @@
 // table or `head.macStyle`, so the small system-font scanner below reads those two tables itself.
 #include "font_face.h"
 #include "internal.h"
+#include "../utils/text.h"
 #include <stb/logging.hpp>
 
 #include <stb/font.hpp>
@@ -871,9 +872,7 @@ int font_face_cache_load_file(font_face_cache_t* cache, const char* filename)
 
 static bool font_face_supports_file(const std::filesystem::path& file)
 {
-    std::string extension = file.extension().string();
-    for(char& ch : extension)
-        ch = static_cast<char>(tolower(static_cast<unsigned char>(ch)));
+    const std::string extension = nova::utils::to_lower(file.extension().string());
     return extension == ".ttf" || extension == ".otf" || extension == ".ttc" || extension == ".otc";
 }
 

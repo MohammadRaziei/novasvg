@@ -54,6 +54,19 @@
 - `add_rect_path`, `add_round_rect_path`, `add_ellipse_path` are gone: `stb::outline::add_rect`, `add_rounded_rect`, `add_ellipse`
   draw the same shapes.
 - Builds against libstb 6af6df8 (GPOS mark placement, `glyph_kind`, shaping of a text range): no code change was needed, golden 0 diff.
+- Builds against libstb 7ede1f4 (CSS colours, Porter-Duff operators, `map_rect`, `outline::arc_to`, `tight_bounds`; `hsl()` rounds like
+  browsers). Less duplication with libstb (ADR-0011): `color_parse` and the 148-name colour table, `map_points`/`mapped_bounds`,
+  `arc_to`/`arc_to_radians` and `bounding_rect` are gone and `stb::color::try_parse`, `stb::matrix::map`/`map_rect`, `stb::outline::arc_to`
+  and `outline::tight_bounds` are used. Three golden images (`01-venn`, `34-venn`, `42-mindmap-shapes`) changed on arc edge pixels only
+  (libstb splits a semicircle into three cubics, we used two); the old images are in `refactor/golden-baseline-step32/`.
+- `ref_count_t` is `std::atomic<int>` on every platform (the three per-compiler variants are gone).
+- `NOVA_LIBSTB_GIT_TAG` is `master` again. Checked against libstb e9702c0 (`premultiplied_image`, `image::premultiplied()`, GSUB/GPOS for
+  left-to-right text): no code change was needed, golden 0 diff.
+- `nova::utils` has `starts_with` and `iequals` (C++17 has neither on `string_view`); the angle-unit lambda in `vg/utils.cpp`, the `!important`
+  loop, the font-file extension loop and the `data:` check use them.
+- The last non-snake_case names: `property_id::RefX/RefY` -> `ref_x/ref_y`, and the unused accessors `refX()/refY()` -> `ref_x()/ref_y()`.
+- Two tests for a damaged WOFF (a table that claims 16 MiB of data, a file cut in half): the font is dropped and the text falls back.
+- ADR-0012 (proposed): shape a text run once and split the glyphs into fragments (`svg_text.cpp` does not do it yet).
 
 ## [0.11.5] - 2026-11-05
 

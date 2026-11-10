@@ -4,6 +4,7 @@
 // `property: value;` block, CSS colours, a number with an optional px unit, UTF-8 to UTF-32.
 
 #include "svg_impl.h"
+#include "utils/text.h"
 
 namespace nova::svg {
 using namespace vg;
@@ -17,12 +18,8 @@ inline bool strip_important_flag(std::string& value)
     flag.remove_prefix(bang + 1);
     skip_optional_spaces(flag);
     strip_trailing_spaces(flag);
-    if(flag.size() != 9)
+    if(!nova::utils::iequals(flag, "important"))
         return false;
-    for(size_t i = 0; i < flag.size(); ++i) {
-        if(std::tolower(static_cast<unsigned char>(flag[i])) != "important"[i])
-            return false;
-    }
 
     value.erase(bang);
     while(!value.empty() && IS_WS(value.back()))

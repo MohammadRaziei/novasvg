@@ -123,3 +123,10 @@ TEST_CASE("var(): a stylesheet applied after loading changes what var() gives")
     const uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
     CHECK(Pixel{p[0], p[1], p[2], p[3]} == blue);
 }
+
+// `!important` is matched without regard to case (nova::utils::iequals).
+TEST_CASE("an !IMPORTANT flag in any letter case wins over a later declaration")
+{
+    const std::string body = "<rect width=\"40\" height=\"40\" style=\"fill:#0000ff !ImPoRtAnT; fill:#ff0000\"/>";
+    CHECK(centre(svg("", body)) == Pixel{0, 0, 255, 255});
+}
