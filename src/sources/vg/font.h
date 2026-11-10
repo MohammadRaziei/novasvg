@@ -139,7 +139,8 @@ public:
     float line_gap() const { return m_line_gap; }
     float x_height() const;
 
-    float measure_text(const std::u32string_view& text) const;
+    // `context`: shape `text` (a view into context.run) as a part of its run, see shaping_context.
+    float measure_text(const std::u32string_view& text, const shaping_context& context = {}) const;
 
     // One entry per glyph that has an outline (spaces and other empty glyphs
     // are left out): where its pen starts and where its ink begins/ends, in

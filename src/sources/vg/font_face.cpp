@@ -447,14 +447,28 @@ static std::string text_to_utf8(const void* text, int length_, text_encoding enc
     return utf8;
 }
 
-float font_face_data::shape(float size_, const void* text, int length_, text_encoding encoding, std::vector<shaped_glyph_t>* glyphs) const
+float font_face_data::shape(float size_, const void* text, int length_, text_encoding encoding, std::vector<shaped_glyph_t>* glyphs, const shaping_context& context) const
 {
     if(glyphs)
         glyphs->clear();
     const float scale = size_scale(size_);
     std::vector<stb::shaped_glyph> shaped;
     try {
-        shaped = ft.shape(text_to_utf8(text, length_, encoding));
+        stb::shape_options options;
+        const auto* part = static_cast<const char32_t*>(text);
+        if(!context.run.empty() && encoding == text_encoding::utf32 && length_ >= 0
+           && part >= context.run.data() && part + length_ <= context.run.data() + context.run.size()) {
+            // A part of a longer run: libstb shapes [begin, end) with the context of the whole run, and its byte offsets
+            // are those of the run's UTF-8.
+            options.ligatures = context.ligatures;
+            const size_t begin = size_t(part - context.run.data());
+            const std::string utf8 = text_to_utf8(context.run.data(), int(context.run.size()), text_encoding::utf32);
+            const size_t begin_byte = text_to_utf8(context.run.data(), int(begin), text_encoding::utf32).size();
+            const size_t end_byte = text_to_utf8(context.run.data(), int(begin) + length_, text_encoding::utf32).size();
+            shaped = ft.shape(utf8, begin_byte, end_byte, options);
+        } else {
+            shaped = ft.shape(text_to_utf8(text, length_, encoding));
+        }
     } catch(...) {
         return 0.f;
     }
@@ -467,10 +481,10 @@ float font_face_data::shape(float size_, const void* text, int length_, text_enc
     return pen;
 }
 
-float font_face_data::text_extents(float size_, const void* text, int length_, text_encoding encoding, rect_t* extents) const
+float font_face_data::text_extents(float size_, const void* text, int length_, text_encoding encoding, rect_t* extents, const shaping_context& context) const
 {
     std::vector<shaped_glyph_t> glyphs;
-    const float advance = shape(size_, text, length_, encoding, extents ? &glyphs : nullptr);
+    const float advance = shape(size_, text, length_, encoding, extents ? &glyphs : nullptr, context);
     if(!extents)
         return advance;
 

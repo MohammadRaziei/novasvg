@@ -28,8 +28,8 @@ public:
     void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) override;
     void stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_) override;
 
-    void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_) override;
-    void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_) override;
+    void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) override;
+    void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) override;
 
     void clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_) override;
     void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) override;
@@ -88,7 +88,7 @@ private:
     void begin_paint(bool stroke, const stb::matrix& transform_);
     void emit_path(const stb::outline& path_, const stb::matrix* transform_);
     void emit_rect_path(const rect& rect_, const stb::matrix* transform_);
-    void emit_text_path(const std::u32string_view& text, const sized_font& font_, const point& origin, const stb::matrix* transform_);
+    void emit_text_path(const std::u32string_view& text, const sized_font& font_, const point& origin, const stb::matrix* transform_, const shaping_context& context);
     std::string alpha_state(float alpha, blend_mode blend_mode_ = blend_mode::src_over);
     int shading_pattern(const stb::matrix& transform_);
     int tiling_pattern(const stb::matrix& transform_);

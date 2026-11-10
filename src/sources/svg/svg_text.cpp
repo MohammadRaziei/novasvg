@@ -213,12 +213,38 @@ svg_text_fragments_builder::svg_text_fragments_builder(std::u32string& text, svg
     m_fragments.clear();
 }
 
+// Where a run starts (ADR-0012): the first character, a change of font, and every character with an absolute x or y
+// (a new text chunk). A run is shaped as a whole, whatever <tspan>s or per-character positions cut it into fragments.
+void svg_text_fragments_builder::find_run_starts()
+{
+    m_run_starts.clear();
+    const font_face_data* last_face = nullptr;
+    float last_size = 0.f;
+    size_t character = 0;
+    for(const auto& text_position : m_text_positions) {
+        if(!text_position.nd->is_text_node())
+            continue;
+        const auto& font = to_svg_text_positioning_element(text_position.nd->parent_element())->font();
+        const auto font_changed = font.face().get() != last_face || font.size() != last_size;
+        last_face = font.face().get();
+        last_size = font.size();
+        for(auto offset = text_position.start_offset; offset < text_position.end_offset; ++offset, ++character) {
+            auto it = m_character_positions.find(character);
+            const auto is_absolute = it != m_character_positions.end() && (it->second.x || it->second.y);
+            if(((offset == text_position.start_offset && font_changed) || is_absolute)
+               && (m_run_starts.empty() || m_run_starts.back() != offset))
+                m_run_starts.push_back(offset);
+        }
+    }
+}
+
 void svg_text_fragments_builder::build(const svg_text_element* text_element)
 {
     handle_element(text_element);
     for(const auto& position : m_text_positions) {
         fill_character_positions(position);
     }
+    find_run_starts();
 
     std::u32string_view whole_text(m_text);
     for(const auto& text_position : m_text_positions) {
@@ -234,7 +260,17 @@ void svg_text_fragments_builder::build(const svg_text_element* text_element)
             auto text = whole_text.substr(start_offset, end_offset - start_offset);
             fragment.offset = start_offset;
             fragment.length_ = text.length();
-            fragment.width = font.measure_text(text);
+            fragment.run_offset = 0;
+            fragment.run_length_ = 0;
+            if(!is_vertical_text) {
+                auto next = std::upper_bound(m_run_starts.begin(), m_run_starts.end(), start_offset);
+                assert(next != m_run_starts.begin());
+                fragment.run_offset = *(next - 1);
+                fragment.run_length_ = (next == m_run_starts.end() ? whole_text.length() : *next) - fragment.run_offset;
+            }
+            // Letter spacing is added between letters, so a ligature must not join them.
+            fragment.ligatures = el->letter_spacing() == 0;
+            fragment.width = font.measure_text(text, fragment.context(whole_text));
             fragment.height = font.height() + font.line_gap();
             if(is_vertical_text) {
                 m_y += is_upright_text ? fragment.height : fragment.width;
@@ -526,16 +562,17 @@ void svg_text_element::render(svg_render_state& state) const
         auto origin = point(fragment.x, fragment.y);
 
         const auto& font = fragment.el->font();
+        const auto context = fragment.context(whole_text);
         if(new_state.mode() == svg_render_mode::clipping) {
-            new_state->fill_text(text, font, origin, transform);
+            new_state->fill_text(text, font, origin, transform, context);
         } else {
             const auto& fill = fragment.el->fill();
             const auto& stroke = fragment.el->stroke();
             auto stroke_width = fragment.el->stroke_width();
             if(fill.apply_paint(new_state))
-                new_state->fill_text(text, font, origin, transform);
+                new_state->fill_text(text, font, origin, transform, context);
             if(stroke.apply_paint(new_state)) {
-                new_state->stroke_text(text, stroke_width, font, origin, transform);
+                new_state->stroke_text(text, stroke_width, font, origin, transform, context);
             }
         }
     }

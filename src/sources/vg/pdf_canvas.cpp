@@ -305,7 +305,7 @@ void pdf_canvas::emit_rect_path(const rect& rect_, const stb::matrix* transform_
     emit_path(path_, transform_);
 }
 
-void pdf_canvas::emit_text_path(const std::u32string_view& text, const sized_font& font_, const point& origin, const stb::matrix* transform_)
+void pdf_canvas::emit_text_path(const std::u32string_view& text, const sized_font& font_, const point& origin, const stb::matrix* transform_, const shaping_context& context)
 {
     font_face_data* face = font_.face().get();
     if(face == nullptr || font_.size() <= 0.f)
@@ -340,7 +340,7 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const sized_fon
 
     // Same layout as canvas_add_text(): the shaped glyphs, each with its outline.
     std::vector<shaped_glyph_t> glyphs;
-    face->shape(font_.size(), text.data(), int(text.length()), text_encoding::utf32, &glyphs);
+    face->shape(font_.size(), text.data(), int(text.length()), text_encoding::utf32, &glyphs, context);
     for(const shaped_glyph_t& g : glyphs)
         face->traverse_glyph_index_path(font_.size(), origin.x + g.x, origin.y + g.y, g.glyph, traverse, &s);
 }
@@ -374,21 +374,21 @@ void pdf_canvas::stroke_path(const stb::outline& path_, const stroke_data& sd, c
     m_content += "S\nQ\n";
 }
 
-void pdf_canvas::fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_)
+void pdf_canvas::fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context)
 {
     m_content += "q\n";
     begin_paint(false, transform_.matrix());
-    emit_text_path(text, font_, origin, &transform_.matrix());
+    emit_text_path(text, font_, origin, &transform_.matrix(), context);
     m_content += "f\nQ\n";
 }
 
-void pdf_canvas::stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_)
+void pdf_canvas::stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context)
 {
     m_content += "q\n";
     begin_paint(true, transform_.matrix());
     m_content += matrix_str(transform_.matrix()) + " cm\n";
     m_content += num(stroke_width) + " w\n0 J\n0 j\n4 M\n";
-    emit_text_path(text, font_, origin, nullptr);
+    emit_text_path(text, font_, origin, nullptr, context);
     m_content += "S\nQ\n";
 }
 

@@ -1,6 +1,6 @@
 # ADR-0012: shape text runs, split the result into fragments
 
-**Status:** Proposed (2026-11-09, step 33). Nothing of this is implemented; golden images may move when it is.
+**Status:** Accepted and implemented (2026-11-10, step 36), except point 5 (`glyph_kind`), see below.
 **Deciders:** Mohammad Raziei (maintainer)
 
 ## Context
@@ -37,3 +37,19 @@ exactly where it matters: a kerning pair, a ligature or an Arabic join that cros
 - How `letter-spacing` and `word-spacing` are applied to a shaped run (libstb `shape_options`?). Today they are added per fragment.
 - Whether the PDF canvas and the raster canvas should share the glyph list of a run instead of shaping again at draw time.
 - A test set first: tspans with kerning pairs (`AV`), a ligature (`fi`) split by `dx`, and Arabic split by a `<tspan>`.
+
+## Outcome (step 36)
+- A **run** is found once per `<text>` (`svg_text_fragments_builder::find_run_starts`): it starts at the first character, at a
+  change of font (face or size) and at every character with an absolute `x` or `y`. Vertical text is shaped per fragment as before.
+- Each fragment keeps the run it belongs to (`run_offset`, `run_length_`) and is measured and drawn with
+  `shaping_context{run, ligatures}`: `sized_font::measure_text`, `fill_text`, `stroke_text` (raster and PDF) and
+  `font_face_data::shape` take it and call libstb's `shape(utf8, begin, end)`. Raster and PDF therefore get the same glyphs.
+  The run is shaped again for every fragment instead of once (the cost is one shaping of the run per fragment; fragments are
+  few unless `rotate`, `letter-spacing` or per-character positions make one per letter).
+- `letter-spacing` is the open point that is decided: a non-zero value sets `ligatures = false` (`shape_options::ligatures`),
+  kerning stays.
+- Tests: `tests/cpp/test_text_runs.cpp` (kerning `AV` across a `<tspan>`: 52.17 px with the run, 54.73 px without; the `fi` ligature
+  stays whole in the fragment of its first letter and is dropped with `ligatures = false`).
+- **Golden images: 0 differ.** None of the 67 contains a pair that kerns or a ligature across a fragment boundary.
+- Not done: point 5. `font_face_data::shape` still ignores `glyph_kind` (a line-break glyph and a missing glyph are both glyph 0);
+  no test needs it yet. Arabic across `<tspan>`s has no test either (libstb joins it by the same call; not verified here).

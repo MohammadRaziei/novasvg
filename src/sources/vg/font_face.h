@@ -79,10 +79,11 @@ public:
     float traverse_glyph_index_path(float size_, float x, float y, std::uint32_t glyph_index, path_traverse_func_t traverse_func, void* closure) const;
 
     // Shapes `text`; fills `glyphs` (when not null) and returns the advance of the whole text. UTF-8, UTF-16 or UTF-32.
-    float shape(float size_, const void* text, int length_, text_encoding encoding, std::vector<shaped_glyph_t>* glyphs) const;
+    // With a `context` (UTF-32 only) the text is shaped as a part of the context's run, see shaping_context.
+    float shape(float size_, const void* text, int length_, text_encoding encoding, std::vector<shaped_glyph_t>* glyphs, const shaping_context& context = {}) const;
 
     // The advance of `text`, and (when not null) its bounding box.
-    float text_extents(float size_, const void* text, int length_, text_encoding encoding, rect_t* extents) const;
+    float text_extents(float size_, const void* text, int length_, text_encoding encoding, rect_t* extents, const shaping_context& context = {}) const;
 
 private:
     explicit font_face_data(stb::font f);

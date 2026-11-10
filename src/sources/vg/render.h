@@ -30,6 +30,7 @@
 #include <stb/color.hpp>
 #include <stb/image.hpp>
 #include <memory>
+#include <string_view>
 #include <stb/raster.hpp>
 #include <stdint.h>
 #include <stddef.h>
@@ -140,6 +141,18 @@ enum class path_command : int {
  * @param npoints The number of points in the array.
  */
 typedef void (*path_traverse_func_t)(void* closure, path_command command, const stb::point* points, int npoints);
+
+/**
+ * @brief The run a piece of text is shaped in (ADR-0012).
+ *
+ * `text` passed next to it must be a view into `run` (UTF-32). The piece is then shaped as a part of the whole run:
+ * kerning, ligatures and joined letters across its edges are those of the run. An empty `run` shapes the piece alone.
+ * `ligatures` false drops the optional ligatures (`letter-spacing` needs that).
+ */
+struct shaping_context {
+    std::u32string_view run;
+    bool ligatures = true;
+};
 
 /**
  * @brief Text encodings used for converting text data to code points.
@@ -1430,7 +1443,7 @@ NOVA_API float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y);
+NOVA_API float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y, const shaping_context& context = {});
 
 /**
  * @brief Fills a text at the specified origin.
@@ -1444,7 +1457,7 @@ NOVA_API float canvas_add_text(canvas_t* canvas, const void* text, int length_, 
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y);
+NOVA_API float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y, const shaping_context& context = {});
 
 /**
  * @brief Strokes a text at the specified origin.
@@ -1458,7 +1471,7 @@ NOVA_API float canvas_fill_text(canvas_t* canvas, const void* text, int length_,
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y);
+NOVA_API float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y, const shaping_context& context = {});
 
 /**
  * @brief Intersects the current clipping region with text at the specified origin.

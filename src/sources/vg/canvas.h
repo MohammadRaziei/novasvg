@@ -358,8 +358,8 @@ public:
     virtual void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) = 0;
     virtual void stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_) = 0;
 
-    virtual void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_) = 0;
-    virtual void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_) = 0;
+    virtual void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) = 0;
+    virtual void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) = 0;
 
     virtual void clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_) = 0;
     virtual void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) = 0;
@@ -385,8 +385,8 @@ public:
     void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) override;
     void stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_) override;
 
-    void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_) override;
-    void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_) override;
+    void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) override;
+    void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) override;
 
     void clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_) override;
     void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) override;

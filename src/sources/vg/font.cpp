@@ -265,10 +265,10 @@ float sized_font::x_height() const
     return extents.h;
 }
 
-float sized_font::measure_text(const std::u32string_view& text) const
+float sized_font::measure_text(const std::u32string_view& text, const shaping_context& context) const
 {
     if(m_size > 0.f && !m_face.is_null())
-        return m_face.get()->text_extents(m_size, text.data(), text.length(), text_encoding::utf32, nullptr);
+        return m_face.get()->text_extents(m_size, text.data(), text.length(), text_encoding::utf32, nullptr, context);
     return 0;
 }
 

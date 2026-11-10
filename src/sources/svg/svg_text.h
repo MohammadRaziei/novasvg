@@ -46,6 +46,17 @@ struct svg_text_fragment {
     float width = 0;
     float height = 0;
     float angle = 0;
+    // The run the fragment is shaped in (ADR-0012): [run_offset, run_offset + run_length_) of the element's text; 0 = alone.
+    size_t run_offset = 0;
+    size_t run_length_ = 0;
+    bool ligatures = true;
+
+    shaping_context context(std::u32string_view whole_text) const
+    {
+        if(run_length_ == 0)
+            return {};
+        return {whole_text.substr(run_offset, run_length_), ligatures};
+    }
 };
 
 using svg_text_fragment_list = std::vector<svg_text_fragment>;
@@ -60,8 +71,10 @@ private:
     void handle_text(const svg_text_node* nd);
     void handle_element(const svg_text_positioning_element* el);
     void fill_character_positions(const svg_text_position& position);
+    void find_run_starts();
     std::u32string& m_text;
     svg_text_fragment_list& m_fragments;
+    std::vector<size_t> m_run_starts;
     svg_character_positions m_character_positions;
     svg_text_position_list m_text_positions;
     size_t m_character_offset = 0;

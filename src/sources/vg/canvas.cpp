@@ -656,30 +656,30 @@ float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x, float y
     return 0.f;
 }
 
-float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y)
+float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y, const shaping_context& context)
 {
     state_t* state = canvas->state;
     if(state->font_face_ == NULL || state->font_size <= 0.f)
         return 0.f;
     std::vector<shaped_glyph_t> glyphs;
-    const float advance_width = state->font_face_->shape(state->font_size, text, length_, encoding, &glyphs);
+    const float advance_width = state->font_face_->shape(state->font_size, text, length_, encoding, &glyphs, context);
     for(const shaped_glyph_t& g : glyphs)
         state->font_face_->get_glyph_index_path(state->font_size, x + g.x, y + g.y, g.glyph, *canvas->path_);
     return advance_width;
 }
 
-float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y)
+float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y, const shaping_context& context)
 {
     canvas_new_path(canvas);
-    float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y);
+    float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y, context);
     canvas_fill(canvas);
     return advance_width;
 }
 
-float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y)
+float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y, const shaping_context& context)
 {
     canvas_new_path(canvas);
-    float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y);
+    float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y, context);
     canvas_stroke(canvas);
     return advance_width;
 }
