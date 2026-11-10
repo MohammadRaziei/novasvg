@@ -120,7 +120,7 @@ bool parse_format(std::string text, image_format& out)
 NB_MODULE(novasvg_py, m) {
     m.doc() = "Python bindings for NovaSVG using nanobind";
 
-    // stb::color parse errors: novasvg.stb::invalid_color_error, a ValueError subclass.
+    // stb::color parse errors: novasvg.InvalidColorError, a ValueError subclass.
     nb::exception<stb::invalid_color_error>(m, "InvalidColorError", PyExc_ValueError);
 
     // --- Bind Static Utility Functions ---

@@ -1,7 +1,8 @@
 # Naming table (ADR-0004), public C++ API
 
-Methods and the DOM types: **applied** (2026-11-03). `Box`, `Matrix`, `Rect`, `Transform`: **deferred to step 5** (they are replaced by `stb::` types, and `gfx::matrix` already exists). Other internal types (non-`SVG*`) are renamed with their module.
-Python names and CLI are unchanged (string literals were not touched).
+Historical record of ADR-0004, all of it **applied**: the DOM types and methods (2026-11-03), `Box`, `Matrix`, `Rect` and `Transform`
+(replaced by `stb::` types in step 5) and the internal identifiers (the second pass of 2026-11-06 and the later snake_case passes;
+the generated list of identifiers is gone, the code is the source). Python names and CLI are unchanged (string literals were not touched).
 
 ## Types (applied)
 | Old | New |
@@ -29,4 +30,4 @@ Python names and CLI are unchanged (string literals were not touched).
 `element` -> `el`, `node` -> `nd`, `document` -> `dom`. All `SVG*` identifiers became `svg_*` (`SVGPathElement` -> `svg_path_element`).
 
 ## Internal identifiers
-Second pass (2026-11-06) applied to the engine and the svg layer: see [naming-table-internal.md](naming-table-internal.md) for what is left.
+Renamed with their modules (`nova::vg`, `nova::svg`, ADR-0009); every identifier follows the snake_case rule, see ADR-0004.

@@ -60,6 +60,8 @@
   and `outline::tight_bounds` are used. Three golden images (`01-venn`, `34-venn`, `42-mindmap-shapes`) changed on arc edge pixels only
   (libstb splits a semicircle into three cubics, we used two); the old images are in `refactor/golden-baseline-step32/`.
 - `ref_count_t` is `std::atomic<int>` on every platform (the three per-compiler variants are gone).
+- `README_PYTHON.md` used the C++ spelling `stb::color` in its Python examples (a rename slip); it is `Color` again. The generated
+  `docs/naming-table-internal.md` is deleted and `docs/naming-table.md` is marked as the applied, historical record of ADR-0004.
 - Text is shaped as a run (ADR-0012): kerning, ligatures and joined letters that cross a `<tspan>` or per-character position boundary
   are kept (`shaping_context`, libstb's `shape(utf8, begin, end)`); `letter-spacing` turns the optional ligatures off. Golden 0 diff.
 - `surface_t` is `stb::premultiplied_image` (libstb issue 9): `surface.{h,cpp}` (the malloc'd, intrusively counted surface, its
