@@ -2,6 +2,13 @@
 
 ### Changed
 
+- **Row compositing and font discovery come from libstb** (libstb issues 10 and 11). The Porter-Duff operators and CSS
+  blend modes on rows of premultiplied pixels are `stb::composite_row` / `stb::composite_solid_row` (about 280 lines of
+  `blend.{h,cpp}` and the hand-written SSE2 fill are gone; gradient and texture sampling stay). The font cache lists
+  faces with `stb::font::scan` / `system_fonts` (the sfnt reader of `font_face.cpp` is gone, about 250 lines) and picks
+  a face by bold, italic, width and weight, so `DejaVu Sans` no longer resolves to the Light or Condensed face; a face
+  is also known under its legacy family name (`DejaVu Sans Light`). The system font folders are libstb's (user font
+  folders are now searched too). Output unchanged: golden images identical at tolerance 0.
 - **The library is split into `nova::svg` and `nova::vg`.** `nova::vg` is the drawing layer (canvas, `pixmap`, fonts,
   PDF output) and `nova::svg` the SVG engine on top of it; the headers live under `include/nova/`. foreignObject
   rendering is an extension (ADR-0010).

@@ -110,7 +110,6 @@ void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, c
 
 void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const stb::matrix* matrix, const rect_t* clip_rect, const stb::stroke_style* stroke_, fill_rule winding);
 void blend(canvas_t* canvas, const span_buffer_t* span_buffer);
-void memfill32(unsigned int* dest, int length_, unsigned int value);
 
 } // namespace vg
 } // namespace nova

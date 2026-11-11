@@ -1,8 +1,8 @@
 // Font faces and the font-face cache, built on stb::font (libstb). Replaces the inlined
 // stb_truetype that used to live in include/novasvg/gfx/font_impl.h (ADR-0006).
 //
-// libstb reads outlines, metrics, kerning (kern/GPOS) and GSUB shaping. It has no API for the `name`
-// table or `head.macStyle`, so the small system-font scanner below reads those two tables itself.
+// libstb reads outlines, metrics, kerning (kern/GPOS), GSUB shaping, and what a font file is called (family, weight,
+// width, bold, italic: font::scan and font::system_fonts); this file only keeps the cache that picks a face for a request.
 #include "font_face.h"
 #include "internal.h"
 #include "../utils/text.h"
@@ -13,6 +13,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <cstring>
 #include <filesystem>
 #include <map>
@@ -21,23 +22,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#ifndef NOVA_DISABLE_FONT_FACE_CACHE_LOAD
-#include <ctype.h>
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <fcntl.h>
-#include <unistd.h>
-#ifdef __linux__
-#include <linux/limits.h>
-#else
-#include <limits.h>
-#endif
-#include <sys/mman.h>
-#include <sys/stat.h>
-#endif
-#endif
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -515,6 +499,8 @@ struct font_face_entry {
     int ttcindex = 0;
     bool bold = false;
     bool italic = false;
+    int weight = 400;       // OS/2 usWeightClass
+    int width = 5;          // OS/2 usWidthClass, 5 is normal
 };
 
 struct font_face_cache_impl {
@@ -570,6 +556,7 @@ void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold
     entry.face = font_face_data::reference(face);
     entry.bold = bold;
     entry.italic = italic;
+    entry.weight = bold ? 700 : 400;
     font_face_cache_add_entry(cache, family ? family : "", std::move(entry));
 }
 
@@ -585,11 +572,18 @@ bool font_face_cache_add_file(font_face_cache_t* cache, const char* family, bool
     return true;
 }
 
-static font_face_entry* font_face_entry_select(font_face_entry* a, font_face_entry* b, bool bold, bool italic)
+// The better of two faces of a family for a request: the one that agrees on bold and italic, then the one nearest the
+// normal width, then the one whose weight is nearest to regular (400) or bold (700). The first argument wins only if it is better.
+static bool font_face_entry_better(const font_face_entry& a, const font_face_entry& b, bool bold, bool italic)
 {
-    int a_score = (bold == a->bold) + (italic == a->italic);
-    int b_score = (bold == b->bold) + (italic == b->italic);
-    return a_score > b_score ? a : b;
+    const int a_score = (bold == a.bold) + (italic == a.italic);
+    const int b_score = (bold == b.bold) + (italic == b.italic);
+    if(a_score != b_score)
+        return a_score > b_score;
+    if(std::abs(a.width - 5) != std::abs(b.width - 5))
+        return std::abs(a.width - 5) < std::abs(b.width - 5);
+    const int target = bold ? 700 : 400;
+    return std::abs(a.weight - target) < std::abs(b.weight - target);
 }
 
 font_face_data* font_face_cache_get(font_face_cache_t* cache, const char* family, bool bold, bool italic)
@@ -603,8 +597,10 @@ font_face_data* font_face_cache_get(font_face_cache_t* cache, const char* family
     // The newest face wins a tie, so walk from the newest to the oldest and replace only on a better score.
     std::vector<font_face_entry>& faces = found->second;
     font_face_entry* selected = &faces.back();
-    for(std::size_t i = faces.size() - 1; i-- > 0;)
-        selected = font_face_entry_select(&faces[i], selected, bold, italic);
+    for(std::size_t i = faces.size() - 1; i-- > 0;) {
+        if(font_face_entry_better(faces[i], *selected, bold, italic))
+            selected = &faces[i];
+    }
 
     if(!selected->filename.empty() && selected->face == NULL)
         selected->face = font_face_data::load_from_file(selected->filename.c_str(), selected->ttcindex);
@@ -613,318 +609,59 @@ font_face_data* font_face_cache_get(font_face_cache_t* cache, const char* family
 
 #ifndef NOVA_DISABLE_FONT_FACE_CACHE_LOAD
 
-// ---- just enough of the sfnt container to list the faces of a font file and read their family name and style
-typedef uint8_t tt_uint8;
-typedef uint16_t tt_uint16;
-typedef int32_t tt_int32;
-typedef uint32_t tt_uint32;
-
-static tt_uint16 tt_ushort(const tt_uint8* p) { return static_cast<tt_uint16>(p[0] * 256 + p[1]); }
-static tt_uint32 tt_ulong(const tt_uint8* p) { return (static_cast<tt_uint32>(p[0]) << 24) + (p[1] << 16) + (p[2] << 8) + p[3]; }
-static bool tt_tag4(const tt_uint8* p, char c0, char c1, char c2, char c3) { return p[0] == c0 && p[1] == c1 && p[2] == c2 && p[3] == c3; }
-
-static bool tt_is_font(const tt_uint8* font_)
+// A face found by libstb goes in under its family (name id 16, "DejaVu Sans") and, when that differs, under the name a
+// program that knows only regular and bold uses (id 1, "DejaVu Sans Light"): font-family can say either.
+static int font_face_cache_add_found(font_face_cache_t* cache, const std::filesystem::path& path, const stb::font_face_info& info)
 {
-    return tt_tag4(font_, '1', 0, 0, 0) || tt_tag4(font_, 0, 1, 0, 0) || tt_tag4(font_, 'O', 'T', 'T', 'O')
-        || tt_tag4(font_, 't', 'r', 'u', 'e') || tt_tag4(font_, 't', 'y', 'p', '1');
-}
+    font_face_entry entry;
+    entry.filename = path.string();
+    entry.ttcindex = info.index;
+    entry.bold = info.bold;
+    entry.italic = info.italic;
+    entry.weight = info.weight;
+    entry.width = info.width;
 
-static int tt_number_of_fonts(const tt_uint8* data)
-{
-    if(tt_is_font(data))
-        return 1;
-    if(tt_tag4(data, 't', 't', 'c', 'f') && (tt_ulong(data + 4) == 0x00010000 || tt_ulong(data + 4) == 0x00020000))
-        return tt_ulong(data + 8);
-    return 0;
-}
-
-static int tt_offset_for_index(const tt_uint8* data, int index)
-{
-    if(tt_is_font(data))
-        return index == 0 ? 0 : -1;
-    if(tt_tag4(data, 't', 't', 'c', 'f') && (tt_ulong(data + 4) == 0x00010000 || tt_ulong(data + 4) == 0x00020000)) {
-        if(index >= tt_ulong(data + 8))
-            return -1;
-        return tt_ulong(data + 12 + index * 4);
+    int added = 0;
+    if(!info.family_name.empty()) {
+        font_face_cache_add_entry(cache, info.family_name, entry);
+        added = 1;
     }
-    return -1;
-}
-
-static tt_uint32 tt_find_table(const tt_uint8* data, tt_uint32 font_start, const char* tag)
-{
-    tt_int32 num_tables = tt_ushort(data + font_start + 4);
-    tt_uint32 table_dir = font_start + 12;
-    for(tt_int32 i = 0; i < num_tables; ++i) {
-        tt_uint32 loc = table_dir + 16 * i;
-        if(tt_tag4(data + loc, tag[0], tag[1], tag[2], tag[3]))
-            return tt_ulong(data + loc + 8);
+    if(!info.legacy_family_name.empty() && info.legacy_family_name != info.family_name) {
+        font_face_cache_add_entry(cache, info.legacy_family_name, entry);
+        added = 1;
     }
-    return 0;
+    return added;
 }
-
-#ifdef _WIN32
-
-static void* mmap(const char* filename, long* length)
-{
-    HANDLE file = create_file_a(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if(file == INVALID_HANDLE_VALUE)
-        return NULL;
-    DWORD size = get_file_size(file, NULL);
-    if(size == INVALID_FILE_SIZE) {
-        close_handle(file);
-        return NULL;
-    }
-
-    HANDLE mapping = create_file_mapping_a(file, NULL, PAGE_READONLY, 0, 0, NULL);
-    if(mapping == NULL) {
-        close_handle(file);
-        return NULL;
-    }
-
-    void* data = map_view_of_file(mapping, FILE_MAP_READ, 0, 0, 0);
-    close_handle(mapping);
-    close_handle(file);
-
-    if(data == NULL)
-        return NULL;
-    *length = size;
-    return data;
-}
-
-static void unmap(void* data, long length)
-{
-    unmap_view_of_file(data);
-}
-
-#else
-
-static void* mmap(const char* filename, long* length_)
-{
-    int fd = open(filename, O_RDONLY);
-    if(fd < 0)
-        return NULL;
-    struct stat st;
-    if(fstat(fd, &st) < 0) {
-        close(fd);
-        return NULL;
-    }
-
-    if(st.st_size == 0) {
-        close(fd);
-        return NULL;
-    }
-
-    void* data = ::mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    close(fd);
-
-    if(data == MAP_FAILED)
-        return NULL;
-    *length_ = st.st_size;
-    return data;
-}
-
-static void unmap(void* data, long length_)
-{
-    munmap(data, length_);
-}
-
-#endif // _WIN32
 
 int font_face_cache_load_file(font_face_cache_t* cache, const char* filename)
 {
-    long length_;
-    tt_uint8* data = static_cast<tt_uint8*>(mmap(filename, &length_));
-    if(data == NULL) {
-        return 0;
+    try {
+        const std::filesystem::path path(filename);
+        int num_faces = 0;
+        for(const stb::font_face_info& info : stb::font::scan(path))
+            num_faces += font_face_cache_add_found(cache, path, info);
+        return num_faces;
+    } catch(const std::exception&) {
+        return 0; // not a font, or not readable
     }
-
-    int num_faces = 0;
-
-    int num_fonts = tt_number_of_fonts(data);
-    for(int index = 0; index < num_fonts; ++index) {
-        int offset = tt_offset_for_index(data, index);
-        if(offset == -1 || !tt_is_font(data + offset)) {
-            continue;
-        }
-
-        tt_uint32 nm = tt_find_table(data, offset, "name");
-        tt_uint16 nm_count = tt_ushort(data + nm + 2);
-
-        const tt_uint8* unicode_family_name = NULL;
-        const tt_uint8* roman_family_name = NULL;
-
-        size_t family_length = 0;
-        for(tt_int32 i = 0; i < nm_count; ++i) {
-            tt_uint32 loc = nm + 6 + 12 * i;
-            tt_uint16 nm_id = tt_ushort(data + loc + 6);
-            if(nm_id != 1) {
-                continue;
-            }
-
-            tt_uint16 platform = tt_ushort(data + loc + 0);
-            tt_uint16 encoding = tt_ushort(data + loc + 2);
-
-            const tt_uint8* family_name = data + nm + tt_ushort(data + nm + 4) + tt_ushort(data + loc + 10);
-            if(platform == 1 && encoding == 0) {
-                family_length = tt_ushort(data + loc + 8);
-                roman_family_name = family_name;
-                continue;
-            }
-
-            if(platform == 0 || (platform == 3 && encoding == 1) || (platform == 3 && encoding == 10)) {
-                family_length = tt_ushort(data + loc + 8);
-                unicode_family_name = family_name;
-                break;
-            }
-        }
-
-        if(unicode_family_name == NULL && roman_family_name == NULL)
-            continue;
-        std::string family;
-        if(unicode_family_name) {
-            const tt_uint8* family_name = unicode_family_name;
-            while(family_length) {
-                tt_uint16 ch = family_name[0] * 256 + family_name[1];
-                if(ch < 0x80) {
-                    family.push_back(static_cast<char>(ch));
-                } else if(ch < 0x800) {
-                    family.push_back(static_cast<char>((0xc0 + (ch >> 6))));
-                    family.push_back(static_cast<char>((0x80 + (ch & 0x3f))));
-                } else if(ch >= 0xd800 && ch < 0xdc00) {
-                    tt_uint16 ch2 = family_name[2] * 256 + family_name[3];
-                    tt_uint32 c = ((ch - 0xd800) << 10) + (ch2 - 0xdc00) + 0x10000;
-
-                    family.push_back(static_cast<char>((0xf0 + (c >> 18))));
-                    family.push_back(static_cast<char>((0x80 + ((c >> 12) & 0x3f))));
-                    family.push_back(static_cast<char>((0x80 + ((c >> 6) & 0x3f))));
-                    family.push_back(static_cast<char>((0x80 + ((c) & 0x3f))));
-
-                    family_name += 2;
-                    family_length -= 2;
-                } else {
-                    family.push_back(static_cast<char>((0xe0 + (ch >> 12))));
-                    family.push_back(static_cast<char>((0x80 + ((ch >> 6) & 0x3f))));
-                    family.push_back(static_cast<char>((0x80 + ((ch) & 0x3f))));
-                }
-
-                family_name += 2;
-                family_length -= 2;
-            }
-
-        } else {
-            static const tt_uint16 MAC_ROMAN_TABLE[256] = {
-                0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
-                0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F,
-                0x0010, 0x2318, 0x21E7, 0x2325, 0x2303, 0x0015, 0x0016, 0x0017,
-                0x0018, 0x0019, 0x001A, 0x001B, 0x001C, 0x001D, 0x001E, 0x001F,
-                0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027,
-                0x0028, 0x0029, 0x002A, 0x002B, 0x002C, 0x002D, 0x002E, 0x002F,
-                0x0030, 0x0031, 0x0032, 0x0033, 0x0034, 0x0035, 0x0036, 0x0037,
-                0x0038, 0x0039, 0x003A, 0x003B, 0x003C, 0x003D, 0x003E, 0x003F,
-                0x0040, 0x0041, 0x0042, 0x0043, 0x0044, 0x0045, 0x0046, 0x0047,
-                0x0048, 0x0049, 0x004A, 0x004B, 0x004C, 0x004D, 0x004E, 0x004F,
-                0x0050, 0x0051, 0x0052, 0x0053, 0x0054, 0x0055, 0x0056, 0x0057,
-                0x0058, 0x0059, 0x005A, 0x005B, 0x005C, 0x005D, 0x005E, 0x005F,
-                0x0060, 0x0061, 0x0062, 0x0063, 0x0064, 0x0065, 0x0066, 0x0067,
-                0x0068, 0x0069, 0x006A, 0x006B, 0x006C, 0x006D, 0x006E, 0x006F,
-                0x0070, 0x0071, 0x0072, 0x0073, 0x0074, 0x0075, 0x0076, 0x0077,
-                0x0078, 0x0079, 0x007A, 0x007B, 0x007C, 0x007D, 0x007E, 0x007F,
-                0x00C4, 0x00C5, 0x00C7, 0x00C9, 0x00D1, 0x00D6, 0x00DC, 0x00E1,
-                0x00E0, 0x00E2, 0x00E4, 0x00E3, 0x00E5, 0x00E7, 0x00E9, 0x00E8,
-                0x00EA, 0x00EB, 0x00ED, 0x00EC, 0x00EE, 0x00EF, 0x00F1, 0x00F3,
-                0x00F2, 0x00F4, 0x00F6, 0x00F5, 0x00FA, 0x00F9, 0x00FB, 0x00FC,
-                0x2020, 0x00B0, 0x00A2, 0x00A3, 0x00A7, 0x2022, 0x00B6, 0x00DF,
-                0x00AE, 0x00A9, 0x2122, 0x00B4, 0x00A8, 0x2260, 0x00C6, 0x00D8,
-                0x221E, 0x00B1, 0x2264, 0x2265, 0x00A5, 0x00B5, 0x2202, 0x2211,
-                0x220F, 0x03C0, 0x222B, 0x00AA, 0x00BA, 0x03A9, 0x00E6, 0x00F8,
-                0x00BF, 0x00A1, 0x00AC, 0x221A, 0x0192, 0x2248, 0x2206, 0x00AB,
-                0x00BB, 0x2026, 0x00A0, 0x00C0, 0x00C3, 0x00D5, 0x0152, 0x0153,
-                0x2013, 0x2014, 0x201C, 0x201D, 0x2018, 0x2019, 0x00F7, 0x25CA,
-                0x00FF, 0x0178, 0x2044, 0x20AC, 0x2039, 0x203A, 0xFB01, 0xFB02,
-                0x2021, 0x00B7, 0x201A, 0x201E, 0x2030, 0x00C2, 0x00CA, 0x00C1,
-                0x00CB, 0x00C8, 0x00CD, 0x00CE, 0x00CF, 0x00CC, 0x00D3, 0x00D4,
-                0xF8FF, 0x00D2, 0x00DA, 0x00DB, 0x00D9, 0x0131, 0x02C6, 0x02DC,
-                0x00AF, 0x02D8, 0x02D9, 0x02DA, 0x00B8, 0x02DD, 0x02DB, 0x02C7,
-            };
-
-            const tt_uint8* family_name = roman_family_name;
-            while(family_length) {
-                tt_uint16 ch = MAC_ROMAN_TABLE[family_name[0]];
-                if(ch < 0x80) {
-                    family.push_back(static_cast<char>(ch));
-                } else if(ch < 0x800) {
-                    family.push_back(static_cast<char>((0xc0 + (ch >> 6))));
-                    family.push_back(static_cast<char>((0x80 + (ch & 0x3f))));
-                } else {
-                    family.push_back(static_cast<char>((0xe0 + (ch >> 12))));
-                    family.push_back(static_cast<char>((0x80 + ((ch >> 6) & 0x3f))));
-                    family.push_back(static_cast<char>((0x80 + ((ch) & 0x3f))));
-                }
-
-                family_name += 1;
-                family_length -= 1;
-            }
-
-        }
-
-        font_face_entry entry;
-        entry.filename = filename;
-        entry.ttcindex = index;
-
-        tt_uint32 hd = tt_find_table(data, offset, "head");
-        tt_uint16 style = tt_ushort(data + hd + 44);
-        entry.bold = (style & 0x1) != 0;
-        entry.italic = (style & 0x2) != 0;
-
-        font_face_cache_add_entry(cache, family, std::move(entry));
-        num_faces++;
-    }
-
-    unmap(data, length_);
-    return num_faces;
 }
 
-static bool font_face_supports_file(const std::filesystem::path& file)
+static int font_face_cache_load_found(font_face_cache_t* cache, const std::vector<stb::system_font_info>& found)
 {
-    const std::string extension = nova::utils::to_lower(file.extension().string());
-    return extension == ".ttf" || extension == ".otf" || extension == ".ttc" || extension == ".otc";
+    int num_faces = 0;
+    for(const stb::system_font_info& info : found)
+        num_faces += font_face_cache_add_found(cache, info.path, info);
+    return num_faces;
 }
 
 int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirname)
 {
-    namespace fs = std::filesystem;
-    const fs::directory_options options = fs::directory_options::skip_permission_denied | fs::directory_options::follow_directory_symlink;
-
-    std::error_code error;
-    fs::recursive_directory_iterator it(dirname, options, error);
-    if(error)
-        return 0;
-
-    int num_faces = 0;
-    fs::recursive_directory_iterator end;
-    for(; it != end; it.increment(error)) {
-        if(error)
-            break;
-        std::error_code status_error;
-        if(it->is_regular_file(status_error) && !status_error && font_face_supports_file(it->path()))
-            num_faces += font_face_cache_load_file(cache, it->path().string().c_str());
-    }
-    return num_faces;
+    return font_face_cache_load_found(cache, stb::font::system_fonts({std::filesystem::path(dirname)}));
 }
 
 int font_face_cache_load_sys(font_face_cache_t* cache)
 {
-    int num_faces = 0;
-#if defined(_WIN32)
-    num_faces += font_face_cache_load_dir(cache, "C:\\Windows\\Fonts");
-#elif defined(__APPLE__)
-    num_faces += font_face_cache_load_dir(cache, "/Library/Fonts");
-    num_faces += font_face_cache_load_dir(cache, "/System/Library/Fonts");
-#elif defined(__linux__)
-    num_faces += font_face_cache_load_dir(cache, "/usr/share/fonts");
-    num_faces += font_face_cache_load_dir(cache, "/usr/local/share/fonts");
-#endif
-    return num_faces;
+    return font_face_cache_load_found(cache, stb::font::system_fonts());
 }
 
 #else
