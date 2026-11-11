@@ -177,7 +177,7 @@ svg_text_anchor parse_text_anchor(std::string_view input);
 
 css_white_space parse_white_space(std::string_view input);
 
-css_mix_blend_mode parse_mix_blend_mode(std::string_view input);
+stb::blend_mode parse_mix_blend_mode(std::string_view input);
 
 css_mask_type parse_mask_type(std::string_view input);
 

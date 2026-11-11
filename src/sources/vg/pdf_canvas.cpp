@@ -101,20 +101,20 @@ int pdf_canvas::add_stream(std::string dict, const std::string& bytes, bool comp
     return int(m_objects.size());
 }
 
-static const char* pdf_blend_name(blend_mode mode)
+static const char* pdf_blend_name(stb::blend_mode mode)
 {
     switch(mode) {
-    case blend_mode::multiply: return "Multiply";
-    case blend_mode::screen: return "Screen";
-    case blend_mode::darken: return "Darken";
-    case blend_mode::lighten: return "Lighten";
-    case blend_mode::difference: return "Difference";
-    case blend_mode::exclusion: return "Exclusion";
+    case stb::blend_mode::multiply: return "Multiply";
+    case stb::blend_mode::screen: return "Screen";
+    case stb::blend_mode::darken: return "Darken";
+    case stb::blend_mode::lighten: return "Lighten";
+    case stb::blend_mode::difference: return "Difference";
+    case stb::blend_mode::exclusion: return "Exclusion";
     default: return "Normal";
     }
 }
 
-std::string pdf_canvas::alpha_state(float alpha, blend_mode blend_mode_)
+std::string pdf_canvas::alpha_state(float alpha, stb::blend_mode blend_mode_)
 {
     std::string alpha_text = num(clamp01(alpha));
     std::string blend = pdf_blend_name(blend_mode_);
@@ -436,7 +436,7 @@ int pdf_canvas::add_image(const pixmap& image, int* width, int* height)
 }
 
 // The whole image (w x h px) scaled so that `src` (in image pixels) lands on `dst`, clipped to `dst`.
-void pdf_canvas::place_image(int object, int w, int h, const rect& dst, const rect& src, const stb::matrix* transform_, float alpha, blend_mode blend_mode_)
+void pdf_canvas::place_image(int object, int w, int h, const rect& dst, const rect& src, const stb::matrix* transform_, float alpha, stb::blend_mode blend_mode_)
 {
     std::string name = "Im" + std::to_string(m_xobjects.size());
     m_xobjects.emplace_back(name, object);
@@ -460,10 +460,10 @@ void pdf_canvas::draw_image(const pixmap& image, const rect& dst, const rect& sr
     int object = add_image(image, &w, &h);
     if(object == 0)
         return;
-    place_image(object, w, h, dst, src, &transform_.matrix(), 1.f, blend_mode::src_over);
+    place_image(object, w, h, dst, src, &transform_.matrix(), 1.f, stb::blend_mode::normal);
 }
 
-void pdf_canvas::draw_raster_group(const pixmap& image, const rect& dst, blend_mode blend_mode_, float opacity)
+void pdf_canvas::draw_raster_group(const pixmap& image, const rect& dst, stb::blend_mode blend_mode_, float opacity)
 {
     if(image.is_null() || dst.w <= 0.f || dst.h <= 0.f)
         return;
@@ -515,7 +515,7 @@ void pdf_canvas::begin_group()
     m_paints.push_back(m_paints.back());
 }
 
-void pdf_canvas::end_group(blend_mode blend_mode_, float opacity)
+void pdf_canvas::end_group(stb::blend_mode blend_mode_, float opacity)
 {
     if(m_groups.empty())
         return;

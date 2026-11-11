@@ -2,6 +2,7 @@
 
 // PropertyID, the property classes (length, number, path, transform, ...) and the enums they carry.
 
+#include <stb/image.hpp>
 #include "vg/pixmap.h"
 
 #include <string>
@@ -197,18 +198,10 @@ enum class css_overflow : uint8_t {
     hidden
 };
 
-// CSS mix-blend-mode. Normal = ordinary painting. Of the other keywords the separable modes below are
-// supported; overlay, color-dodge, color-burn, hard-light, soft-light and the non-separable ones (hue,
-// saturation, color, luminosity) are not yet and paint as Normal, like a value this library doesn't know.
-enum class css_mix_blend_mode : uint8_t {
-    normal,
-    multiply,
-    screen,
-    darken,
-    lighten,
-    difference,
-    exclusion
-};
+// CSS mix-blend-mode is an stb::blend_mode. Of the keywords the separable modes normal, multiply, screen, darken,
+// lighten, difference and exclusion are supported; overlay, color-dodge, color-burn, hard-light, soft-light and the
+// non-separable ones (hue, saturation, color, luminosity) are not yet and paint as normal, like a value this library
+// doesn't know.
 
 enum class css_pointer_events : uint8_t {
     none,

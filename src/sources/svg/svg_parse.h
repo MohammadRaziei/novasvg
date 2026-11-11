@@ -34,7 +34,7 @@ css_writing_mode parse_writing_mode(std::string_view input);
 css_text_orientation parse_text_orientation(std::string_view input);
 svg_text_anchor parse_text_anchor(std::string_view input);
 css_white_space parse_white_space(std::string_view input);
-css_mix_blend_mode parse_mix_blend_mode(std::string_view input);
+stb::blend_mode parse_mix_blend_mode(std::string_view input);
 css_mask_type parse_mask_type(std::string_view input);
 fill_rule parse_fill_rule(std::string_view input);
 line_cap parse_line_cap(std::string_view input);

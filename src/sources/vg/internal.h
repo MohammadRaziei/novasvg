@@ -80,7 +80,8 @@ typedef struct state {
     stb::stroke_style stroke;
     span_buffer_t clip_spans;
     fill_rule winding;
-    blend_mode op;
+    stb::composite_op op;
+    stb::blend_mode mode;
     float font_size;
     float opacity;
     bool clipping;

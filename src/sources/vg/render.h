@@ -468,32 +468,6 @@ NOVA_API void paint_destroy(paint_t* paint_);
 NOVA_API int paint_get_reference_count(const paint_t* paint_);
 
 /**
- * @brief Defines compositing operations.
- */
-enum class blend_mode : int {
-    clear,       ///< Clears the destination (resulting in a fully transparent image).
-    src,         ///< Source replaces destination.
-    dst,         ///< Destination is kept, source is ignored.
-    src_over,    ///< Source is composited over destination.
-    dst_over,    ///< Destination is composited over source.
-    src_in,      ///< Source within destination (only the overlapping part of source is shown).
-    dst_in,      ///< Destination within source.
-    src_out,     ///< Source outside destination (non-overlapping part of source is shown).
-    dst_out,     ///< Destination outside source.
-    src_atop,    ///< Source atop destination (source shown over destination but only in the destination's bounds).
-    dst_atop,    ///< Destination atop source (destination shown over source but only in the source's bounds).
-    exclusive_or,        ///< Source and destination are combined, but their overlapping regions are cleared.
-    // CSS blend modes (W3C Compositing and Blending): the source is blended with the backdrop's colour,
-    // then composited over it. Appended after the Porter-Duff operators; same order as the tables in blend.h.
-    multiply,    ///< Backdrop * source: darkens, white is neutral.
-    screen,      ///< Inverse of multiply: lightens, black is neutral.
-    darken,      ///< The darker of backdrop and source, per channel.
-    lighten,     ///< The lighter of backdrop and source, per channel.
-    difference,  ///< Absolute difference of backdrop and source, per channel.
-    exclusion    ///< Like difference, with lower contrast.
-};
-
-/**
  * @brief Represents a drawing context.
  */
 typedef struct canvas_context canvas_t;
@@ -781,24 +755,33 @@ NOVA_API void canvas_set_fill_rule(canvas_t* canvas, fill_rule winding);
 NOVA_API fill_rule canvas_get_fill_rule(const canvas_t* canvas);
 
 /**
- * @brief Sets the compositing operator.
+ * @brief Sets the compositing operator and blend mode.
  *
- * If not set, the default compositing operator is `blend_mode::src_over`.
+ * `op` is a Porter-Duff operator and `mode` how the colours mix (libstb's types; a blend mode other than `normal`
+ * with an operator other than `source_over` is allowed, see `stb::composite_row`). If not set, the default is
+ * `composite_op::source_over` with `blend_mode::normal`.
  *
  * @param canvas A pointer to a `canvas_t` object.
  * @param op The compositing operator.
+ * @param mode The blend mode.
  */
-NOVA_API void canvas_set_operator(canvas_t* canvas, blend_mode op);
+NOVA_API void canvas_set_operator(canvas_t* canvas, stb::composite_op op, stb::blend_mode mode = stb::blend_mode::normal);
 
 /**
  * @brief Retrieves the current compositing operator.
  *
- * If not set, the default compositing operator is `blend_mode::src_over`.
- *
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current compositing operator.
  */
-NOVA_API blend_mode canvas_get_operator(const canvas_t* canvas);
+NOVA_API stb::composite_op canvas_get_operator(const canvas_t* canvas);
+
+/**
+ * @brief Retrieves the current blend mode.
+ *
+ * @param canvas A pointer to a `canvas_t` object.
+ * @return The current blend mode.
+ */
+NOVA_API stb::blend_mode canvas_get_blend_mode(const canvas_t* canvas);
 
 /**
  * @brief Sets the global opacity.

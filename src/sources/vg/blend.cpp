@@ -190,55 +190,19 @@ void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values_t* v, 
     }
 }
 
-// vg::blend_mode is one value for a Porter-Duff operator or a CSS blend mode; libstb takes the two apart
-// (a blend mode is source_over with the colours mixed). Same order as the enum.
-namespace {
-struct composite {
-    stb::composite_op op;
-    stb::blend_mode mode;
-};
-
-composite composite_of(blend_mode op)
+void blend_solid(surface_t* surface, stb::composite_op op, stb::blend_mode mode, uint32_t solid, const span_buffer_t* span_buffer)
 {
-    static const composite table[] = {
-        {stb::composite_op::clear, stb::blend_mode::normal},
-        {stb::composite_op::source, stb::blend_mode::normal},
-        {stb::composite_op::destination, stb::blend_mode::normal},
-        {stb::composite_op::source_over, stb::blend_mode::normal},
-        {stb::composite_op::destination_over, stb::blend_mode::normal},
-        {stb::composite_op::source_in, stb::blend_mode::normal},
-        {stb::composite_op::destination_in, stb::blend_mode::normal},
-        {stb::composite_op::source_out, stb::blend_mode::normal},
-        {stb::composite_op::destination_out, stb::blend_mode::normal},
-        {stb::composite_op::source_atop, stb::blend_mode::normal},
-        {stb::composite_op::destination_atop, stb::blend_mode::normal},
-        {stb::composite_op::exclusive_or, stb::blend_mode::normal},
-        {stb::composite_op::source_over, stb::blend_mode::multiply},
-        {stb::composite_op::source_over, stb::blend_mode::screen},
-        {stb::composite_op::source_over, stb::blend_mode::darken},
-        {stb::composite_op::source_over, stb::blend_mode::lighten},
-        {stb::composite_op::source_over, stb::blend_mode::difference},
-        {stb::composite_op::source_over, stb::blend_mode::exclusion},
-    };
-    return table[static_cast<int>(op)];
-}
-} // namespace
-
-void blend_solid(surface_t* surface, blend_mode op, uint32_t solid, const span_buffer_t* span_buffer)
-{
-    const composite c = composite_of(op);
     int count = span_buffer->spans.size_;
     const stb::span* spans = span_buffer->spans.data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data() + size_t(spans->y) * surface->stride()) + spans->x;
-        stb::composite_solid_row(target, solid, size_t(spans->len), c.op, c.mode, uint8_t(spans->coverage));
+        stb::composite_solid_row(target, solid, size_t(spans->len), op, mode, uint8_t(spans->coverage));
         ++spans;
     }
 }
 
-void blend_linear_gradient(surface_t* surface, blend_mode op, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
+void blend_linear_gradient(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
 {
-    const composite c = composite_of(op);
     unsigned int buffer[BUFFER_SIZE];
 
     linear_gradient_values_t v;
@@ -261,7 +225,7 @@ void blend_linear_gradient(surface_t* surface, blend_mode op, const gradient_dat
             int l = STB_MIN(length_, BUFFER_SIZE);
             fetch_linear_gradient(buffer, &v, gradient, spans->y, x, l);
             uint32_t* target = (uint32_t*)(surface->data() + size_t(spans->y) * surface->stride()) + x;
-            stb::composite_row(target, buffer, size_t(l), c.op, c.mode, uint8_t(spans->coverage));
+            stb::composite_row(target, buffer, size_t(l), op, mode, uint8_t(spans->coverage));
             x += l;
             length_ -= l;
         }
@@ -270,9 +234,8 @@ void blend_linear_gradient(surface_t* surface, blend_mode op, const gradient_dat
     }
 }
 
-void blend_radial_gradient(surface_t* surface, blend_mode op, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
+void blend_radial_gradient(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
 {
-    const composite c = composite_of(op);
     unsigned int buffer[BUFFER_SIZE];
 
     radial_gradient_values_t v;
@@ -292,7 +255,7 @@ void blend_radial_gradient(surface_t* surface, blend_mode op, const gradient_dat
             int l = STB_MIN(length_, BUFFER_SIZE);
             fetch_radial_gradient(buffer, &v, gradient, spans->y, x, l);
             uint32_t* target = (uint32_t*)(surface->data() + size_t(spans->y) * surface->stride()) + x;
-            stb::composite_row(target, buffer, size_t(l), c.op, c.mode, uint8_t(spans->coverage));
+            stb::composite_row(target, buffer, size_t(l), op, mode, uint8_t(spans->coverage));
             x += l;
             length_ -= l;
         }
@@ -301,9 +264,8 @@ void blend_radial_gradient(surface_t* surface, blend_mode op, const gradient_dat
     }
 }
 
-void blend_untransformed_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_untransformed_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
-    const composite c = composite_of(op);
 
     const int image_width = texture->width;
     const int image_height = texture->height;
@@ -331,7 +293,7 @@ void blend_untransformed_argb(surface_t* surface, blend_mode op, const texture_d
                 const int coverage = (spans->coverage * texture->const_alpha) >> 8;
                 const uint32_t* src = (const uint32_t*)(texture->data + sy * texture->stride) + sx;
                 uint32_t* dest = (uint32_t*)(surface->data() + size_t(spans->y) * surface->stride()) + x;
-                stb::composite_row(dest, src, size_t(length_), c.op, c.mode, uint8_t(coverage));
+                stb::composite_row(dest, src, size_t(length_), op, mode, uint8_t(coverage));
             }
         }
 
@@ -339,9 +301,8 @@ void blend_untransformed_argb(surface_t* surface, blend_mode op, const texture_d
     }
 }
 
-void blend_transformed_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_transformed_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
-    const composite c = composite_of(op);
     uint32_t buffer[BUFFER_SIZE];
 
     int image_width = texture->width;
@@ -381,7 +342,7 @@ void blend_transformed_argb(surface_t* surface, blend_mode op, const texture_dat
                 ++b;
             }
 
-            stb::composite_row(target, buffer, size_t(l), c.op, c.mode, uint8_t(coverage));
+            stb::composite_row(target, buffer, size_t(l), op, mode, uint8_t(coverage));
             target += l;
             length_ -= l;
         }
@@ -390,9 +351,8 @@ void blend_transformed_argb(surface_t* surface, blend_mode op, const texture_dat
     }
 }
 
-void blend_untransformed_tiled_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_untransformed_tiled_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
-    const composite c = composite_of(op);
 
     int image_width = texture->width;
     int image_height = texture->height;
@@ -426,7 +386,7 @@ void blend_untransformed_tiled_argb(surface_t* surface, blend_mode op, const tex
                 l = BUFFER_SIZE;
             const uint32_t* src = (const uint32_t*)(texture->data + sy * texture->stride) + sx;
             uint32_t* dest = (uint32_t*)(surface->data() + size_t(spans->y) * surface->stride()) + x;
-            stb::composite_row(dest, src, size_t(l), c.op, c.mode, uint8_t(coverage));
+            stb::composite_row(dest, src, size_t(l), op, mode, uint8_t(coverage));
             x += l;
             sx += l;
             length_ -= l;
@@ -439,9 +399,8 @@ void blend_untransformed_tiled_argb(surface_t* surface, blend_mode op, const tex
     }
 }
 
-void blend_transformed_tiled_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_transformed_tiled_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
-    const composite c = composite_of(op);
     uint32_t buffer[BUFFER_SIZE];
 
     int image_width = texture->width;
@@ -487,7 +446,7 @@ void blend_transformed_tiled_argb(surface_t* surface, blend_mode op, const textu
                 ++b;
             }
 
-            stb::composite_row(target, buffer, size_t(l), c.op, c.mode, uint8_t(coverage));
+            stb::composite_row(target, buffer, size_t(l), op, mode, uint8_t(coverage));
             target += l;
             length_ -= l;
         }
@@ -505,9 +464,8 @@ uint32_t interpolate_4_pixels(uint32_t tl, uint32_t tr, uint32_t bl, uint32_t br
     return INTERPOLATE_PIXEL_256(xtop, idisty, xbot, disty);
 }
 
-void blend_transformed_bilinear_tiled_argb(surface_t* surface, blend_mode op, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_transformed_bilinear_tiled_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const span_buffer_t* span_buffer)
 {
-    const composite c = composite_of(op);
     uint32_t buffer[BUFFER_SIZE];
 
     int image_width = texture->width;
@@ -563,7 +521,7 @@ void blend_transformed_bilinear_tiled_argb(surface_t* surface, blend_mode op, co
                 ++b;
             }
 
-            stb::composite_row(target, buffer, size_t(l), c.op, c.mode, uint8_t(coverage));
+            stb::composite_row(target, buffer, size_t(l), op, mode, uint8_t(coverage));
             target += l;
             length_ -= l;
         }
@@ -578,10 +536,10 @@ void blend_color(canvas_t* canvas, const stb::color* color_, const span_buffer_t
     uint32_t solid = premultiply_color_with_opacity(color_, state->opacity);
     uint32_t alpha = novasvg_alpha(solid);
 
-    if(alpha == 255 && state->op == blend_mode::src_over) {
-        blend_solid(canvas->surface.get(), blend_mode::src, solid, span_buffer);
+    if(alpha == 255 && state->op == stb::composite_op::source_over && state->mode == stb::blend_mode::normal) {
+        blend_solid(canvas->surface.get(), stb::composite_op::source, stb::blend_mode::normal, solid, span_buffer);
     } else {
-        blend_solid(canvas->surface.get(), state->op, solid, span_buffer);
+        blend_solid(canvas->surface.get(), state->op, state->mode, solid, span_buffer);
     }
 }
 
@@ -649,7 +607,7 @@ void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const sp
         data.values.linear.y1 = gradient->values[1];
         data.values.linear.x2 = gradient->values[2];
         data.values.linear.y2 = gradient->values[3];
-        blend_linear_gradient(canvas->surface.get(), state->op, &data, span_buffer);
+        blend_linear_gradient(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
     } else {
         data.values.radial.cx = gradient->values[0];
         data.values.radial.cy = gradient->values[1];
@@ -657,7 +615,7 @@ void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const sp
         data.values.radial.fx = gradient->values[3];
         data.values.radial.fy = gradient->values[4];
         data.values.radial.fr = gradient->values[5];
-        blend_radial_gradient(canvas->surface.get(), state->op, &data, span_buffer);
+        blend_radial_gradient(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
     }
 }
 
@@ -682,17 +640,17 @@ void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_
     const stb::matrix* matrix = &data.matrix;
     if(matrix->a == 1 && matrix->b == 0 && matrix->c == 0 && matrix->d == 1) {
         if(texture->type_ == texture_type::plain) {
-            blend_untransformed_argb(canvas->surface.get(), state->op, &data, span_buffer);
+            blend_untransformed_argb(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
         } else {
-            blend_untransformed_tiled_argb(canvas->surface.get(), state->op, &data, span_buffer);
+            blend_untransformed_tiled_argb(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
         }
     } else {
         if(texture->type_ == texture_type::plain) {
-            blend_transformed_argb(canvas->surface.get(), state->op, &data, span_buffer);
+            blend_transformed_argb(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
         } else if(fabsf(matrix->b) > 1e-6f || fabsf(matrix->c) > 1e-6f) {
-            blend_transformed_bilinear_tiled_argb(canvas->surface.get(), state->op, &data, span_buffer);
+            blend_transformed_bilinear_tiled_argb(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
         } else {
-            blend_transformed_tiled_argb(canvas->surface.get(), state->op, &data, span_buffer);
+            blend_transformed_tiled_argb(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
         }
     }
 }

@@ -493,10 +493,17 @@ float font_face_data::text_extents(float size_, const void* text, int length_, t
 }
 
 // One face of a family: either loaded already (`face` holds one reference) or only known by its file, loaded on first use.
-struct font_face_entry {
+// The face itself, loaded on first use. A face listed under two family names (the typographic one and the legacy one)
+// has two entries and one slot, so it is loaded once and its glyph cache is shared.
+struct font_face_slot {
     font_face_data* face = nullptr;
     std::string filename;   // empty for a face that was added directly
     int ttcindex = 0;
+    ~font_face_slot() { font_face_data::release(face); }
+};
+
+struct font_face_entry {
+    std::shared_ptr<font_face_slot> slot;
     bool bold = false;
     bool italic = false;
     int weight = 400;       // OS/2 usWeightClass
@@ -538,9 +545,6 @@ int font_face_cache_reference_count(const font_face_cache_t* cache)
 void font_face_cache_reset(font_face_cache_t* cache)
 {
     std::lock_guard<std::mutex> lock(cache->mutex);
-    for(auto& family : cache->families)
-        for(font_face_entry& entry : family.second)
-            font_face_data::release(entry.face);
     cache->families.clear();
 }
 
@@ -553,7 +557,8 @@ static void font_face_cache_add_entry(font_face_cache_t* cache, const std::strin
 void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold, bool italic, font_face_data* face)
 {
     font_face_entry entry;
-    entry.face = font_face_data::reference(face);
+    entry.slot = std::make_shared<font_face_slot>();
+    entry.slot->face = font_face_data::reference(face);
     entry.bold = bold;
     entry.italic = italic;
     entry.weight = bold ? 700 : 400;
@@ -602,9 +607,10 @@ font_face_data* font_face_cache_get(font_face_cache_t* cache, const char* family
             selected = &faces[i];
     }
 
-    if(!selected->filename.empty() && selected->face == NULL)
-        selected->face = font_face_data::load_from_file(selected->filename.c_str(), selected->ttcindex);
-    return selected->face;
+    font_face_slot& slot = *selected->slot;
+    if(!slot.filename.empty() && slot.face == NULL)
+        slot.face = font_face_data::load_from_file(slot.filename.c_str(), slot.ttcindex);
+    return slot.face;
 }
 
 #ifndef NOVA_DISABLE_FONT_FACE_CACHE_LOAD
@@ -614,8 +620,9 @@ font_face_data* font_face_cache_get(font_face_cache_t* cache, const char* family
 static int font_face_cache_add_found(font_face_cache_t* cache, const std::filesystem::path& path, const stb::font_face_info& info)
 {
     font_face_entry entry;
-    entry.filename = path.string();
-    entry.ttcindex = info.index;
+    entry.slot = std::make_shared<font_face_slot>();
+    entry.slot->filename = path.string();
+    entry.slot->ttcindex = info.index;
     entry.bold = info.bold;
     entry.italic = info.italic;
     entry.weight = info.weight;

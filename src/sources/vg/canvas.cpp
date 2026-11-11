@@ -29,7 +29,8 @@ static state_t* state_create(void)
     state->stroke = NOVA_DEFAULT_STROKE_STYLE;
     span_buffer_init(&state->clip_spans);
     state->winding = fill_rule::non_zero;
-    state->op = blend_mode::src_over;
+    state->op = stb::composite_op::source_over;
+    state->mode = stb::blend_mode::normal;
     state->font_size = 12.f;
     state->opacity = 1.f;
     state->clipping = false;
@@ -48,7 +49,8 @@ static void state_reset(state_t* state)
     state->stroke = NOVA_DEFAULT_STROKE_STYLE;
     span_buffer_reset(&state->clip_spans);
     state->winding = fill_rule::non_zero;
-    state->op = blend_mode::src_over;
+    state->op = stb::composite_op::source_over;
+    state->mode = stb::blend_mode::normal;
     state->font_size = 12.f;
     state->opacity = 1.f;
     state->clipping = false;
@@ -64,6 +66,7 @@ static void state_copy(state_t* state, const state_t* source)
     span_buffer_copy(&state->clip_spans, &source->clip_spans);
     state->winding = source->winding;
     state->op = source->op;
+    state->mode = source->mode;
     state->font_size = source->font_size;
     state->opacity = source->opacity;
     state->clipping = source->clipping;
@@ -282,14 +285,20 @@ fill_rule canvas_get_fill_rule(const canvas_t* canvas)
     return canvas->state->winding;
 }
 
-void canvas_set_operator(canvas_t* canvas, blend_mode op)
+void canvas_set_operator(canvas_t* canvas, stb::composite_op op, stb::blend_mode mode)
 {
     canvas->state->op = op;
+    canvas->state->mode = mode;
 }
 
-blend_mode canvas_get_operator(const canvas_t* canvas)
+stb::composite_op canvas_get_operator(const canvas_t* canvas)
 {
     return canvas->state->op;
+}
+
+stb::blend_mode canvas_get_blend_mode(const canvas_t* canvas)
+{
+    return canvas->state->mode;
 }
 
 void canvas_set_opacity(canvas_t* canvas, float opacity)

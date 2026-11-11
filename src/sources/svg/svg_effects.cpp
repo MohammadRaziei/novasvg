@@ -124,7 +124,7 @@ void svg_clip_path_element::apply_clip_mask(svg_render_state& state) const
         clipper()->apply_clip_mask(new_state);
     }
 
-    state.raster()->blend_canvas(*mask_image, blend_mode::dst_in, 1.f);
+    state.raster()->blend_canvas(*mask_image, stb::composite_op::destination_in, stb::blend_mode::normal, 1.f);
 }
 
 void svg_clip_path_element::apply_clip_path(svg_render_state& state) const
@@ -264,7 +264,7 @@ void svg_mask_element::apply_mask(svg_render_state& state) const
 
     if(m_mask_type == css_mask_type::luminance)
         mask_image->convert_to_luminance_mask();
-    state.raster()->blend_canvas(*mask_image, blend_mode::dst_in, 1.f);
+    state.raster()->blend_canvas(*mask_image, stb::composite_op::destination_in, stb::blend_mode::normal, 1.f);
 }
 
 svg_filter_element::svg_filter_element(document* dom)

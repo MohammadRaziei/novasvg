@@ -24,7 +24,7 @@ public:
     const stb::color& stop_color() const { return m_stop_color; }
 
     float opacity() const { return m_opacity; }
-    css_mix_blend_mode mix_blend_mode() const { return m_mix_blend_mode; }
+    stb::blend_mode mix_blend_mode() const { return m_mix_blend_mode; }
     float stop_opacity() const { return m_stop_opacity; }
     float fill_opacity() const { return m_fill_opacity; }
     float stroke_opacity() const { return m_stroke_opacity; }
@@ -84,7 +84,7 @@ private:
     stb::color m_stop_color = stb::color::black();
 
     float m_opacity = 1.f;
-    css_mix_blend_mode m_mix_blend_mode = css_mix_blend_mode::normal; // like opacity: not inherited
+    stb::blend_mode m_mix_blend_mode = stb::blend_mode::normal; // like opacity: not inherited
     float m_fill_opacity = 1.f;
     float m_stroke_opacity = 1.f;
     float m_stop_opacity = 1.f;

@@ -16,7 +16,7 @@ svg_blend_info::svg_blend_info(const svg_element* el)
 
 bool svg_blend_info::requires_compositing(svg_render_mode mode) const
 {
-    return (m_clipper && m_clipper->requires_masking()) || (mode == svg_render_mode::painting && (m_masker || m_filter || m_opacity < 1.f || m_mix_blend_mode != css_mix_blend_mode::normal));
+    return (m_clipper && m_clipper->requires_masking()) || (mode == svg_render_mode::painting && (m_masker || m_filter || m_opacity < 1.f || m_mix_blend_mode != stb::blend_mode::normal));
 }
 
 bool svg_render_state::has_cycle_reference(const svg_element* el) const
@@ -83,18 +83,7 @@ void svg_render_state::end_group(const svg_blend_info& blend_info)
     }
 
     // the finished group is blended into what is already painted under it, with its mix-blend-mode
-    blend_mode blend_mode_ = blend_mode::src_over;
-    if(m_mode == svg_render_mode::painting) {
-        switch(blend_info.mix_blend_mode()) {
-        case css_mix_blend_mode::multiply: blend_mode_ = blend_mode::multiply; break;
-        case css_mix_blend_mode::screen: blend_mode_ = blend_mode::screen; break;
-        case css_mix_blend_mode::darken: blend_mode_ = blend_mode::darken; break;
-        case css_mix_blend_mode::lighten: blend_mode_ = blend_mode::lighten; break;
-        case css_mix_blend_mode::difference: blend_mode_ = blend_mode::difference; break;
-        case css_mix_blend_mode::exclusion: blend_mode_ = blend_mode::exclusion; break;
-        case css_mix_blend_mode::normal: break;
-        }
-    }
+    const stb::blend_mode blend_mode_ = m_mode == svg_render_mode::painting ? blend_info.mix_blend_mode() : stb::blend_mode::normal;
 
     auto opacity = m_mode == svg_render_mode::clipping ? 1.f : blend_info.opacity();
     if(m_layer == layer_kind::pdf_group) {
@@ -120,7 +109,7 @@ void svg_render_state::end_group(const svg_blend_info& blend_info)
         return;
     }
 
-    static_cast<raster_canvas&>(*m_parent->m_canvas).blend_canvas(static_cast<raster_canvas&>(*m_canvas), blend_mode_, opacity);
+    static_cast<raster_canvas&>(*m_parent->m_canvas).blend_canvas(static_cast<raster_canvas&>(*m_canvas), stb::composite_op::source_over, blend_mode_, opacity);
 }
 
 svg_paint_element::svg_paint_element(document* dom, element_id id)

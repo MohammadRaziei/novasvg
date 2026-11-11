@@ -392,7 +392,7 @@ public:
     void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) override;
 
     void draw_image(const pixmap& image, const rect& dst_rect, const rect& src_rect, const transform& transform_) override;
-    void blend_canvas(const raster_canvas& canvas, blend_mode blend_mode_, float opacity);
+    void blend_canvas(const raster_canvas& canvas, stb::composite_op op, stb::blend_mode mode, float opacity);
 
     void save() override;
     void restore() override;

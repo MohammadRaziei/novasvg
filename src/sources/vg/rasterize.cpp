@@ -169,34 +169,6 @@ void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, c
     }
 }
 
-namespace {
-
-// The rasterizer takes cubics only: a quadratic is raised to a cubic exactly as the C API's path_quad_to did.
-stb::outline cubics_only(const stb::outline& in)
-{
-    stb::outline out;
-    stb::point cur{0.f, 0.f}, start{0.f, 0.f};
-    for(const stb::outline_command& c : in) {
-        switch(c.op) {
-        case stb::outline_op::move_to:
-            out.move_to(c.p[0].x, c.p[0].y); cur = start = c.p[0]; break;
-        case stb::outline_op::line_to:
-            out.line_to(c.p[0].x, c.p[0].y); cur = c.p[0]; break;
-        case stb::outline_op::quad_to:
-            out.cubic_to(2.f / 3.f * c.p[0].x + 1.f / 3.f * cur.x, 2.f / 3.f * c.p[0].y + 1.f / 3.f * cur.y,
-                         2.f / 3.f * c.p[0].x + 1.f / 3.f * c.p[1].x, 2.f / 3.f * c.p[0].y + 1.f / 3.f * c.p[1].y, c.p[1].x, c.p[1].y);
-            cur = c.p[1]; break;
-        case stb::outline_op::cubic_to:
-            out.cubic_to(c.p[0].x, c.p[0].y, c.p[1].x, c.p[1].y, c.p[2].x, c.p[2].y); cur = c.p[2]; break;
-        case stb::outline_op::close:
-            out.close(); cur = start; break;
-        }
-    }
-    return out;
-}
-
-} // namespace
-
 void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const stb::matrix* matrix, const rect_t* clip_rect, const stb::stroke_style* stroke_, fill_rule winding)
 {
     span_buffer_reset(span_buffer);
@@ -226,7 +198,7 @@ void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const stb:
         span_buffer->spans.size_ += count;
     };
 
-    const stb::outline outline = cubics_only(path_);
+    const stb::outline& outline = path_;
     if(stroke_) {
         stb::rasterize_stroke(outline, *stroke_, m, clip, sink);
     } else {

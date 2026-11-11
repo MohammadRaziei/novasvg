@@ -2,6 +2,7 @@
 
 ### Changed
 
+- **Dead code out of `rasterize()`**: `cubics_only` (quadratics raised to cubics before libstb's rasterizer, which converts them itself); golden images identical.
 - **Row compositing and font discovery come from libstb** (libstb issues 10 and 11). The Porter-Duff operators and CSS
   blend modes on rows of premultiplied pixels are `stb::composite_row` / `stb::composite_solid_row` (about 280 lines of
   `blend.{h,cpp}` and the hand-written SSE2 fill are gone; gradient and texture sampling stay). The font cache lists
