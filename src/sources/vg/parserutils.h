@@ -40,13 +40,19 @@ constexpr bool skip_optional_spaces(std::string_view& input)
     return !input.empty();
 }
 
-constexpr bool skip_optional_spaces_or_delimiter(std::string_view& input, char delimiter)
+// Spaces, then at most one delimiter, then spaces. False when nothing is left or nothing was skipped; `has_delimiter`
+// (if given) says whether the delimiter itself was there.
+constexpr bool skip_optional_spaces_or_delimiter(std::string_view& input, char delimiter, bool* has_delimiter = nullptr)
 {
+    if(has_delimiter)
+        *has_delimiter = false;
     if(!input.empty() && !IS_WS(input.front()) && delimiter != input.front())
         return false;
     if(skip_optional_spaces(input)) {
         if(delimiter == input.front()) {
             input.remove_prefix(1);
+            if(has_delimiter)
+                *has_delimiter = true;
             skip_optional_spaces(input);
         }
     }
@@ -54,9 +60,9 @@ constexpr bool skip_optional_spaces_or_delimiter(std::string_view& input, char d
     return !input.empty();
 }
 
-constexpr bool skip_optional_spaces_or_comma(std::string_view& input)
+constexpr bool skip_optional_spaces_or_comma(std::string_view& input, bool* has_comma = nullptr)
 {
-    return skip_optional_spaces_or_delimiter(input, ',');
+    return skip_optional_spaces_or_delimiter(input, ',', has_comma);
 }
 
 constexpr bool skip_delimiter_and_optional_spaces(std::string_view& input, char delimiter)
@@ -144,7 +150,7 @@ inline bool parse_integer(std::string_view& input, T& integer, int base = 10)
 }
 
 template<typename T>
-inline bool parse_number(std::string_view& input, T& number)
+inline bool parse_number_unchecked(std::string_view& input, T& number)
 {
     constexpr T max_value = std::numeric_limits<T>::max();
     T integer = 0;
@@ -205,6 +211,20 @@ inline bool parse_number(std::string_view& input, T& number)
     if(exponent)
         number *= static_cast<T>(std::pow(10.0, expsign * exponent));
     return number >= -max_value && number <= max_value;
+}
+
+// The number at the start of `input` (SVG number syntax, an exponent only when no CSS unit starts with the e). On failure
+// `input` and `number` are as they were.
+template<typename T>
+inline bool parse_number(std::string_view& input, T& number)
+{
+    std::string_view rest = input;
+    T value = 0;
+    if(!parse_number_unchecked(rest, value))
+        return false;
+    input = rest;
+    number = value;
+    return true;
 }
 
 } // namespace nova::vg

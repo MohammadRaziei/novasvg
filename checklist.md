@@ -437,31 +437,28 @@
   یه الگوی استانداردِ پورتیبله (capture-less lambda به function pointer)، ولی تاییدِ قطعی با
   یه اجرای دیگه‌ی CI به دست میاد.
 
-## نشست ۵ نوامبر ۲۰۲۶ — وضعیت ریفکتور (برای چت بعدی)
+## نشست ۱۳ نوامبر ۲۰۲۶ — وضعیت ریفکتور (برای چت بعدی)
 
-> جزئیات کامل: `refactor/handoff.md` (انگلیسی) و `REFACTOR_CHECKLIST.md`، بخش «Next, in this order». این بخش فقط خلاصه‌ی فارسی است.
-> بخش‌های بالاتر این فایل بیشترش مربوط به قبل از ریفکتور است و عمداً دست نخورد (مثلاً `detail/svgelement.h` الان `src/sources/svg/svgelement.h` است).
-
-### انجام‌شده
-- [x] فونت‌ها روی `stb::font` (فایل ۶۲۶۶ خطیِ `font_impl.h` حذف شد؛ جایش `src/sources/vg/font_face.cpp`)
-- [x] هدرهای خصوصی gfx از `include/` رفتند به `src/sources/vg/`
-- [x] rasterizer و stroker از libstb؛ پوشه‌ی `src/sources/vg/vendor/` (پورت FreeType) حذف شد
-- [x] `pdf_canvas` و `document::render_to_pdf` / `save_pdf` با دو حالت `pdf_mode::vector` و `pdf_mode::raster`
-- [x] تصمیم نام‌گذاری: `nova::svg` و `nova::vg` (ADR-0009)
+### انجام‌شده (گام ۳۹ و ۴۰)
+- [x] libstb: همه‌ی issueهای `refactor/libstb-issues.md` (۱ تا ۱۴) داخل libstb هستن و novasvg ازشون استفاده می‌کنه. دیگه issue نمی‌نویسیم: چیز عمومی که کم باشه مستقیم توی libstb پیاده می‌شه و novasvg بهش سوییچ می‌کنه.
+- [x] `blend.{h,cpp}`: کد Porter-Duff و blend mode ردیفی رفت (`stb::composite_row`/`composite_solid_row`، SSE2/AVX2)؛ فقط sampling گرادیان و بافت مونده. `vg::blend_mode` و `css_mix_blend_mode` حذف شدن: state کانواس `stb::composite_op op` + `stb::blend_mode mode` دارد، PDF فقط `stb::blend_mode` می‌گیره.
+- [x] `font_face.cpp`: خواننده‌ی sfnt (حدود ۲۶۰ خط) رفت؛ cache با `font::scan`/`system_fonts` پر می‌شه، هر face با اسم typographic و اسم قدیمی ثبت می‌شه و یک‌بار load می‌شه، انتخاب با bold/italic، بعد عرض، بعد وزن. `font_face(std::vector<uint8_t>&&)` برای بایت‌های فونت (data URI و فونت داخلی).
+- [x] `span_buffer_t` و ماکروهای `novasvg_array_*` رفتن: `stb::span_set` (clip/mask). `cubics_only` حذف شد (کد مرده).
+- [x] `base64_decode` رفت: `stb::try_base64_decode` (دیکد «forgiving» مرورگرها). `pixmap`: `clear` = `fill`، `pixmap_release_to_image` = `into_image() &&` بدون کپی وقتی سطح مال خودشه.
+- [x] `utils.cpp` پاک شد: یک parser عدد/فاصله می‌مونه (`parserutils.h`)، و `parse_number` تراکنشی شد (روی شکست ورودی دست‌نخورده). `matrix.cpp` و `outline_util.cpp` رو string_view هستن. تست تفاضلی با کد قدیمی روی ۱ میلیون ورودی تصادفی: تنها تفاوت `em`/`ex` که حالا همیشه رد می‌شه (قبلاً فقط اتفاقی).
+- gate: C++ ۱۰۰ تست / ۲۳۵۲ assertion، فونت ۸۴، ctest ۴/۴، golden ۶۷ تصویر با تلرانس صفر بدون تفاوت.
 
 ### قدم بعدی، به ترتیب
-- [ ] **گیت کامل** (از اول نشست ۳ هیچ‌وقت زده نشده، فقط کامپایل و smoke تست PDF): تست‌های C++، تست فونت، لینک libstb، و golden روی ۶۷ تصویر با tolerance صفر
-- [ ] Step 5b: نوع‌های `Path/Transform/Rect/stb::color/Bitmap` خودمان را با نوع‌های `stb::` عوض کنیم
+- [ ] ماژول Python: `src/bindings/python/binding.cpp` با API فعلی کامپایل نمی‌شه (`font_face_cache_()`، `vg::font`)؛ بازنویسی، build و اجرای تست‌های Python (از جمله `test_mix_blend_mode.py`)
+- [ ] `overlay` برای `mix-blend-mode` (libstb دارد؛ golden `golden-blend-modes.svg` فعلاً overlay را normal ثبت کرده، پس با re-baseline)
+- [ ] کوچک کردن `font_face`/`font_face_data` (لایه‌ی نازک روی `stb::font`)
+- [ ] گرادیان و بافت به‌عنوان paint در `paint.cpp`/`raster_canvas.cpp` (کار خودِ ما؛ `stb/raster.hpp` عمداً coverage span می‌دهد)
 - [ ] شکستن `svgelement.{h,cpp}` (حدود ۴۲۰۰ خط)، حذف `NOVA_INLINE`، API عمومی اندازه‌گیری متن
-- [ ] یک مرحله‌ی اسکریپتی: namespace (`nova::svg` / `nova::vg`) + جابه‌جایی پوشه‌ها + rename به `snake_case` (`FillRule::NonZero` → `fill_rule::non_zero` و غیره) + target جدای CMake برای `nova::vg`
-- [ ] لایه‌ها (`begin_layer`، pattern، mask) به‌صورت virtual در `canvas`؛ بهبودهای PDF (mask برداری، gradient با reflect/repeat، alpha هر stop، embed فونت، چندصفحه)
-- [ ] پایتون را دوباره روشن کنیم (فعلاً OFF)، بعد Step 7 (README، Doxygen، CI، wheel) و پاک‌سازی `refactor/`
+- [ ] یک مرحله‌ی اسکریپتی: namespace + جابه‌جایی پوشه‌ها + rename به `snake_case` + target جدای CMake برای `nova::vg`
+- [ ] لایه‌ها (`begin_layer`، pattern، mask) به‌صورت virtual در `canvas`؛ بهبودهای PDF
+- [ ] Step 7 (README، Doxygen، CI، wheel) و پاک‌سازی `refactor/`
+- ASAN با `ASAN_OPTIONS=detect_odr_violation=0` اجرا می‌شه (`std::_Sp_make_shared_tag` هم توی exe هست هم توی libstb.so: false positive شناخته‌شده).
 
 ### یادآوری روش کار
-- جسورانه برو؛ تست وسط کار نه، گیت آخرِ ریفکتور. بعد از هر مرحله zip بفرست، هیچ‌وقت push نکن.
-- issue برای libstb فقط وقتی واقعاً در رسالت خودش است، وگرنه خودت در novasvg انجام بده.
-
-### جلوتر از ADR-0011 (بعد از گام ۲ و ۳)
-- [ ] **libstb issue ۵** (پیش‌نویس در `refactor/handoff.md` بخش ۷): عملگرهای Porter-Duff و `exclusion` روی `stb::image`. کارِ libstb است، چون خودش `blend_mode` و `composite` را دارد. تا وقتی نیامده، `blend.{h,cpp}` و `blend_mode` در `vg` می‌مانند. وقتی آمد: آن‌ها را حذف کن و به `stb::composite_op` برو.
-- [ ] **کار خودِ ما (نه libstb):** گرادیان، pattern و mask به‌عنوان paint؛ چون `stb/raster.hpp` عمداً coverage span می‌دهد و ترکیبشان را به صاحب‌کار می‌سپارد. در `paint.cpp` و `raster_canvas.cpp` می‌مانند.
-- [ ] اسم `vg::blend_mode` با `stb::blend_mode` یکی است ولی مجموعه‌ی دیگری دارد؛ تا آمدن libstb issue ۵ تصمیم بگیر بماند یا `composite_op` شود.
+- جسورانه برو؛ تست وسط کار نه، گیت آخرِ ریفکتور. بعد از هر مرحله هر پروژه‌ای که عوض شد zip بفرست، هیچ‌وقت push نکن.
+- هر دو پروژه (novasvg و libstb) و `handoff.md`/`checklist.md` هر دو دست خودمه؛ در libstb از `STB_MIN`/`STB_MAX` استفاده کن، نه `std::min`/`std::max`.

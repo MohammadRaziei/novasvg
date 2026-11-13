@@ -121,6 +121,9 @@ public:
 
     /**
      * @brief Converts the bitmap pixel data from ARGB32 Premultiplied to RGBA Plain format in place.
+     *
+     * For a pixmap over caller-owned memory that should end up as straight RGBA (stb::premultiplied_argb_to_rgba with the
+     * same buffer as source and destination); the pixmap should not be drawn into afterwards.
      */
     void convert_to_rgba();
 
@@ -162,17 +165,15 @@ private:
 
 // pixmap is internal. Its pixels are premultiplied ARGB32 because that is what the rasterizer draws in and
 // what canvas_set_texture samples (<image>, patterns): both need premultiplied alpha for `over` to be correct.
-// The public pixel type is stb::image (straight RGBA); these two functions are the boundary.
+// The public pixel type is stb::image (straight RGBA); pixmap_release_to_image and pixmap_from_image are the boundary.
 
-// A straight-alpha RGBA copy of `bitmap` (one conversion pass, out of place). Works for any stride: a pixmap
-// over caller-owned memory may be wider than width * 4, an image never is.
-
-// The same image without a copy: the bitmap's own buffer is converted in place and the image keeps the
-// bitmap alive. This is what render() hands to callers. A bitmap whose rows are padded (stride > width * 4)
-// cannot be wrapped (stb::image has no stride), so that case takes the copying path above.
+// A straight-alpha RGBA copy of `bitmap` (the pixmap itself is left alone). Works for any stride: a pixmap over
+// caller-owned memory may be wider than width * 4, an image never is.
 stb::image bitmap_to_rgba_image(const pixmap& bitmap);
 // The other direction: `image` premultiplied into a new pixmap. Empty, or a side of 32768 or more, gives a null pixmap.
 pixmap pixmap_from_image(const stb::image& image);
+// The bitmap as a straight RGBA image, taking it over: when nothing else holds its pixels they are converted in place
+// and become the image (no copy: this is what render() hands to callers), otherwise they are copied.
 stb::image pixmap_release_to_image(pixmap&& bitmap);
 
 } // namespace nova::vg

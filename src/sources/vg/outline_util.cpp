@@ -1,28 +1,32 @@
 // What the engine needs on top of stb::outline: SVG path data and a walker over the commands. See canvas.h.
 
 #include "canvas.h"
+#include "parserutils.h"
 #include "utils.h"
+
+#include <cstring>
+#include <string_view>
 
 namespace nova::vg {
 
-static bool parse_arc_flag(const char** begin, const char* end, bool* flag)
+static bool parse_arc_flag(std::string_view& input, bool* flag)
 {
-    if(skip_delim(begin, end, '0'))
+    if(skip_delimiter(input, '0'))
         *flag = 0;
-    else if(skip_delim(begin, end, '1'))
+    else if(skip_delimiter(input, '1'))
         *flag = 1;
     else
         return false;
-    skip_ws_or_comma(begin, end, NULL);
+    skip_optional_spaces_or_comma(input);
     return true;
 }
 
-static bool parse_path_coordinates(const char** begin, const char* end, float values[6], int offset, int count)
+static bool parse_path_coordinates(std::string_view& input, float values[6], int offset, int count)
 {
     for(int i = 0; i < count; i++) {
-        if(!parse_number(begin, end, values + offset + i))
+        if(!parse_number(input, values[offset + i]))
             return false;
-        skip_ws_or_comma(begin, end, NULL);
+        skip_optional_spaces_or_comma(input);
     }
 
     return true;
@@ -30,10 +34,7 @@ static bool parse_path_coordinates(const char** begin, const char* end, float va
 
 static bool parse_svg_path(stb::outline& path_, const char* data, int length_)
 {
-    if(length_ == -1)
-        length_ = strlen(data);
-    const char* it = data;
-    const char* end = it + length_;
+    std::string_view input(data, length_ == -1 ? strlen(data) : size_t(length_));
 
     float values[6];
     bool flags[2];
@@ -47,17 +48,18 @@ static bool parse_svg_path(stb::outline& path_, const char* data, int length_)
 
     char command = 0;
     char last_command = 0;
-    skip_ws(&it, end);
-    while(it < end) {
-        if(NOVA_IS_ALPHA(*it)) {
-            command = *it++;
-            skip_ws(&it, end);
+    skip_optional_spaces(input);
+    while(!input.empty()) {
+        if(IS_ALPHA(input.front())) {
+            command = input.front();
+            input.remove_prefix(1);
+            skip_optional_spaces(input);
         }
 
         if(!last_command && !(command == 'M' || command == 'm'))
             return false;
         if(command == 'M' || command == 'm') {
-            if(!parse_path_coordinates(&it, end, values, 0, 2))
+            if(!parse_path_coordinates(input, values, 0, 2))
                 return false;
             if(command == 'm') {
                 values[0] += current_x;
@@ -69,7 +71,7 @@ static bool parse_svg_path(stb::outline& path_, const char* data, int length_)
             current_y = start_y = values[1];
             command = command == 'm' ? 'l' : 'L';
         } else if(command == 'L' || command == 'l') {
-            if(!parse_path_coordinates(&it, end, values, 0, 2))
+            if(!parse_path_coordinates(input, values, 0, 2))
                 return false;
             if(command == 'l') {
                 values[0] += current_x;
@@ -80,7 +82,7 @@ static bool parse_svg_path(stb::outline& path_, const char* data, int length_)
             current_x = values[0];
             current_y = values[1];
         } else if(command == 'H' || command == 'h') {
-            if(!parse_path_coordinates(&it, end, values, 0, 1))
+            if(!parse_path_coordinates(input, values, 0, 1))
                 return false;
             if(command == 'h') {
                 values[0] += current_x;
@@ -89,7 +91,7 @@ static bool parse_svg_path(stb::outline& path_, const char* data, int length_)
             path_.line_to(values[0], current_y);
             current_x = values[0];
         } else if(command == 'V' || command == 'v') {
-            if(!parse_path_coordinates(&it, end, values, 1, 1))
+            if(!parse_path_coordinates(input, values, 1, 1))
                 return false;
             if(command == 'v') {
                 values[1] += current_y;
@@ -98,7 +100,7 @@ static bool parse_svg_path(stb::outline& path_, const char* data, int length_)
             path_.line_to(current_x, values[1]);
             current_y = values[1];
         } else if(command == 'Q' || command == 'q') {
-            if(!parse_path_coordinates(&it, end, values, 0, 4))
+            if(!parse_path_coordinates(input, values, 0, 4))
                 return false;
             if(command == 'q') {
                 values[0] += current_x;
@@ -113,7 +115,7 @@ static bool parse_svg_path(stb::outline& path_, const char* data, int length_)
             current_x = values[2];
             current_y = values[3];
         } else if(command == 'C' || command == 'c') {
-            if(!parse_path_coordinates(&it, end, values, 0, 6))
+            if(!parse_path_coordinates(input, values, 0, 6))
                 return false;
             if(command == 'c') {
                 values[0] += current_x;
@@ -138,7 +140,7 @@ static bool parse_svg_path(stb::outline& path_, const char* data, int length_)
                 values[1] = 2 * current_y - last_control_y;
             }
 
-            if(!parse_path_coordinates(&it, end, values, 2, 2))
+            if(!parse_path_coordinates(input, values, 2, 2))
                 return false;
             if(command == 't') {
                 values[2] += current_x;
@@ -159,7 +161,7 @@ static bool parse_svg_path(stb::outline& path_, const char* data, int length_)
                 values[1] = 2 * current_y - last_control_y;
             }
 
-            if(!parse_path_coordinates(&it, end, values, 2, 4))
+            if(!parse_path_coordinates(input, values, 2, 4))
                 return false;
             if(command == 's') {
                 values[2] += current_x;
@@ -174,10 +176,10 @@ static bool parse_svg_path(stb::outline& path_, const char* data, int length_)
             current_x = values[4];
             current_y = values[5];
         } else if(command == 'A' || command == 'a') {
-            if(!parse_path_coordinates(&it, end, values, 0, 3)
-                || !parse_arc_flag(&it, end, &flags[0])
-                || !parse_arc_flag(&it, end, &flags[1])
-                || !parse_path_coordinates(&it, end, values, 3, 2)) {
+            if(!parse_path_coordinates(input, values, 0, 3)
+                || !parse_arc_flag(input, &flags[0])
+                || !parse_arc_flag(input, &flags[1])
+                || !parse_path_coordinates(input, values, 3, 2)) {
                 return false;
             }
 

@@ -59,26 +59,13 @@ typedef struct {
     std::shared_ptr<surface_t> surface;  // constructed in place: the paint is malloc'd
 } texture_paint_t;
 
-typedef struct {
-    struct {
-        stb::span* data;
-        int size_;
-        int capacity;
-    } spans;
-
-    int x;
-    int y;
-    int w;
-    int h;
-} span_buffer_t;
-
 typedef struct state {
     paint_t* paint_;
     font_face_data* font_face_;
     stb::color color_;
     stb::matrix matrix;
     stb::stroke_style stroke;
-    span_buffer_t clip_spans;
+    stb::span_set clip_spans;
     fill_rule winding;
     stb::composite_op op;
     stb::blend_mode mode;
@@ -96,21 +83,13 @@ struct canvas_context {
     state_t* freed_state;
     font_face_cache_t* face_cache;
     rect_t clip_rect;
-    span_buffer_t clip_spans;
-    span_buffer_t fill_spans;
+    stb::span_set clip_spans;
+    stb::span_set fill_spans;
 };
 
-void span_buffer_init(span_buffer_t* span_buffer);
-void span_buffer_init_rect(span_buffer_t* span_buffer, int x, int y, int width, int height);
-void span_buffer_reset(span_buffer_t* span_buffer);
-void span_buffer_destroy(span_buffer_t* span_buffer);
-void span_buffer_copy(span_buffer_t* span_buffer, const span_buffer_t* source);
-bool span_buffer_contains(const span_buffer_t* span_buffer, float x, float y);
-void span_buffer_extents(span_buffer_t* span_buffer, rect_t* extents);
-void span_buffer_intersect(span_buffer_t* span_buffer, const span_buffer_t* a, const span_buffer_t* b);
 
-void rasterize(span_buffer_t* span_buffer, const stb::outline& path_, const stb::matrix* matrix, const rect_t* clip_rect, const stb::stroke_style* stroke_, fill_rule winding);
-void blend(canvas_t* canvas, const span_buffer_t* span_buffer);
+void rasterize(stb::span_set* span_buffer, const stb::outline& path_, const stb::matrix* matrix, const rect_t* clip_rect, const stb::stroke_style* stroke_, fill_rule winding);
+void blend(canvas_t* canvas, const stb::span_set* span_buffer);
 
 } // namespace vg
 } // namespace nova

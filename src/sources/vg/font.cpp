@@ -15,6 +15,14 @@ font_face::font_face(const void* data, size_t length_, destroy_func_t destroy_fu
 {
 }
 
+font_face::font_face(std::vector<uint8_t>&& bytes)
+    : font_face(bytes.empty() ? font_face() : [&bytes] {
+          auto* owned = new std::vector<uint8_t>(std::move(bytes));
+          return font_face(owned->data(), owned->size(), [](void* closure) { delete static_cast<std::vector<uint8_t>*>(closure); }, owned);
+      }())
+{
+}
+
 font_face::font_face(const char* filename)
     : m_face(font_face_data::load_from_file(filename, 0))
 {

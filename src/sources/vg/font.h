@@ -22,6 +22,8 @@ public:
     font_face() = default;
     explicit font_face(font_face_data* face);
     font_face(const void* data, size_t length_, destroy_func_t destroy_func, void* closure);
+    /// Takes the bytes of a font file (TrueType, OpenType or WOFF 1.0); a null face when they are not one libstb reads.
+    explicit font_face(std::vector<uint8_t>&& bytes);
     font_face(const char* filename);
     font_face(const font_face& face);
     font_face(font_face&& face);

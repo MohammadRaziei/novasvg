@@ -6,7 +6,9 @@
 
 #include <stb/zlib.hpp>
 
-#include "vg/render.h"  // base64_decode (data: URIs)
+#include "vg/render.h"
+#include <stb/util.hpp> // try_base64_decode (data: URIs)
+#include <optional>
 
 namespace nova::svg {
 
@@ -730,11 +732,10 @@ static std::string_view strip_quotes(std::string_view value)
 // fallback font.
 static font_face font_face_from_base64(std::string_view payload)
 {
-    size_t decoded_length = 0;
-    auto* decoded = base64_decode(payload.data(), int(payload.size()), &decoded_length);
-    if(decoded == nullptr)
+    std::optional<std::vector<uint8_t>> decoded = stb::try_base64_decode(payload);
+    if(!decoded)
         return font_face();
-    return font_face(decoded, decoded_length, [](void* closure) { free(closure); }, decoded);
+    return font_face(std::move(*decoded));
 }
 
 // Loads an `@font-face` rule's embedded font (a `src: url(data:...)`

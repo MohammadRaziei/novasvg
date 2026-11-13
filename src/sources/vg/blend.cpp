@@ -190,10 +190,10 @@ void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values_t* v, 
     }
 }
 
-void blend_solid(surface_t* surface, stb::composite_op op, stb::blend_mode mode, uint32_t solid, const span_buffer_t* span_buffer)
+void blend_solid(surface_t* surface, stb::composite_op op, stb::blend_mode mode, uint32_t solid, const stb::span_set* span_buffer)
 {
-    int count = span_buffer->spans.size_;
-    const stb::span* spans = span_buffer->spans.data;
+    int count = int(span_buffer->spans().size);
+    const stb::span* spans = span_buffer->spans().data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data() + size_t(spans->y) * surface->stride()) + spans->x;
         stb::composite_solid_row(target, solid, size_t(spans->len), op, mode, uint8_t(spans->coverage));
@@ -201,7 +201,7 @@ void blend_solid(surface_t* surface, stb::composite_op op, stb::blend_mode mode,
     }
 }
 
-void blend_linear_gradient(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
+void blend_linear_gradient(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const gradient_data_t* gradient, const stb::span_set* span_buffer)
 {
     unsigned int buffer[BUFFER_SIZE];
 
@@ -216,8 +216,8 @@ void blend_linear_gradient(surface_t* surface, stb::composite_op op, stb::blend_
         v.off = -v.dx * gradient->values.linear.x1 - v.dy * gradient->values.linear.y1;
     }
 
-    int count = span_buffer->spans.size_;
-    const stb::span* spans = span_buffer->spans.data;
+    int count = int(span_buffer->spans().size);
+    const stb::span* spans = span_buffer->spans().data;
     while(count--) {
         int length_ = spans->len;
         int x = spans->x;
@@ -234,7 +234,7 @@ void blend_linear_gradient(surface_t* surface, stb::composite_op op, stb::blend_
     }
 }
 
-void blend_radial_gradient(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const gradient_data_t* gradient, const span_buffer_t* span_buffer)
+void blend_radial_gradient(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const gradient_data_t* gradient, const stb::span_set* span_buffer)
 {
     unsigned int buffer[BUFFER_SIZE];
 
@@ -246,8 +246,8 @@ void blend_radial_gradient(surface_t* surface, stb::composite_op op, stb::blend_
     v.a = v.dr * v.dr - v.dx * v.dx - v.dy * v.dy;
     v.extended = gradient->values.radial.fr != 0.f || v.a <= 0.f;
 
-    int count = span_buffer->spans.size_;
-    const stb::span* spans = span_buffer->spans.data;
+    int count = int(span_buffer->spans().size);
+    const stb::span* spans = span_buffer->spans().data;
     while(count--) {
         int length_ = spans->len;
         int x = spans->x;
@@ -264,7 +264,7 @@ void blend_radial_gradient(surface_t* surface, stb::composite_op op, stb::blend_
     }
 }
 
-void blend_untransformed_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_untransformed_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const stb::span_set* span_buffer)
 {
 
     const int image_width = texture->width;
@@ -273,8 +273,8 @@ void blend_untransformed_argb(surface_t* surface, stb::composite_op op, stb::ble
     int xoff = (int)(texture->matrix.e);
     int yoff = (int)(texture->matrix.f);
 
-    int count = span_buffer->spans.size_;
-    const stb::span* spans = span_buffer->spans.data;
+    int count = int(span_buffer->spans().size);
+    const stb::span* spans = span_buffer->spans().data;
     while(count--) {
         int x = spans->x;
         int length_ = spans->len;
@@ -301,7 +301,7 @@ void blend_untransformed_argb(surface_t* surface, stb::composite_op op, stb::ble
     }
 }
 
-void blend_transformed_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_transformed_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const stb::span_set* span_buffer)
 {
     uint32_t buffer[BUFFER_SIZE];
 
@@ -311,8 +311,8 @@ void blend_transformed_argb(surface_t* surface, stb::composite_op op, stb::blend
     int fdx = (int)(texture->matrix.a * FIXED_SCALE);
     int fdy = (int)(texture->matrix.b * FIXED_SCALE);
 
-    int count = span_buffer->spans.size_;
-    const stb::span* spans = span_buffer->spans.data;
+    int count = int(span_buffer->spans().size);
+    const stb::span* spans = span_buffer->spans().data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data() + size_t(spans->y) * surface->stride()) + spans->x;
 
@@ -351,7 +351,7 @@ void blend_transformed_argb(surface_t* surface, stb::composite_op op, stb::blend
     }
 }
 
-void blend_untransformed_tiled_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_untransformed_tiled_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const stb::span_set* span_buffer)
 {
 
     int image_width = texture->width;
@@ -366,8 +366,8 @@ void blend_untransformed_tiled_argb(surface_t* surface, stb::composite_op op, st
         yoff += image_height;
     }
 
-    int count = span_buffer->spans.size_;
-    const stb::span* spans = span_buffer->spans.data;
+    int count = int(span_buffer->spans().size);
+    const stb::span* spans = span_buffer->spans().data;
     while(count--) {
         int x = spans->x;
         int length_ = spans->len;
@@ -399,7 +399,7 @@ void blend_untransformed_tiled_argb(surface_t* surface, stb::composite_op op, st
     }
 }
 
-void blend_transformed_tiled_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_transformed_tiled_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const stb::span_set* span_buffer)
 {
     uint32_t buffer[BUFFER_SIZE];
 
@@ -410,8 +410,8 @@ void blend_transformed_tiled_argb(surface_t* surface, stb::composite_op op, stb:
     int fdx = (int)(texture->matrix.a * FIXED_SCALE);
     int fdy = (int)(texture->matrix.b * FIXED_SCALE);
 
-    int count = span_buffer->spans.size_;
-    const stb::span* spans = span_buffer->spans.data;
+    int count = int(span_buffer->spans().size);
+    const stb::span* spans = span_buffer->spans().data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data() + size_t(spans->y) * surface->stride()) + spans->x;
         const uint32_t* image_bits = (const uint32_t*)texture->data;
@@ -464,7 +464,7 @@ uint32_t interpolate_4_pixels(uint32_t tl, uint32_t tr, uint32_t bl, uint32_t br
     return INTERPOLATE_PIXEL_256(xtop, idisty, xbot, disty);
 }
 
-void blend_transformed_bilinear_tiled_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const span_buffer_t* span_buffer)
+void blend_transformed_bilinear_tiled_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const stb::span_set* span_buffer)
 {
     uint32_t buffer[BUFFER_SIZE];
 
@@ -474,8 +474,8 @@ void blend_transformed_bilinear_tiled_argb(surface_t* surface, stb::composite_op
     int fdx = (int)(texture->matrix.a * FIXED_SCALE);
     int fdy = (int)(texture->matrix.b * FIXED_SCALE);
 
-    int count = span_buffer->spans.size_;
-    const stb::span* spans = span_buffer->spans.data;
+    int count = int(span_buffer->spans().size);
+    const stb::span* spans = span_buffer->spans().data;
     while(count--) {
         uint32_t* target = (uint32_t*)(surface->data() + size_t(spans->y) * surface->stride()) + spans->x;
 
@@ -530,7 +530,7 @@ void blend_transformed_bilinear_tiled_argb(surface_t* surface, stb::composite_op
     }
 }
 
-void blend_color(canvas_t* canvas, const stb::color* color_, const span_buffer_t* span_buffer)
+void blend_color(canvas_t* canvas, const stb::color* color_, const stb::span_set* span_buffer)
 {
     state_t* state = canvas->state;
     uint32_t solid = premultiply_color_with_opacity(color_, state->opacity);
@@ -543,7 +543,7 @@ void blend_color(canvas_t* canvas, const stb::color* color_, const span_buffer_t
     }
 }
 
-void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const span_buffer_t* span_buffer)
+void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const stb::span_set* span_buffer)
 {
     if(gradient->nstops == 0)
         return;
@@ -619,7 +619,7 @@ void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const sp
     }
 }
 
-void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_buffer_t* span_buffer)
+void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const stb::span_set* span_buffer)
 {
     if(!texture->surface)
         return;
@@ -655,9 +655,9 @@ void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const span_
     }
 }
 
-void blend(canvas_t* canvas, const span_buffer_t* span_buffer)
+void blend(canvas_t* canvas, const stb::span_set* span_buffer)
 {
-    if(span_buffer->spans.size_ == 0)
+    if(span_buffer->empty())
         return;
     if(canvas->state->paint_ == NULL) {
         blend_color(canvas, &canvas->state->color_, span_buffer);

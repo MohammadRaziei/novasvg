@@ -2,6 +2,7 @@
 
 ### Changed
 
+- **Spans, base64, pixmap and parsers from libstb or shared** (libstb `span_set`, `try_base64_decode`, `premultiplied_image::fill` / `into_image`): `span_buffer_t` and the `novasvg_array_*` macros are `stb::span_set` (about 170 lines); `base64_decode` is `stb::try_base64_decode` (browsers' forgiving decode: white space ignored, padding optional but complete); a finished render leaves the canvas without a copy; `vg::blend_mode` and the CSS mix-blend-mode enum are `stb::composite_op` + `stb::blend_mode`. `utils.cpp` is gone: the SVG number and separator parser lives once in `parserutils.h` (`parse_number` leaves its input alone when it fails), and the transform list and path data parsers use it. A transform with an `em` or `ex` length is invalid (it was by accident of the exponent rule, only sometimes). Golden images identical.
 - **Dead code out of `rasterize()`**: `cubics_only` (quadratics raised to cubics before libstb's rasterizer, which converts them itself); golden images identical.
 - **Row compositing and font discovery come from libstb** (libstb issues 10 and 11). The Porter-Duff operators and CSS
   blend modes on rows of premultiplied pixels are `stb::composite_row` / `stb::composite_solid_row` (about 280 lines of

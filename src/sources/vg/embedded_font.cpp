@@ -1,15 +1,17 @@
 // The embedded fallback font (a zlib+base64 payload in default_font.h), declared in src/sources/vg/font.h.
 #include "font.h"
 
+#include <stb/util.hpp>
 #include <stb/zlib.hpp>
 
-#include "render.h"  // base64_decode
+#include "render.h"
 
 #ifndef NOVA_DISABLE_EMBEDDED_FONT
 #include "default_font.h"
 #endif
 
 #include <cstdlib>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -20,21 +22,16 @@ namespace {
 // libstb's (stb::zlib_decompress), which reports bad input by exception: that becomes an empty FontFace.
 font_face font_face_from_zlib_base64(std::string_view payload)
 {
-    size_t compressed_length = 0;
-    auto* compressed = base64_decode(payload.data(), int(payload.size()), &compressed_length);
-    if(compressed == nullptr)
+    const std::optional<std::vector<uint8_t>> compressed = stb::try_base64_decode(payload);
+    if(!compressed)
         return font_face();
     std::vector<uint8_t> inflated;
     try {
-        inflated = stb::zlib_decompress(compressed, compressed_length);
+        inflated = stb::zlib_decompress(compressed->data(), compressed->size());
     } catch(const std::exception&) {
         inflated.clear();
     }
-    free(compressed);
-    if(inflated.empty())
-        return font_face();
-    auto* owned = new std::vector<uint8_t>(std::move(inflated));
-    return font_face(owned->data(), owned->size(), [](void* closure) { delete static_cast<std::vector<uint8_t>*>(closure); }, owned);
+    return font_face(std::move(inflated));
 }
 
 }  // namespace

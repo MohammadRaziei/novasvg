@@ -27,7 +27,6 @@ static state_t* state_create(void)
     state->color_ = stb::color(0, 0, 0, 255);
     state->matrix = stb::matrix{};
     state->stroke = NOVA_DEFAULT_STROKE_STYLE;
-    span_buffer_init(&state->clip_spans);
     state->winding = fill_rule::non_zero;
     state->op = stb::composite_op::source_over;
     state->mode = stb::blend_mode::normal;
@@ -47,7 +46,7 @@ static void state_reset(state_t* state)
     state->color_ = stb::color(0, 0, 0, 255);
     state->matrix = stb::matrix{};
     state->stroke = NOVA_DEFAULT_STROKE_STYLE;
-    span_buffer_reset(&state->clip_spans);
+    state->clip_spans.clear();
     state->winding = fill_rule::non_zero;
     state->op = stb::composite_op::source_over;
     state->mode = stb::blend_mode::normal;
@@ -63,7 +62,7 @@ static void state_copy(state_t* state, const state_t* source)
     state->color_ = source->color_;
     state->matrix = source->matrix;
     state->stroke = source->stroke;
-    span_buffer_copy(&state->clip_spans, &source->clip_spans);
+    state->clip_spans = source->clip_spans;
     state->winding = source->winding;
     state->op = source->op;
     state->mode = source->mode;
@@ -76,22 +75,19 @@ static void state_destroy(state_t* state)
 {
     paint_destroy(state->paint_);
     font_face_data::release(state->font_face_);
-    span_buffer_destroy(&state->clip_spans);
     delete state;
 }
 
 canvas_t* canvas_create(std::shared_ptr<surface_t> surface)
 {
-    canvas_t* canvas = static_cast<canvas_t*>(malloc(sizeof(canvas_t)));
+    canvas_t* canvas = new canvas_t();
     novasvg_init_reference(canvas);
-    new (&canvas->surface) std::shared_ptr<surface_t>(surface);
+    canvas->surface = surface;
     canvas->path_ = new stb::outline;
     canvas->state = state_create();
     canvas->freed_state = NULL;
     canvas->face_cache = NULL;
     canvas->clip_rect = NOVA_MAKE_RECT(0, 0, surface->width(), surface->height());
-    span_buffer_init(&canvas->clip_spans);
-    span_buffer_init(&canvas->fill_spans);
     return canvas;
 }
 
@@ -117,11 +113,8 @@ void canvas_destroy(canvas_t* canvas)
         }
 
         font_face_cache_destroy(canvas->face_cache);
-        span_buffer_destroy(&canvas->fill_spans);
-        span_buffer_destroy(&canvas->clip_spans);
-        canvas->surface.~shared_ptr();
         delete canvas->path_;
-        free(canvas);
+        delete canvas;
     }
 }
 
@@ -503,22 +496,32 @@ void canvas_get_current_point(const canvas_t* canvas, float* x, float* y)
     { const stb::point p = canvas->path_->current_point().value_or(stb::point{0.f, 0.f}); if(x) *x = p.x; if(y) *y = p.y; }
 }
 
+// The box of a span set as a rect (all zero when it is empty).
+static void span_extents(const stb::span_set& spans, rect_t* extents)
+{
+    const std::optional<stb::clip_rect> box = spans.extents();
+    extents->x = box ? box->x : 0;
+    extents->y = box ? box->y : 0;
+    extents->w = box ? box->w : 0;
+    extents->h = box ? box->h : 0;
+}
+
 bool canvas_fill_contains(canvas_t* canvas, float x, float y)
 {
     rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
-    return span_buffer_contains(&canvas->fill_spans, x, y);
+    return canvas->fill_spans.contains(int(floorf(x)), int(floorf(y)));
 }
 
 bool canvas_stroke_contains(canvas_t* canvas, float x, float y)
 {
     rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
-    return span_buffer_contains(&canvas->fill_spans, x, y);
+    return canvas->fill_spans.contains(int(floorf(x)), int(floorf(y)));
 }
 
 bool canvas_clip_contains(canvas_t* canvas, float x, float y)
 {
     if(canvas->state->clipping) {
-        return span_buffer_contains(&canvas->state->clip_spans, x, y);
+        return canvas->state->clip_spans.contains(int(floorf(x)), int(floorf(y)));
     }
 
     float l = canvas->clip_rect.x;
@@ -532,19 +535,19 @@ bool canvas_clip_contains(canvas_t* canvas, float x, float y)
 void canvas_fill_extents(canvas_t *canvas, rect_t* extents)
 {
     rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
-    span_buffer_extents(&canvas->fill_spans, extents);
+    span_extents(canvas->fill_spans, extents);
 }
 
 void canvas_stroke_extents(canvas_t *canvas, rect_t* extents)
 {
     rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, &canvas->state->stroke, fill_rule::non_zero);
-    span_buffer_extents(&canvas->fill_spans, extents);
+    span_extents(canvas->fill_spans, extents);
 }
 
 void canvas_clip_extents(canvas_t* canvas, rect_t* extents)
 {
     if(canvas->state->clipping) {
-        span_buffer_extents(&canvas->state->clip_spans, extents);
+        span_extents(canvas->state->clip_spans, extents);
     } else {
         extents->x = canvas->clip_rect.x;
         extents->y = canvas->clip_rect.y;
@@ -576,7 +579,7 @@ void canvas_paint(canvas_t* canvas)
     if(canvas->state->clipping) {
         blend(canvas, &canvas->state->clip_spans);
     } else {
-        span_buffer_init_rect(&canvas->clip_spans, 0, 0, canvas->surface->width(), canvas->surface->height());
+        canvas->clip_spans = stb::span_set::from_rect(0, 0, canvas->surface->width(), canvas->surface->height());
         blend(canvas, &canvas->clip_spans);
     }
 }
@@ -585,7 +588,7 @@ void canvas_fill_preserve(canvas_t* canvas)
 {
     rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
     if(canvas->state->clipping) {
-        span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
+        canvas->clip_spans = stb::span_set::intersect(canvas->fill_spans, canvas->state->clip_spans);
         blend(canvas, &canvas->clip_spans);
     } else {
         blend(canvas, &canvas->fill_spans);
@@ -596,7 +599,7 @@ void canvas_stroke_preserve(canvas_t* canvas)
 {
     rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, fill_rule::non_zero);
     if(canvas->state->clipping) {
-        span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
+        canvas->clip_spans = stb::span_set::intersect(canvas->fill_spans, canvas->state->clip_spans);
         blend(canvas, &canvas->clip_spans);
     } else {
         blend(canvas, &canvas->fill_spans);
@@ -607,8 +610,8 @@ void canvas_clip_preserve(canvas_t* canvas)
 {
     if(canvas->state->clipping) {
         rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
-        span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
-        span_buffer_copy(&canvas->state->clip_spans, &canvas->clip_spans);
+        canvas->clip_spans = stb::span_set::intersect(canvas->fill_spans, canvas->state->clip_spans);
+        canvas->state->clip_spans = canvas->clip_spans;
     } else {
         rasterize(&canvas->state->clip_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
         canvas->state->clipping = true;

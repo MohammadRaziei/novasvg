@@ -51,16 +51,8 @@ int pixmap::stride() const
 
 void pixmap::clear(const stb::color& value)
 {
-    if(!m_surface)
-        return;
-    // One pixel through libstb's straight-RGBA -> premultiplied-ARGB32 conversion (c * a / 255, packed 0xAARRGGBB).
-    const uint8_t rgba[4] = {value.r(), value.g(), value.b(), value.a()};
-    uint32_t pixel = 0;
-    stb::rgba_to_premultiplied_argb(reinterpret_cast<uint8_t*>(&pixel), sizeof(pixel), rgba, sizeof(rgba), 1, 1);
-    for(int y = 0; y < height(); y++) {
-        uint32_t* row = reinterpret_cast<uint32_t*>(data() + size_t(stride()) * size_t(y));
-        std::fill_n(row, width(), pixel);
-    }
+    if(m_surface)
+        m_surface->fill(value);
 }
 
 void pixmap::convert_to_rgba()
@@ -90,14 +82,11 @@ stb::image pixmap_release_to_image(pixmap&& bitmap)
 {
     if(bitmap.is_null())
         return stb::image();
-    if(size_t(bitmap.stride()) != size_t(bitmap.width()) * 4)
-        return bitmap_to_rgba_image(bitmap);
-    bitmap.convert_to_rgba();
-    const int width = bitmap.width();
-    const int height = bitmap.height();
-    auto keep = std::make_shared<pixmap>(std::move(bitmap));
-    uint8_t* data = keep->data();
-    return stb::image::wrap(width, height, stb::pixel_format::rgba, data, std::move(keep));
+    // The surface is converted in place and handed over when nobody else holds it (libstb decides whether it owns
+    // its pixels); a shared one, or somebody else's buffer, is copied.
+    std::shared_ptr<surface_t> surface = bitmap.surface();
+    bitmap = pixmap();
+    return surface.use_count() == 1 ? std::move(*surface).into_image() : surface->to_image();
 }
 
 } // namespace nova::vg

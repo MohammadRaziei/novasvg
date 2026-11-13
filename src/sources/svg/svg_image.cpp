@@ -3,6 +3,11 @@
 #include "svgelement.h"
 #include "utils/text.h"
 
+#include <stb/util.hpp>
+
+#include <optional>
+#include <vector>
+
 namespace nova::svg {
 using namespace vg;
 
@@ -69,11 +74,10 @@ pixmap load_image_resource(const std::string& href)
             if(index == std::string_view::npos)
                 return pixmap();
             input.remove_prefix(index + 1);
-            size_t length = 0;
-            std::unique_ptr<uint8_t, decltype(&free)> bytes(base64_decode(input.data(), int(input.length()), &length), free);
+            const std::optional<std::vector<uint8_t>> bytes = stb::try_base64_decode(input);
             if(!bytes)
                 return pixmap();
-            return pixmap_from_image(stb::image::decode(bytes.get(), length, options));
+            return pixmap_from_image(stb::image::decode(bytes->data(), bytes->size(), options));
         }
         return pixmap_from_image(stb::image::open(href.c_str(), options));
     } catch(const std::exception&) {

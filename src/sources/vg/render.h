@@ -337,9 +337,6 @@ inline uint32_t color_to_argb32(const stb::color& c)
  */
 typedef stb::premultiplied_image surface_t;
 
-/** @brief Decodes base64 text (used for data: URIs). Returns a malloc'd buffer the caller frees, or NULL. */
-NOVA_API uint8_t* base64_decode(const char* data, int length_, size_t* out_length);
-
 /**
  * @brief Defines the type of texture, either plain or tiled.
  */
