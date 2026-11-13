@@ -25,7 +25,11 @@ if(DEFINED SKBUILD)
         set(NOVA_NANOBIND_ABI_OPTION "")
     endif()
 
+    # NB_DOMAIN: nanobind modules of one process share their type registry unless they say otherwise, and libstb's
+    # module registers stb::matrix too ("type 'Matrix' was already registered" and the import aborts when both are
+    # loaded). A domain of its own keeps the two apart; novasvg and libstb meet in Python (novasvg.interop).
     nanobind_add_module(novasvg_py
+        NB_DOMAIN novasvg
         ${NOVA_NANOBIND_ABI_OPTION}
         ${BINDING_SOURCE_FILE}
     )
@@ -35,12 +39,12 @@ if(DEFINED SKBUILD)
     # The binding reaches into the private SVG layer (foreignObject text measurement); see REFACTOR_CHECKLIST.md.
     target_include_directories(novasvg_py PRIVATE "${PROJECT_SOURCE_DIR}/src/sources")
 
-    # libstb is a shared library and the wheel puts it in site-packages/libstb/lib (next to the `novasvg`
-    # package). Without this runpath `import novasvg` only works if something imported `libstb` first.
+    # libstb is a shared library and the wheel puts it in site-packages/libstb/sdk/lib (next to the `novasvg`
+    # package; libstb installs its SDK as a regular prefix, libstb/sdk/{include,lib}). Without this runpath `import novasvg` only works if something imported `libstb` first.
     if(APPLE)
-        set_target_properties(novasvg_py PROPERTIES INSTALL_RPATH "@loader_path/../libstb/lib")
+        set_target_properties(novasvg_py PROPERTIES INSTALL_RPATH "@loader_path/../libstb/sdk/lib")
     elseif(UNIX)
-        set_target_properties(novasvg_py PROPERTIES INSTALL_RPATH "$ORIGIN/../libstb/lib")
+        set_target_properties(novasvg_py PROPERTIES INSTALL_RPATH "$ORIGIN/../libstb/sdk/lib")
     endif()
 
     # Generate Python stubs

@@ -209,13 +209,13 @@ NB_MODULE(novasvg_py, m) {
            "for exactly which cmap formats are covered -- virtually every real-world font).");
 
     m.def("get_font_face", [](const std::string& family, bool bold, bool italic) {
-        return nova::vg::font_face_cache_()->get_font_face(family, bold, italic);
+        return nova::vg::global_font_face_cache()->get_font_face(family, bold, italic);
     }, "family"_a, "bold"_a = false, "italic"_a = false,
        "Look up a font face previously registered via add_font_face_from_file/_data "
        "(falling back to novasvg's built-in generic-family table, e.g. \"sans-serif\").");
 
     m.def("get_font_face_for_family_stack", [](const std::string& family_stack, bool bold, bool italic) {
-        return nova::vg::font_face_cache_()->get_font_face_for_family_stack(family_stack, bold, italic);
+        return nova::vg::global_font_face_cache()->get_font_face_for_family_stack(family_stack, bold, italic);
     }, "family_stack"_a, "bold"_a = false, "italic"_a = false,
        "Resolve a CSS-style comma-separated font-family stack (e.g. "
        "'\"trebuchet ms\", verdana, arial, sans-serif') name by name: a face registered or "
@@ -223,41 +223,41 @@ NB_MODULE(novasvg_py, m) {
        "built-in table (case-insensitive, e.g. 'arial' -> Liberation Sans), then generic "
        "keywords. Names nothing matches are skipped; returns a null face if none resolve.");
 
-    nb::class_<nova::vg::font>(m, "Font")
+    nb::class_<nova::vg::sized_font>(m, "Font")
         .def(nb::init<>(), "Construct a null font.")
         .def(nb::init<const nova::vg::font_face&, float>(), "face"_a, "size"_a,
              "Construct a font from a face at a given pixel size.")
-        .def_prop_ro("ascent", &nova::vg::font::ascent, "Ascent in pixels, at this font's size.")
-        .def_prop_ro("descent", &nova::vg::font::descent, "Descent in pixels (typically negative), at this font's size.")
-        .def_prop_ro("height", &nova::vg::font::height, "ascent - descent.")
-        .def_prop_ro("line_gap", &nova::vg::font::line_gap, "Recommended extra spacing between lines, in pixels.")
-        .def_prop_ro("x_height", &nova::vg::font::x_height, "Height of a lowercase 'x' glyph, in pixels.")
-        .def_prop_ro("size", &nova::vg::font::size, "The pixel size this font was constructed with.")
-        .def_prop_ro("face", &nova::vg::font::face, nb::rv_policy::reference_internal, "The underlying FontFace.")
-        .def("is_null", &nova::vg::font::is_null, "Check if the font is null/invalid.")
-        .def("__bool__", [](const nova::vg::font& font) { return !font.is_null(); })
-        .def("measure_text", [](const nova::vg::font& font, const std::string& text) {
+        .def_prop_ro("ascent", &nova::vg::sized_font::ascent, "Ascent in pixels, at this font's size.")
+        .def_prop_ro("descent", &nova::vg::sized_font::descent, "Descent in pixels (typically negative), at this font's size.")
+        .def_prop_ro("height", &nova::vg::sized_font::height, "ascent - descent.")
+        .def_prop_ro("line_gap", &nova::vg::sized_font::line_gap, "Recommended extra spacing between lines, in pixels.")
+        .def_prop_ro("x_height", &nova::vg::sized_font::x_height, "Height of a lowercase 'x' glyph, in pixels.")
+        .def_prop_ro("size", &nova::vg::sized_font::size, "The pixel size this font was constructed with.")
+        .def_prop_ro("face", &nova::vg::sized_font::face, nb::rv_policy::reference_internal, "The underlying FontFace.")
+        .def("is_null", &nova::vg::sized_font::is_null, "Check if the font is null/invalid.")
+        .def("__bool__", [](const nova::vg::sized_font& font) { return !font.is_null(); })
+        .def("measure_text", [](const nova::vg::sized_font& font, const std::string& text) {
             // Python str arrives as UTF-8 (nanobind's std::string conversion);
             // Font::measureText wants UTF-32, same as novasvg's own svg text
             // layout path (see svg_text_fragments_builder), so route through the
             // identical utf8ToU32() conversion for byte-for-byte consistency
             // with what novasvg will actually paint.
-            auto u32text = nova::vg::utf8_to_u32(text);
+            auto u32text = nova::svg::utf8_to_u32(text);
             return font.measure_text(u32text);
         }, "text"_a, "Measure the advance width of a UTF-8 string, in pixels, at this font's size.");
 
     // nb::class_<Font> chain above ends with measure_text; attach glyph_boxes to it.
     m.attr("Font").attr("glyph_boxes") = nb::cpp_function(
-        [](const nova::vg::font& font, const std::string& text) {
+        [](const nova::vg::sized_font& font, const std::string& text) {
             nb::list out;
-            for(const auto& box : font.glyph_boxes(nova::vg::utf8_to_u32(text)))
+            for(const auto& box : font.glyph_boxes(nova::svg::utf8_to_u32(text)))
                 out.append(nb::make_tuple(box.pen, box.ink_left, box.ink_right, box.ink_top, box.ink_bottom));
             return out;
         }, nb::is_method(), "text"_a,
         "Per-glyph (pen_x, ink_left, ink_right, ink_top, ink_bottom) in pixels (top/bottom relative to the baseline, y down) for every glyph that has an outline "
         "(spaces are skipped), shaped by libstb, like measure_text().");
 
-    m.def("measure_foreign_object", [](const std::string& html, const nova::vg::font& font, std::optional<float> max_width,
+    m.def("measure_foreign_object", [](const std::string& html, const nova::vg::sized_font& font, std::optional<float> max_width,
                                        std::optional<std::string> family, bool bold, bool italic) {
         auto renderer = nova::svg::default_foreign_object_renderer();
         if(!renderer)

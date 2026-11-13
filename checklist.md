@@ -446,10 +446,10 @@
 - [x] `span_buffer_t` و ماکروهای `novasvg_array_*` رفتن: `stb::span_set` (clip/mask). `cubics_only` حذف شد (کد مرده).
 - [x] `base64_decode` رفت: `stb::try_base64_decode` (دیکد «forgiving» مرورگرها). `pixmap`: `clear` = `fill`، `pixmap_release_to_image` = `into_image() &&` بدون کپی وقتی سطح مال خودشه.
 - [x] `utils.cpp` پاک شد: یک parser عدد/فاصله می‌مونه (`parserutils.h`)، و `parse_number` تراکنشی شد (روی شکست ورودی دست‌نخورده). `matrix.cpp` و `outline_util.cpp` رو string_view هستن. تست تفاضلی با کد قدیمی روی ۱ میلیون ورودی تصادفی: تنها تفاوت `em`/`ex` که حالا همیشه رد می‌شه (قبلاً فقط اتفاقی).
+- [x] ماژول Python دوباره build می‌شه و کار می‌کنه (گام ۴۱): `binding.cpp` روی API فعلی (`global_font_face_cache()`، `sized_font`، `nova::svg::utf8_to_u32`)؛ `NB_DOMAIN novasvg` تا با ماژول Python خودِ libstb (که `stb::matrix` را هم ثبت می‌کنه) در یک پروسه تداخل نکنه (قبلاً import هر دو با «type Matrix was already registered» abort می‌شد)؛ RUNPATH روی `$ORIGIN/../libstb/sdk/lib` چون libstb حالا SDK خودش را آنجا نصب می‌کنه. ۴۵۰ تست Python پاس (build: `-DNOVA_BUILD_PYTHON=ON`، تست: `PYTHONPATH=<build>/python/install pytest tests/python`).
 - gate: C++ ۱۰۰ تست / ۲۳۵۲ assertion، فونت ۸۴، ctest ۴/۴، golden ۶۷ تصویر با تلرانس صفر بدون تفاوت.
 
 ### قدم بعدی، به ترتیب
-- [ ] ماژول Python: `src/bindings/python/binding.cpp` با API فعلی کامپایل نمی‌شه (`font_face_cache_()`، `vg::font`)؛ بازنویسی، build و اجرای تست‌های Python (از جمله `test_mix_blend_mode.py`)
 - [ ] `overlay` برای `mix-blend-mode` (libstb دارد؛ golden `golden-blend-modes.svg` فعلاً overlay را normal ثبت کرده، پس با re-baseline)
 - [ ] کوچک کردن `font_face`/`font_face_data` (لایه‌ی نازک روی `stb::font`)
 - [ ] گرادیان و بافت به‌عنوان paint در `paint.cpp`/`raster_canvas.cpp` (کار خودِ ما؛ `stb/raster.hpp` عمداً coverage span می‌دهد)
