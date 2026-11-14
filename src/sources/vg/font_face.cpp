@@ -314,20 +314,20 @@ float font_face_data::get_kern_advance(float size_, codepoint_t ch1, codepoint_t
     return ft.glyph_kerning(a, b) * scale;
 }
 
-static void glyph_traverse_func(void* closure, path_command command, const stb::point* points, int npoints)
+static void glyph_traverse_func(void* closure, outline_op command, const stb::point* points, int npoints)
 {
     outline* path_ = static_cast<outline*>(closure);
     switch(command) {
-    case path_command::move_to:
+    case outline_op::move_to:
         path_->move_to(points[0].x, points[0].y);
         break;
-    case path_command::line_to:
+    case outline_op::line_to:
         path_->line_to(points[0].x, points[0].y);
         break;
-    case path_command::cubic_to:
+    case outline_op::cubic_to:
         path_->cubic_to(points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
         break;
-    case path_command::close:
+    case outline_op::close:
         assert(false);
     }
 }
@@ -364,14 +364,14 @@ float font_face_data::traverse_glyph_index_path(float size_, float x, float y, s
             points[0].y = cmd.p[0].y;
             current_point = points[0];
             matrix.map(points, points, 1);
-            traverse_func(closure, path_command::move_to, points, 1);
+            traverse_func(closure, outline_op::move_to, points, 1);
             break;
         case outline_op::line_to:
             points[0].x = cmd.p[0].x;
             points[0].y = cmd.p[0].y;
             current_point = points[0];
             matrix.map(points, points, 1);
-            traverse_func(closure, path_command::line_to, points, 1);
+            traverse_func(closure, outline_op::line_to, points, 1);
             break;
         case outline_op::quad_to: // TrueType: raised to a cubic, as the renderer only knows cubics
             points[0].x = 2.f / 3.f * cmd.p[0].x + 1.f / 3.f * current_point.x;
@@ -382,7 +382,7 @@ float font_face_data::traverse_glyph_index_path(float size_, float x, float y, s
             points[2].y = cmd.p[1].y;
             current_point = points[2];
             matrix.map(points, points, 3);
-            traverse_func(closure, path_command::cubic_to, points, 3);
+            traverse_func(closure, outline_op::cubic_to, points, 3);
             break;
         case outline_op::cubic_to: // CFF
             points[0].x = cmd.p[0].x;
@@ -393,7 +393,7 @@ float font_face_data::traverse_glyph_index_path(float size_, float x, float y, s
             points[2].y = cmd.p[2].y;
             current_point = points[2];
             matrix.map(points, points, 3);
-            traverse_func(closure, path_command::cubic_to, points, 3);
+            traverse_func(closure, outline_op::cubic_to, points, 3);
             break;
         case outline_op::close:
             // Contours were never closed explicitly here (stb_truetype gave none): the fill closes

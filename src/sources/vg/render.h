@@ -126,16 +126,6 @@ typedef struct {
 bool parse_matrix(stb::matrix* matrix, const char* data, int length);
 
 /**
- * @brief Enumeration defining path commands.
- */
-enum class path_command : int {
-    move_to, ///< Moves the current point to a new position.
-    line_to, ///< Draws a straight line to a new point.
-    cubic_to, ///< Draws a cubic Bézier curve to a new point.
-    close ///< Closes the current path by drawing a line to the starting point.
-};
-
-/**
  * @brief Callback function type for traversing a path.
  *
  * This function type defines a callback used to traverse path elements.
@@ -145,7 +135,7 @@ enum class path_command : int {
  * @param points An array of points associated with the command.
  * @param npoints The number of points in the array.
  */
-typedef void (*path_traverse_func_t)(void* closure, path_command command, const stb::point* points, int npoints);
+typedef void (*path_traverse_func_t)(void* closure, outline_op command, const stb::point* points, int npoints);
 
 /**
  * @brief The run a piece of text is shaped in (ADR-0012).

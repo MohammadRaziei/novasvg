@@ -316,23 +316,23 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const sized_fon
         const stb::matrix* transform_;
     } s{this, transform_};
 
-    auto traverse = [](void* closure, path_command command, const stb::point* points, int) {
+    auto traverse = [](void* closure, outline_op command, const stb::point* points, int) {
         auto* s = static_cast<sink*>(closure);
         auto pt = [&](const stb::point& p) {
             point q = s->transform_ ? apply(*s->transform_, p.x, p.y) : point(p.x, p.y);
             return num(q.x) + " " + num(q.y);
         };
         switch(command) {
-        case path_command::move_to:
+        case outline_op::move_to:
             s->self->m_content += pt(points[0]) + " m\n";
             break;
-        case path_command::line_to:
+        case outline_op::line_to:
             s->self->m_content += pt(points[0]) + " l\n";
             break;
-        case path_command::cubic_to:
+        case outline_op::cubic_to:
             s->self->m_content += pt(points[0]) + " " + pt(points[1]) + " " + pt(points[2]) + " c\n";
             break;
-        case path_command::close:
+        case outline_op::close:
             s->self->m_content += "h\n";
             break;
         }
