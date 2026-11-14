@@ -110,7 +110,7 @@ rect transform::map_rect(const rect& rect_) const
         return rect::invalid;
     }
 
-    const stb::outline_bounds b = m_matrix.map_rect({rect_.x, rect_.y, rect_.x + rect_.w, rect_.y + rect_.h});
+    const outline_bounds b = m_matrix.map_rect({rect_.x, rect_.y, rect_.x + rect_.w, rect_.y + rect_.h});
     return rect(b.x0, b.y0, b.width(), b.height());
 }
 
@@ -189,7 +189,7 @@ std::shared_ptr<raster_canvas> raster_canvas::create(const rect& extents)
     return create(extents.x, extents.y, extents.w, extents.h);
 }
 
-void raster_canvas::set_color(const stb::color& color_)
+void raster_canvas::set_color(const color& color_)
 {
     set_color(red_f(color_), green_f(color_), blue_f(color_), alpha_f(color_));
 }
@@ -214,16 +214,16 @@ void raster_canvas::set_texture(const raster_canvas& source, texture_type type_,
     canvas_set_texture(m_canvas, source.surface(), static_cast<texture_type>(type_), opacity, &transform_.matrix());
 }
 
-void raster_canvas::fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_)
+void raster_canvas::fill_path(const outline& path_, fill_rule fill_rule_, const transform& transform_)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform_.matrix());
     canvas_set_fill_rule(m_canvas, static_cast<fill_rule>(fill_rule_));
-    canvas_set_operator(m_canvas, stb::composite_op::source_over);
+    canvas_set_operator(m_canvas, composite_op::source_over);
         canvas_fill_path(m_canvas, path_);
 }
 
-void raster_canvas::stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_)
+void raster_canvas::stroke_path(const outline& path_, const stroke_data& stroke_data_, const transform& transform_)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform_.matrix());
@@ -233,7 +233,7 @@ void raster_canvas::stroke_path(const stb::outline& path_, const stroke_data& st
     canvas_set_line_join(m_canvas, static_cast<line_join>(stroke_data_.line_join()));
     canvas_set_dash_offset(m_canvas, stroke_data_.dash_offset());
     canvas_set_dash_array(m_canvas, stroke_data_.dash_array().data(), stroke_data_.dash_array().size());
-    canvas_set_operator(m_canvas, stb::composite_op::source_over);
+    canvas_set_operator(m_canvas, composite_op::source_over);
         canvas_stroke_path(m_canvas, path_);
 }
 
@@ -242,7 +242,7 @@ void raster_canvas::fill_text(const std::u32string_view& text, const sized_font&
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform_.matrix());
     canvas_set_fill_rule(m_canvas, fill_rule::non_zero);
-    canvas_set_operator(m_canvas, stb::composite_op::source_over);
+    canvas_set_operator(m_canvas, composite_op::source_over);
     canvas_set_font(m_canvas, font_.face().get(), font_.size());
     canvas_fill_text(m_canvas, text.data(), text.length(), text_encoding::utf32, origin.x, origin.y, context);
 }
@@ -257,12 +257,12 @@ void raster_canvas::stroke_text(const std::u32string_view& text, float stroke_wi
     canvas_set_line_join(m_canvas, line_join::miter);
     canvas_set_dash_offset(m_canvas, 0.f);
     canvas_set_dash_array(m_canvas, nullptr, 0);
-    canvas_set_operator(m_canvas, stb::composite_op::source_over);
+    canvas_set_operator(m_canvas, composite_op::source_over);
     canvas_set_font(m_canvas, font_.face().get(), font_.size());
     canvas_stroke_text(m_canvas, text.data(), text.length(), text_encoding::utf32, origin.x, origin.y, context);
 }
 
-void raster_canvas::clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_)
+void raster_canvas::clip_path(const outline& path_, fill_rule clip_rule, const transform& transform_)
 {
     canvas_set_matrix(m_canvas, &m_translation);
     canvas_transform(m_canvas, &transform_.matrix());
@@ -287,12 +287,12 @@ void raster_canvas::draw_image(const pixmap& image, const rect& dst_rect, const 
     canvas_transform(m_canvas, &transform_.matrix());
     canvas_translate(m_canvas, dst_rect.x, dst_rect.y);
     canvas_set_fill_rule(m_canvas, fill_rule::non_zero);
-    canvas_set_operator(m_canvas, stb::composite_op::source_over);
+    canvas_set_operator(m_canvas, composite_op::source_over);
     canvas_set_texture(m_canvas, image.surface(), texture_type::plain, 1.f, &matrix);
     canvas_fill_rect(m_canvas, 0, 0, dst_rect.w, dst_rect.h);
 }
 
-void raster_canvas::blend_canvas(const raster_canvas& canvas, stb::composite_op op, stb::blend_mode mode, float opacity)
+void raster_canvas::blend_canvas(const raster_canvas& canvas, composite_op op, blend_mode mode, float opacity)
 {
     stb::matrix matrix = { 1, 0, 0, 1, static_cast<float>(canvas.x()), static_cast<float>(canvas.y()) };
     canvas_set_matrix(m_canvas, &m_translation);
@@ -375,7 +375,7 @@ void raster_canvas::fill_opaque_white()
     }
 }
 
-void raster_canvas::tint_to_flood_color(const stb::color& flood_color, float flood_opacity)
+void raster_canvas::tint_to_flood_color(const color& flood_color, float flood_opacity)
 {
     auto width = m_surface->width();
     auto height = m_surface->height();

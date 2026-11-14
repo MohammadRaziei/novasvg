@@ -33,7 +33,7 @@ struct paint {
 
 typedef struct {
     paint_t base;
-    stb::color color_;
+    color color_;
 } solid_paint_t;
 
 typedef enum {
@@ -62,13 +62,13 @@ typedef struct {
 typedef struct state {
     paint_t* paint_;
     font_face_data* font_face_;
-    stb::color color_;
+    color color_;
     stb::matrix matrix;
     stb::stroke_style stroke;
-    stb::span_set clip_spans;
+    span_set clip_spans;
     fill_rule winding;
-    stb::composite_op op;
-    stb::blend_mode mode;
+    composite_op op;
+    blend_mode mode;
     float font_size;
     float opacity;
     bool clipping;
@@ -78,18 +78,18 @@ typedef struct state {
 struct canvas_context {
     ref_count_t ref_count;
     std::shared_ptr<surface_t> surface;  // constructed in place: the canvas is malloc'd
-    stb::outline* path_;
+    outline* path_;
     state_t* state;
     state_t* freed_state;
     font_face_cache_t* face_cache;
     rect_t clip_rect;
-    stb::span_set clip_spans;
-    stb::span_set fill_spans;
+    span_set clip_spans;
+    span_set fill_spans;
 };
 
 
-void rasterize(stb::span_set* span_buffer, const stb::outline& path_, const stb::matrix* matrix, const rect_t* clip_rect, const stb::stroke_style* stroke_, fill_rule winding);
-void blend(canvas_t* canvas, const stb::span_set* span_buffer);
+void rasterize(span_set* span_buffer, const outline& path_, const stb::matrix* matrix, const rect_t* clip_rect, const stb::stroke_style* stroke_, fill_rule winding);
+void blend(canvas_t* canvas, const span_set* span_buffer);
 
 } // namespace vg
 } // namespace nova

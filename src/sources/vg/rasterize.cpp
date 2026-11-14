@@ -9,7 +9,7 @@
 namespace nova {
 namespace vg {
 
-void rasterize(stb::span_set* span_buffer, const stb::outline& path_, const stb::matrix* matrix, const rect_t* clip_rect, const stb::stroke_style* stroke_, fill_rule winding)
+void rasterize(span_set* span_buffer, const outline& path_, const stb::matrix* matrix, const rect_t* clip_rect, const stb::stroke_style* stroke_, fill_rule winding)
 {
     span_buffer->clear();
 
@@ -29,7 +29,7 @@ void rasterize(stb::span_set* span_buffer, const stb::outline& path_, const stb:
         clip.h = 2000000;
     }
 
-    const stb::outline& outline = path_;
+    const outline& outline = path_;
     if(stroke_) {
         stb::rasterize_stroke(outline, *stroke_, m, clip, stb::span_sink(*span_buffer));
     } else {

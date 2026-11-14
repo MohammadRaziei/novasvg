@@ -32,7 +32,7 @@ static bool parse_path_coordinates(std::string_view& input, float values[6], int
     return true;
 }
 
-static bool parse_svg_path(stb::outline& path_, const char* data, int length_)
+static bool parse_svg_path(outline& path_, const char* data, int length_)
 {
     std::string_view input(data, length_ == -1 ? strlen(data) : size_t(length_));
 
@@ -209,13 +209,13 @@ static bool parse_svg_path(stb::outline& path_, const char* data, int length_)
 
 
 
-bool parse_path(stb::outline& outline, const char* data, size_t length_)
+bool parse_path(outline& outline, const char* data, size_t length_)
 {
     outline.clear();
     return parse_svg_path(outline, data, (int)length_);
 }
 
-outline_walker::outline_walker(const stb::outline& outline)
+outline_walker::outline_walker(const outline& outline)
 {
     stb::point start{0.f, 0.f};
     stb::point current{0.f, 0.f};
@@ -223,17 +223,17 @@ outline_walker::outline_walker(const stb::outline& outline)
     for(const stb::outline_command& c : outline) {
         segment s{};
         switch(c.op) {
-        case stb::outline_op::move_to:
+        case outline_op::move_to:
             s.command = segment_kind::move_to;
             s.points[0] = point(c.p[0].x, c.p[0].y);
             start = current = c.p[0];
             break;
-        case stb::outline_op::line_to:
+        case outline_op::line_to:
             s.command = segment_kind::line_to;
             s.points[0] = point(c.p[0].x, c.p[0].y);
             current = c.p[0];
             break;
-        case stb::outline_op::quad_to: {
+        case outline_op::quad_to: {
             // Exactly what path_quad_to does: the quadratic raised to a cubic.
             s.command = segment_kind::cubic_to;
             const float x1 = 2.f / 3.f * c.p[0].x + 1.f / 3.f * current.x;
@@ -246,14 +246,14 @@ outline_walker::outline_walker(const stb::outline& outline)
             current = c.p[1];
             break;
         }
-        case stb::outline_op::cubic_to:
+        case outline_op::cubic_to:
             s.command = segment_kind::cubic_to;
             s.points[0] = point(c.p[0].x, c.p[0].y);
             s.points[1] = point(c.p[1].x, c.p[1].y);
             s.points[2] = point(c.p[2].x, c.p[2].y);
             current = c.p[2];
             break;
-        case stb::outline_op::close:
+        case outline_op::close:
             s.command = segment_kind::close;
             s.points[0] = point(start.x, start.y);
             current = start;

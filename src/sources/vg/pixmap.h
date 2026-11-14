@@ -117,7 +117,7 @@ public:
      * @brief Clears the bitmap with the specified color.
      * @param value The color to clear with.
      */
-    void clear(const stb::color& value);
+    void clear(const color& value);
 
     /**
      * @brief Converts the bitmap pixel data from ARGB32 Premultiplied to RGBA Plain format in place.
@@ -169,11 +169,11 @@ private:
 
 // A straight-alpha RGBA copy of `bitmap` (the pixmap itself is left alone). Works for any stride: a pixmap over
 // caller-owned memory may be wider than width * 4, an image never is.
-stb::image bitmap_to_rgba_image(const pixmap& bitmap);
+image bitmap_to_rgba_image(const pixmap& bitmap);
 // The other direction: `image` premultiplied into a new pixmap. Empty, or a side of 32768 or more, gives a null pixmap.
-pixmap pixmap_from_image(const stb::image& image);
+pixmap pixmap_from_image(const image& image);
 // The bitmap as a straight RGBA image, taking it over: when nothing else holds its pixels they are converted in place
 // and become the image (no copy: this is what render() hands to callers), otherwise they are copied.
-stb::image pixmap_release_to_image(pixmap&& bitmap);
+image pixmap_release_to_image(pixmap&& bitmap);
 
 } // namespace nova::vg

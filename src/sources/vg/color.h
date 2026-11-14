@@ -11,21 +11,21 @@ namespace nova::vg {
 
 using stb::color;
 
-inline float red_f(const stb::color& c) { return c.r() / 255.f; }
-inline float green_f(const stb::color& c) { return c.g() / 255.f; }
-inline float blue_f(const stb::color& c) { return c.b() / 255.f; }
-inline float alpha_f(const stb::color& c) { return c.a() / 255.f; }
+inline float red_f(const color& c) { return c.r() / 255.f; }
+inline float green_f(const color& c) { return c.g() / 255.f; }
+inline float blue_f(const color& c) { return c.b() / 255.f; }
+inline float alpha_f(const color& c) { return c.a() / 255.f; }
 
-inline bool is_opaque(const stb::color& c) { return c.a() == 255; }
-inline bool is_visible(const stb::color& c) { return c.a() > 0; }
+inline bool is_opaque(const color& c) { return c.a() == 255; }
+inline bool is_visible(const color& c) { return c.a() > 0; }
 
 // The same colour with alpha 255.
-inline stb::color opaque(const stb::color& c) { return stb::color(c.r(), c.g(), c.b(), 255); }
+inline color opaque(const color& c) { return color(c.r(), c.g(), c.b(), 255); }
 
 // The same colour with its alpha multiplied by `opacity` (0..1), truncated like the former Color::colorWithAlpha().
-inline stb::color with_alpha(const stb::color& c, float opacity)
+inline color with_alpha(const color& c, float opacity)
 {
-    return stb::color(c.r(), c.g(), c.b(), static_cast<uint8_t>(c.a() * opacity));
+    return color(c.r(), c.g(), c.b(), static_cast<uint8_t>(c.a() * opacity));
 }
 
 }  // namespace nova::vg

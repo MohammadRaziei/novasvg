@@ -24,12 +24,12 @@ static state_t* state_create(void)
     state_t* state = new state_t();
     state->paint_ = NULL;
     state->font_face_ = NULL;
-    state->color_ = stb::color(0, 0, 0, 255);
+    state->color_ = color(0, 0, 0, 255);
     state->matrix = stb::matrix{};
     state->stroke = default_stroke_style();
     state->winding = fill_rule::non_zero;
-    state->op = stb::composite_op::source_over;
-    state->mode = stb::blend_mode::normal;
+    state->op = composite_op::source_over;
+    state->mode = blend_mode::normal;
     state->font_size = 12.f;
     state->opacity = 1.f;
     state->clipping = false;
@@ -43,13 +43,13 @@ static void state_reset(state_t* state)
     font_face_data::release(state->font_face_);
     state->paint_ = NULL;
     state->font_face_ = NULL;
-    state->color_ = stb::color(0, 0, 0, 255);
+    state->color_ = color(0, 0, 0, 255);
     state->matrix = stb::matrix{};
     state->stroke = default_stroke_style();
     state->clip_spans.clear();
     state->winding = fill_rule::non_zero;
-    state->op = stb::composite_op::source_over;
-    state->mode = stb::blend_mode::normal;
+    state->op = composite_op::source_over;
+    state->mode = blend_mode::normal;
     state->font_size = 12.f;
     state->opacity = 1.f;
     state->clipping = false;
@@ -83,7 +83,7 @@ canvas_t* canvas_create(std::shared_ptr<surface_t> surface)
     canvas_t* canvas = new canvas_t();
     novasvg_init_reference(canvas);
     canvas->surface = surface;
-    canvas->path_ = new stb::outline;
+    canvas->path_ = new outline;
     canvas->state = state_create();
     canvas->freed_state = NULL;
     canvas->face_cache = NULL;
@@ -162,7 +162,7 @@ void canvas_set_rgba(canvas_t* canvas, float r, float g, float b, float a)
     canvas_set_paint(canvas, NULL);
 }
 
-void canvas_set_color(canvas_t* canvas, const stb::color* color_)
+void canvas_set_color(canvas_t* canvas, const color* color_)
 {
     canvas->state->color_ = *color_;
     canvas_set_paint(canvas, NULL);
@@ -196,7 +196,7 @@ void canvas_set_paint(canvas_t* canvas, paint_t* paint_)
     canvas->state->paint_ = paint_;
 }
 
-paint_t* canvas_get_paint(const canvas_t* canvas, stb::color* color_)
+paint_t* canvas_get_paint(const canvas_t* canvas, color* color_)
 {
     if(color_)
         *color_ = canvas->state->color_;
@@ -278,18 +278,18 @@ fill_rule canvas_get_fill_rule(const canvas_t* canvas)
     return canvas->state->winding;
 }
 
-void canvas_set_operator(canvas_t* canvas, stb::composite_op op, stb::blend_mode mode)
+void canvas_set_operator(canvas_t* canvas, composite_op op, blend_mode mode)
 {
     canvas->state->op = op;
     canvas->state->mode = mode;
 }
 
-stb::composite_op canvas_get_operator(const canvas_t* canvas)
+composite_op canvas_get_operator(const canvas_t* canvas)
 {
     return canvas->state->op;
 }
 
-stb::blend_mode canvas_get_blend_mode(const canvas_t* canvas)
+blend_mode canvas_get_blend_mode(const canvas_t* canvas)
 {
     return canvas->state->mode;
 }
@@ -424,7 +424,7 @@ void canvas_map_point(const canvas_t* canvas, const stb::point* src, stb::point*
 
 void canvas_map_rect(const canvas_t* canvas, const rect_t* src, rect_t* dst)
 {
-    const stb::outline_bounds b = canvas->state->matrix.map_rect({src->x, src->y, src->x + src->w, src->y + src->h});
+    const outline_bounds b = canvas->state->matrix.map_rect({src->x, src->y, src->x + src->w, src->y + src->h});
     dst->x = b.x0;
     dst->y = b.y0;
     dst->w = b.width();
@@ -476,7 +476,7 @@ void canvas_circle(canvas_t* canvas, float cx, float cy, float r)
     canvas->path_->add_circle(cx, cy, r);
 }
 
-void canvas_add_path(canvas_t* canvas, const stb::outline& path_)
+void canvas_add_path(canvas_t* canvas, const outline& path_)
 {
     canvas->path_->add_outline(path_);
 }
@@ -497,7 +497,7 @@ void canvas_get_current_point(const canvas_t* canvas, float* x, float* y)
 }
 
 // The box of a span set as a rect (all zero when it is empty).
-static void span_extents(const stb::span_set& spans, rect_t* extents)
+static void span_extents(const span_set& spans, rect_t* extents)
 {
     const std::optional<stb::clip_rect> box = spans.extents();
     extents->x = box ? box->x : 0;
@@ -579,7 +579,7 @@ void canvas_paint(canvas_t* canvas)
     if(canvas->state->clipping) {
         blend(canvas, &canvas->state->clip_spans);
     } else {
-        canvas->clip_spans = stb::span_set::from_rect(0, 0, canvas->surface->width(), canvas->surface->height());
+        canvas->clip_spans = span_set::from_rect(0, 0, canvas->surface->width(), canvas->surface->height());
         blend(canvas, &canvas->clip_spans);
     }
 }
@@ -588,7 +588,7 @@ void canvas_fill_preserve(canvas_t* canvas)
 {
     rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
     if(canvas->state->clipping) {
-        canvas->clip_spans = stb::span_set::intersect(canvas->fill_spans, canvas->state->clip_spans);
+        canvas->clip_spans = span_set::intersect(canvas->fill_spans, canvas->state->clip_spans);
         blend(canvas, &canvas->clip_spans);
     } else {
         blend(canvas, &canvas->fill_spans);
@@ -599,7 +599,7 @@ void canvas_stroke_preserve(canvas_t* canvas)
 {
     rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, fill_rule::non_zero);
     if(canvas->state->clipping) {
-        canvas->clip_spans = stb::span_set::intersect(canvas->fill_spans, canvas->state->clip_spans);
+        canvas->clip_spans = span_set::intersect(canvas->fill_spans, canvas->state->clip_spans);
         blend(canvas, &canvas->clip_spans);
     } else {
         blend(canvas, &canvas->fill_spans);
@@ -610,7 +610,7 @@ void canvas_clip_preserve(canvas_t* canvas)
 {
     if(canvas->state->clipping) {
         rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
-        canvas->clip_spans = stb::span_set::intersect(canvas->fill_spans, canvas->state->clip_spans);
+        canvas->clip_spans = span_set::intersect(canvas->fill_spans, canvas->state->clip_spans);
         canvas->state->clip_spans = canvas->clip_spans;
     } else {
         rasterize(&canvas->state->clip_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
@@ -625,7 +625,7 @@ void canvas_fill_rect(canvas_t* canvas, float x, float y, float w, float h)
     canvas_fill(canvas);
 }
 
-void canvas_fill_path(canvas_t* canvas, const stb::outline& path_)
+void canvas_fill_path(canvas_t* canvas, const outline& path_)
 {
     canvas_new_path(canvas);
     canvas_add_path(canvas, path_);
@@ -639,7 +639,7 @@ void canvas_stroke_rect(canvas_t* canvas, float x, float y, float w, float h)
     canvas_stroke(canvas);
 }
 
-void canvas_stroke_path(canvas_t* canvas, const stb::outline& path_)
+void canvas_stroke_path(canvas_t* canvas, const outline& path_)
 {
     canvas_new_path(canvas);
     canvas_add_path(canvas, path_);
@@ -653,7 +653,7 @@ void canvas_clip_rect(canvas_t* canvas, float x, float y, float w, float h)
     canvas_clip(canvas);
 }
 
-void canvas_clip_path(canvas_t* canvas, const stb::outline& path_)
+void canvas_clip_path(canvas_t* canvas, const outline& path_)
 {
     canvas_new_path(canvas);
     canvas_add_path(canvas, path_);

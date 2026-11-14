@@ -49,7 +49,7 @@ int pixmap::stride() const
     return m_surface ? int(m_surface->stride()) : 0;
 }
 
-void pixmap::clear(const stb::color& value)
+void pixmap::clear(const color& value)
 {
     if(m_surface)
         m_surface->fill(value);
@@ -64,24 +64,24 @@ void pixmap::convert_to_rgba()
     stb::premultiplied_argb_to_rgba(pixels, row_bytes, pixels, row_bytes, width(), height());
 }
 
-stb::image bitmap_to_rgba_image(const pixmap& bitmap)
+image bitmap_to_rgba_image(const pixmap& bitmap)
 {
     if(bitmap.is_null())
-        return stb::image();
+        return image();
     return bitmap.surface()->to_image();
 }
 
-pixmap pixmap_from_image(const stb::image& image)
+pixmap pixmap_from_image(const image& image)
 {
     if(image.empty() || image.width() >= max_side || image.height() >= max_side)
         return pixmap();
     return pixmap(std::make_shared<surface_t>(surface_t::from_image(image)));
 }
 
-stb::image pixmap_release_to_image(pixmap&& bitmap)
+image pixmap_release_to_image(pixmap&& bitmap)
 {
     if(bitmap.is_null())
-        return stb::image();
+        return image();
     // The surface is converted in place and handed over when nobody else holds it (libstb decides whether it owns
     // its pixels); a shared one, or somebody else's buffer, is copied.
     std::shared_ptr<surface_t> surface = bitmap.surface();

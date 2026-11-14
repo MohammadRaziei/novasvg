@@ -18,7 +18,7 @@ paint_t* paint_create_rgba(float r, float g, float b, float a)
     return &solid->base;
 }
 
-paint_t* paint_create_color(const stb::color* color_)
+paint_t* paint_create_color(const color* color_)
 {
     solid_paint_t* solid = static_cast<solid_paint_t*>(paint_create(
         NOVA_PAINT_TYPE_COLOR,

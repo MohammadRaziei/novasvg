@@ -278,7 +278,7 @@ private:
 // A path is an stb::outline. Arcs (`outline::arc_to`) and boxes (`outline::tight_bounds`) are libstb's; the engine adds
 // one thing on top (src/sources/vg/outline_util.cpp):
 //   parse_path  SVG path data ("M 0 0 L ..."), replaces the content; partial data stays on error, as in SVG
-bool parse_path(stb::outline& path_, const char* data, size_t length_);
+bool parse_path(outline& path_, const char* data, size_t length_);
 
 enum class segment_kind { move_to, line_to, cubic_to, close };
 
@@ -286,7 +286,7 @@ enum class segment_kind { move_to, line_to, cubic_to, close };
 // start point of its contour in points[0].
 class outline_walker {
 public:
-    explicit outline_walker(const stb::outline& path_);
+    explicit outline_walker(const outline& path_);
     segment_kind current_segment(std::array<point, 3>& points) const;
     bool done() const { return m_index >= m_segments.size(); }
     void next() { ++m_index; }
@@ -350,18 +350,18 @@ class canvas {
 public:
     virtual ~canvas() = default;
 
-    virtual void set_color(const stb::color& color_) = 0;
+    virtual void set_color(const color& color_) = 0;
     virtual void set_color(float r, float g, float b, float a) = 0;
     virtual void set_linear_gradient(float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stops& stops, const transform& transform_) = 0;
     virtual void set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method_value spread, const gradient_stops& stops, const transform& transform_) = 0;
 
-    virtual void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) = 0;
-    virtual void stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_) = 0;
+    virtual void fill_path(const outline& path_, fill_rule fill_rule_, const transform& transform_) = 0;
+    virtual void stroke_path(const outline& path_, const stroke_data& stroke_data_, const transform& transform_) = 0;
 
     virtual void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) = 0;
     virtual void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) = 0;
 
-    virtual void clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_) = 0;
+    virtual void clip_path(const outline& path_, fill_rule clip_rule, const transform& transform_) = 0;
     virtual void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) = 0;
 
     virtual void draw_image(const pixmap& image, const rect& dst_rect, const rect& src_rect, const transform& transform_) = 0;
@@ -376,23 +376,23 @@ public:
     static std::shared_ptr<raster_canvas> create(float x, float y, float width, float height);
     static std::shared_ptr<raster_canvas> create(const rect& extents);
 
-    void set_color(const stb::color& color_) override;
+    void set_color(const color& color_) override;
     void set_color(float r, float g, float b, float a) override;
     void set_linear_gradient(float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stops& stops, const transform& transform_) override;
     void set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method_value spread, const gradient_stops& stops, const transform& transform_) override;
     void set_texture(const raster_canvas& source, texture_type type_, float opacity, const transform& transform_);
 
-    void fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_) override;
-    void stroke_path(const stb::outline& path_, const stroke_data& stroke_data_, const transform& transform_) override;
+    void fill_path(const outline& path_, fill_rule fill_rule_, const transform& transform_) override;
+    void stroke_path(const outline& path_, const stroke_data& stroke_data_, const transform& transform_) override;
 
     void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) override;
     void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) override;
 
-    void clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_) override;
+    void clip_path(const outline& path_, fill_rule clip_rule, const transform& transform_) override;
     void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) override;
 
     void draw_image(const pixmap& image, const rect& dst_rect, const rect& src_rect, const transform& transform_) override;
-    void blend_canvas(const raster_canvas& canvas, stb::composite_op op, stb::blend_mode mode, float opacity);
+    void blend_canvas(const raster_canvas& canvas, composite_op op, blend_mode mode, float opacity);
 
     void save() override;
     void restore() override;
@@ -413,7 +413,7 @@ public:
 
     // Recolors every pixel to flood_color while preserving its alpha
     // (scaled by flood_opacity), for feDropShadow/feFlood.
-    void tint_to_flood_color(const stb::color& flood_color, float flood_opacity);
+    void tint_to_flood_color(const color& flood_color, float flood_opacity);
 
     // Fills every pixel fully opaque white; paired with tint_to_flood_color()
     // this gives feFlood's "solid flood-color rectangle" result.

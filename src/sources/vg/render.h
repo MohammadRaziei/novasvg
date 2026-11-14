@@ -54,7 +54,6 @@ using stb::fill_rule;
 using stb::line_cap;
 using stb::line_join;
 
-
 // The rest of libstb's vocabulary, under its own names (matrix and point are not here: vg has its own `point` and
 // `transform::matrix()`).
 using stb::blend_mode;
@@ -324,14 +323,14 @@ NOVA_API int font_face_cache_load_dir(font_face_cache_t* cache, const char* dirn
 NOVA_API int font_face_cache_load_sys(font_face_cache_t* cache);
 
 /// A colour with float channels (0 to 1, clamped) rounded to the 8-bit stb::color.
-inline stb::color color_from_floats(float r, float g, float b, float a = 1.f)
+inline color color_from_floats(float r, float g, float b, float a = 1.f)
 {
     auto channel = [](float v) { return static_cast<uint8_t>(lroundf(std::clamp(v, 0.f, 1.f) * 255.f)); };
-    return stb::color(channel(r), channel(g), channel(b), channel(a));
+    return color(channel(r), channel(g), channel(b), channel(a));
 }
 
 /// The colour packed as 0xAARRGGBB (alpha in the high byte; stb::color::value() is 0xRRGGBBAA).
-inline uint32_t color_to_argb32(const stb::color& c)
+inline uint32_t color_to_argb32(const color& c)
 {
     return (uint32_t(c.a()) << 24) | (uint32_t(c.r()) << 16) | (uint32_t(c.g()) << 8) | uint32_t(c.b());
 }
@@ -341,7 +340,7 @@ inline uint32_t color_to_argb32(const stb::color& c)
  *
  * Pixmaps, canvases and texture paints share one through std::shared_ptr.
  */
-typedef stb::premultiplied_image surface_t;
+using surface_t = stb::premultiplied_image;
 
 /**
  * @brief Defines the type of texture, either plain or tiled.
@@ -365,7 +364,7 @@ enum class spread_method_value : uint8_t {
  */
 typedef struct {
     float offset; ///< The offset of the gradient stop, as a value between 0 and 1.
-    stb::color color_; ///< The color of the gradient stop.
+    color color_; ///< The color of the gradient stop.
 } gradient_stop_t;
 
 /**
@@ -397,10 +396,10 @@ NOVA_API paint_t* paint_create_rgba(float r, float g, float b, float a);
 /**
  * @brief Creates a solid color paint.
  *
- * @param color A pointer to the `stb::color` object.
+ * @param color A pointer to the `color` object.
  * @return A pointer to the created `paint_t` object.
  */
-NOVA_API paint_t* paint_create_color(const stb::color* color_);
+NOVA_API paint_t* paint_create_color(const color* color_);
 
 /**
  * @brief Creates a linear gradient paint.
@@ -559,9 +558,9 @@ NOVA_API void canvas_set_rgba(canvas_t* canvas, float r, float g, float b, float
  * If not set, the default paint is opaque black color.
  *
  * @param canvas A pointer to a `canvas_t` object.
- * @param color A pointer to a `stb::color` object.
+ * @param color A pointer to a `color` object.
  */
-NOVA_API void canvas_set_color(canvas_t* canvas, const stb::color* color_);
+NOVA_API void canvas_set_color(canvas_t* canvas, const color* color_);
 
 /**
  * @brief Sets the current paint to a linear gradient.
@@ -630,10 +629,10 @@ NOVA_API void canvas_set_paint(canvas_t* canvas, paint_t* paint_);
  * If not set, the default paint is opaque black color.
  *
  * @param canvas A pointer to a `canvas_t` object.
- * @param color A pointer to a `stb::color` object where the current color will be stored.
+ * @param color A pointer to a `color` object where the current color will be stored.
  * @return The current `paint_t` used for drawing operations. If no paint is set, `NULL` is returned.
  */
-NOVA_API paint_t* canvas_get_paint(const canvas_t* canvas, stb::color* color_);
+NOVA_API paint_t* canvas_get_paint(const canvas_t* canvas, color* color_);
 
 /**
  * @brief Assigns a font-face cache to the canvas for font management.
@@ -768,7 +767,7 @@ NOVA_API fill_rule canvas_get_fill_rule(const canvas_t* canvas);
  * @param op The compositing operator.
  * @param mode The blend mode.
  */
-NOVA_API void canvas_set_operator(canvas_t* canvas, stb::composite_op op, stb::blend_mode mode = stb::blend_mode::normal);
+NOVA_API void canvas_set_operator(canvas_t* canvas, composite_op op, blend_mode mode = blend_mode::normal);
 
 /**
  * @brief Retrieves the current compositing operator.
@@ -776,7 +775,7 @@ NOVA_API void canvas_set_operator(canvas_t* canvas, stb::composite_op op, stb::b
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current compositing operator.
  */
-NOVA_API stb::composite_op canvas_get_operator(const canvas_t* canvas);
+NOVA_API composite_op canvas_get_operator(const canvas_t* canvas);
 
 /**
  * @brief Retrieves the current blend mode.
@@ -784,7 +783,7 @@ NOVA_API stb::composite_op canvas_get_operator(const canvas_t* canvas);
  * @param canvas A pointer to a `canvas_t` object.
  * @return The current blend mode.
  */
-NOVA_API stb::blend_mode canvas_get_blend_mode(const canvas_t* canvas);
+NOVA_API blend_mode canvas_get_blend_mode(const canvas_t* canvas);
 
 /**
  * @brief Sets the global opacity.
@@ -1160,7 +1159,7 @@ NOVA_API void canvas_circle(canvas_t* canvas, float cx, float cy, float r);
  * @param canvas A pointer to a `canvas_t` object.
  * @param path A pointer to the `path_t` object to be added.
  */
-NOVA_API void canvas_add_path(canvas_t* canvas, const stb::outline& path_);
+NOVA_API void canvas_add_path(canvas_t* canvas, const outline& path_);
 
 /**
  * @brief Starts a new path on the canvas.
@@ -1363,7 +1362,7 @@ NOVA_API void canvas_fill_rect(canvas_t* canvas, float x, float y, float w, floa
  * @param canvas A pointer to a `canvas_t` object.
  * @param path The `path_t` object.
  */
-NOVA_API void canvas_fill_path(canvas_t* canvas, const stb::outline& path_);
+NOVA_API void canvas_fill_path(canvas_t* canvas, const outline& path_);
 
 /**
  * @brief Strokes a rectangle with the current stroke settings.
@@ -1384,7 +1383,7 @@ NOVA_API void canvas_stroke_rect(canvas_t* canvas, float x, float y, float w, fl
  * @param canvas A pointer to a `canvas_t` object.
  * @param path The `path_t` object.
  */
-NOVA_API void canvas_stroke_path(canvas_t* canvas, const stb::outline& path_);
+NOVA_API void canvas_stroke_path(canvas_t* canvas, const outline& path_);
 
 /**
  * @brief Intersects the current clipping region with a rectangle according to the current fill rule.
@@ -1405,7 +1404,7 @@ NOVA_API void canvas_clip_rect(canvas_t* canvas, float x, float y, float w, floa
  * @param canvas A pointer to a `canvas_t` object.
  * @param path The `path_t` object.
  */
-NOVA_API void canvas_clip_path(canvas_t* canvas, const stb::outline& path_);
+NOVA_API void canvas_clip_path(canvas_t* canvas, const outline& path_);
 
 /**
  * @brief Adds a glyph to the current path at the specified origin.

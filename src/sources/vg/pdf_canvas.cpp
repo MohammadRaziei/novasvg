@@ -101,20 +101,20 @@ int pdf_canvas::add_stream(std::string dict, const std::string& bytes, bool comp
     return int(m_objects.size());
 }
 
-static const char* pdf_blend_name(stb::blend_mode mode)
+static const char* pdf_blend_name(blend_mode mode)
 {
     switch(mode) {
-    case stb::blend_mode::multiply: return "Multiply";
-    case stb::blend_mode::screen: return "Screen";
-    case stb::blend_mode::darken: return "Darken";
-    case stb::blend_mode::lighten: return "Lighten";
-    case stb::blend_mode::difference: return "Difference";
-    case stb::blend_mode::exclusion: return "Exclusion";
+    case blend_mode::multiply: return "Multiply";
+    case blend_mode::screen: return "Screen";
+    case blend_mode::darken: return "Darken";
+    case blend_mode::lighten: return "Lighten";
+    case blend_mode::difference: return "Difference";
+    case blend_mode::exclusion: return "Exclusion";
     default: return "Normal";
     }
 }
 
-std::string pdf_canvas::alpha_state(float alpha, stb::blend_mode blend_mode_)
+std::string pdf_canvas::alpha_state(float alpha, blend_mode blend_mode_)
 {
     std::string alpha_text = num(clamp01(alpha));
     std::string blend = pdf_blend_name(blend_mode_);
@@ -127,7 +127,7 @@ std::string pdf_canvas::alpha_state(float alpha, stb::blend_mode blend_mode_)
     return name;
 }
 
-void pdf_canvas::set_color(const stb::color& color_)
+void pdf_canvas::set_color(const color& color_)
 {
     set_color(red_f(color_), green_f(color_), blue_f(color_), alpha_f(color_));
 }
@@ -271,7 +271,7 @@ void pdf_canvas::begin_paint(bool stroke, const stb::matrix& transform_)
     m_content += m_patterns.back().first + (stroke ? " SCN\n" : " scn\n");
 }
 
-void pdf_canvas::emit_path(const stb::outline& path_, const stb::matrix* transform_)
+void pdf_canvas::emit_path(const outline& path_, const stb::matrix* transform_)
 {
     if(path_.empty())
         return;
@@ -300,7 +300,7 @@ void pdf_canvas::emit_path(const stb::outline& path_, const stb::matrix* transfo
 
 void pdf_canvas::emit_rect_path(const rect& rect_, const stb::matrix* transform_)
 {
-    stb::outline path_;
+    outline path_;
     path_.add_rect(rect_.x, rect_.y, rect_.w, rect_.h);
     emit_path(path_, transform_);
 }
@@ -345,7 +345,7 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const sized_fon
         face->traverse_glyph_index_path(font_.size(), origin.x + g.x, origin.y + g.y, g.glyph, traverse, &s);
 }
 
-void pdf_canvas::fill_path(const stb::outline& path_, fill_rule fill_rule_, const transform& transform_)
+void pdf_canvas::fill_path(const outline& path_, fill_rule fill_rule_, const transform& transform_)
 {
     m_content += "q\n";
     begin_paint(false, transform_.matrix());
@@ -354,7 +354,7 @@ void pdf_canvas::fill_path(const stb::outline& path_, fill_rule fill_rule_, cons
     m_content += "Q\n";
 }
 
-void pdf_canvas::stroke_path(const stb::outline& path_, const stroke_data& sd, const transform& transform_)
+void pdf_canvas::stroke_path(const outline& path_, const stroke_data& sd, const transform& transform_)
 {
     m_content += "q\n";
     begin_paint(true, transform_.matrix());
@@ -392,7 +392,7 @@ void pdf_canvas::stroke_text(const std::u32string_view& text, float stroke_width
     m_content += "S\nQ\n";
 }
 
-void pdf_canvas::clip_path(const stb::outline& path_, fill_rule clip_rule, const transform& transform_)
+void pdf_canvas::clip_path(const outline& path_, fill_rule clip_rule, const transform& transform_)
 {
     emit_path(path_, &transform_.matrix());
     m_content += clip_rule == fill_rule::even_odd ? "W* n\n" : "W n\n";
@@ -436,7 +436,7 @@ int pdf_canvas::add_image(const pixmap& image, int* width, int* height)
 }
 
 // The whole image (w x h px) scaled so that `src` (in image pixels) lands on `dst`, clipped to `dst`.
-void pdf_canvas::place_image(int object, int w, int h, const rect& dst, const rect& src, const stb::matrix* transform_, float alpha, stb::blend_mode blend_mode_)
+void pdf_canvas::place_image(int object, int w, int h, const rect& dst, const rect& src, const stb::matrix* transform_, float alpha, blend_mode blend_mode_)
 {
     std::string name = "Im" + std::to_string(m_xobjects.size());
     m_xobjects.emplace_back(name, object);
@@ -460,10 +460,10 @@ void pdf_canvas::draw_image(const pixmap& image, const rect& dst, const rect& sr
     int object = add_image(image, &w, &h);
     if(object == 0)
         return;
-    place_image(object, w, h, dst, src, &transform_.matrix(), 1.f, stb::blend_mode::normal);
+    place_image(object, w, h, dst, src, &transform_.matrix(), 1.f, blend_mode::normal);
 }
 
-void pdf_canvas::draw_raster_group(const pixmap& image, const rect& dst, stb::blend_mode blend_mode_, float opacity)
+void pdf_canvas::draw_raster_group(const pixmap& image, const rect& dst, blend_mode blend_mode_, float opacity)
 {
     if(image.is_null() || dst.w <= 0.f || dst.h <= 0.f)
         return;
@@ -515,7 +515,7 @@ void pdf_canvas::begin_group()
     m_paints.push_back(m_paints.back());
 }
 
-void pdf_canvas::end_group(stb::blend_mode blend_mode_, float opacity)
+void pdf_canvas::end_group(blend_mode blend_mode_, float opacity)
 {
     if(m_groups.empty())
         return;

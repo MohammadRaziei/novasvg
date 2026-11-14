@@ -72,10 +72,10 @@ public:
     float get_kern_advance(float size_, codepoint_t ch1, codepoint_t ch2) const;
 
     // The outline of a glyph at (x, y); returns its own advance.
-    float get_glyph_path(float size_, float x, float y, codepoint_t codepoint, stb::outline& path_) const;
+    float get_glyph_path(float size_, float x, float y, codepoint_t codepoint, outline& path_) const;
     float traverse_glyph_path(float size_, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure) const;
     // The same by glyph index (what shape() returns).
-    float get_glyph_index_path(float size_, float x, float y, std::uint32_t glyph, stb::outline& path_) const;
+    float get_glyph_index_path(float size_, float x, float y, std::uint32_t glyph, outline& path_) const;
     float traverse_glyph_index_path(float size_, float x, float y, std::uint32_t glyph_index, path_traverse_func_t traverse_func, void* closure) const;
 
     // Shapes `text`; fills `glyphs` (when not null) and returns the advance of the whole text. UTF-8, UTF-16 or UTF-32.
