@@ -9,6 +9,8 @@
 
 namespace nova::vg {
 
+using stb::color;
+
 inline float red_f(const stb::color& c) { return c.r() / 255.f; }
 inline float green_f(const stb::color& c) { return c.g() / 255.f; }
 inline float blue_f(const stb::color& c) { return c.b() / 255.f; }

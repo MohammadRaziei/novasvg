@@ -55,6 +55,18 @@ using stb::line_cap;
 using stb::line_join;
 
 
+// The rest of libstb's vocabulary, under its own names (matrix and point are not here: vg has its own `point` and
+// `transform::matrix()`).
+using stb::blend_mode;
+using stb::color;
+using stb::composite_op;
+using stb::image;
+using stb::outline;
+using stb::outline_bounds;
+using stb::outline_op;
+using stb::span_set;
+
+
 #define NOVA_RENDER_VERSION_MAJOR 1
 #define NOVA_RENDER_VERSION_MINOR 3
 #define NOVA_RENDER_VERSION_MICRO 2
