@@ -92,14 +92,11 @@ typedef void (*destroy_func_t)(void* closure);
  */
 typedef void (*write_func_t)(void* closure, void* data, int size_);
 
-#define NOVA_PI      3.14159265358979323846f
-#define NOVA_TWO_PI  6.28318530717958647693f
-#define NOVA_HALF_PI 1.57079632679489661923f
-#define NOVA_SQRT2   1.41421356237309504880f
-#define NOVA_KAPPA   0.55228474983079339840f
+inline constexpr float pi = 3.14159265358979323846f;
+inline constexpr float sqrt2 = 1.41421356237309504880f;
 
-#define NOVA_DEG2RAD(x) ((x) * (NOVA_PI / 180.0f))
-#define NOVA_RAD2DEG(x) ((x) * (180.0f / NOVA_PI))
+constexpr float deg_to_rad(float degrees) { return degrees * (pi / 180.0f); }
+constexpr float rad_to_deg(float radians) { return radians * (180.0f / pi); }
 
 /**
  * @brief A structure representing a rectangle in 2D space.
@@ -110,9 +107,6 @@ typedef struct {
     float w; ///< The width of the rectangle.
     float h; ///< The height of the rectangle.
 } rect_t;
-
-#define NOVA_MAKE_RECT(x, y, w, h) (rect_t{x, y, w, h})
-#define NOVA_EMPTY_RECT NOVA_MAKE_RECT(0, 0, 0, 0)
 
 // Matrices are stb::matrix and points are stb::point (<stb/outline.hpp>); mapping points and boxes is `stb::matrix::map` / `map_rect`; the helper below is what libstb does not have.
 

@@ -37,7 +37,7 @@ bool svg_angle::parse(std::string_view input)
         return false;
     if(!input.empty()) {
         if(input == "rad")
-            value *= 180.f / NOVA_PI;
+            value *= 180.f / vg::pi;
         else if(input == "grad")
             value *= 360.f / 400.f;
         else if(input == "turn")
@@ -165,7 +165,7 @@ float length_context::viewport_dimension(length_direction direction_) const
     case length_direction::vertical:
         return viewport_size.h;
     default:
-        return std::sqrt(viewport_size.w * viewport_size.w + viewport_size.h * viewport_size.h) / NOVA_SQRT2;
+        return std::sqrt(viewport_size.w * viewport_size.w + viewport_size.h * viewport_size.h) / vg::sqrt2;
     }
 }
 

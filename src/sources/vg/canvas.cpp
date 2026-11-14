@@ -26,7 +26,7 @@ static state_t* state_create(void)
     state->font_face_ = NULL;
     state->color_ = stb::color(0, 0, 0, 255);
     state->matrix = stb::matrix{};
-    state->stroke = NOVA_DEFAULT_STROKE_STYLE;
+    state->stroke = default_stroke_style();
     state->winding = fill_rule::non_zero;
     state->op = stb::composite_op::source_over;
     state->mode = stb::blend_mode::normal;
@@ -45,7 +45,7 @@ static void state_reset(state_t* state)
     state->font_face_ = NULL;
     state->color_ = stb::color(0, 0, 0, 255);
     state->matrix = stb::matrix{};
-    state->stroke = NOVA_DEFAULT_STROKE_STYLE;
+    state->stroke = default_stroke_style();
     state->clip_spans.clear();
     state->winding = fill_rule::non_zero;
     state->op = stb::composite_op::source_over;
@@ -87,7 +87,7 @@ canvas_t* canvas_create(std::shared_ptr<surface_t> surface)
     canvas->state = state_create();
     canvas->freed_state = NULL;
     canvas->face_cache = NULL;
-    canvas->clip_rect = NOVA_MAKE_RECT(0, 0, static_cast<float>(surface->width()), static_cast<float>(surface->height()));
+    canvas->clip_rect = rect_t{0, 0, static_cast<float>(surface->width()), static_cast<float>(surface->height())};
     return canvas;
 }
 
@@ -453,7 +453,7 @@ void canvas_cubic_to(canvas_t* canvas, float x1, float y1, float x2, float y2, f
 
 void canvas_arc_to(canvas_t* canvas, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y)
 {
-    canvas->path_->arc_to(rx, ry, NOVA_RAD2DEG(angle), large_arc_flag, sweep_flag, x, y);
+    canvas->path_->arc_to(rx, ry, rad_to_deg(angle), large_arc_flag, sweep_flag, x, y);
 }
 
 void canvas_rect(canvas_t* canvas, float x, float y, float w, float h)

@@ -6,7 +6,13 @@
 namespace nova {
 namespace vg {
 
-#define NOVA_DEFAULT_STROKE_STYLE (stb::stroke_style{1.f, stb::line_cap::butt, stb::line_join::miter, 10.f})
+// novasvg's miter limit is 10 (libstb's default is 4).
+inline stb::stroke_style default_stroke_style()
+{
+    stb::stroke_style style;
+    style.miter_limit = 10.f;
+    return style;
+}
 
 } // namespace vg
 } // namespace nova

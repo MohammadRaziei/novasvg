@@ -95,7 +95,7 @@ bool parse_matrix(stb::matrix* matrix, const char* data, int length_)
                 return false;
             if(count == 3)
                 matrix->translate(values[1], values[2]);
-            matrix->rotate(NOVA_DEG2RAD(values[0]));
+            matrix->rotate(deg_to_rad(values[0]));
             if(count == 3) {
                 matrix->translate(-values[1], -values[2]);
             }
@@ -103,12 +103,12 @@ bool parse_matrix(stb::matrix* matrix, const char* data, int length_)
             int count = parse_matrix_parameters(input, values, 1, 0);
             if(count == 0)
                 return false;
-            matrix->shear(NOVA_DEG2RAD(values[0]), 0);
+            matrix->shear(deg_to_rad(values[0]), 0);
         } else if(skip_string(input, "skewY")) {
             int count = parse_matrix_parameters(input, values, 1, 0);
             if(count == 0)
                 return false;
-            matrix->shear(0, NOVA_DEG2RAD(values[0]));
+            matrix->shear(0, deg_to_rad(values[0]));
         } else {
             return false;
         }

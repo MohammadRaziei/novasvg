@@ -33,7 +33,7 @@ rect svg_geometry_element::stroke_bounding_box() const
     if(m_stroke.is_renderable()) {
         float cap_limit = m_stroke_data.line_width() / 2.f;
         if(m_stroke_data.line_cap() == line_cap::square)
-            cap_limit *= NOVA_SQRT2;
+            cap_limit *= vg::sqrt2;
         float join_limit = m_stroke_data.line_width() / 2.f;
         if(m_stroke_data.line_join() == line_join::miter) {
             join_limit *= m_stroke_data.miter_limit();
@@ -115,7 +115,7 @@ void svg_geometry_element::update_marker_positions(svg_marker_position_list& pos
             outslope_points[1] = points[0];
             if(index == 0 && marker_start) {
                 auto slope = outslope_points[1] - outslope_points[0];
-                auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVA_PI;
+                auto angle = 180.f * std::atan2(slope.y, slope.x) / vg::pi;
                 const auto& orient = marker_start->orient();
                 if(orient.orient_type() == svg_angle::orient_type_value::auto_start_reverse)
                     angle -= 180.f;
@@ -125,8 +125,8 @@ void svg_geometry_element::update_marker_positions(svg_marker_position_list& pos
             if(index > 0 && marker_mid) {
                 auto inslope = inslope_points[1] - inslope_points[0];
                 auto outslope = outslope_points[1] - outslope_points[0];
-                auto inangle = 180.f * std::atan2(inslope.y, inslope.x) / NOVA_PI;
-                auto outangle = 180.f * std::atan2(outslope.y, outslope.x) / NOVA_PI;
+                auto inangle = 180.f * std::atan2(inslope.y, inslope.x) / vg::pi;
+                auto outangle = 180.f * std::atan2(outslope.y, outslope.x) / vg::pi;
                 if(std::abs(inangle - outangle) > 180.f)
                     inangle += 360.f;
                 auto angle = (inangle + outangle) * 0.5f;
@@ -136,7 +136,7 @@ void svg_geometry_element::update_marker_positions(svg_marker_position_list& pos
 
         if(marker_end && it.done()) {
             auto slope = inslope_points[1] - inslope_points[0];
-            auto angle = 180.f * std::atan2(slope.y, slope.x) / NOVA_PI;
+            auto angle = 180.f * std::atan2(slope.y, slope.x) / vg::pi;
             positions.emplace_back(marker_end, origin, angle);
         }
 

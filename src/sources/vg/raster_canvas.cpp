@@ -133,10 +133,10 @@ transform transform::rotated(float angle, float cx, float cy)
 {
     stb::matrix matrix;
     if(cx == 0.f && cy == 0.f) {
-        matrix = stb::matrix::rotation(NOVA_DEG2RAD(angle));
+        matrix = stb::matrix::rotation(deg_to_rad(angle));
     } else {
         matrix = stb::matrix::translation(cx, cy);
-        matrix.rotate(NOVA_DEG2RAD(angle));
+        matrix.rotate(deg_to_rad(angle));
         matrix.translate(-cx, -cy);
     }
 
@@ -153,7 +153,7 @@ transform transform::scaled(float sx, float sy)
 transform transform::sheared(float shx, float shy)
 {
     stb::matrix matrix;
-    matrix = stb::matrix::shearing(NOVA_DEG2RAD(shx), NOVA_DEG2RAD(shy));
+    matrix = stb::matrix::shearing(deg_to_rad(shx), deg_to_rad(shy));
     return matrix;
 }
 
