@@ -550,7 +550,7 @@ void svg_text_element::render(svg_render_state& state) const
     svg_render_state new_state(this, state, local_transform());
     new_state.begin_group(blend_info);
     if(new_state.mode() == svg_render_mode::clipping) {
-        new_state->set_color(stb::color::white());
+        new_state->set_color(color::white());
     }
 
     std::u32string_view whole_text(m_text);

@@ -77,9 +77,9 @@ pixmap load_image_resource(const std::string& href)
             const std::optional<std::vector<uint8_t>> bytes = stb::try_base64_decode(input);
             if(!bytes)
                 return pixmap();
-            return pixmap_from_image(stb::image::decode(bytes->data(), bytes->size(), options));
+            return pixmap_from_image(image::decode(bytes->data(), bytes->size(), options));
         }
-        return pixmap_from_image(stb::image::open(href.c_str(), options));
+        return pixmap_from_image(image::open(href.c_str(), options));
     } catch(const std::exception&) {
         return pixmap();
     }

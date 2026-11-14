@@ -83,7 +83,7 @@ void svg_render_state::end_group(const svg_blend_info& blend_info)
     }
 
     // the finished group is blended into what is already painted under it, with its mix-blend-mode
-    const stb::blend_mode blend_mode_ = m_mode == svg_render_mode::painting ? blend_info.mix_blend_mode() : stb::blend_mode::normal;
+    const blend_mode blend_mode_ = m_mode == svg_render_mode::painting ? blend_info.mix_blend_mode() : blend_mode::normal;
 
     auto opacity = m_mode == svg_render_mode::clipping ? 1.f : blend_info.opacity();
     if(m_layer == layer_kind::pdf_group) {
@@ -109,7 +109,7 @@ void svg_render_state::end_group(const svg_blend_info& blend_info)
         return;
     }
 
-    static_cast<raster_canvas&>(*m_parent->m_canvas).blend_canvas(static_cast<raster_canvas&>(*m_canvas), stb::composite_op::source_over, blend_mode_, opacity);
+    static_cast<raster_canvas&>(*m_parent->m_canvas).blend_canvas(static_cast<raster_canvas&>(*m_canvas), composite_op::source_over, blend_mode_, opacity);
 }
 
 svg_paint_element::svg_paint_element(document* dom, element_id id)
@@ -133,7 +133,7 @@ void svg_stop_element::layout_element(const svg_layout_state& state)
 
 gradient_stop svg_stop_element::make_gradient_stop(float opacity) const
 {
-    stb::color stop_color = with_alpha(m_stop_color, m_stop_opacity * opacity);
+    color stop_color = with_alpha(m_stop_color, m_stop_opacity * opacity);
     gradient_stop gradient_stop_ = {m_offset.value(), stop_color};
 
     return gradient_stop_;

@@ -139,14 +139,14 @@ property_id csspropertyid(std::string_view name)
     return it->value;
 }
 
-std::optional<stb::color> parse_color_value(std::string_view& input, const svg_layout_state* state)
+std::optional<color> parse_color_value(std::string_view& input, const svg_layout_state* state)
 {
     if(skip_string(input, "currentColor")) {
         return state->color();
     }
 
     std::size_t used = 0;
-    const auto color_ = stb::color::try_parse(input, &used);
+    const auto color_ = color::try_parse(input, &used);
     if(!color_)
         return std::nullopt;
     input.remove_prefix(used);
@@ -154,7 +154,7 @@ std::optional<stb::color> parse_color_value(std::string_view& input, const svg_l
     return color_;
 }
 
-stb::color parse_color(std::string_view input, const svg_layout_state* state, const stb::color& default_value)
+color parse_color(std::string_view input, const svg_layout_state* state, const color& default_value)
 {
     auto color_ = parse_color_value(input, state);
     if(!color_ || !input.empty())
@@ -162,10 +162,10 @@ stb::color parse_color(std::string_view input, const svg_layout_state* state, co
     return color_.value();
 }
 
-stb::color parse_color_or_none(std::string_view input, const svg_layout_state* state, const stb::color& default_value)
+color parse_color_or_none(std::string_view input, const svg_layout_state* state, const color& default_value)
 {
     if(input.compare("none") == 0)
-        return stb::color::transparent();
+        return color::transparent();
     return parse_color(input, state, default_value);
 }
 
@@ -218,14 +218,14 @@ std::string parse_url(std::string_view input)
     return value;
 }
 
-paint parse_paint(std::string_view input, const svg_layout_state* state, const stb::color& default_value)
+paint parse_paint(std::string_view input, const svg_layout_state* state, const color& default_value)
 {
     std::string id;
     if(!parse_url_value(input, id))
         return paint(parse_color_or_none(input, state, default_value));
     if(skip_optional_spaces(input))
         return paint(id, parse_color_or_none(input, state, default_value));
-    return paint(id, stb::color::transparent());
+    return paint(id, color::transparent());
 }
 
 float parse_number_or_percentage(std::string_view input, bool allow_percentage, float default_value)

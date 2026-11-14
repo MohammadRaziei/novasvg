@@ -9,12 +9,12 @@ using namespace vg;
 
 property_id propertyid(std::string_view name);
 property_id csspropertyid(std::string_view name);
-std::optional<stb::color> parse_color_value(std::string_view& input, const svg_layout_state* state);
-stb::color parse_color(std::string_view input, const svg_layout_state* state, const stb::color& default_value);
-stb::color parse_color_or_none(std::string_view input, const svg_layout_state* state, const stb::color& default_value);
+std::optional<color> parse_color_value(std::string_view& input, const svg_layout_state* state);
+color parse_color(std::string_view input, const svg_layout_state* state, const color& default_value);
+color parse_color_or_none(std::string_view input, const svg_layout_state* state, const color& default_value);
 bool parse_url_value(std::string_view& input, std::string& value);
 std::string parse_url(std::string_view input);
-paint parse_paint(std::string_view input, const svg_layout_state* state, const stb::color& default_value);
+paint parse_paint(std::string_view input, const svg_layout_state* state, const color& default_value);
 float parse_number_or_percentage(std::string_view input, bool allow_percentage, float default_value);
 css_length parse_length(std::string_view input, length_negative_mode mode, const css_length& default_value);
 css_baseline_shift parse_baseline_shift(std::string_view input);

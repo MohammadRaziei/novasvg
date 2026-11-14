@@ -99,7 +99,7 @@ public:
 
 private:
     svg_number_percentage m_offset;
-    stb::color m_stop_color = stb::color::black();
+    color m_stop_color = color::black();
     float m_stop_opacity = 1.f;
 };
 

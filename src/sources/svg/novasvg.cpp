@@ -149,7 +149,7 @@ void element::render(pixmap& bitmap, const stb::matrix& matrix) const
     el(true)->render(state);
 }
 
-pixmap element::render_to_pixmap(int width, int height, const stb::color& background_color) const
+pixmap element::render_to_pixmap(int width, int height, const color& background_color) const
 {
     if(m_node == nullptr)
         return pixmap();
@@ -175,7 +175,7 @@ pixmap element::render_to_pixmap(int width, int height, const stb::color& backgr
     return bitmap;
 }
 
-void element::render(stb::image& image, const stb::matrix& matrix) const
+void element::render(image& image, const stb::matrix& matrix) const
 {
     if(m_node == nullptr || image.empty())
         return;
@@ -188,7 +188,7 @@ void element::render(stb::image& image, const stb::matrix& matrix) const
         image.blend(over);
 }
 
-stb::image element::render_to_image(int width, int height, const stb::color& background_color) const
+image element::render_to_image(int width, int height, const color& background_color) const
 {
     return pixmap_release_to_image(render_to_pixmap(width, height, background_color));
 }
@@ -339,8 +339,8 @@ void document::render(pixmap& bitmap, const stb::matrix& matrix) const
     // show through transparent content", and content here isn't actually
     // transparent -- it explicitly asked for this color.
     if(const auto& bg = root_element(true)->attribute(property_id::background_color); !bg.empty()) {
-        if(const auto parsed = stb::color::try_parse(bg)) {
-            const stb::color color_ = *parsed;
+        if(const auto parsed = color::try_parse(bg)) {
+            const color color_ = *parsed;
             // A fully transparent `background-color` (Mermaid emits `transparent`) paints nothing, so it must
             // not wipe the caller's `backgroundColor` argument -- that made every PNG come out transparent.
             // ponytail: a *semi*-transparent root color still replaces the argument instead of compositing
@@ -355,7 +355,7 @@ void document::render(pixmap& bitmap, const stb::matrix& matrix) const
     root_element(true)->render(state);
 }
 
-pixmap document::render_to_pixmap(int width, int height, const stb::color& background_color) const
+pixmap document::render_to_pixmap(int width, int height, const color& background_color) const
 {
     auto intrinsic_width = root_element(true)->intrinsic_width();
     auto intrinsic_height = root_element()->intrinsic_height();
@@ -407,10 +407,10 @@ std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
 
     // Same rule as render(pixmap&): a root `background-color` sits under everything.
     if(const auto& bg = root_element(true)->attribute(property_id::background_color); !bg.empty()) {
-        if(const auto parsed = stb::color::try_parse(bg)) {
-            const stb::color color_ = *parsed;
+        if(const auto parsed = color::try_parse(bg)) {
+            const color color_ = *parsed;
             if(color_.a() > 0) {
-                stb::outline page;
+                outline page;
                 page.add_rect(0, 0, width, height);
                 pdf->set_color(red_f(color_), green_f(color_), blue_f(color_), alpha_f(color_));
                 pdf->fill_path(page, fill_rule::non_zero, transform());
@@ -435,7 +435,7 @@ bool document::save_pdf(const std::string& filename, pdf_mode mode, float dpi) c
     return static_cast<bool>(out);
 }
 
-void document::render(stb::image& image, const stb::matrix& matrix) const
+void document::render(image& image, const stb::matrix& matrix) const
 {
     if(image.empty())
         return;
@@ -448,7 +448,7 @@ void document::render(stb::image& image, const stb::matrix& matrix) const
         image.blend(over);
 }
 
-stb::image document::render_to_image(int width, int height, const stb::color& background_color) const
+image document::render_to_image(int width, int height, const color& background_color) const
 {
     return pixmap_release_to_image(render_to_pixmap(width, height, background_color));
 }

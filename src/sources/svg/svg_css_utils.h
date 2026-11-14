@@ -150,9 +150,9 @@ inline std::optional<std::string_view> find_raw_declaration_value(std::string_vi
 }
 
 // A CSS colour value (`#f9f`, `rgb(..)`, `hsl(..)`, `rgba(..)`, a name) -> stb::color; nullopt if it isn't one.
-inline std::optional<stb::color> parse_css_color(std::string_view value)
+inline std::optional<color> parse_css_color(std::string_view value)
 {
-    return stb::color::try_parse(value);
+    return color::try_parse(value);
 }
 
 // A parsed numeric CSS value: `raw` is the number itself, `isPixels`

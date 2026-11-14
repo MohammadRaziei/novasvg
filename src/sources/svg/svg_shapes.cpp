@@ -6,7 +6,7 @@ namespace nova::svg {
 using namespace vg;
 
 // The fill box of a shape: the exact box of what it draws (SVG objectBoundingBox), libstb's outline::tight_bounds.
-static rect fill_box(const stb::outline& outline)
+static rect fill_box(const outline& outline)
 {
     const auto b = outline.tight_bounds();
     return b ? rect(b->x0, b->y0, b->width(), b->height()) : rect::empty_rect;
@@ -152,7 +152,7 @@ void svg_geometry_element::render(svg_render_state& state) const
     svg_render_state new_state(this, state, local_transform());
     new_state.begin_group(blend_info);
     if(new_state.mode() == svg_render_mode::clipping) {
-        new_state->set_color(stb::color::white());
+        new_state->set_color(color::white());
         new_state->fill_path(m_path, m_clip_rule, new_state.current_transform());
     } else {
         if(m_fill.apply_paint(new_state))
@@ -182,7 +182,7 @@ svg_line_element::svg_line_element(document* dom)
     add_property(m_y2);
 }
 
-rect svg_line_element::update_shape(stb::outline& path_)
+rect svg_line_element::update_shape(outline& path_)
 {
     length_context length_context_(this);
     auto x1 = length_context_.value_for_length(m_x1);
@@ -212,7 +212,7 @@ svg_rect_element::svg_rect_element(document* dom)
     add_property(m_ry);
 }
 
-rect svg_rect_element::update_shape(stb::outline& path_)
+rect svg_rect_element::update_shape(outline& path_)
 {
     length_context length_context_(this);
     auto width = length_context_.value_for_length(m_width);
@@ -250,7 +250,7 @@ svg_ellipse_element::svg_ellipse_element(document* dom)
     add_property(m_ry);
 }
 
-rect svg_ellipse_element::update_shape(stb::outline& path_)
+rect svg_ellipse_element::update_shape(outline& path_)
 {
     length_context length_context_(this);
     auto rx = length_context_.value_for_length(m_rx);
@@ -276,7 +276,7 @@ svg_circle_element::svg_circle_element(document* dom)
     add_property(m_r);
 }
 
-rect svg_circle_element::update_shape(stb::outline& path_)
+rect svg_circle_element::update_shape(outline& path_)
 {
     length_context length_context_(this);
     auto r = length_context_.value_for_length(m_r);
@@ -297,7 +297,7 @@ svg_poly_element::svg_poly_element(document* dom, element_id id)
     add_property(m_points);
 }
 
-rect svg_poly_element::update_shape(stb::outline& path_)
+rect svg_poly_element::update_shape(outline& path_)
 {
     const auto& points = m_points.values();
     if(points.empty()) {
@@ -321,7 +321,7 @@ svg_path_element::svg_path_element(document* dom)
     add_property(m_d);
 }
 
-rect svg_path_element::update_shape(stb::outline& path_)
+rect svg_path_element::update_shape(outline& path_)
 {
     path_ = m_d.value();
     return fill_box(path_);

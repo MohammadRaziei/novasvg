@@ -387,7 +387,7 @@ public:
             return m_source_graphic;
         if(in == "SourceAlpha") {
             auto alpha = clone_canvas(*m_source_graphic);
-            alpha->tint_to_flood_color(stb::color(0, 0, 0), 1.f);
+            alpha->tint_to_flood_color(color(0, 0, 0), 1.f);
             return alpha;
         }
         auto it = m_named_results.find(std::string(in));
@@ -448,7 +448,7 @@ public:
     std::shared_ptr<raster_canvas> apply_filter_primitive(svg_filter_context& context) const final
     {
         auto flood_color_attr = attribute(property_id::flood_color);
-        stb::color flood_color = flood_color_attr.empty() ? stb::color(0, 0, 0) : stb::color(flood_color_attr);
+        color flood_color = flood_color_attr.empty() ? color(0, 0, 0) : color(flood_color_attr);
         auto flood_opacity = parse_first_float(attribute(property_id::flood_opacity), 1.f);
 
         auto output = context.new_canvas();
@@ -516,7 +516,7 @@ public:
         auto dx = parse_first_float(attribute(property_id::dx), 2.f) * context.scale();
         auto dy = parse_first_float(attribute(property_id::dy), 2.f) * context.scale();
         auto flood_color_attr = attribute(property_id::flood_color);
-        stb::color flood_color = flood_color_attr.empty() ? stb::color(0, 0, 0) : stb::color(flood_color_attr);
+        color flood_color = flood_color_attr.empty() ? color(0, 0, 0) : color(flood_color_attr);
         auto flood_opacity = parse_first_float(attribute(property_id::flood_opacity), 1.f);
 
         auto input = context.resolve_input(attribute(property_id::in));

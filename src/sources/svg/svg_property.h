@@ -202,7 +202,7 @@ enum class css_overflow : uint8_t {
 // lighten, difference and exclusion are supported; overlay, color-dodge, color-burn, hard-light, soft-light and the
 // non-separable ones (hue, saturation, color, luminosity) are not yet and paint as normal, like a value this library
 // doesn't know.
-using css_mix_blend_mode = stb::blend_mode;
+using css_mix_blend_mode = blend_mode;
 
 enum class css_pointer_events : uint8_t {
     none,
@@ -509,11 +509,11 @@ public:
         : svg_property(id)
     {}
 
-    const stb::outline& value() const { return m_value; }
+    const outline& value() const { return m_value; }
     bool parse(std::string_view input) final;
 
 private:
-    stb::outline m_value;
+    outline m_value;
 };
 
 class svg_point final : public svg_property {

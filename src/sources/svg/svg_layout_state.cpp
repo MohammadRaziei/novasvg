@@ -47,16 +47,16 @@ svg_layout_state::svg_layout_state(const svg_layout_state& parent, const svg_ele
             continue;
         switch(attribute.id()) {
         case property_id::fill:
-            m_fill = parse_paint(input, this, stb::color::black());
+            m_fill = parse_paint(input, this, color::black());
             break;
         case property_id::stroke:
-            m_stroke = parse_paint(input, this, stb::color::transparent());
+            m_stroke = parse_paint(input, this, color::transparent());
             break;
         case property_id::color:
-            m_color = parse_color(input, this, stb::color::black());
+            m_color = parse_color(input, this, color::black());
             break;
         case property_id::stop_color:
-            m_stop_color = parse_color(input, this, stb::color::black());
+            m_stop_color = parse_color(input, this, color::black());
             break;
         case property_id::opacity:
             m_opacity = parse_number_or_percentage(input, true, 1.f);

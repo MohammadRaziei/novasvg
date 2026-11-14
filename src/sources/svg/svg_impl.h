@@ -119,13 +119,13 @@ void handle_text_chunk(svg_text_fragment_iterator begin, svg_text_fragment_itera
 // ---- svglayoutstate (impl) ----
 using namespace vg; // the drawing layer (nova::vg), the former plutovg
 
-stb::color parse_color(std::string_view input, const svg_layout_state* state, const stb::color& default_value);
+color parse_color(std::string_view input, const svg_layout_state* state, const color& default_value);
 
-stb::color parse_color_or_none(std::string_view input, const svg_layout_state* state, const stb::color& default_value);
+color parse_color_or_none(std::string_view input, const svg_layout_state* state, const color& default_value);
 
 bool parse_url_value(std::string_view& input, std::string& value);
 
-paint parse_paint(std::string_view input, const svg_layout_state* state, const stb::color& default_value);
+paint parse_paint(std::string_view input, const svg_layout_state* state, const color& default_value);
 
 float parse_number_or_percentage(std::string_view input, bool allow_percentage, float default_value);
 

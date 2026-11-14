@@ -18,10 +18,10 @@ public:
     element_painter(const sized_font& base, std::string family, unsigned char base_style, svg_render_state* state, bool variants = true)
         : m_base(base), m_family(std::move(family)), m_base_style(base_style), m_state(state), m_variants(variants) {}
 
-    void fill_rect(const box& box_, const stb::color& color_) override;
-    void fill_text(std::u32string_view text, const foreign_object_font& font_, float x, float y, const stb::color& color_,
+    void fill_rect(const box& box_, const color& color_) override;
+    void fill_text(std::u32string_view text, const foreign_object_font& font_, float x, float y, const color& color_,
                    const text_squeeze& squeeze) override;
-    void draw_image(const stb::image& image, const box& dest) override;
+    void draw_image(const image& image, const box& dest) override;
     foreign_object_font_metrics metrics(const foreign_object_font& font_) const override;
     float measure_text(std::u32string_view text, const foreign_object_font& font_) const override;
 
@@ -76,18 +76,18 @@ float element_painter::measure_text(std::u32string_view text, const foreign_obje
     return face.is_null() ? 0.f : face.measure_text(text);
 }
 
-void element_painter::fill_rect(const box& box_, const stb::color& color_)
+void element_painter::fill_rect(const box& box_, const color& color_)
 {
     if(m_state == nullptr)
         return;
     (*m_state)->set_color(color_);
-    stb::outline path_;
+    outline path_;
     path_.add_rect(box_.x, box_.y, box_.w, box_.h);
     (*m_state)->fill_path(path_, fill_rule::non_zero, m_state->current_transform());
 }
 
 void element_painter::fill_text(std::u32string_view text, const foreign_object_font& font_, float x, float y,
-                                const stb::color& color_, const text_squeeze& squeeze)
+                                const color& color_, const text_squeeze& squeeze)
 {
     if(m_state == nullptr)
         return;
@@ -105,7 +105,7 @@ void element_painter::fill_text(std::u32string_view text, const foreign_object_f
     (*m_state)->fill_text(text, face, point(x, y), transform_);
 }
 
-void element_painter::draw_image(const stb::image& image, const box& dest)
+void element_painter::draw_image(const image& image, const box& dest)
 {
     if(m_state == nullptr || image.empty() || image.channels() != 4)
         return;

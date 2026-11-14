@@ -77,8 +77,8 @@ private:
     const svg_layout_state* m_parent = nullptr;
     const svg_element* m_element = nullptr;
 
-    paint m_fill{stb::color::black()};
-    paint m_stroke{stb::color::transparent()};
+    paint m_fill{color::black()};
+    paint m_stroke{color::transparent()};
 
     stb::color m_color = stb::color::black();
     stb::color m_stop_color = stb::color::black();
