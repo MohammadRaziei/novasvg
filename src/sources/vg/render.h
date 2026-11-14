@@ -93,7 +93,6 @@ NOVA_API const char* render_version_string(void);
  * @brief A function pointer type for a cleanup callback.
  * @param closure A pointer to the resource to be cleaned up.
  */
-typedef void (*destroy_func_t)(void* closure);
 
 /**
  * @brief A function pointer type for a write callback.
@@ -149,60 +148,13 @@ struct shaping_context {
     bool ligatures = true;
 };
 
-/**
- * @brief Text encodings used for converting text data to code points.
- */
-enum class text_encoding : int {
-    latin1, ///< Latin-1 encoding
-    utf8, ///< UTF-8 encoding
-    utf16, ///< UTF-16 encoding
-    utf32 ///< UTF-32 encoding
-};
-
-/**
- * @brief Iterator for traversing code points in text data.
- */
-typedef struct text_iterator {
-    const void* text; ///< Pointer to the text data.
-    int length_; ///< Length of the text data.
-    text_encoding encoding; ///< Encoding format of the text data.
-    int index; ///< Current position in the text data.
-} text_iterator_t;
-
-/**
- * @brief Represents a Unicode code point.
- */
+/// A Unicode code point.
 typedef unsigned int codepoint_t;
-
-/**
- * @brief Initializes a text iterator.
- *
- * @param it Pointer to the text iterator.
- * @param text Pointer to the text data.
- * @param length Length of the text data, or -1 if the data is null-terminated.
- * @param encoding Encoding of the text data.
- */
-NOVA_API void text_iterator_init(text_iterator_t* it, const void* text, int length_, text_encoding encoding);
-
-/**
- * @brief Checks if there are more code points to iterate.
- *
- * @param it Pointer to the text iterator.
- * @return `true` if more code points are available; otherwise, `false`.
- */
-NOVA_API bool text_iterator_has_next(const text_iterator_t* it);
-
-/**
- * @brief Retrieves the next code point and advances the iterator.
- *
- * @param it Pointer to the text iterator.
- * @return The next code point.
- */
-NOVA_API codepoint_t text_iterator_next(text_iterator_t* it);
 
 /**
  * @brief Represents a font face.
  */
+class font_face;
 class font_face_data;
 
 /**
@@ -254,9 +206,9 @@ NOVA_API void font_face_cache_reset(font_face_cache_t* cache);
  * @param family The font family name.
  * @param bold Whether the font is bold.
  * @param italic Whether the font is italic.
- * @param face A pointer to the `font_face_data` to add. The cache increments its reference count.
+ * @param face The face to add; the cache shares it.
  */
-NOVA_API void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold, bool italic, font_face_data* face);
+NOVA_API void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold, bool italic, const font_face& face);
 
 /**
  * @brief Load a font face from a file and add it to the cache with the specified family and style.
@@ -278,9 +230,9 @@ NOVA_API bool font_face_cache_add_file(font_face_cache_t* cache, const char* fam
  * @param family The font family name.
  * @param bold Whether the font is bold.
  * @param italic Whether the font is italic.
- * @return A pointer to the matching `font_face_data` object, or NULL if not found. The returned face is owned by the cache and must not be destroyed by the caller.
+ * @return The matching face, or a null face when there is none.
  */
-NOVA_API font_face_data* font_face_cache_get(font_face_cache_t* cache, const char* family, bool bold, bool italic);
+NOVA_API font_face font_face_cache_get(font_face_cache_t* cache, const char* family, bool bold, bool italic);
 
 /**
  * @brief Load all font faces from a file and add them to the cache.
@@ -625,86 +577,15 @@ NOVA_API void canvas_set_paint(canvas_t* canvas, paint_t* paint_);
 NOVA_API paint_t* canvas_get_paint(const canvas_t* canvas, color* color_);
 
 /**
- * @brief Assigns a font-face cache to the canvas for font management.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @param cache A pointer to a `font_face_cache_t` object, or NULL to unset the current cache.
- */
-NOVA_API void canvas_set_font_face_cache(canvas_t* canvas, font_face_cache_t* cache);
-
-/**
- * @brief Returns the font-face cache associated with the canvas.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @return A pointer to the associated `font_face_cache_t` object, or NULL if none is set.
- */
-NOVA_API font_face_cache_t* canvas_get_font_face_cache(const canvas_t* canvas);
-
-/**
- * @brief Add a font face to the canvas using the specified family and style.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @param family The font family name to associate with the face.
- * @param bold Whether the font is bold.
- * @param italic Whether the font is italic.
- * @param face A pointer to the `font_face_data` object to add.
- */
-NOVA_API void canvas_add_font_face(canvas_t* canvas, const char* family, bool bold, bool italic, font_face_data* face);
-
-/**
- * @brief Load a font face from a file and add it to the canvas using the specified family and style.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @param family The font family name to associate with the face.
- * @param bold Whether the font is bold.
- * @param italic Whether the font is italic.
- * @param filename Path to the font file.
- * @param ttcindex Index within a TrueType Collection (use 0 for regular font files).
- * @return `true` on success, or `false` if the font could not be loaded.
- */
-NOVA_API bool canvas_add_font_file(canvas_t* canvas, const char* family, bool bold, bool italic, const char* filename, int ttcindex);
-
-/**
- * @brief Selects and sets the current font face on the canvas.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @param family The font family name to select.
- * @param bold Whether to match a bold variant.
- * @param italic Whether to match an italic variant.
- * @return `true` if a matching font was found and set, `false` otherwise.
- */
-NOVA_API bool canvas_select_font_face(canvas_t* canvas, const char* family, bool bold, bool italic);
-
-/**
  * @brief Sets the font face and size for text rendering on the canvas.
  *
  * If not set, the default font face is `NULL`, and the default face size is 12.
  *
  * @param canvas A pointer to a `canvas_t` object.
- * @param face A pointer to a `font_face_data` object representing the font face to use.
+ * @param face The font face to use.
  * @param size The size of the font, in pixels. This determines the height of the rendered text.
  */
-NOVA_API void canvas_set_font(canvas_t* canvas, font_face_data* face, float size_);
-
-/**
- * @brief Sets the font face for text rendering on the canvas.
- *
- * If not set, the default font face is `NULL`.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @param face A pointer to a `font_face_data` object representing the font face to use.
- */
-NOVA_API void canvas_set_font_face(canvas_t* canvas, font_face_data* face);
-
-/**
- * @brief Retrieves the current font face used for text rendering on the canvas.
- *
- * If not set, the default font face is `NULL`.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @return A pointer to a `font_face_data` object representing the current font face.
- */
-NOVA_API font_face_data* canvas_get_font_face(const canvas_t* canvas);
+NOVA_API void canvas_set_font(canvas_t* canvas, const font_face& face, float size_);
 
 /**
  * @brief Sets the font size for text rendering on the canvas.
@@ -1397,17 +1278,6 @@ NOVA_API void canvas_clip_rect(canvas_t* canvas, float x, float y, float w, floa
 NOVA_API void canvas_clip_path(canvas_t* canvas, const outline& path_);
 
 /**
- * @brief Adds a glyph to the current path at the specified origin.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @param codepoint The glyph codepoint.
- * @param x The x-coordinate of the origin.
- * @param y The y-coordinate of the origin.
- * @return The advance width of the glyph.
- */
-NOVA_API float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x, float y);
-
-/**
  * @brief Adds text to the current path at the specified origin.
  *
  * @param canvas A pointer to a `canvas_t` object.
@@ -1418,7 +1288,7 @@ NOVA_API float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y, const shaping_context& context = {});
+NOVA_API float canvas_add_text(canvas_t* canvas, std::u32string_view text, float x, float y, const shaping_context& context = {});
 
 /**
  * @brief Fills a text at the specified origin.
@@ -1432,7 +1302,7 @@ NOVA_API float canvas_add_text(canvas_t* canvas, const void* text, int length_, 
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y, const shaping_context& context = {});
+NOVA_API float canvas_fill_text(canvas_t* canvas, std::u32string_view text, float x, float y, const shaping_context& context = {});
 
 /**
  * @brief Strokes a text at the specified origin.
@@ -1446,55 +1316,7 @@ NOVA_API float canvas_fill_text(canvas_t* canvas, const void* text, int length_,
  * @param y The y-coordinate of the origin.
  * @return The total advance width of the text.
  */
-NOVA_API float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y, const shaping_context& context = {});
-
-/**
- * @brief Intersects the current clipping region with text at the specified origin.
- *
- * @note The current path will be cleared by this operation.
- * @param canvas A pointer to a `canvas_t` object.
- * @param text The text data.
- * @param length The length of the text data, or -1 if null-terminated.
- * @param encoding The encoding of the text data.
- * @param x The x-coordinate of the origin.
- * @param y The y-coordinate of the origin.
- * @return The total advance width of the text.
- */
-NOVA_API float canvas_clip_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y);
-
-/**
- * @brief Retrieves font metrics for the current font.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @param ascent The ascent of the font.
- * @param descent The descent of the font.
- * @param line_gap The line gap of the font.
- * @param extents The bounding box of the font.
- */
-NOVA_API void canvas_font_metrics(const canvas_t* canvas, float* ascent, float* descent, float* line_gap, rect_t* extents);
-
-/**
- * @brief Retrieves metrics for a specific glyph.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @param codepoint The glyph codepoint.
- * @param advance_width The advance width of the glyph.
- * @param left_side_bearing The left side bearing of the glyph.
- * @param extents The bounding box of the glyph.
- */
-NOVA_API void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents);
-
-/**
- * @brief Retrieves the extents of a text.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @param text The text data.
- * @param length The length of the text data, or -1 if null-terminated.
- * @param encoding The encoding of the text data.
- * @param extents The bounding box of the text.
- * @return The total advance width of the text.
- */
-NOVA_API float canvas_text_extents(canvas_t* canvas, const void* text, int length_, text_encoding encoding, rect_t* extents);
+NOVA_API float canvas_stroke_text(canvas_t* canvas, std::u32string_view text, float x, float y, const shaping_context& context = {});
 
 } // namespace vg
 } // namespace nova

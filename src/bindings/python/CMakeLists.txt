@@ -125,6 +125,14 @@ else()
 endif()
 
 set(NOVA_PYTHON_INSTALL_DIR ${CMAKE_BINARY_DIR}/python/install)
+
+# The nested build fetches libstb on its own; a local libstb checkout given to this one (a libstb change tried
+# together with novasvg) has to reach it too, or the module is built against another libstb than the rest.
+set(NOVA_PYTHON_FORWARDED_ARGS "")
+if(FETCHCONTENT_SOURCE_DIR_LIBSTB)
+    list(APPEND NOVA_PYTHON_FORWARDED_ARGS -DFETCHCONTENT_SOURCE_DIR_LIBSTB=${FETCHCONTENT_SOURCE_DIR_LIBSTB})
+endif()
+
 ExternalProject_Add(novasvg_build_python
     SOURCE_DIR ${CMAKE_SOURCE_DIR}
     BINARY_DIR ${CMAKE_BINARY_DIR}/python/build
@@ -139,6 +147,7 @@ ExternalProject_Add(novasvg_build_python
         -Dnanobind_DIR=${NANOBIND_CMAKE_DIR}
         -DCMAKE_BUILD_TYPE=${NOVA_PYTHON_CONFIG}
         -DPython_EXECUTABLE=${Python_EXECUTABLE}
+        ${NOVA_PYTHON_FORWARDED_ARGS}
 
     # Multi-config generators (Visual Studio, Xcode) ignore CMAKE_BUILD_TYPE:
     # tell the nested build/install which configuration to use explicitly.

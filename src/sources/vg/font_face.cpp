@@ -4,9 +4,11 @@
 // libstb reads outlines, metrics, kerning (kern/GPOS), GSUB shaping, and what a font file is called (family, weight,
 // width, bold, italic: font::scan and font::system_fonts); this file only keeps the cache that picks a face for a request.
 #include "font_face.h"
+#include "font.h"
 #include "internal.h"
 #include "../utils/text.h"
 #include <stb/logging.hpp>
+#include <stb/util.hpp>
 
 #include <stb/font.hpp>
 
@@ -35,116 +37,9 @@ namespace {
 stb::logging::logger& font_log() { static auto& l = stb::logging::get_logger("novasvg.font"); return l; }
 }  // namespace
 
-static int text_iterator_length(const void* data, text_encoding encoding)
-{
-    int length_ = 0;
-    switch(encoding) {
-    case text_encoding::latin1:
-    case text_encoding::utf8: {
-        const uint8_t* text = static_cast<const uint8_t*>(data);
-        while(*text++)
-            length_++;
-        break;
-    } case text_encoding::utf16: {
-        const uint16_t* text = static_cast<const uint16_t*>(data);
-        while(*text++)
-            length_++;
-        break;
-    } case text_encoding::utf32: {
-        const uint32_t* text = static_cast<const uint32_t*>(data);
-        while(*text++)
-            length_++;
-        break;
-    } default:
-        assert(false);
-    }
-
-    return length_;
-}
-
-void text_iterator_init(text_iterator_t* it, const void* text, int length_, text_encoding encoding)
-{
-    if(length_ == -1)
-        length_ = text_iterator_length(text, encoding);
-    it->text = text;
-    it->length_ = length_;
-    it->encoding = encoding;
-    it->index = 0;
-}
-
-bool text_iterator_has_next(const text_iterator_t* it)
-{
-    return it->index < it->length_;
-}
-
-codepoint_t text_iterator_next(text_iterator_t* it)
-{
-    codepoint_t codepoint = 0;
-    switch(it->encoding) {
-    case text_encoding::latin1: {
-        const uint8_t* text = static_cast<const uint8_t*>(it->text);
-        codepoint = text[it->index++];
-        break;
-    } case text_encoding::utf8: {
-        static const uint8_t trailing[256] = {
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5
-        };
-
-        static const uint32_t offsets[6] = {
-            0x00000000, 0x00003080, 0x000E2080, 0x03C82080, 0xFA082080, 0x82082080
-        };
-
-        const uint8_t* text = static_cast<const uint8_t*>(it->text);
-        uint8_t trailing_offset = trailing[text[it->index]];
-        uint32_t offset_value = offsets[trailing_offset];
-        while(trailing_offset > 0 && it->index < it->length_ - 1) {
-            codepoint += text[it->index++];
-            codepoint <<= 6;
-            trailing_offset--;
-        }
-
-        codepoint += text[it->index++];
-        codepoint -= offset_value;
-        break;
-    } case text_encoding::utf16: {
-        const uint16_t* text = static_cast<const uint16_t*>(it->text);
-        codepoint = text[it->index++];
-        if(((codepoint) & 0xfffffc00) == 0xd800) {
-            if(it->index < it->length_ && (((codepoint) & 0xfffffc00) == 0xdc00)) {
-                uint16_t trail = text[it->index++];
-                codepoint = (codepoint << 10) + trail - ((0xD800u << 10) - 0x10000u + 0xDC00u);
-            }
-        }
-
-        break;
-    } case text_encoding::utf32: {
-        const uint32_t* text = static_cast<const uint32_t*>(it->text);
-        codepoint = text[it->index++];
-        break;
-    } default:
-        assert(false);
-    }
-
-    return codepoint;
-}
-
 font_face_data::font_face_data(stb::font f)
     : ft(std::move(f)), design(ft.design_metrics())
 {
-    novasvg_init_reference(this);
-}
-
-font_face_data::~font_face_data()
-{
-    if(destroy_func)
-        destroy_func(closure);
 }
 
 uint32_t font_face_data::glyph_index_of(codepoint_t codepoint) const
@@ -178,76 +73,27 @@ glyph_entry* font_face_data::glyph(codepoint_t codepoint) const
     return glyph_by_index(glyph_index_of(codepoint));
 }
 
-font_face_data* font_face_data::load_from_file(const char* filename, int ttcindex)
+font_face font_face::from_memory(std::vector<std::uint8_t> bytes, int ttcindex)
 {
-    FILE* fp = fopen(filename, "rb");
-    if(fp == NULL) {
-        return NULL;
-    }
-
-    fseek(fp, 0, SEEK_END);
-    long length_ = ftell(fp);
-    if(length_ == -1L) {
-        fclose(fp);
-        return NULL;
-    }
-
-    void* data = static_cast<void*>(malloc(length_));
-    if(data == NULL) {
-        fclose(fp);
-        return NULL;
-    }
-
-    fseek(fp, 0, SEEK_SET);
-    size_t nread = fread(data, 1, length_, fp);
-    fclose(fp);
-
-    if(nread != static_cast<size_t>(length_)) {
-        free(data);
-        return NULL;
-    }
-
-    return load_from_data(data, length_, ttcindex, free, data);
-}
-
-font_face_data* font_face_data::load_from_data(const void* data, unsigned int length_, int ttcindex, destroy_func_t destroy_func, void* closure)
-{
-    font_face_data* face = NULL;
+    if(bytes.empty())
+        return font_face();
+    const size_t length_ = bytes.size();
     try {
-        const auto* bytes = static_cast<const std::uint8_t*>(data);
-        face = new font_face_data(stb::font::from_memory(std::vector<std::uint8_t>(bytes, bytes + length_), ttcindex));
+        return font_face(std::make_shared<font_face_data>(stb::font::from_memory(std::move(bytes), ttcindex)));
     } catch(const std::exception& e) {
-        font_log().warning("cannot load a font from memory (%u bytes, index %d): %s", length_, ttcindex, e.what());
-        if(destroy_func)
-            destroy_func(closure);
-        return NULL;
-    } catch(...) {
-        font_log().warning("cannot load a font from memory (%u bytes, index %d)", length_, ttcindex);
-        if(destroy_func)
-            destroy_func(closure);
-        return NULL;
+        font_log().warning("cannot load a font from memory (%zu bytes, index %d): %s", length_, ttcindex, e.what());
     }
-
-    face->destroy_func = destroy_func;
-    face->closure = closure;
-    return face;
+    return font_face();
 }
 
-font_face_data* font_face_data::reference(font_face_data* face)
+font_face font_face::from_file(const char* filename, int ttcindex)
 {
-    novasvg_increment_reference(face);
-    return face;
-}
-
-void font_face_data::release(font_face_data* face)
-{
-    if(novasvg_destroy_reference(face))
-        delete face;
-}
-
-int font_face_data::reference_count_of(const font_face_data* face)
-{
-    return novasvg_get_reference_count(face);
+    try {
+        return font_face(std::make_shared<font_face_data>(stb::font::open(filename, ttcindex)));
+    } catch(const std::exception& e) {
+        font_log().warning("cannot load the font file '%s' (index %d): %s", filename, ttcindex, e.what());
+    }
+    return font_face();
 }
 
 float font_face_data::size_scale(float size_) const
@@ -262,14 +108,16 @@ float font_face_data::units_per_em() const
 
 // Every code point the face draws with a real glyph (glyph 0, .notdef, does not count). libstb has no
 // cmap walker, so every Unicode scalar value is asked; has_glyph is one table lookup.
-void font_face_data::enumerate_codepoints(void (*callback)(uint32_t codepoint, void* closure), void* closure) const
+std::vector<char32_t> font_face_data::codepoints() const
 {
+    std::vector<char32_t> result;
     for(uint32_t cp = 0; cp <= 0x10FFFFu; ++cp) {
         if(cp >= 0xD800u && cp <= 0xDFFFu)
             continue;
         if(ft.has_glyph(static_cast<char32_t>(cp)))
-            callback(cp, closure);
+            result.push_back(static_cast<char32_t>(cp));
     }
+    return result;
 }
 
 void font_face_data::get_metrics(float size_, float* ascent, float* descent, float* line_gap, rect_t* extents) const
@@ -330,16 +178,6 @@ static void glyph_traverse_func(void* closure, outline_op command, const stb::po
     case outline_op::close:
         assert(false);
     }
-}
-
-float font_face_data::get_glyph_path(float size_, float x, float y, codepoint_t codepoint, outline& path_) const
-{
-    return traverse_glyph_path(size_, x, y, codepoint, glyph_traverse_func, &path_);
-}
-
-float font_face_data::traverse_glyph_path(float size_, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure) const
-{
-    return traverse_glyph_index_path(size_, x, y, glyph_index_of(codepoint), traverse_func, closure);
 }
 
 float font_face_data::get_glyph_index_path(float size_, float x, float y, std::uint32_t glyph, outline& path_) const
@@ -405,53 +243,25 @@ float font_face_data::traverse_glyph_index_path(float size_, float x, float y, s
     return glyph->advance_width * scale;
 }
 
-static std::string text_to_utf8(const void* text, int length_, text_encoding encoding)
-{
-    std::string utf8;
-    text_iterator_t it;
-    text_iterator_init(&it, text, length_, encoding);
-    while(text_iterator_has_next(&it)) {
-        const codepoint_t c = text_iterator_next(&it);
-        if(c < 0x80) {
-            utf8.push_back(static_cast<char>(c));
-        } else if(c < 0x800) {
-            utf8.push_back(static_cast<char>(0xC0 | (c >> 6)));
-            utf8.push_back(static_cast<char>(0x80 | (c & 0x3F)));
-        } else if(c < 0x10000) {
-            utf8.push_back(static_cast<char>(0xE0 | (c >> 12)));
-            utf8.push_back(static_cast<char>(0x80 | ((c >> 6) & 0x3F)));
-            utf8.push_back(static_cast<char>(0x80 | (c & 0x3F)));
-        } else {
-            utf8.push_back(static_cast<char>(0xF0 | ((c >> 18) & 0x07)));
-            utf8.push_back(static_cast<char>(0x80 | ((c >> 12) & 0x3F)));
-            utf8.push_back(static_cast<char>(0x80 | ((c >> 6) & 0x3F)));
-            utf8.push_back(static_cast<char>(0x80 | (c & 0x3F)));
-        }
-    }
-    return utf8;
-}
-
-float font_face_data::shape(float size_, const void* text, int length_, text_encoding encoding, std::vector<shaped_glyph_t>* glyphs, const shaping_context& context) const
+float font_face_data::shape(float size_, std::u32string_view text, std::vector<shaped_glyph_t>* glyphs, const shaping_context& context) const
 {
     if(glyphs)
         glyphs->clear();
     const float scale = size_scale(size_);
     std::vector<stb::shaped_glyph> shaped;
     try {
-        stb::shape_options options;
-        const auto* part = static_cast<const char32_t*>(text);
-        if(!context.run.empty() && encoding == text_encoding::utf32 && length_ >= 0
-           && part >= context.run.data() && part + length_ <= context.run.data() + context.run.size()) {
+        if(!context.run.empty() && text.data() >= context.run.data() && text.data() + text.size() <= context.run.data() + context.run.size()) {
             // A part of a longer run: libstb shapes [begin, end) with the context of the whole run, and its byte offsets
             // are those of the run's UTF-8.
+            stb::shape_options options;
             options.ligatures = context.ligatures;
-            const size_t begin = size_t(part - context.run.data());
-            const std::string utf8 = text_to_utf8(context.run.data(), int(context.run.size()), text_encoding::utf32);
-            const size_t begin_byte = text_to_utf8(context.run.data(), int(begin), text_encoding::utf32).size();
-            const size_t end_byte = text_to_utf8(context.run.data(), int(begin) + length_, text_encoding::utf32).size();
+            const size_t begin = size_t(text.data() - context.run.data());
+            const std::string utf8 = stb::utf8_encode(context.run);
+            const size_t begin_byte = stb::utf8_encode(context.run.substr(0, begin)).size();
+            const size_t end_byte = stb::utf8_encode(context.run.substr(0, begin + text.size())).size();
             shaped = ft.shape(utf8, begin_byte, end_byte, options);
         } else {
-            shaped = ft.shape(text_to_utf8(text, length_, encoding));
+            shaped = ft.shape(stb::utf8_encode(text));
         }
     } catch(...) {
         return 0.f;
@@ -465,10 +275,10 @@ float font_face_data::shape(float size_, const void* text, int length_, text_enc
     return pen;
 }
 
-float font_face_data::text_extents(float size_, const void* text, int length_, text_encoding encoding, rect_t* extents, const shaping_context& context) const
+float font_face_data::text_extents(float size_, std::u32string_view text, rect_t* extents, const shaping_context& context) const
 {
     std::vector<shaped_glyph_t> glyphs;
-    const float advance = shape(size_, text, length_, encoding, extents ? &glyphs : nullptr, context);
+    const float advance = shape(size_, text, extents ? &glyphs : nullptr, context);
     if(!extents)
         return advance;
 
@@ -496,10 +306,9 @@ float font_face_data::text_extents(float size_, const void* text, int length_, t
 // The face itself, loaded on first use. A face listed under two family names (the typographic one and the legacy one)
 // has two entries and one slot, so it is loaded once and its glyph cache is shared.
 struct font_face_slot {
-    font_face_data* face = nullptr;
+    font_face face;
     std::string filename;   // empty for a face that was added directly
     int ttcindex = 0;
-    ~font_face_slot() { font_face_data::release(face); }
 };
 
 struct font_face_entry {
@@ -554,11 +363,11 @@ static void font_face_cache_add_entry(font_face_cache_t* cache, const std::strin
     cache->families[family].push_back(std::move(entry));
 }
 
-void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold, bool italic, font_face_data* face)
+void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold, bool italic, const font_face& face)
 {
     font_face_entry entry;
     entry.slot = std::make_shared<font_face_slot>();
-    entry.slot->face = font_face_data::reference(face);
+    entry.slot->face = face;
     entry.bold = bold;
     entry.italic = italic;
     entry.weight = bold ? 700 : 400;
@@ -567,13 +376,12 @@ void font_face_cache_add(font_face_cache_t* cache, const char* family, bool bold
 
 bool font_face_cache_add_file(font_face_cache_t* cache, const char* family, bool bold, bool italic, const char* filename, int ttcindex)
 {
-    font_face_data* face = font_face_data::load_from_file(filename, ttcindex);
-    if(face == NULL) {
+    font_face face = font_face::from_file(filename, ttcindex);
+    if(face.is_null()) {
         font_log().warning("cannot add '%s' to the font cache (family '%s')", filename, family);
         return false;
     }
     font_face_cache_add(cache, family, bold, italic, face);
-    font_face_data::release(face);
     return true;
 }
 
@@ -591,13 +399,13 @@ static bool font_face_entry_better(const font_face_entry& a, const font_face_ent
     return std::abs(a.weight - target) < std::abs(b.weight - target);
 }
 
-font_face_data* font_face_cache_get(font_face_cache_t* cache, const char* family, bool bold, bool italic)
+font_face font_face_cache_get(font_face_cache_t* cache, const char* family, bool bold, bool italic)
 {
     std::lock_guard<std::mutex> lock(cache->mutex);
 
     auto found = cache->families.find(family);
     if(found == cache->families.end())
-        return NULL;
+        return font_face();
 
     // The newest face wins a tie, so walk from the newest to the oldest and replace only on a better score.
     std::vector<font_face_entry>& faces = found->second;
@@ -608,8 +416,8 @@ font_face_data* font_face_cache_get(font_face_cache_t* cache, const char* family
     }
 
     font_face_slot& slot = *selected->slot;
-    if(!slot.filename.empty() && slot.face == NULL)
-        slot.face = font_face_data::load_from_file(slot.filename.c_str(), slot.ttcindex);
+    if(!slot.filename.empty() && slot.face.is_null())
+        slot.face = font_face::from_file(slot.filename.c_str(), slot.ttcindex);
     return slot.face;
 }
 

@@ -491,6 +491,7 @@ css_mix_blend_mode parse_mix_blend_mode(std::string_view input)
         {css_mix_blend_mode::normal, "normal"},
         {css_mix_blend_mode::multiply, "multiply"},
         {css_mix_blend_mode::screen, "screen"},
+        {css_mix_blend_mode::overlay, "overlay"},
         {css_mix_blend_mode::darken, "darken"},
         {css_mix_blend_mode::lighten, "lighten"},
         {css_mix_blend_mode::difference, "difference"},

@@ -243,8 +243,8 @@ void raster_canvas::fill_text(const std::u32string_view& text, const sized_font&
     canvas_transform(m_canvas, &transform_.matrix());
     canvas_set_fill_rule(m_canvas, fill_rule::non_zero);
     canvas_set_operator(m_canvas, composite_op::source_over);
-    canvas_set_font(m_canvas, font_.face().get(), font_.size());
-    canvas_fill_text(m_canvas, text.data(), text.length(), text_encoding::utf32, origin.x, origin.y, context);
+    canvas_set_font(m_canvas, font_.face(), font_.size());
+    canvas_fill_text(m_canvas, text, origin.x, origin.y, context);
 }
 
 void raster_canvas::stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context)
@@ -258,8 +258,8 @@ void raster_canvas::stroke_text(const std::u32string_view& text, float stroke_wi
     canvas_set_dash_offset(m_canvas, 0.f);
     canvas_set_dash_array(m_canvas, nullptr, 0);
     canvas_set_operator(m_canvas, composite_op::source_over);
-    canvas_set_font(m_canvas, font_.face().get(), font_.size());
-    canvas_stroke_text(m_canvas, text.data(), text.length(), text_encoding::utf32, origin.x, origin.y, context);
+    canvas_set_font(m_canvas, font_.face(), font_.size());
+    canvas_stroke_text(m_canvas, text, origin.x, origin.y, context);
 }
 
 void raster_canvas::clip_path(const outline& path_, fill_rule clip_rule, const transform& transform_)

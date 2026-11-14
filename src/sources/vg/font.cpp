@@ -5,64 +5,9 @@
 
 namespace nova::vg {
 
-font_face::font_face(font_face_data* face)
-    : m_face(font_face_data::reference(face))
+font_face::font_face(const void* data, size_t length_)
+    : font_face(from_memory(std::vector<uint8_t>(static_cast<const uint8_t*>(data), static_cast<const uint8_t*>(data) + length_)))
 {
-}
-
-font_face::font_face(const void* data, size_t length_, destroy_func_t destroy_func, void* closure)
-    : m_face(font_face_data::load_from_data(data, length_, 0, destroy_func, closure))
-{
-}
-
-font_face::font_face(std::vector<uint8_t>&& bytes)
-    : font_face(bytes.empty() ? font_face() : [&bytes] {
-          auto* owned = new std::vector<uint8_t>(std::move(bytes));
-          return font_face(owned->data(), owned->size(), [](void* closure) { delete static_cast<std::vector<uint8_t>*>(closure); }, owned);
-      }())
-{
-}
-
-font_face::font_face(const char* filename)
-    : m_face(font_face_data::load_from_file(filename, 0))
-{
-}
-
-font_face::font_face(const font_face& face)
-    : m_face(font_face_data::reference(face.get()))
-{
-}
-
-font_face::font_face(font_face&& face)
-    : m_face(face.release())
-{
-}
-
-font_face::~font_face()
-{
-    font_face_data::release(m_face);
-}
-
-font_face& font_face::operator=(const font_face& face)
-{
-    font_face(face).swap(*this);
-    return *this;
-}
-
-font_face& font_face::operator=(font_face&& face)
-{
-    font_face(std::move(face)).swap(*this);
-    return *this;
-}
-
-void font_face::swap(font_face& face)
-{
-    std::swap(m_face, face.m_face);
-}
-
-font_face_data* font_face::release()
-{
-    return std::exchange(m_face, nullptr);
 }
 
 float font_face::units_per_em() const
@@ -115,25 +60,19 @@ float font_face::kern_advance_units(char32_t first, char32_t second) const
 
 std::vector<char32_t> font_face::codepoints() const
 {
-    std::vector<char32_t> result;
-    if(is_null())
-        return result;
-    m_face->enumerate_codepoints([](uint32_t codepoint, void* closure) {
-        static_cast<std::vector<char32_t>*>(closure)->push_back(static_cast<char32_t>(codepoint));
-    }, &result);
-    return result;
+    return is_null() ? std::vector<char32_t>() : m_face->codepoints();
 }
 
 bool font_face_cache::add_font_face(const std::string& family, bool bold, bool italic, const font_face& face)
 {
     if(!face.is_null())
-        font_face_cache_add(m_cache, family.data(), bold, italic, face.get());
+        font_face_cache_add(m_cache, family.data(), bold, italic, face);
     return !face.is_null();
 }
 
 font_face font_face_cache::get_font_face_local(const std::string& family, bool bold, bool italic) const
 {
-    return font_face(font_face_cache_get(m_cache, family.data(), bold, italic));
+    return font_face_cache_get(m_cache, family.data(), bold, italic);
 }
 
 font_face font_face_cache::get_font_face(const std::string& family, bool bold, bool italic) const
@@ -161,7 +100,7 @@ font_face font_face_cache::get_font_face(const std::string& family, bool bold, b
 
     for(auto value : generic_fallbacks) {
         if(value.generic == family || family.empty()) {
-            if(auto face = font_face(font_face_cache_get(m_cache, value.fallback, bold, italic)); !face.is_null())
+            if(auto face = font_face_cache_get(m_cache, value.fallback, bold, italic); !face.is_null())
                 return face;
             // Not even the platform's stand-in is installed: use the embedded font
             // so text is still drawn (and drawn the same way) on a machine without fonts.
@@ -276,7 +215,7 @@ float sized_font::x_height() const
 float sized_font::measure_text(const std::u32string_view& text, const shaping_context& context) const
 {
     if(m_size > 0.f && !m_face.is_null())
-        return m_face.get()->text_extents(m_size, text.data(), text.length(), text_encoding::utf32, nullptr, context);
+        return m_face.get()->text_extents(m_size, text, nullptr, context);
     return 0;
 }
 
@@ -288,7 +227,7 @@ std::vector<sized_font::glyph_box> sized_font::glyph_boxes(const std::u32string_
 
     font_face_data* face = m_face.get();
     std::vector<shaped_glyph_t> glyphs;
-    face->shape(m_size, text.data(), static_cast<int>(text.length()), text_encoding::utf32, &glyphs);
+    face->shape(m_size, text, &glyphs);
     for(const shaped_glyph_t& g : glyphs) {
         float advance = 0.f;
         rect_t extents = {0};
@@ -304,9 +243,9 @@ bool add_font_face_from_file(const char* family, bool bold, bool italic, const c
     return global_font_face_cache()->add_font_face(family, bold, italic, font_face(filename));
 }
 
-bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length_, destroy_func_t destroy_func, void* closure)
+bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length_)
 {
-    return global_font_face_cache()->add_font_face(family, bold, italic, font_face(data, length_, destroy_func, closure));
+    return global_font_face_cache()->add_font_face(family, bold, italic, font_face(data, length_));
 }
 
 } // namespace nova::vg

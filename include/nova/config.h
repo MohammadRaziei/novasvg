@@ -39,5 +39,3 @@
 // stb/export.hpp), just
 // under this project's own prefix for general-purpose call sites.
 
-/** Callback that frees a user-supplied memory buffer once novasvg no longer needs it. */
-typedef void (*novasvg_destroy_func_t)(void* closure);

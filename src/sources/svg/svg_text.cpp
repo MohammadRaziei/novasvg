@@ -1,3 +1,4 @@
+#include <stb/util.hpp>
 #include "vg/pixmap.h"
 #include "vg/pdf_canvas.h"
 #include "svgelement.h"
@@ -380,10 +381,7 @@ void svg_text_fragments_builder::handle_text(const svg_text_node* nd)
         last_character = m_text.back();
     }
 
-    text_iterator_t it;
-    text_iterator_init(&it, text.data(), text.length(), text_encoding::utf8);
-    while(text_iterator_has_next(&it)) {
-        auto current_character = text_iterator_next(&it);
+    for(char32_t current_character : stb::utf8_decode_lossy(text)) {
         if(current_character == '\t' || current_character == '\n' || current_character == '\r')
             current_character = ' ';
         if(current_character == ' ' && last_character == ' ' && el->white_space() == css_white_space::default_)

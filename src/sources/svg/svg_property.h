@@ -198,8 +198,8 @@ enum class css_overflow : uint8_t {
     hidden
 };
 
-// CSS mix-blend-mode is an stb::blend_mode. Of the keywords the separable modes normal, multiply, screen, darken,
-// lighten, difference and exclusion are supported; overlay, color-dodge, color-burn, hard-light, soft-light and the
+// CSS mix-blend-mode is an stb::blend_mode. Of the keywords the separable modes normal, multiply, screen, overlay,
+// darken, lighten, difference and exclusion are supported; color-dodge, color-burn, hard-light, soft-light and the
 // non-separable ones (hue, saturation, color, luminosity) are not yet and paint as normal, like a value this library
 // doesn't know.
 using css_mix_blend_mode = blend_mode;

@@ -8,6 +8,7 @@
 #include "parserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no svg-tree dependency, consistent with this header's own self-contained goal
 #include "render.h"  // path_move_to/line_to/cubic_to, used to extract glyph outlines
 
+#include <memory>
 #include <string>
 #include <string_view>
 #include <cctype>
@@ -20,22 +21,18 @@ namespace nova::vg {
 class font_face {
 public:
     font_face() = default;
-    explicit font_face(font_face_data* face);
-    font_face(const void* data, size_t length_, destroy_func_t destroy_func, void* closure);
-    /// Takes the bytes of a font file (TrueType, OpenType or WOFF 1.0); a null face when they are not one libstb reads.
-    explicit font_face(std::vector<uint8_t>&& bytes);
-    font_face(const char* filename);
-    font_face(const font_face& face);
-    font_face(font_face&& face);
-    ~font_face();
-
-    font_face& operator=(const font_face& face);
-    font_face& operator=(font_face&& face);
-
-    void swap(font_face& face);
+    explicit font_face(std::shared_ptr<font_face_data> face) : m_face(std::move(face)) {}
+    /// Copies the bytes of a font file (TrueType, OpenType or WOFF 1.0); a null face when they are not one libstb reads.
+    font_face(const void* data, size_t length_);
+    explicit font_face(std::vector<uint8_t>&& bytes) : font_face(from_memory(std::move(bytes))) {}
+    font_face(const char* filename) : font_face(from_file(filename)) {}
+    /// A null face (and a logged warning) when the bytes or the file are not a font libstb reads; `ttcindex` picks the
+    /// face of a collection.
+    static font_face from_memory(std::vector<uint8_t> bytes, int ttcindex = 0);
+    static font_face from_file(const char* filename, int ttcindex = 0);
 
     bool is_null() const { return m_face == nullptr; }
-    font_face_data* get() const { return m_face; }
+    font_face_data* get() const { return m_face.get(); }
 
     // Raw font design units (unscaled by any particular pixel size) -- the
     // same space a font file's own tables (head.unitsPerEm, hmtx advance
@@ -82,8 +79,7 @@ public:
     std::vector<char32_t> codepoints() const;
 
 private:
-    font_face_data* release();
-    font_face_data* m_face = nullptr;
+    std::shared_ptr<font_face_data> m_face;
 };
 
 // The last-resort fonts: Latin subsets of DejaVu Sans (regular, bold, oblique and bold oblique)
@@ -190,46 +186,10 @@ bool add_font_face_from_file(const char* family, bool bold, bool italic, const c
 * @param family The name of the font family. If an empty string is provided, the font will act as a fallback.
 * @param bold Use `true` for bold, `false` otherwise.
 * @param italic Use `true` for italic, `false` otherwise.
-* @param data A pointer to the memory buffer containing the font data.
+* @param data A pointer to the memory buffer containing the font data; it is copied.
 * @param length The size of the memory buffer in bytes.
-* @param destroy_func Callback function to free the memory buffer when it is no longer needed.
-* @param closure User-defined pointer passed to the `destroy_func` callback.
 * @return `true` if the font face was successfully added to the cache, `false` otherwise.
 */
-bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length_, novasvg_destroy_func_t destroy_func, void* closure);
-
-} // namespace nova::vg
-
-namespace nova::vg {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-font_face_cache* global_font_face_cache();
-
-
-
-
-bool add_font_face_from_file(const char* family, bool bold, bool italic, const char* filename);
-
-bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length_, destroy_func_t destroy_func, void* closure);
+bool add_font_face_from_data(const char* family, bool bold, bool italic, const void* data, size_t length_);
 
 } // namespace nova::vg

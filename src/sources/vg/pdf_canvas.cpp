@@ -340,7 +340,7 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const sized_fon
 
     // Same layout as canvas_add_text(): the shaped glyphs, each with its outline.
     std::vector<shaped_glyph_t> glyphs;
-    face->shape(font_.size(), text.data(), int(text.length()), text_encoding::utf32, &glyphs, context);
+    face->shape(font_.size(), text, &glyphs, context);
     for(const shaped_glyph_t& g : glyphs)
         face->traverse_glyph_index_path(font_.size(), origin.x + g.x, origin.y + g.y, g.glyph, traverse, &s);
 }

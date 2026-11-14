@@ -1,5 +1,6 @@
 #include "doctest.h"
 
+#include <cmath>
 #include <cstdint>
 #include <string>
 
@@ -71,3 +72,25 @@ TEST_CASE("render onto an existing image keeps its pixels where nothing is drawn
     CHECK(none.empty());
 }
 
+
+TEST_CASE("mix-blend-mode: overlay follows the W3C formula")
+{
+    // opaque backdrop (204, 102, 51) under an opaque (64, 128, 192) square: overlay = multiply where the backdrop
+    // channel is dark, screen where it is light
+    auto doc = nova::svg::document::load_data(
+        svg("<rect width='40' height='40' fill='#cc6633'/>"
+            "<rect x='10' y='10' width='20' height='20' fill='#4080c0' style='mix-blend-mode:overlay'/>"));
+    REQUIRE(doc != nullptr);
+    const stb::image image = doc->render_to_image(40, 40);
+    REQUIRE(!image.empty());
+    const std::uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
+    const int backdrop[3] = {204, 102, 51};
+    const int source[3] = {64, 128, 192};
+    for(int i = 0; i < 3; ++i) {
+        const float b = backdrop[i] / 255.f, s = source[i] / 255.f;
+        const float expected = (b <= 0.5f ? 2.f * b * s : 1.f - 2.f * (1.f - b) * (1.f - s)) * 255.f;
+        CHECK(std::abs(p[i] - expected) <= 1.5f);
+        CHECK(p[i] != source[i]);  // it is not painted as normal any more
+    }
+    CHECK(p[3] == 255);
+}

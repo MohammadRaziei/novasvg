@@ -129,29 +129,10 @@ NB_MODULE(novasvg_py, m) {
           "family"_a, "bold"_a, "italic"_a, "filename"_a,
           "Add a font face from a file to the cache.");
     
-    // Binding for adding a font from memory. The C++ API takes a raw
-    // (destroy_func, closure) pair so it can avoid copying the caller's
-    // buffer -- but exposing that pair as Python-visible parameters is
-    // both wrong and (on MSVC specifically) doesn't even compile: wrong
-    // because with destroy_func=nullptr novasvg never copies the data,
-    // it just keeps the original pointer alive only as long as the
-    // caller does -- here, only as long as Python's nb::bytes object
-    // isn't garbage-collected, which nothing guarantees once the font is
-    // cached indefinitely in FontFaceCache; a raw C function pointer
-    // isn't something a Python caller could usefully pass in anyway.
-    // Fixed by copying the buffer once here and owning that copy with a
-    // capture-less lambda (implicitly convertible to the destroy_func_t
-    // function-pointer type novasvg wants, portably across compilers --
-    // unlike a raw function pointer arriving through nanobind's
-    // Python-argument machinery, which is what didn't compile on MSVC).
+    // The bytes are copied, so the Python object may go away.
     m.def("add_font_face_from_data",
           [](const char* family, bool bold, bool italic, nb::bytes data) -> bool {
-               auto* copy = std::malloc(data.size());
-               if(copy == nullptr)
-                   return false;
-               std::memcpy(copy, data.data(), data.size());
-               return nova::vg::add_font_face_from_data(family, bold, italic, copy, data.size(),
-                                                     [](void* p) { std::free(p); }, copy);
+               return nova::vg::add_font_face_from_data(family, bold, italic, data.data(), data.size());
           },
           "family"_a, "bold"_a, "italic"_a, "data"_a,
           "Add a font face from a memory buffer (bytes) to the cache.");
@@ -167,13 +148,7 @@ NB_MODULE(novasvg_py, m) {
         .def(nb::init<>(), "Construct a null font face.")
         .def(nb::init<const char*>(), "filename"_a, "Load a font face directly from a font file (no cache involved).")
         .def("__init__", [](nova::vg::font_face* self, nb::bytes data) {
-            auto* copy = std::malloc(data.size());
-            if(copy == nullptr) {
-                new (self) nova::vg::font_face();
-                return;
-            }
-            std::memcpy(copy, data.data(), data.size());
-            new (self) nova::vg::font_face(copy, data.size(), [](void* p) { std::free(p); }, copy);
+            new (self) nova::vg::font_face(data.data(), data.size());
         }, "data"_a, "Load a font face directly from a memory buffer (bytes), no cache involved.")
         .def("is_null", &nova::vg::font_face::is_null, "Check if the font face is null/invalid.")
         .def("__bool__", [](const nova::vg::font_face& face) { return !face.is_null(); })

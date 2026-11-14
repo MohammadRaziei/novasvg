@@ -8,6 +8,7 @@
 #define NOVA_PRIVATE_H
 
 #include "render.h"
+#include "font.h"
 
 namespace nova {
 namespace vg {
@@ -61,7 +62,7 @@ typedef struct {
 
 typedef struct state {
     paint_t* paint_;
-    font_face_data* font_face_;
+    font_face font_face_;
     color color_;
     stb::matrix matrix;
     stb::stroke_style stroke;
@@ -81,7 +82,6 @@ struct canvas_context {
     outline* path_;
     state_t* state;
     state_t* freed_state;
-    font_face_cache_t* face_cache;
     rect_t clip_rect;
     span_set clip_spans;
     span_set fill_spans;

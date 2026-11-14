@@ -23,7 +23,6 @@ static state_t* state_create(void)
 {
     state_t* state = new state_t();
     state->paint_ = NULL;
-    state->font_face_ = NULL;
     state->color_ = color(0, 0, 0, 255);
     state->matrix = stb::matrix{};
     state->stroke = default_stroke_style();
@@ -40,9 +39,8 @@ static state_t* state_create(void)
 static void state_reset(state_t* state)
 {
     paint_destroy(state->paint_);
-    font_face_data::release(state->font_face_);
     state->paint_ = NULL;
-    state->font_face_ = NULL;
+    state->font_face_ = font_face();
     state->color_ = color(0, 0, 0, 255);
     state->matrix = stb::matrix{};
     state->stroke = default_stroke_style();
@@ -58,7 +56,7 @@ static void state_reset(state_t* state)
 static void state_copy(state_t* state, const state_t* source)
 {
     state->paint_ = paint_reference(source->paint_);
-    state->font_face_ = font_face_data::reference(source->font_face_);
+    state->font_face_ = source->font_face_;
     state->color_ = source->color_;
     state->matrix = source->matrix;
     state->stroke = source->stroke;
@@ -74,7 +72,6 @@ static void state_copy(state_t* state, const state_t* source)
 static void state_destroy(state_t* state)
 {
     paint_destroy(state->paint_);
-    font_face_data::release(state->font_face_);
     delete state;
 }
 
@@ -86,7 +83,6 @@ canvas_t* canvas_create(std::shared_ptr<surface_t> surface)
     canvas->path_ = new outline;
     canvas->state = state_create();
     canvas->freed_state = NULL;
-    canvas->face_cache = NULL;
     canvas->clip_rect = rect_t{0, 0, static_cast<float>(surface->width()), static_cast<float>(surface->height())};
     return canvas;
 }
@@ -112,7 +108,6 @@ void canvas_destroy(canvas_t* canvas)
             state_destroy(state);
         }
 
-        font_face_cache_destroy(canvas->face_cache);
         delete canvas->path_;
         delete canvas;
     }
@@ -203,59 +198,10 @@ paint_t* canvas_get_paint(const canvas_t* canvas, color* color_)
     return canvas->state->paint_;
 }
 
-void canvas_set_font_face_cache(canvas_t* canvas, font_face_cache_t* cache)
+void canvas_set_font(canvas_t* canvas, const font_face& face, float size_)
 {
-    cache = font_face_cache_reference(cache);
-    font_face_cache_destroy(canvas->face_cache);
-    canvas->face_cache = cache;
-}
-
-font_face_cache_t* canvas_get_font_face_cache(const canvas_t* canvas)
-{
-    return canvas->face_cache;
-}
-
-void canvas_add_font_face(canvas_t* canvas, const char* family, bool bold, bool italic, font_face_data* face)
-{
-    if(canvas->face_cache == NULL)
-        canvas->face_cache = font_face_cache_create();
-    font_face_cache_add(canvas->face_cache, family, bold, italic, face);
-}
-
-bool canvas_add_font_file(canvas_t* canvas, const char* family, bool bold, bool italic, const char* filename, int ttcindex)
-{
-    if(canvas->face_cache == NULL)
-        canvas->face_cache = font_face_cache_create();
-    return font_face_cache_add_file(canvas->face_cache, family, bold, italic, filename, ttcindex);
-}
-
-bool canvas_select_font_face(canvas_t* canvas, const char* family, bool bold, bool italic)
-{
-    if(canvas->face_cache == NULL)
-        return false;
-    font_face_data* face = font_face_cache_get(canvas->face_cache, family, bold, italic);
-    if(face == NULL)
-        return false;
-    canvas_set_font_face(canvas, face);
-    return true;
-}
-
-void canvas_set_font(canvas_t* canvas, font_face_data* face, float size_)
-{
-    canvas_set_font_face(canvas, face);
-    canvas_set_font_size(canvas, size_);
-}
-
-void canvas_set_font_face(canvas_t* canvas, font_face_data* face)
-{
-    face = font_face_data::reference(face);
-    font_face_data::release(canvas->state->font_face_);
     canvas->state->font_face_ = face;
-}
-
-font_face_data* canvas_get_font_face(const canvas_t* canvas)
-{
-    return canvas->state->font_face_;
+    canvas_set_font_size(canvas, size_);
 }
 
 void canvas_set_font_size(canvas_t* canvas, float size_)
@@ -660,102 +606,33 @@ void canvas_clip_path(canvas_t* canvas, const outline& path_)
     canvas_clip(canvas);
 }
 
-float canvas_add_glyph(canvas_t* canvas, codepoint_t codepoint, float x, float y)
+float canvas_add_text(canvas_t* canvas, std::u32string_view text, float x, float y, const shaping_context& context)
 {
     state_t* state = canvas->state;
-    if(state->font_face_ && state->font_size > 0.f)
-        return state->font_face_->get_glyph_path(state->font_size, x, y, codepoint, *canvas->path_);
-    return 0.f;
-}
-
-float canvas_add_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y, const shaping_context& context)
-{
-    state_t* state = canvas->state;
-    if(state->font_face_ == NULL || state->font_size <= 0.f)
+    font_face_data* face = state->font_face_.get();
+    if(face == NULL || state->font_size <= 0.f)
         return 0.f;
     std::vector<shaped_glyph_t> glyphs;
-    const float advance_width = state->font_face_->shape(state->font_size, text, length_, encoding, &glyphs, context);
+    const float advance_width = face->shape(state->font_size, text, &glyphs, context);
     for(const shaped_glyph_t& g : glyphs)
-        state->font_face_->get_glyph_index_path(state->font_size, x + g.x, y + g.y, g.glyph, *canvas->path_);
+        face->get_glyph_index_path(state->font_size, x + g.x, y + g.y, g.glyph, *canvas->path_);
     return advance_width;
 }
 
-float canvas_fill_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y, const shaping_context& context)
+float canvas_fill_text(canvas_t* canvas, std::u32string_view text, float x, float y, const shaping_context& context)
 {
     canvas_new_path(canvas);
-    float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y, context);
+    float advance_width = canvas_add_text(canvas, text, x, y, context);
     canvas_fill(canvas);
     return advance_width;
 }
 
-float canvas_stroke_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y, const shaping_context& context)
+float canvas_stroke_text(canvas_t* canvas, std::u32string_view text, float x, float y, const shaping_context& context)
 {
     canvas_new_path(canvas);
-    float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y, context);
+    float advance_width = canvas_add_text(canvas, text, x, y, context);
     canvas_stroke(canvas);
     return advance_width;
-}
-
-float canvas_clip_text(canvas_t* canvas, const void* text, int length_, text_encoding encoding, float x, float y)
-{
-    canvas_new_path(canvas);
-    float advance_width = canvas_add_text(canvas, text, length_, encoding, x, y);
-    canvas_clip(canvas);
-    return advance_width;
-}
-
-void canvas_font_metrics(const canvas_t* canvas, float* ascent, float* descent, float* line_gap, rect_t* extents)
-{
-    state_t* state = canvas->state;
-    if(state->font_face_ && state->font_size > 0.f) {
-        state->font_face_->get_metrics(state->font_size, ascent, descent, line_gap, extents);
-        return;
-    }
-
-    if(ascent) *ascent = 0.f;
-    if(descent) *descent = 0.f;
-    if(line_gap) *line_gap = 0.f;
-    if(extents) {
-        extents->x = 0.f;
-        extents->y = 0.f;
-        extents->w = 0.f;
-        extents->h = 0.f;
-    }
-}
-
-void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents)
-{
-    state_t* state = canvas->state;
-    if(state->font_face_ && state->font_size > 0.f) {
-        state->font_face_->get_glyph_metrics(state->font_size, codepoint, advance_width, left_side_bearing, extents);
-        return;
-    }
-
-    if(advance_width) *advance_width = 0.f;
-    if(left_side_bearing) *left_side_bearing = 0.f;
-    if(extents) {
-        extents->x = 0.f;
-        extents->y = 0.f;
-        extents->w = 0.f;
-        extents->h = 0.f;
-    }
-}
-
-float canvas_text_extents(canvas_t* canvas, const void* text, int length_, text_encoding encoding, rect_t* extents)
-{
-    state_t* state = canvas->state;
-    if(state->font_face_ && state->font_size > 0.f) {
-        return state->font_face_->text_extents(state->font_size, text, length_, encoding, extents);
-    }
-
-    if(extents) {
-        extents->x = 0.f;
-        extents->y = 0.f;
-        extents->w = 0.f;
-        extents->h = 0.f;
-    }
-
-    return 0.f;
 }
 
 } // namespace vg

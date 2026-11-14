@@ -1,8 +1,7 @@
 #pragma once
 
-// Private to src/sources/vg: a font face (one font of a file or of a memory block), on top of stb::font (libstb).
-// Reference counted by hand for now (the C canvas layer shares faces through raw pointers); it becomes a plain
-// value or a shared_ptr when that layer goes (ADR-0011, step 3).
+// Private to src/sources/vg: what novasvg keeps per font on top of stb::font (libstb): the design metrics, a cache of
+// glyph outlines and the shaping glue. Shared through font_face (a shared_ptr), never by hand.
 
 #include "render.h"
 
@@ -11,6 +10,7 @@
 #include <stdint.h>
 #include <cstdint>
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 #include <mutex>
 #include <vector>
@@ -18,8 +18,6 @@
 #if defined(_WIN32)
 #include <windows.h>
 #endif
-
-#include "internal.h"  // ref_count_t and the novasvg_*_reference macros
 
 namespace nova {
 namespace vg {
@@ -44,25 +42,15 @@ struct glyph_entry {
 
 class font_face_data {
 public:
-    // A null pointer when the file or the data is not a font. `destroy_func(closure)` runs when the last
-    // reference goes (also when loading fails).
-    static font_face_data* load_from_file(const char* filename, int ttcindex);
-    static font_face_data* load_from_data(const void* data, unsigned int length, int ttcindex, destroy_func_t destroy_func, void* closure);
-
-    // Null-safe: reference() adds one and returns `face`; release() drops one and deletes at zero.
-    static font_face_data* reference(font_face_data* face);
-    static void release(font_face_data* face);
-    static int reference_count_of(const font_face_data* face);
-
-    ~font_face_data();
+    explicit font_face_data(stb::font f);
     font_face_data(const font_face_data&) = delete;
     font_face_data& operator=(const font_face_data&) = delete;
 
     // Design units per em (the font's own grid), e.g. 1000 or 2048.
     float units_per_em() const;
 
-    // Calls `callback` for every Unicode code point the face has a glyph for, in ascending order.
-    void enumerate_codepoints(void (*callback)(uint32_t codepoint, void* closure), void* closure) const;
+    // Every Unicode code point the face has a glyph for, in ascending order.
+    std::vector<char32_t> codepoints() const;
 
     void get_metrics(float size_, float* ascent, float* descent, float* line_gap, rect_t* extents) const;
     void get_glyph_metrics(float size_, codepoint_t codepoint, float* advance_width, float* left_side_bearing, rect_t* extents) const;
@@ -71,35 +59,27 @@ public:
     // Kerning between two consecutive code points, in pixels at `size_` (kern table or GPOS).
     float get_kern_advance(float size_, codepoint_t ch1, codepoint_t ch2) const;
 
-    // The outline of a glyph at (x, y); returns its own advance.
-    float get_glyph_path(float size_, float x, float y, codepoint_t codepoint, outline& path_) const;
-    float traverse_glyph_path(float size_, float x, float y, codepoint_t codepoint, path_traverse_func_t traverse_func, void* closure) const;
-    // The same by glyph index (what shape() returns).
+    // The outline of a glyph (an index, as shape() returns) at (x, y); returns its own advance.
     float get_glyph_index_path(float size_, float x, float y, std::uint32_t glyph, outline& path_) const;
     float traverse_glyph_index_path(float size_, float x, float y, std::uint32_t glyph_index, path_traverse_func_t traverse_func, void* closure) const;
 
-    // Shapes `text`; fills `glyphs` (when not null) and returns the advance of the whole text. UTF-8, UTF-16 or UTF-32.
-    // With a `context` (UTF-32 only) the text is shaped as a part of the context's run, see shaping_context.
-    float shape(float size_, const void* text, int length_, text_encoding encoding, std::vector<shaped_glyph_t>* glyphs, const shaping_context& context = {}) const;
+    // Shapes `text`; fills `glyphs` (when not null) and returns the advance of the whole text. With a `context` the
+    // text (a view into context.run) is shaped as a part of that run, see shaping_context.
+    float shape(float size_, std::u32string_view text, std::vector<shaped_glyph_t>* glyphs, const shaping_context& context = {}) const;
 
     // The advance of `text`, and (when not null) its bounding box.
-    float text_extents(float size_, const void* text, int length_, text_encoding encoding, rect_t* extents, const shaping_context& context = {}) const;
+    float text_extents(float size_, std::u32string_view text, rect_t* extents, const shaping_context& context = {}) const;
 
 private:
-    explicit font_face_data(stb::font f);
-
     uint32_t glyph_index_of(codepoint_t codepoint) const;
     glyph_entry* glyph_by_index(uint32_t index) const;
     glyph_entry* glyph(codepoint_t codepoint) const;
     float size_scale(float size_) const;
 
-    mutable ref_count_t ref_count;
     stb::font ft;
     stb::font_design_metrics design;
     mutable std::mutex mutex;
     mutable std::unordered_map<codepoint_t, std::unique_ptr<glyph_entry>> cache;
-    destroy_func_t destroy_func = nullptr;
-    void* closure = nullptr;
 };
 
 } // namespace vg
