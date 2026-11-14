@@ -51,7 +51,7 @@ typedef struct {
     bool extended;
 } radial_gradient_values_t;
 
-uint32_t premultiply_color_with_opacity(const stb::color* color_, float opacity);
+uint32_t premultiply_color_with_opacity(const color* color_, float opacity);
 
 uint32_t INTERPOLATE_PIXEL_255(uint32_t x, uint32_t a, uint32_t y, uint32_t b);
 
@@ -74,32 +74,32 @@ void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values_t* v, 
 void fetch_radial_gradient(uint32_t* buffer, const radial_gradient_values_t* v, const gradient_data_t* gradient, int y, int x, int length_);
 
 
-void blend_solid(surface_t* surface, stb::composite_op op, stb::blend_mode mode, uint32_t solid, const stb::span_set* span_buffer);
+void paint_solid(surface_t* surface, composite_op op, blend_mode mode, uint32_t solid, const span_set* span_buffer);
 
 #define BUFFER_SIZE 1024
-void blend_linear_gradient(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const gradient_data_t* gradient, const stb::span_set* span_buffer);
+void paint_linear_gradient(surface_t* surface, composite_op op, blend_mode mode, const gradient_data_t* gradient, const span_set* span_buffer);
 
-void blend_radial_gradient(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const gradient_data_t* gradient, const stb::span_set* span_buffer);
+void paint_radial_gradient(surface_t* surface, composite_op op, blend_mode mode, const gradient_data_t* gradient, const span_set* span_buffer);
 
-void blend_untransformed_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const stb::span_set* span_buffer);
+void paint_untransformed_argb(surface_t* surface, composite_op op, blend_mode mode, const texture_data_t* texture, const span_set* span_buffer);
 
 #define FIXED_SCALE (1 << 16)
-void blend_transformed_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const stb::span_set* span_buffer);
+void paint_transformed_argb(surface_t* surface, composite_op op, blend_mode mode, const texture_data_t* texture, const span_set* span_buffer);
 
-void blend_untransformed_tiled_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const stb::span_set* span_buffer);
+void paint_untransformed_tiled_argb(surface_t* surface, composite_op op, blend_mode mode, const texture_data_t* texture, const span_set* span_buffer);
 
-void blend_transformed_tiled_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const stb::span_set* span_buffer);
+void paint_transformed_tiled_argb(surface_t* surface, composite_op op, blend_mode mode, const texture_data_t* texture, const span_set* span_buffer);
 
 uint32_t interpolate_4_pixels(uint32_t tl, uint32_t tr, uint32_t bl, uint32_t br, uint32_t distx, uint32_t disty);
 
 #define HALF_POINT (1 << 15)
-void blend_transformed_bilinear_tiled_argb(surface_t* surface, stb::composite_op op, stb::blend_mode mode, const texture_data_t* texture, const stb::span_set* span_buffer);
+void paint_transformed_bilinear_tiled_argb(surface_t* surface, composite_op op, blend_mode mode, const texture_data_t* texture, const span_set* span_buffer);
 
-void blend_color(canvas_t* canvas, const stb::color* color_, const stb::span_set* span_buffer);
+void paint_color(canvas_t* canvas, const color* color_, const span_set* span_buffer);
 
-void blend_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const stb::span_set* span_buffer);
+void paint_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const span_set* span_buffer);
 
-void blend_texture(canvas_t* canvas, const texture_paint_t* texture, const stb::span_set* span_buffer);
+void paint_texture(canvas_t* canvas, const texture_paint_t* texture, const span_set* span_buffer);
 
 } // namespace vg
 } // namespace nova
