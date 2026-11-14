@@ -87,7 +87,7 @@ canvas_t* canvas_create(std::shared_ptr<surface_t> surface)
     canvas->state = state_create();
     canvas->freed_state = NULL;
     canvas->face_cache = NULL;
-    canvas->clip_rect = NOVA_MAKE_RECT(0, 0, surface->width(), surface->height());
+    canvas->clip_rect = NOVA_MAKE_RECT(0, 0, static_cast<float>(surface->width()), static_cast<float>(surface->height()));
     return canvas;
 }
 
