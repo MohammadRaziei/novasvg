@@ -250,7 +250,7 @@ public:
     const svg_mask_element* masker() const { return m_masker; }
     const svg_filter_element* filter_element() const { return m_filter; }
     float opacity() const { return m_opacity; }
-    stb::blend_mode mix_blend_mode() const { return m_mix_blend_mode; }
+    css_mix_blend_mode mix_blend_mode() const { return m_mix_blend_mode; }
 
     bool is_element() const final { return true; }
 
@@ -260,7 +260,7 @@ private:
     const svg_mask_element* m_masker = nullptr;
     const svg_filter_element* m_filter = nullptr;
     float m_opacity = 1.f;
-    stb::blend_mode m_mix_blend_mode = stb::blend_mode::normal;
+    css_mix_blend_mode m_mix_blend_mode = css_mix_blend_mode::normal;
 
     float m_font_size = 12.f;
     css_display m_display = css_display::inline_;

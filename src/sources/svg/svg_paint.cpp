@@ -16,7 +16,7 @@ svg_blend_info::svg_blend_info(const svg_element* el)
 
 bool svg_blend_info::requires_compositing(svg_render_mode mode) const
 {
-    return (m_clipper && m_clipper->requires_masking()) || (mode == svg_render_mode::painting && (m_masker || m_filter || m_opacity < 1.f || m_mix_blend_mode != stb::blend_mode::normal));
+    return (m_clipper && m_clipper->requires_masking()) || (mode == svg_render_mode::painting && (m_masker || m_filter || m_opacity < 1.f || m_mix_blend_mode != css_mix_blend_mode::normal));
 }
 
 bool svg_render_state::has_cycle_reference(const svg_element* el) const

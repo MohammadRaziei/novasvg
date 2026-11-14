@@ -485,23 +485,23 @@ css_white_space parse_white_space(std::string_view input)
     return parse_enum_value(input, entries, css_white_space::default_);
 }
 
-stb::blend_mode parse_mix_blend_mode(std::string_view input)
+css_mix_blend_mode parse_mix_blend_mode(std::string_view input)
 {
-    static const svg_enumeration_entry<stb::blend_mode> entries[] = {
-        {stb::blend_mode::normal, "normal"},
-        {stb::blend_mode::multiply, "multiply"},
-        {stb::blend_mode::screen, "screen"},
-        {stb::blend_mode::darken, "darken"},
-        {stb::blend_mode::lighten, "lighten"},
-        {stb::blend_mode::difference, "difference"},
-        {stb::blend_mode::exclusion, "exclusion"}
+    static const svg_enumeration_entry<css_mix_blend_mode> entries[] = {
+        {css_mix_blend_mode::normal, "normal"},
+        {css_mix_blend_mode::multiply, "multiply"},
+        {css_mix_blend_mode::screen, "screen"},
+        {css_mix_blend_mode::darken, "darken"},
+        {css_mix_blend_mode::lighten, "lighten"},
+        {css_mix_blend_mode::difference, "difference"},
+        {css_mix_blend_mode::exclusion, "exclusion"}
     };
 
     // CSS keywords are ASCII case-insensitive
     std::string keyword;
     for(char ch : input)
         keyword.push_back(utils::to_lower(ch));
-    return parse_enum_value(keyword, entries, stb::blend_mode::normal);
+    return parse_enum_value(keyword, entries, css_mix_blend_mode::normal);
 }
 
 css_mask_type parse_mask_type(std::string_view input)

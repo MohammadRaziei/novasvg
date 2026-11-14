@@ -16,7 +16,7 @@ class svg_blend_info {
 public:
     explicit svg_blend_info(const svg_element* el);
     svg_blend_info(const svg_clip_path_element* clipper, const svg_mask_element* masker, const svg_filter_element* filter, float opacity,
-                 stb::blend_mode mix_blend_mode_ = stb::blend_mode::normal)
+                 css_mix_blend_mode mix_blend_mode_ = css_mix_blend_mode::normal)
         : m_clipper(clipper), m_masker(masker), m_filter(filter), m_opacity(opacity), m_mix_blend_mode(mix_blend_mode_)
     {}
 
@@ -25,14 +25,14 @@ public:
     const svg_mask_element* masker() const { return m_masker; }
     const svg_filter_element* filter_element() const { return m_filter; }
     float opacity() const { return m_opacity; }
-    stb::blend_mode mix_blend_mode() const { return m_mix_blend_mode; }
+    css_mix_blend_mode mix_blend_mode() const { return m_mix_blend_mode; }
 
 private:
     const svg_clip_path_element* m_clipper;
     const svg_mask_element* m_masker;
     const svg_filter_element* m_filter;
     const float m_opacity;
-    const stb::blend_mode m_mix_blend_mode;
+    const css_mix_blend_mode m_mix_blend_mode;
 };
 
 class svg_render_state {
