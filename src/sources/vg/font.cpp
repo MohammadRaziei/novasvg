@@ -1,9 +1,52 @@
-// Definitions declared in src/sources/vg/font.h.
+// Definitions declared in src/sources/vg/font.h: font faces on top of stb::font (libstb), and a face at a size.
+//
+// libstb reads outlines, metrics, kerning (kern/GPOS) and GSUB/GPOS shaping, and tells what a font file is called; this
+// file only applies a pixel size and hands the glyphs to the renderer.
 #include "../utils/text.h"
 #include "font.h"
-#include "font_face.h"
+#include <stb/logging.hpp>
+#include <stb/util.hpp>
+
+#include <algorithm>
+#include <cmath>
+#include <exception>
 
 namespace nova::vg {
+
+namespace {
+
+stb::logging::logger& font_log() { static auto& l = stb::logging::get_logger("novasvg.font"); return l; }
+
+// stb::font::glyph_index throws above U+10FFFF; such a code point is just "not in the font".
+std::uint32_t glyph_of(const stb::font& font, char32_t codepoint)
+{
+    return codepoint > 0x10FFFFu ? 0u : font.glyph_index(codepoint);
+}
+
+}  // namespace
+
+font_face font_face::from_memory(std::vector<std::uint8_t> bytes, int ttcindex)
+{
+    if(bytes.empty())
+        return font_face();
+    const size_t length_ = bytes.size();
+    try {
+        return font_face(stb::font::from_memory(std::move(bytes), ttcindex));
+    } catch(const std::exception& e) {
+        font_log().warning("cannot load a font from memory (%zu bytes, index %d): %s", length_, ttcindex, e.what());
+    }
+    return font_face();
+}
+
+font_face font_face::from_file(const char* filename, int ttcindex)
+{
+    try {
+        return font_face(stb::font::open(filename, ttcindex));
+    } catch(const std::exception& e) {
+        font_log().warning("cannot load the font file '%s' (index %d): %s", filename, ttcindex, e.what());
+    }
+    return font_face();
+}
 
 font_face::font_face(const void* data, size_t length_)
     : font_face(from_memory(std::vector<uint8_t>(static_cast<const uint8_t*>(data), static_cast<const uint8_t*>(data) + length_)))
@@ -12,55 +55,33 @@ font_face::font_face(const void* data, size_t length_)
 
 float font_face::units_per_em() const
 {
-    if(is_null())
-        return 0.f;
-    return m_face->units_per_em();
+    return is_null() ? 0.f : static_cast<float>(m_font->design_metrics().units_per_em);
 }
 
 float font_face::ascent_units() const
 {
-    if(is_null())
-        return 0.f;
-    float ascent = 0.f;
-    m_face->get_metrics(units_per_em(), &ascent, nullptr, nullptr, nullptr);
-    return ascent;
+    return is_null() ? 0.f : static_cast<float>(m_font->design_metrics().ascent);
 }
 
 float font_face::descent_units() const
 {
-    if(is_null())
-        return 0.f;
-    float descent = 0.f;
-    m_face->get_metrics(units_per_em(), nullptr, &descent, nullptr, nullptr);
-    return descent;
+    return is_null() ? 0.f : static_cast<float>(m_font->design_metrics().descent);
 }
 
 float font_face::advance_width_units(char32_t codepoint) const
 {
-    if(is_null())
-        return 0.f;
-    // font_face_data::get_glyph_metrics() always returns advance_width * scale
-    // (see font_face.cpp) -- passing unitsPerEm() as the "size"
-    // makes scale == 1, i.e. the raw, size-independent font-unit value,
-    // with no separate unscaled code path needed on the render side.
-    float advance = 0.f;
-    m_face->get_glyph_metrics(units_per_em(), codepoint, &advance, nullptr, nullptr);
-    return advance;
+    return is_null() ? 0.f : m_font->glyph_info(glyph_of(*m_font, codepoint)).advance;
 }
 
 float font_face::kern_advance_units(char32_t first, char32_t second) const
 {
-    if(is_null())
-        return 0.f;
-    // Same unitsPerEm()-as-size trick as advanceWidthUnits(): makes
-    // font_face_data::get_kern_advance()'s internal scale multiplication a
-    // no-op, yielding the raw, size-independent value.
-    return m_face->get_kern_advance(units_per_em(), first, second);
+    // The kern table or GPOS pair adjustment, per pair, as libstb resolves it.
+    return is_null() ? 0.f : m_font->glyph_kerning(glyph_of(*m_font, first), glyph_of(*m_font, second));
 }
 
 std::vector<char32_t> font_face::codepoints() const
 {
-    return is_null() ? std::vector<char32_t>() : m_face->codepoints();
+    return is_null() ? std::vector<char32_t>() : m_font->codepoints();
 }
 
 bool font_face_cache::add_font_face(const std::string& family, bool bold, bool italic, const font_face& face)
@@ -200,40 +221,147 @@ sized_font::sized_font(const font_face& face, float size_)
     : m_face(face), m_size(size_)
 {
     if(m_size > 0.f && !m_face.is_null()) {
-        m_face.get()->get_metrics(m_size, &m_ascent, &m_descent, &m_line_gap, nullptr);
+        const stb::font_design_metrics design = m_face.get()->design_metrics();
+        m_scale = m_size / static_cast<float>(design.units_per_em);
+        m_ascent = design.ascent * m_scale;
+        m_descent = design.descent * m_scale;
+        m_line_gap = design.line_gap * m_scale;
     }
 }
 
 float sized_font::x_height() const
 {
-    rect_t extents = {0};
-    if(m_size > 0.f && !m_face.is_null())
-        m_face.get()->get_glyph_metrics(m_size, 'x', nullptr, nullptr, &extents);
-    return extents.h;
+    if(is_null())
+        return 0.f;
+    const stb::glyph_metrics info = m_face.get()->glyph_info(glyph_of(*m_face.get(), U'x'));
+    return (info.y_min - info.y_max) * -m_scale;
 }
 
 float sized_font::measure_text(const std::u32string_view& text, const shaping_context& context) const
 {
-    if(m_size > 0.f && !m_face.is_null())
-        return m_face.get()->text_extents(m_size, text, nullptr, context);
-    return 0;
+    return shape(text, nullptr, context);
+}
+
+float sized_font::shape(const std::u32string_view& text, std::vector<shaped_glyph_t>* glyphs, const shaping_context& context) const
+{
+    if(glyphs)
+        glyphs->clear();
+    if(is_null())
+        return 0.f;
+    std::vector<stb::shaped_glyph> shaped;
+    try {
+        if(!context.run.empty() && text.data() >= context.run.data() && text.data() + text.size() <= context.run.data() + context.run.size()) {
+            // A part of a longer run: libstb shapes [begin, end) with the context of the whole run, and its byte offsets
+            // are those of the run's UTF-8.
+            stb::shape_options options;
+            options.ligatures = context.ligatures;
+            const size_t begin = size_t(text.data() - context.run.data());
+            const std::string utf8 = stb::utf8_encode(context.run);
+            const size_t begin_byte = stb::utf8_encode(context.run.substr(0, begin)).size();
+            const size_t end_byte = stb::utf8_encode(context.run.substr(0, begin + text.size())).size();
+            shaped = m_face.get()->shape(utf8, begin_byte, end_byte, options);
+        } else {
+            shaped = m_face.get()->shape(stb::utf8_encode(text));
+        }
+    } catch(...) {
+        return 0.f;
+    }
+    float pen = 0.f;
+    for(const stb::shaped_glyph& g : shaped) {
+        if(glyphs)
+            glyphs->push_back({g.glyph, pen + g.x_offset * m_scale, -g.y_offset * m_scale});
+        pen += g.x_advance * m_scale;
+    }
+    return pen;
+}
+
+void sized_font::traverse_glyph_path(std::uint32_t glyph, float x, float y, path_traverse_func_t traverse_func, void* closure) const
+{
+    if(is_null())
+        return;
+    stb::matrix matrix = stb::matrix::translation(x, y);
+    matrix.scale(m_scale, -m_scale);
+
+    stb::point points[3];
+    stb::point current_point = {0, 0};
+    // ponytail: libstb parses the glyph on every call (the cache this file used to keep is gone); a scratch vector saves
+    // the allocation. Upgrade: an outline cache inside stb::font, shared by every caller.
+    thread_local std::vector<stb::outline_command> commands;
+    m_face.get()->outline(glyph, commands);
+    for(const stb::outline_command& cmd : commands) {
+        switch(cmd.op) {
+        case outline_op::move_to:
+            points[0] = cmd.p[0];
+            current_point = points[0];
+            matrix.map(points, points, 1);
+            traverse_func(closure, outline_op::move_to, points, 1);
+            break;
+        case outline_op::line_to:
+            points[0] = cmd.p[0];
+            current_point = points[0];
+            matrix.map(points, points, 1);
+            traverse_func(closure, outline_op::line_to, points, 1);
+            break;
+        case outline_op::quad_to: // TrueType: raised to a cubic, as the renderer only knows cubics
+            points[0].x = 2.f / 3.f * cmd.p[0].x + 1.f / 3.f * current_point.x;
+            points[0].y = 2.f / 3.f * cmd.p[0].y + 1.f / 3.f * current_point.y;
+            points[1].x = 2.f / 3.f * cmd.p[0].x + 1.f / 3.f * cmd.p[1].x;
+            points[1].y = 2.f / 3.f * cmd.p[0].y + 1.f / 3.f * cmd.p[1].y;
+            points[2] = cmd.p[1];
+            current_point = points[2];
+            matrix.map(points, points, 3);
+            traverse_func(closure, outline_op::cubic_to, points, 3);
+            break;
+        case outline_op::cubic_to: // CFF
+            points[0] = cmd.p[0];
+            points[1] = cmd.p[1];
+            points[2] = cmd.p[2];
+            current_point = points[2];
+            matrix.map(points, points, 3);
+            traverse_func(closure, outline_op::cubic_to, points, 3);
+            break;
+        case outline_op::close:
+            // Contours were never closed explicitly here (stb_truetype gave none): the fill closes
+            // them anyway, and this keeps stroked text identical.
+            break;
+        }
+    }
+}
+
+void sized_font::add_glyph_path(std::uint32_t glyph, float x, float y, outline& path_) const
+{
+    traverse_glyph_path(glyph, x, y, [](void* closure, outline_op command, const stb::point* points, int) {
+        outline* path_ = static_cast<outline*>(closure);
+        switch(command) {
+        case outline_op::move_to:
+            path_->move_to(points[0].x, points[0].y);
+            break;
+        case outline_op::line_to:
+            path_->line_to(points[0].x, points[0].y);
+            break;
+        case outline_op::cubic_to:
+            path_->cubic_to(points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y);
+            break;
+        default:  // traverse_glyph_path gives only these three
+            break;
+        }
+    }, &path_);
 }
 
 std::vector<sized_font::glyph_box> sized_font::glyph_boxes(const std::u32string_view& text) const
 {
     std::vector<glyph_box> boxes;
-    if(m_size <= 0.f || m_face.is_null())
+    if(is_null())
         return boxes;
 
-    font_face_data* face = m_face.get();
     std::vector<shaped_glyph_t> glyphs;
-    face->shape(m_size, text, &glyphs);
+    shape(text, &glyphs);
     for(const shaped_glyph_t& g : glyphs) {
-        float advance = 0.f;
-        rect_t extents = {0};
-        face->get_glyph_index_metrics(m_size, g.glyph, &advance, nullptr, &extents);
-        if(extents.w > 0.f || extents.h > 0.f)
-            boxes.push_back({g.x, extents.x, extents.x + extents.w, extents.y + g.y, extents.y + extents.h + g.y});
+        const stb::glyph_metrics info = m_face.get()->glyph_info(g.glyph);
+        const float x = info.x_min * m_scale, y = info.y_max * -m_scale;
+        const float w = (info.x_max - info.x_min) * m_scale, h = (info.y_min - info.y_max) * -m_scale;
+        if(w > 0.f || h > 0.f)
+            boxes.push_back({g.x, x, x + w, y + g.y, y + h + g.y});
     }
     return boxes;
 }

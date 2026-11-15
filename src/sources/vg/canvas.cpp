@@ -1,5 +1,4 @@
 #include "state.h"
-#include "font_face.h"
 
 namespace nova {
 namespace vg {
@@ -609,13 +608,13 @@ void canvas_clip_path(canvas_t* canvas, const outline& path_)
 float canvas_add_text(canvas_t* canvas, std::u32string_view text, float x, float y, const shaping_context& context)
 {
     state_t* state = canvas->state;
-    font_face_data* face = state->font_face_.get();
-    if(face == NULL || state->font_size <= 0.f)
+    const sized_font font(state->font_face_, state->font_size);
+    if(font.is_null())
         return 0.f;
     std::vector<shaped_glyph_t> glyphs;
-    const float advance_width = face->shape(state->font_size, text, &glyphs, context);
+    const float advance_width = font.shape(text, &glyphs, context);
     for(const shaped_glyph_t& g : glyphs)
-        face->get_glyph_index_path(state->font_size, x + g.x, y + g.y, g.glyph, *canvas->path_);
+        font.add_glyph_path(g.glyph, x + g.x, y + g.y, *canvas->path_);
     return advance_width;
 }
 

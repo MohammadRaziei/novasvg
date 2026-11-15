@@ -1,5 +1,4 @@
 #include "pdf_canvas.h"
-#include "font_face.h"
 #include <stb/logging.hpp>
 
 #include <stb/zlib.hpp>
@@ -307,8 +306,7 @@ void pdf_canvas::emit_rect_path(const rect& rect_, const stb::matrix* transform_
 
 void pdf_canvas::emit_text_path(const std::u32string_view& text, const sized_font& font_, const point& origin, const stb::matrix* transform_, const shaping_context& context)
 {
-    font_face_data* face = font_.face().get();
-    if(face == nullptr || font_.size() <= 0.f)
+    if(font_.is_null())
         return;
 
     struct sink {
@@ -340,9 +338,9 @@ void pdf_canvas::emit_text_path(const std::u32string_view& text, const sized_fon
 
     // Same layout as canvas_add_text(): the shaped glyphs, each with its outline.
     std::vector<shaped_glyph_t> glyphs;
-    face->shape(font_.size(), text, &glyphs, context);
+    font_.shape(text, &glyphs, context);
     for(const shaped_glyph_t& g : glyphs)
-        face->traverse_glyph_index_path(font_.size(), origin.x + g.x, origin.y + g.y, g.glyph, traverse, &s);
+        font_.traverse_glyph_path(g.glyph, origin.x + g.x, origin.y + g.y, traverse, &s);
 }
 
 void pdf_canvas::fill_path(const outline& path_, fill_rule fill_rule_, const transform& transform_)

@@ -219,7 +219,7 @@ svg_text_fragments_builder::svg_text_fragments_builder(std::u32string& text, svg
 void svg_text_fragments_builder::find_run_starts()
 {
     m_run_starts.clear();
-    const font_face_data* last_face = nullptr;
+    const stb::font* last_face = nullptr;
     float last_size = 0.f;
     size_t character = 0;
     for(const auto& text_position : m_text_positions) {

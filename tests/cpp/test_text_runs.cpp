@@ -7,7 +7,6 @@
 #include <nova/svg/svg.h>
 
 #include "vg/font.h"
-#include "vg/font_face.h"
 
 // ADR-0012: a text is shaped as a run; <tspan>s and per-character positions cut it into fragments afterwards, so
 // kerning and ligatures that cross a fragment boundary are kept.
@@ -45,19 +44,19 @@ TEST_CASE("Text runs: a ligature crossing a fragment boundary stays in the fragm
     const std::u32string run = U"fi";
     std::vector<nova::vg::shaped_glyph_t> glyphs;
 
-    face.get()->shape(40.f, std::u32string_view(run.data(), 2), &glyphs);
+    nova::vg::sized_font(face, 40.f).shape(std::u32string_view(run.data(), 2), &glyphs);
     REQUIRE(glyphs.size() == 1);  // the fi ligature of DejaVu Sans
 
     nova::vg::shaping_context context{run, true};
-    face.get()->shape(40.f, std::u32string_view(run.data(), 1), &glyphs, context);
+    nova::vg::sized_font(face, 40.f).shape(std::u32string_view(run.data(), 1), &glyphs, context);
     CHECK(glyphs.size() == 1);
-    face.get()->shape(40.f, std::u32string_view(run.data() + 1, 1), &glyphs, context);
+    nova::vg::sized_font(face, 40.f).shape(std::u32string_view(run.data() + 1, 1), &glyphs, context);
     CHECK(glyphs.empty());
 
     // letter-spacing: no ligature, the two letters are separate glyphs in their own fragments.
     context.ligatures = false;
-    face.get()->shape(40.f, std::u32string_view(run.data(), 1), &glyphs, context);
+    nova::vg::sized_font(face, 40.f).shape(std::u32string_view(run.data(), 1), &glyphs, context);
     CHECK(glyphs.size() == 1);
-    face.get()->shape(40.f, std::u32string_view(run.data() + 1, 1), &glyphs, context);
+    nova::vg::sized_font(face, 40.f).shape(std::u32string_view(run.data() + 1, 1), &glyphs, context);
     CHECK(glyphs.size() == 1);
 }

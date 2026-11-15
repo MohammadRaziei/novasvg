@@ -155,7 +155,6 @@ typedef unsigned int codepoint_t;
  * @brief Represents a font face.
  */
 class font_face;
-class font_face_data;
 
 /**
  * @brief Represents a cache of loaded font faces.

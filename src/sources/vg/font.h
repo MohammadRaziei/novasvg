@@ -7,6 +7,7 @@
 
 #include "parserutils.h" // stripLeadingAndTrailingSpaces() -- generic string utils only, no svg-tree dependency, consistent with this header's own self-contained goal
 #include "render.h"  // path_move_to/line_to/cubic_to, used to extract glyph outlines
+#include <stb/font.hpp>
 
 #include <memory>
 #include <string>
@@ -18,10 +19,20 @@
 
 namespace nova::vg {
 
+// A text shaped by libstb (font::shape): the glyphs to draw, in visual order, with the pen already placed (kerning,
+// ligatures, joined and mirrored letters, marks), in pixels at the font size, y down.
+struct shaped_glyph_t {
+    std::uint32_t glyph; // glyph index of the font
+    float x;             // where the glyph is drawn, from the start of the text
+    float y;             // offset from the baseline (mark placement)
+};
+
+// A font as libstb reads it, shared between every holder (a copy of a font_face is a pointer copy; two copies are the
+// same face when get() is equal). Null when there is no font.
 class font_face {
 public:
     font_face() = default;
-    explicit font_face(std::shared_ptr<font_face_data> face) : m_face(std::move(face)) {}
+    explicit font_face(stb::font font) : m_font(std::make_shared<const stb::font>(std::move(font))) {}
     /// Copies the bytes of a font file (TrueType, OpenType or WOFF 1.0); a null face when they are not one libstb reads.
     font_face(const void* data, size_t length_);
     explicit font_face(std::vector<uint8_t>&& bytes) : font_face(from_memory(std::move(bytes))) {}
@@ -31,8 +42,8 @@ public:
     static font_face from_memory(std::vector<uint8_t> bytes, int ttcindex = 0);
     static font_face from_file(const char* filename, int ttcindex = 0);
 
-    bool is_null() const { return m_face == nullptr; }
-    font_face_data* get() const { return m_face.get(); }
+    bool is_null() const { return m_font == nullptr; }
+    const stb::font* get() const { return m_font.get(); }
 
     // Raw font design units (unscaled by any particular pixel size) -- the
     // same space a font file's own tables (head.unitsPerEm, hmtx advance
@@ -52,7 +63,7 @@ public:
     // Kerning adjustment between two consecutive codepoints, in raw font
     // design units (unscaled) -- the same "kern"/GPOS lookup
     // Font::measureText() itself applies between every glyph pair (see
-    // font_face_data::text_extents() in src/sources/vg/font_face.cpp), exposed per-pair
+    // sized_font::measure_text() in src/sources/vg/font.cpp), exposed per-pair
     // so a caller that (unlike Font::measureText()) can't call back into
     // novasvg per string -- e.g. mermaidx's V8 engine, which sums a
     // shipped per-codepoint advance table in JS instead -- can still fold
@@ -79,7 +90,7 @@ public:
     std::vector<char32_t> codepoints() const;
 
 private:
-    std::shared_ptr<font_face_data> m_face;
+    std::shared_ptr<const stb::font> m_font;
 };
 
 // The last-resort fonts: Latin subsets of DejaVu Sans (regular, bold, oblique and bold oblique)
@@ -140,6 +151,14 @@ public:
     // `context`: shape `text` (a view into context.run) as a part of its run, see shaping_context.
     float measure_text(const std::u32string_view& text, const shaping_context& context = {}) const;
 
+    // Shapes `text`: fills `glyphs` (when not null) and returns the advance of the whole text.
+    float shape(const std::u32string_view& text, std::vector<shaped_glyph_t>* glyphs, const shaping_context& context = {}) const;
+
+    // The outline of a glyph (an index, as shape() returns it) with its pen at (x, y): quadratics are raised to cubics,
+    // contours are left to the fill to close.
+    void traverse_glyph_path(std::uint32_t glyph, float x, float y, path_traverse_func_t traverse_func, void* closure) const;
+    void add_glyph_path(std::uint32_t glyph, float x, float y, outline& path_) const;
+
     // One entry per glyph that has an outline (spaces and other empty glyphs
     // are left out): where its pen starts and where its ink begins/ends, in
     // pixels. inkLeft/inkRight are along the baseline relative to the glyph's
@@ -166,6 +185,7 @@ public:
 private:
     font_face m_face;
     float m_size = 0.f;
+    float m_scale = 0.f;   // pixels per design unit
     float m_ascent = 0.f;
     float m_descent = 0.f;
     float m_line_gap = 0.f;
