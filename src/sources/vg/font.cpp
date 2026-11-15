@@ -84,18 +84,6 @@ std::vector<char32_t> font_face::codepoints() const
     return is_null() ? std::vector<char32_t>() : m_font->codepoints();
 }
 
-bool font_face_cache::add_font_face(const std::string& family, bool bold, bool italic, const font_face& face)
-{
-    if(!face.is_null())
-        font_face_cache_add(m_cache, family.data(), bold, italic, face);
-    return !face.is_null();
-}
-
-font_face font_face_cache::get_font_face_local(const std::string& family, bool bold, bool italic) const
-{
-    return font_face_cache_get(m_cache, family.data(), bold, italic);
-}
-
 font_face font_face_cache::get_font_face(const std::string& family, bool bold, bool italic) const
 {
     if(auto face = get_font_face_local(family, bold, italic); !face.is_null()) {
@@ -121,7 +109,7 @@ font_face font_face_cache::get_font_face(const std::string& family, bool bold, b
 
     for(auto value : generic_fallbacks) {
         if(value.generic == family || family.empty()) {
-            if(auto face = font_face_cache_get(m_cache, value.fallback, bold, italic); !face.is_null())
+            if(auto face = get_font_face_local(value.fallback, bold, italic); !face.is_null())
                 return face;
             // Not even the platform's stand-in is installed: use the embedded font
             // so text is still drawn (and drawn the same way) on a machine without fonts.
@@ -203,17 +191,13 @@ font_face font_face_cache::get_font_face_for_family_stack(const std::string& fam
     return font_face();
 }
 
-font_face_cache::font_face_cache()
-    : m_cache(font_face_cache_create())
-{
-#ifndef NOVA_DISABLE_LOAD_SYSTEM_FONTS
-    font_face_cache_load_sys(m_cache);
-#endif
-}
-
 font_face_cache* global_font_face_cache()
 {
     static font_face_cache cache;
+#ifndef NOVA_DISABLE_LOAD_SYSTEM_FONTS
+    static const int loaded = cache.load_system();  // once, before the first lookup
+    (void)loaded;
+#endif
     return &cache;
 }
 

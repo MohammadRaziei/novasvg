@@ -9,7 +9,9 @@
 #include "render.h"  // path_move_to/line_to/cubic_to, used to extract glyph outlines
 #include <stb/font.hpp>
 
+#include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <cctype>
@@ -99,21 +101,41 @@ private:
 // Defined in svgparser.hpp, next to the base64 decoding it shares with @font-face.
 font_face embedded_fallback_font(bool bold = false, bool italic = false);
 
+// The faces a family name can be asked for: installed ones (known by their file, loaded on first use) and added ones.
+// Thread-safe. A request is answered by the face of that family that fits bold and italic best (see get_font_face_local).
 class font_face_cache {
 public:
-    bool add_font_face(const std::string& family, bool bold, bool italic, const font_face& face);
+    font_face_cache() = default;
+    font_face_cache(const font_face_cache&) = delete;
+    font_face_cache& operator=(const font_face_cache&) = delete;
 
-    // Local-only lookup: just this cache's literal-name scan (system
-    // fonts by their own internal name, plus anything explicitly
-    // registered via addFontFace() -- including an @font-face-embedded
-    // font under the exact family name its CSS declared). No generic
-    // "sans-serif"-style fallback table and no OS substitution -- used
-    // by svg_layout_state::font()'s per-name stack loop so an embedded
-    // font is found (and wins) before falling through to guessing at a
-    // substitute for names later in the stack.
+    /// Adds a face under `family` ("" makes it a fallback); a null face is refused. The newest face wins a tie.
+    bool add_font_face(const std::string& family, bool bold, bool italic, const font_face& face);
+    /// Loads face `ttcindex` of a font file and adds it; false (and a warning) when that is not a font.
+    bool add_file(const std::string& family, bool bold, bool italic, const char* filename, int ttcindex = 0);
+
+    /// The installed faces libstb finds: one file, every font under a directory, the system's fonts. Each returns the
+    /// number of families added (0 when there is none), or -1 when this build has no font loading
+    /// (NOVA_DISABLE_FONT_FACE_CACHE_LOAD). A face is known by its file and loaded on first use; it is listed under its
+    /// typographic family (name id 16) and, when that differs, under the one a regular/bold program uses (id 1).
+    int load_file(const char* filename);
+    int load_dir(const char* dirname);
+    int load_system();
+
+    /// Forgets every face.
+    void reset();
+
+    // Local-only lookup: just this cache's literal-name scan (system fonts by their own internal name, plus anything
+    // explicitly registered via add_font_face(), including an @font-face-embedded font under the exact family name its
+    // CSS declared). No generic "sans-serif"-style fallback table and no OS substitution; used by
+    // svg_layout_state::font()'s per-name stack loop so an embedded font is found (and wins) before falling through to
+    // guessing at a substitute for names later in the stack.
+    //
+    // Of the faces of the family: the one that agrees on bold and italic, then the one nearest the normal width, then
+    // the one whose weight is nearest to regular (400) or bold (700); the newest wins a tie. Null when there is none.
     font_face get_font_face_local(const std::string& family, bool bold, bool italic) const;
 
-    // getFontFaceLocal(), then the hardcoded generic-family table
+    // get_font_face_local(), then the hardcoded generic-family table
     // ("sans-serif" -> "DejaVu Sans" and similar) as a last resort.
     font_face get_font_face(const std::string& family, bool bold, bool italic) const;
 
@@ -130,9 +152,26 @@ public:
     font_face get_font_face_for_family_stack(const std::string& family_stack, bool bold, bool italic) const;
 
 private:
-    font_face_cache();
-    font_face_cache_t* m_cache;
-    friend font_face_cache* global_font_face_cache();
+    // One face of a family: loaded already or only known by its file. A face listed under two family names has two
+    // entries and one slot, so it is loaded once.
+    struct slot {
+        font_face face;
+        std::string filename;   // empty for a face that was added directly
+        int ttcindex = 0;
+    };
+    struct entry {
+        std::shared_ptr<slot> slot_;
+        bool bold = false;
+        bool italic = false;
+        int weight = 400;       // OS/2 usWeightClass
+        int width = 5;          // OS/2 usWidthClass, 5 is normal
+    };
+    void add_entry(const std::string& family, entry e);
+    int add_found(const std::string& path, int index, bool bold, bool italic, int weight, int width,
+                  const std::string& family_name, const std::string& legacy_family_name);
+
+    mutable std::mutex m_mutex;
+    std::map<std::string, std::vector<entry>> m_families;   // the faces of a family, oldest first
 };
 
 font_face_cache* global_font_face_cache();
