@@ -97,9 +97,9 @@ void paint_transformed_bilinear_tiled_argb(surface_t* surface, composite_op op, 
 
 void paint_color(canvas_t* canvas, const color* color_, const span_set* span_buffer);
 
-void paint_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const span_set* span_buffer);
+void paint_gradient(canvas_t* canvas, const gradient_paint& gradient, const span_set* span_buffer);
 
-void paint_texture(canvas_t* canvas, const texture_paint_t* texture, const span_set* span_buffer);
+void paint_texture(canvas_t* canvas, const texture_paint& texture, const span_set* span_buffer);
 
 } // namespace vg
 } // namespace nova

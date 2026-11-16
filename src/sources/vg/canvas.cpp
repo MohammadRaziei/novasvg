@@ -21,7 +21,6 @@ const char* render_version_string(void)
 static state_t* state_create(void)
 {
     state_t* state = new state_t();
-    state->paint_ = NULL;
     state->color_ = color(0, 0, 0, 255);
     state->matrix = stb::matrix{};
     state->stroke = default_stroke_style();
@@ -37,8 +36,7 @@ static state_t* state_create(void)
 
 static void state_reset(state_t* state)
 {
-    paint_destroy(state->paint_);
-    state->paint_ = NULL;
+    state->paint_.reset();
     state->font_face_ = font_face();
     state->color_ = color(0, 0, 0, 255);
     state->matrix = stb::matrix{};
@@ -54,7 +52,7 @@ static void state_reset(state_t* state)
 
 static void state_copy(state_t* state, const state_t* source)
 {
-    state->paint_ = paint_reference(source->paint_);
+    state->paint_ = source->paint_;
     state->font_face_ = source->font_face_;
     state->color_ = source->color_;
     state->matrix = source->matrix;
@@ -70,7 +68,6 @@ static void state_copy(state_t* state, const state_t* source)
 
 static void state_destroy(state_t* state)
 {
-    paint_destroy(state->paint_);
     delete state;
 }
 
@@ -153,48 +150,62 @@ void canvas_set_rgb(canvas_t* canvas, float r, float g, float b)
 void canvas_set_rgba(canvas_t* canvas, float r, float g, float b, float a)
 {
     canvas->state->color_ = color_from_floats(r, g, b, a);
-    canvas_set_paint(canvas, NULL);
+    canvas->state->paint_.reset();
 }
 
 void canvas_set_color(canvas_t* canvas, const color* color_)
 {
     canvas->state->color_ = *color_;
-    canvas_set_paint(canvas, NULL);
+    canvas->state->paint_.reset();
+}
+
+// A gradient with the offsets clamped to [0, 1] and made non-decreasing, the way SVG reads stops.
+static gradient_paint make_gradient(gradient_paint::kind type_, spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
+{
+    gradient_paint gradient;
+    gradient.type_ = type_;
+    gradient.spread = spread;
+    gradient.matrix = matrix ? *matrix : stb::matrix{};
+    gradient.stops.reserve(nstops > 0 ? nstops : 0);
+    float prev_offset = 0.f;
+    for(int i = 0; i < nstops; ++i) {
+        const float offset = STB_MAX(prev_offset, std::clamp(stops[i].offset, 0.f, 1.f));
+        gradient.stops.push_back({offset, stops[i].color_});
+        prev_offset = offset;
+    }
+    return gradient;
 }
 
 void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
 {
-    paint_t* paint_ = paint_create_linear_gradient(x1, y1, x2, y2, spread, stops, nstops, matrix);
-    canvas_set_paint(canvas, paint_);
-    paint_destroy(paint_);
+    gradient_paint gradient = make_gradient(gradient_paint::kind::linear, spread, stops, nstops, matrix);
+    gradient.values[0] = x1;
+    gradient.values[1] = y1;
+    gradient.values[2] = x2;
+    gradient.values[3] = y2;
+    canvas->state->paint_ = std::make_shared<const paint_source>(std::move(gradient));
 }
 
 void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr, spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
 {
-    paint_t* paint_ = paint_create_radial_gradient(cx, cy, cr, fx, fy, fr, spread, stops, nstops, matrix);
-    canvas_set_paint(canvas, paint_);
-    paint_destroy(paint_);
+    gradient_paint gradient = make_gradient(gradient_paint::kind::radial, spread, stops, nstops, matrix);
+    gradient.values[0] = cx;
+    gradient.values[1] = cy;
+    gradient.values[2] = cr;
+    gradient.values[3] = fx;
+    gradient.values[4] = fy;
+    gradient.values[5] = fr;
+    canvas->state->paint_ = std::make_shared<const paint_source>(std::move(gradient));
 }
 
 void canvas_set_texture(canvas_t* canvas, std::shared_ptr<surface_t> surface, texture_type type_, float opacity, const stb::matrix* matrix)
 {
-    paint_t* paint_ = paint_create_texture(surface, type_, opacity, matrix);
-    canvas_set_paint(canvas, paint_);
-    paint_destroy(paint_);
-}
-
-void canvas_set_paint(canvas_t* canvas, paint_t* paint_)
-{
-    paint_ = paint_reference(paint_);
-    paint_destroy(canvas->state->paint_);
-    canvas->state->paint_ = paint_;
-}
-
-paint_t* canvas_get_paint(const canvas_t* canvas, color* color_)
-{
-    if(color_)
-        *color_ = canvas->state->color_;
-    return canvas->state->paint_;
+    texture_paint texture;
+    texture.type_ = type_;
+    texture.opacity = std::clamp(opacity, 0.f, 1.f);
+    texture.matrix = matrix ? *matrix : stb::matrix{};
+    texture.surface = std::move(surface);
+    canvas->state->paint_ = std::make_shared<const paint_source>(std::move(texture));
 }
 
 void canvas_set_font(canvas_t* canvas, const font_face& face, float size_)

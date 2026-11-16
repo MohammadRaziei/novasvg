@@ -202,108 +202,6 @@ typedef struct {
 } gradient_stop_t;
 
 /**
- * @brief Represents a paint object used for drawing operations.
- */
-typedef struct paint paint_t;
-
-/**
- * @brief Creates a solid RGB paint.
- *
- * @param r The red component (0 to 1).
- * @param g The green component (0 to 1).
- * @param b The blue component (0 to 1).
- * @return A pointer to the created `paint_t` object.
- */
-NOVA_API paint_t* paint_create_rgb(float r, float g, float b);
-
-/**
- * @brief Creates a solid RGBA paint.
- *
- * @param r The red component (0 to 1).
- * @param g The green component (0 to 1).
- * @param b The blue component (0 to 1).
- * @param a The alpha component (0 to 1).
- * @return A pointer to the created `paint_t` object.
- */
-NOVA_API paint_t* paint_create_rgba(float r, float g, float b, float a);
-
-/**
- * @brief Creates a solid color paint.
- *
- * @param color A pointer to the `color` object.
- * @return A pointer to the created `paint_t` object.
- */
-NOVA_API paint_t* paint_create_color(const color* color_);
-
-/**
- * @brief Creates a linear gradient paint.
- *
- * @param x1 The x coordinate of the gradient start.
- * @param y1 The y coordinate of the gradient start.
- * @param x2 The x coordinate of the gradient end.
- * @param y2 The y coordinate of the gradient end.
- * @param spread The gradient spread method.
- * @param stops Array of gradient stops.
- * @param nstops Number of gradient stops.
- * @param matrix Optional transformation matrix.
- * @return A pointer to the created `paint_t` object.
- */
-NOVA_API paint_t* paint_create_linear_gradient(float x1, float y1, float x2, float y2,
-    spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
-
-/**
- * @brief Creates a radial gradient paint.
- *
- * @param cx The x coordinate of the gradient center.
- * @param cy The y coordinate of the gradient center.
- * @param cr The radius of the gradient.
- * @param fx The x coordinate of the focal point.
- * @param fy The y coordinate of the focal point.
- * @param fr The radius of the focal point.
- * @param spread The gradient spread method.
- * @param stops Array of gradient stops.
- * @param nstops Number of gradient stops.
- * @param matrix Optional transformation matrix.
- * @return A pointer to the created `paint_t` object.
- */
-NOVA_API paint_t* paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr,
-    spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix);
-
-/**
- * @brief Creates a texture paint from a surface.
- *
- * @param surface The texture surface.
- * @param type The texture type (plain or tiled).
- * @param opacity The opacity of the texture (0 to 1).
- * @param matrix Optional transformation matrix.
- * @return A pointer to the created `paint_t` object.
- */
-NOVA_API paint_t* paint_create_texture(std::shared_ptr<surface_t> surface, texture_type type_, float opacity, const stb::matrix* matrix);
-
-/**
- * @brief Increments the reference count of a paint object.
- *
- * @param paint A pointer to the `paint_t` object.
- * @return A pointer to the referenced `paint_t` object.
- */
-NOVA_API paint_t* paint_reference(paint_t* paint_);
-
-/**
- * @brief Decrements the reference count and destroys the paint if the count reaches zero.
- *
- * @param paint A pointer to the `paint_t` object.
- */
-NOVA_API void paint_destroy(paint_t* paint_);
-
-/**
- * @brief Retrieves the reference count of a paint object.
- *
- * @param paint A pointer to the `paint_t` object.
- * @return The reference count of the `paint_t` object.
- */
-NOVA_API int paint_get_reference_count(const paint_t* paint_);
-
-/**
  * @brief Represents a drawing context.
  */
 typedef struct canvas_context canvas_t;
@@ -446,27 +344,6 @@ NOVA_API void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, f
  * @param matrix Optional transformation matrix.
  */
 NOVA_API void canvas_set_texture(canvas_t* canvas, std::shared_ptr<surface_t> surface, texture_type type_, float opacity, const stb::matrix* matrix);
-
-/**
- * @brief Sets the current paint.
- *
- * If not set, the default paint is opaque black color.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @param paint The paint to be used for subsequent drawing operations.
- */
-NOVA_API void canvas_set_paint(canvas_t* canvas, paint_t* paint_);
-
-/**
- * @brief Retrieves the current paint.
- *
- * If not set, the default paint is opaque black color.
- *
- * @param canvas A pointer to a `canvas_t` object.
- * @param color A pointer to a `color` object where the current color will be stored.
- * @return The current `paint_t` used for drawing operations. If no paint is set, `NULL` is returned.
- */
-NOVA_API paint_t* canvas_get_paint(const canvas_t* canvas, color* color_);
 
 /**
  * @brief Sets the font face and size for text rendering on the canvas.

@@ -495,7 +495,15 @@ css_mix_blend_mode parse_mix_blend_mode(std::string_view input)
         {css_mix_blend_mode::darken, "darken"},
         {css_mix_blend_mode::lighten, "lighten"},
         {css_mix_blend_mode::difference, "difference"},
-        {css_mix_blend_mode::exclusion, "exclusion"}
+        {css_mix_blend_mode::exclusion, "exclusion"},
+        {css_mix_blend_mode::color_dodge, "color-dodge"},
+        {css_mix_blend_mode::color_burn, "color-burn"},
+        {css_mix_blend_mode::hard_light, "hard-light"},
+        {css_mix_blend_mode::soft_light, "soft-light"},
+        {css_mix_blend_mode::hue, "hue"},
+        {css_mix_blend_mode::saturation, "saturation"},
+        {css_mix_blend_mode::color, "color"},
+        {css_mix_blend_mode::luminosity, "luminosity"}
     };
 
     // CSS keywords are ASCII case-insensitive

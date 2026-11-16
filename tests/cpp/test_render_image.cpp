@@ -94,3 +94,37 @@ TEST_CASE("mix-blend-mode: overlay follows the W3C formula")
     }
     CHECK(p[3] == 255);
 }
+
+TEST_CASE("mix-blend-mode: every CSS keyword follows the W3C formulas")
+{
+    // opaque backdrop (204, 102, 51) under an opaque (64, 128, 192) square, expected colours worked out from the spec
+    struct { const char* keyword; int r, g, b; } cases[] = {
+        {"color-dodge", 255, 205, 206}, {"color-burn", 52, 0, 0},    {"hard-light", 102, 103, 154},
+        {"soft-light", 184, 102, 83},   {"hue", 65, 142, 218},       {"saturation", 191, 106, 63},
+        {"color", 75, 139, 203},        {"luminosity", 193, 91, 40}, {"HARD-LIGHT", 102, 103, 154},
+    };
+    for(const auto& c : cases) {
+        CAPTURE(c.keyword);
+        auto doc = nova::svg::document::load_data(
+            svg("<rect width='40' height='40' fill='#cc6633'/>"
+                "<rect x='10' y='10' width='20' height='20' fill='#4080c0' style='mix-blend-mode:" + std::string(c.keyword) + "'/>"));
+        REQUIRE(doc != nullptr);
+        const stb::image image = doc->render_to_image(40, 40);
+        REQUIRE(!image.empty());
+        const std::uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
+        CHECK(std::abs(p[0] - c.r) <= 2);
+        CHECK(std::abs(p[1] - c.g) <= 2);
+        CHECK(std::abs(p[2] - c.b) <= 2);
+        CHECK(p[3] == 255);
+    }
+    // plus-lighter is a composite operator in CSS, not a mix-blend-mode keyword: an unknown value paints as normal
+    auto doc = nova::svg::document::load_data(
+        svg("<rect width='40' height='40' fill='#cc6633'/>"
+            "<rect x='10' y='10' width='20' height='20' fill='#4080c0' style='mix-blend-mode:plus-lighter'/>"));
+    REQUIRE(doc != nullptr);
+    const stb::image image = doc->render_to_image(40, 40);
+    const std::uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
+    CHECK(int(p[0]) == 0x40);
+    CHECK(int(p[1]) == 0x80);
+    CHECK(int(p[2]) == 0xc0);
+}

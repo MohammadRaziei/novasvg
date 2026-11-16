@@ -3,6 +3,9 @@
 #include <stb/outline.hpp>
 
 #include <atomic>
+#include <memory>
+#include <variant>
+#include <vector>
 
 #ifndef NOVA_PRIVATE_H
 #define NOVA_PRIVATE_H
@@ -21,47 +24,28 @@ typedef std::atomic<int> ref_count_t;
 #define novasvg_destroy_reference(ob) (ob && (ob)->ref_count.fetch_sub(1) == 1)
 #define novasvg_get_reference_count(ob) ((ob) ? (ob)->ref_count.load() : 0)
 
-typedef enum {
-    NOVA_PAINT_TYPE_COLOR,
-    NOVA_PAINT_TYPE_GRADIENT,
-    NOVA_PAINT_TYPE_TEXTURE
-} paint_type_t;
-
-struct paint {
-    ref_count_t ref_count;
-    paint_type_t type_;
+// What a canvas fills with besides its plain color: a gradient or a texture. Immutable and shared, so a saved state
+// and the canvas hold the same one.
+struct gradient_paint {
+    enum class kind { linear, radial };
+    kind type_ = kind::linear;
+    spread_method_value spread{};
+    stb::matrix matrix;
+    std::vector<gradient_stop_t> stops;  // offsets within [0, 1], never decreasing
+    float values[6] = {};                // linear: x1 y1 x2 y2; radial: cx cy cr fx fy fr
 };
 
-typedef struct {
-    paint_t base;
-    color color_;
-} solid_paint_t;
-
-typedef enum {
-    NOVA_GRADIENT_TYPE_LINEAR,
-    NOVA_GRADIENT_TYPE_RADIAL
-} gradient_type_t;
-
-typedef struct {
-    paint_t base;
-    gradient_type_t type_;
-    spread_method_value spread;
+struct texture_paint {
+    texture_type type_{};
+    float opacity = 1.f;
     stb::matrix matrix;
-    gradient_stop_t* stops;
-    int nstops;
-    float values[6];
-} gradient_paint_t;
+    std::shared_ptr<surface_t> surface;
+};
 
-typedef struct {
-    paint_t base;
-    texture_type type_;
-    float opacity;
-    stb::matrix matrix;
-    std::shared_ptr<surface_t> surface;  // constructed in place: the paint is malloc'd
-} texture_paint_t;
+using paint_source = std::variant<gradient_paint, texture_paint>;
 
 typedef struct state {
-    paint_t* paint_;
+    std::shared_ptr<const paint_source> paint_;  // none: fill with color_
     font_face font_face_;
     color color_;
     stb::matrix matrix;

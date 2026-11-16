@@ -543,27 +543,27 @@ void paint_color(canvas_t* canvas, const color* color_, const span_set* span_buf
     }
 }
 
-void paint_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const span_set* span_buffer)
+void paint_gradient(canvas_t* canvas, const gradient_paint& gradient, const span_set* span_buffer)
 {
-    if(gradient->nstops == 0)
+    if(gradient.stops.empty())
         return;
     state_t* state = canvas->state;
     gradient_data_t data;
-    data.spread = gradient->spread;
-    data.matrix = gradient->matrix;
+    data.spread = gradient.spread;
+    data.matrix = gradient.matrix;
     data.matrix = data.matrix.then(state->matrix);
     const auto inverse = data.matrix.inverse();
     if(!inverse)
         return;
     data.matrix = *inverse;
-    int i, pos = 0, nstops = gradient->nstops;
+    int i, pos = 0, nstops = int(gradient.stops.size());
     const gradient_stop_t *curr, *next, *start, *last;
     uint32_t curr_color, next_color, last_color;
     uint32_t dist, idist;
     float delta, t, incr, fpos;
     float opacity = state->opacity;
 
-    start = gradient->stops;
+    start = gradient.stops.data();
     curr = start;
     curr_color = premultiply_color_with_opacity(&curr->color_, opacity);
 
@@ -602,35 +602,35 @@ void paint_gradient(canvas_t* canvas, const gradient_paint_t* gradient, const sp
         data.colortable[pos] = last_color;
     }
 
-    if(gradient->type_ == NOVA_GRADIENT_TYPE_LINEAR) {
-        data.values.linear.x1 = gradient->values[0];
-        data.values.linear.y1 = gradient->values[1];
-        data.values.linear.x2 = gradient->values[2];
-        data.values.linear.y2 = gradient->values[3];
+    if(gradient.type_ == gradient_paint::kind::linear) {
+        data.values.linear.x1 = gradient.values[0];
+        data.values.linear.y1 = gradient.values[1];
+        data.values.linear.x2 = gradient.values[2];
+        data.values.linear.y2 = gradient.values[3];
         paint_linear_gradient(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
     } else {
-        data.values.radial.cx = gradient->values[0];
-        data.values.radial.cy = gradient->values[1];
-        data.values.radial.cr = gradient->values[2];
-        data.values.radial.fx = gradient->values[3];
-        data.values.radial.fy = gradient->values[4];
-        data.values.radial.fr = gradient->values[5];
+        data.values.radial.cx = gradient.values[0];
+        data.values.radial.cy = gradient.values[1];
+        data.values.radial.cr = gradient.values[2];
+        data.values.radial.fx = gradient.values[3];
+        data.values.radial.fy = gradient.values[4];
+        data.values.radial.fr = gradient.values[5];
         paint_radial_gradient(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
     }
 }
 
-void paint_texture(canvas_t* canvas, const texture_paint_t* texture, const span_set* span_buffer)
+void paint_texture(canvas_t* canvas, const texture_paint& texture, const span_set* span_buffer)
 {
-    if(!texture->surface)
+    if(!texture.surface)
         return;
     state_t* state = canvas->state;
     texture_data_t data;
-    data.matrix = texture->matrix;
-    data.data = texture->surface->data();
-    data.width = texture->surface->width();
-    data.height = texture->surface->height();
-    data.stride = int(texture->surface->stride());
-    data.const_alpha = lroundf(state->opacity * texture->opacity * 256);
+    data.matrix = texture.matrix;
+    data.data = texture.surface->data();
+    data.width = texture.surface->width();
+    data.height = texture.surface->height();
+    data.stride = int(texture.surface->stride());
+    data.const_alpha = lroundf(state->opacity * texture.opacity * 256);
 
     data.matrix = data.matrix.then(state->matrix);
     const auto inverse = data.matrix.inverse();
@@ -639,13 +639,13 @@ void paint_texture(canvas_t* canvas, const texture_paint_t* texture, const span_
     data.matrix = *inverse;
     const stb::matrix* matrix = &data.matrix;
     if(matrix->a == 1 && matrix->b == 0 && matrix->c == 0 && matrix->d == 1) {
-        if(texture->type_ == texture_type::plain) {
+        if(texture.type_ == texture_type::plain) {
             paint_untransformed_argb(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
         } else {
             paint_untransformed_tiled_argb(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
         }
     } else {
-        if(texture->type_ == texture_type::plain) {
+        if(texture.type_ == texture_type::plain) {
             paint_transformed_argb(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
         } else if(fabsf(matrix->b) > 1e-6f || fabsf(matrix->c) > 1e-6f) {
             paint_transformed_bilinear_tiled_argb(canvas->surface.get(), state->op, state->mode, &data, span_buffer);
@@ -659,22 +659,13 @@ void blend(canvas_t* canvas, const span_set* span_buffer)
 {
     if(span_buffer->empty())
         return;
-    if(canvas->state->paint_ == NULL) {
+    const paint_source* source = canvas->state->paint_.get();
+    if(source == nullptr)
         paint_color(canvas, &canvas->state->color_, span_buffer);
-        return;
-    }
-
-    paint_t* paint_ = canvas->state->paint_;
-    if(paint_->type_ == NOVA_PAINT_TYPE_COLOR) {
-        solid_paint_t* solid = (solid_paint_t*)(paint_);
-        paint_color(canvas, &solid->color_, span_buffer);
-    } else if(paint_->type_ == NOVA_PAINT_TYPE_GRADIENT) {
-        gradient_paint_t* gradient = (gradient_paint_t*)(paint_);
-        paint_gradient(canvas, gradient, span_buffer);
-    } else {
-        texture_paint_t* texture = (texture_paint_t*)(paint_);
-        paint_texture(canvas, texture, span_buffer);
-    }
+    else if(const gradient_paint* gradient = std::get_if<gradient_paint>(source))
+        paint_gradient(canvas, *gradient, span_buffer);
+    else
+        paint_texture(canvas, std::get<texture_paint>(*source), span_buffer);
 }
 
 } // namespace vg
