@@ -16,6 +16,7 @@ decision; each records the context, the options that were weighed, what was chos
 | [0009](0009-namespaces-nova-svg-and-nova-vg.md) | Namespaces `nova::svg` and `nova::vg`; the drawing layer is a library of its own | Accepted (direction), not implemented |
 | [0010](0010-foreign-object-extension.md) | foreignObject is an extension (public renderer interface, painter, per-document registration), not part of the core | Accepted, implemented |
 | [0012](0012-shape-text-runs-not-fragments.md) | Shape a text run once with libstb and split the glyphs into fragments, instead of shaping each fragment alone | Proposed, not implemented |
+| [0013](0013-measure-then-speed-up-the-parser.md) | Measure the parser first; borrow pugixml's techniques (in-place parse, arena, char table) instead of its DOM | Proposed, not implemented |
 
 The step numbers refer to [`REFACTOR_CHECKLIST.md`](../../REFACTOR_CHECKLIST.md) at the repository root.
 

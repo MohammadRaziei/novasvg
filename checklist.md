@@ -455,6 +455,7 @@
 - [ ] گرادیان و بافت به‌عنوان paint در `paint.cpp`/`raster_canvas.cpp` (کار خودِ ما؛ `stb/raster.hpp` عمداً coverage span می‌دهد)
 - [x] شکستن `svgelement.{h,cpp}` و حذف `NOVA_INLINE` (قبلاً انجام شده بود؛ `svgparser.hpp` هم در گام ۵۰ به `svg_css.h` + `svg_css.cpp` شکسته شد)
 - [ ] API عمومی اندازه‌گیری متن (طرح لازم است)
+- [ ] پارسر: اول اندازه‌گیری (perf/massif)، بعد فقط اگر ارزش داشت تکنیک‌های pugixml (parse درجا، arena، جدول کاراکتر) در `document::parse` — طبق ADR-0013؛ تست `<!ENTITY>` هم اضافه شود
 - [ ] یک مرحله‌ی اسکریپتی: namespace + جابه‌جایی پوشه‌ها + rename به `snake_case` + target جدای CMake برای `nova::vg`
 - [ ] لایه‌ها (`begin_layer`، pattern، mask) به‌صورت virtual در `canvas`؛ بهبودهای PDF
 - [ ] Step 7 (README، Doxygen، CI، wheel) و پاک‌سازی `refactor/`
