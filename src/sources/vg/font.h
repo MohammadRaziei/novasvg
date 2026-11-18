@@ -98,7 +98,7 @@ private:
 // The last-resort fonts: Latin subsets of DejaVu Sans (regular, bold, oblique and bold oblique)
 // compiled into the library (see default_font.h); the face matching `bold` / `italic` is returned.
 // A null face when built with NOVA_DISABLE_EMBEDDED_FONT.
-// Defined in svg_css.cpp, next to the base64 decoding it shares with @font-face.
+// Defined in svg_style.cpp, next to the base64 decoding it shares with @font-face.
 font_face embedded_fallback_font(bool bold = false, bool italic = false);
 
 // The faces a family name can be asked for: installed ones (known by their file, loaded on first use) and added ones.

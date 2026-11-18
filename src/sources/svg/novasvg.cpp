@@ -26,7 +26,7 @@
 #include "vg/pdf_canvas.h"
 #include <stb/logging.hpp>
 #include "svgelement.h"
-#include "svg_css.h"
+#include "svg_style.h"
 
 namespace nova::svg {
 namespace {
@@ -549,7 +549,7 @@ void prepare_foreign_object(svg_foreign_object_element* el, const foreign_object
 
 } // namespace nova::svg
 
-// ---- definitions of public-class members that used to sit in svgelement.h / svg_css.h ----
+// ---- definitions of public-class members that used to sit in svgelement.h / svg_style.h ----
 namespace nova::svg {
 using namespace vg;
 
@@ -868,6 +868,17 @@ element_list document::query_selector_all(const std::string& content) const
     });
 
     return elements;
+}
+
+text_metrics measure_text(const std::string& utf8_text, const std::string& font_family, float font_size, bool bold, bool italic)
+{
+    const sized_font font = make_font(font_family, font_size, bold, italic);
+    text_metrics metrics;
+    metrics.width = font.measure_text(utf8_to_u32(utf8_text));
+    metrics.ascent = font.ascent();
+    metrics.descent = -font.descent(); // the font reports it negative (below the baseline)
+    metrics.line_gap = font.line_gap();
+    return metrics;
 }
 
 } // namespace nova::svg

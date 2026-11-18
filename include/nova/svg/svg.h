@@ -472,6 +472,33 @@ private:
     friend class svg_node;
 };
 
+/**
+ * @brief How big a piece of text is, measured the way a `<text>` element is laid out.
+ *
+ * All values are in user units (pixels at `font_size`).
+ */
+struct text_metrics {
+    float width = 0.f;    ///< Advance of the whole text (kerning and ligatures included).
+    float ascent = 0.f;   ///< Distance from the baseline up to the top of the font's line box; never negative.
+    float descent = 0.f;  ///< Distance from the baseline down to the bottom of the line box; never negative.
+    float line_gap = 0.f; ///< Extra leading the font asks for between two lines.
+};
+
+/**
+ * @brief Measures `utf8_text` with the same font lookup, shaping and kerning that `<text>` uses.
+ *
+ * `font_family` is a CSS `font-family` list (`"Inter", Arial, sans-serif`): the names are tried in order, fonts
+ * embedded by `@font-face` of a loaded document included. Invalid UTF-8 is replaced, not rejected. The result is
+ * all zeros when no font can be found at all.
+ * @param utf8_text The text, in UTF-8. Line breaks are not interpreted: this is one run.
+ * @param font_family A CSS font-family list.
+ * @param font_size The size in user units; the metrics scale with it.
+ * @param bold `font-weight: bold` when true, `normal` otherwise.
+ * @param italic `font-style: italic` when true, `normal` otherwise.
+ */
+NOVA_API text_metrics measure_text(const std::string& utf8_text, const std::string& font_family, float font_size,
+                                   bool bold = false, bool italic = false);
+
 } // namespace nova::svg
 
 #endif // NOVA_H

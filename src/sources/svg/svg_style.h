@@ -1,6 +1,6 @@
 #pragma once
 
-// The CSS side of the svg reader: selectors, rules and the style-sheet parser. Bodies live in svg_css.cpp.
+// The CSS side of the svg reader: selectors, rules and the style-sheet parser. Bodies live in svg_style.cpp.
 #include <cstdint>
 #include <string>
 #include <string_view>

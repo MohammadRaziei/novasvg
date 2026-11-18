@@ -6,7 +6,7 @@
 
 ## Context
 novasvg reads an SVG in one pass: `document::parse` (novasvg.cpp, about 230 lines) tokenizes the XML by hand and
-builds the typed `svg_element` tree directly, and `svg_css.cpp` is a hand-written CSS reader. The question was whether
+builds the typed `svg_element` tree directly, and `svg_style.cpp` is a hand-written CSS reader. The question was whether
 to replace the tokenizer with pugixml, or build on its DOM, to gain speed and use less memory. novasvg only reads
 documents; it does not write them.
 

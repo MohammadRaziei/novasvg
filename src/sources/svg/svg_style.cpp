@@ -1,6 +1,6 @@
-// The CSS side of the svg reader (declared in svg_css.h).
+// The CSS side of the svg reader (declared in svg_style.h).
 #include "svgelement.h"
-#include "svg_css.h"
+#include "svg_style.h"
 
 #include "utils/text.h"
 #include <cassert>
