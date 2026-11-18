@@ -453,7 +453,8 @@
 - [ ] `overlay` برای `mix-blend-mode` (libstb دارد؛ golden `golden-blend-modes.svg` فعلاً overlay را normal ثبت کرده، پس با re-baseline)
 - [ ] کوچک کردن `font_face`/`font_face_data` (لایه‌ی نازک روی `stb::font`)
 - [ ] گرادیان و بافت به‌عنوان paint در `paint.cpp`/`raster_canvas.cpp` (کار خودِ ما؛ `stb/raster.hpp` عمداً coverage span می‌دهد)
-- [ ] شکستن `svgelement.{h,cpp}` (حدود ۴۲۰۰ خط)، حذف `NOVA_INLINE`، API عمومی اندازه‌گیری متن
+- [x] شکستن `svgelement.{h,cpp}` و حذف `NOVA_INLINE` (قبلاً انجام شده بود؛ `svgparser.hpp` هم در گام ۵۰ به `svg_css.h` + `svg_css.cpp` شکسته شد)
+- [ ] API عمومی اندازه‌گیری متن (طرح لازم است)
 - [ ] یک مرحله‌ی اسکریپتی: namespace + جابه‌جایی پوشه‌ها + rename به `snake_case` + target جدای CMake برای `nova::vg`
 - [ ] لایه‌ها (`begin_layer`، pattern، mask) به‌صورت virtual در `canvas`؛ بهبودهای PDF
 - [ ] Step 7 (README، Doxygen، CI، wheel) و پاک‌سازی `refactor/`

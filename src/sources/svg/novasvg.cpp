@@ -26,7 +26,7 @@
 #include "vg/pdf_canvas.h"
 #include <stb/logging.hpp>
 #include "svgelement.h"
-#include "svgparser.hpp"
+#include "svg_css.h"
 
 namespace nova::svg {
 namespace {
@@ -549,7 +549,7 @@ void prepare_foreign_object(svg_foreign_object_element* el, const foreign_object
 
 } // namespace nova::svg
 
-// ---- definitions of public-class members that used to sit in svgelement.h / svgparser.hpp ----
+// ---- definitions of public-class members that used to sit in svgelement.h / svg_css.h ----
 namespace nova::svg {
 using namespace vg;
 
