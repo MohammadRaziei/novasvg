@@ -454,7 +454,7 @@
 - [ ] کوچک کردن `font_face`/`font_face_data` (لایه‌ی نازک روی `stb::font`)
 - [ ] گرادیان و بافت به‌عنوان paint در `paint.cpp`/`raster_canvas.cpp` (کار خودِ ما؛ `stb/raster.hpp` عمداً coverage span می‌دهد)
 - [x] شکستن `svgelement.{h,cpp}` و حذف `NOVA_INLINE` (قبلاً انجام شده بود؛ `svgparser.hpp` هم در گام ۵۰ به `svg_style.h` + `svg_style.cpp` شکسته شد)
-- [x] فونت variable در cache: `bold` برای Open Sans ی variable وزن 700 می‌گیرد (libstb `with_weight`)؛ باقی: `font-weight` عددی و بازه‌ی وزن برای `add_font_face`
+- [x] فونت variable در cache: هر وزن 1 تا 1000 (`font-weight` عددی تا `make_font`)، `bolder`/`lighter` نسبی، بازه‌ی وزن برای `add_font_face` از خود فونت (STEP 52)
 - [x] API عمومی اندازه‌گیری متن: `nova::svg::measure_text(text, font_family, size, bold, italic)` → `text_metrics` (عرض، ascent، descent، line_gap)؛ فقط C++، پایتون هنوز ندارد
 - [ ] پارسر: اول اندازه‌گیری (perf/massif)، بعد فقط اگر ارزش داشت تکنیک‌های pugixml (parse درجا، arena، جدول کاراکتر) در `document::parse` — طبق ADR-0013؛ تست `<!ENTITY>` هم اضافه شود
 - [ ] یک مرحله‌ی اسکریپتی: namespace + جابه‌جایی پوشه‌ها + rename به `snake_case` + target جدای CMake برای `nova::vg`

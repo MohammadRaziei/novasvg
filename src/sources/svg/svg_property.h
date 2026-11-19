@@ -223,10 +223,11 @@ enum class css_font_style : uint8_t {
     italic
 };
 
-enum class css_font_weight : uint8_t {
-    normal,
-    bold
-};
+/// CSS font-weight: a number from 1 to 1000. 400 is normal and 700 is bold; 600 and above counts as bold where only
+/// regular and bold exist (foreignObject runs, the embedded fallback font).
+using css_font_weight = int;
+inline constexpr css_font_weight font_weight_normal = 400;
+inline constexpr css_font_weight font_weight_bold = 700;
 
 enum class css_alignment_baseline : uint8_t {
     auto_,

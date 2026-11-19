@@ -25,7 +25,7 @@ css_display parse_display(std::string_view input);
 css_visibility parse_visibility(std::string_view input);
 css_overflow parse_overflow(std::string_view input);
 css_pointer_events parse_pointer_events(std::string_view input);
-css_font_weight parse_font_weight(std::string_view input);
+css_font_weight parse_font_weight(std::string_view input, css_font_weight inherited);
 css_font_style parse_font_style(std::string_view input);
 css_alignment_baseline parse_alignment_baseline(std::string_view input);
 css_dominant_baseline parse_dominant_baseline(std::string_view input);

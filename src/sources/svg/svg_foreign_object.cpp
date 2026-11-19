@@ -151,7 +151,7 @@ void svg_foreign_object_element::layout_element(const svg_layout_state& state)
 {
     m_font = state.font();
     m_font_family = state.font_family();
-    m_base_font_style = (unsigned char)((state.font_weight() == css_font_weight::bold ? style_bold : 0)
+    m_base_font_style = (unsigned char)((state.font_weight() >= 600 ? style_bold : 0)
                                       | (state.font_style() == css_font_style::italic ? style_italic : 0));
     m_fill = get_paint_server(state.fill(), state.fill_opacity());
     svg_graphics_element::layout_element(state);

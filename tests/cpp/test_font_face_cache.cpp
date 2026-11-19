@@ -153,3 +153,26 @@ TEST_CASE("Font face cache: a variable font is one face that is set to the weigh
     const std::uint32_t h = regular.get()->glyph_index(U'H');
     CHECK(bold.get()->glyph_info(h).advance > regular.get()->glyph_info(h).advance);
 }
+
+TEST_CASE("Font face cache: any weight of a variable font, and the range of one added by hand")
+{
+    using namespace nova::vg;
+    const std::string file = (std::filesystem::path(__FILE__).parent_path().parent_path() / "data" / "libstb-variable-test.ttf").string();
+
+    // found by a scan
+    font_face_cache scanned;
+    REQUIRE(scanned.load_file(file.c_str()) == 1);
+    CHECK(scanned.get_font_face_local("Open Sans", 300, false).get()->weight() == 300);
+    CHECK(scanned.get_font_face_local("Open Sans", 550, false).get()->weight() == 550);
+    CHECK(scanned.get_font_face_local("Open Sans", 800, false).get()->weight() == 800);
+    CHECK(scanned.get_font_face_local("Open Sans", 100, false).get()->weight() == 300);   // clamped to the axis, 300 is the nearest it has
+    CHECK(scanned.get_font_face_local("Open Sans", 900, false).get()->weight() == 800);
+    CHECK(scanned.get_font_face_local("Open Sans", 550, false).get() == scanned.get_font_face_local("Open Sans", 550, false).get());  // made once
+
+    // added by hand under a name of our own, as @font-face does: the range comes from the font itself
+    font_face_cache added;
+    REQUIRE(added.add_file("Mine", false, false, file.c_str()));
+    CHECK(added.get_font_face_local("Mine", false, false).get()->weight() == 400);
+    CHECK(added.get_font_face_local("Mine", true, false).get()->weight() == 700);
+    CHECK(added.get_font_face_local("Mine", 300, false).get()->weight() == 300);
+}

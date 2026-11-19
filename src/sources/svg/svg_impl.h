@@ -159,7 +159,7 @@ css_overflow parse_overflow(std::string_view input);
 
 css_pointer_events parse_pointer_events(std::string_view input);
 
-css_font_weight parse_font_weight(std::string_view input);
+css_font_weight parse_font_weight(std::string_view input, css_font_weight inherited = font_weight_normal);
 
 css_font_style parse_font_style(std::string_view input);
 
@@ -190,7 +190,11 @@ line_join parse_line_join(std::string_view input);
 // The one place a (font-family stack, weight, style) triple becomes a Font, shared by svg <text>
 // (svg_layout_state::font()) and by the bold/italic runs inside a <foreignObject>, so both always
 // pick the very same face for the same request.
-sized_font make_font(const std::string& family, float size_, bool bold, bool italic);
+sized_font make_font(const std::string& family, float size_, int weight, bool italic);
+inline sized_font make_font(const std::string& family, float size_, bool bold, bool italic)
+{
+    return make_font(family, size_, bold ? font_weight_bold : font_weight_normal, italic);
+}
 
 // ---- svgelement (impl) ----
 using namespace vg; // the drawing layer (nova::vg), the former plutovg

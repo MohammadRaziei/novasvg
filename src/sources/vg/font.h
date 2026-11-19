@@ -137,11 +137,13 @@ public:
     //
     // Of the faces of the family: the one that agrees on bold and italic, then the one nearest the normal width, then
     // the one whose weight is nearest to regular (400) or bold (700); the newest wins a tie. Null when there is none.
-    font_face get_font_face_local(const std::string& family, bool bold, bool italic) const;
+    font_face get_font_face_local(const std::string& family, int weight, bool italic) const;
+    font_face get_font_face_local(const std::string& family, bool bold, bool italic) const { return get_font_face_local(family, bold ? 700 : 400, italic); }
 
     // get_font_face_local(), then the hardcoded generic-family table
     // ("sans-serif" -> "DejaVu Sans" and similar) as a last resort.
-    font_face get_font_face(const std::string& family, bool bold, bool italic) const;
+    font_face get_font_face(const std::string& family, int weight, bool italic) const;
+    font_face get_font_face(const std::string& family, bool bold, bool italic) const { return get_font_face(family, bold ? 700 : 400, italic); }
 
     // Resolves a CSS-style comma-separated family stack (e.g.
     // `"trebuchet ms", verdana, arial, sans-serif`) the way a browser walks
@@ -153,7 +155,11 @@ public:
     // A name nothing matches is skipped, not guessed at; returns a null
     // face when the whole stack is unresolved. A generic keyword nothing on
     // the machine satisfies resolves to the embedded fallback font.
-    font_face get_font_face_for_family_stack(const std::string& family_stack, bool bold, bool italic) const;
+    font_face get_font_face_for_family_stack(const std::string& family_stack, int weight, bool italic) const;
+    font_face get_font_face_for_family_stack(const std::string& family_stack, bool bold, bool italic) const
+    {
+        return get_font_face_for_family_stack(family_stack, bold ? 700 : 400, italic);
+    }
 
 private:
     // One face of a family: loaded already or only known by its file. A face listed under two family names has two

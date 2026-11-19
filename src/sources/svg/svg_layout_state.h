@@ -105,7 +105,7 @@ private:
     stb::fill_rule m_fill_rule = stb::fill_rule::non_zero;
     stb::fill_rule m_clip_rule = stb::fill_rule::non_zero;
 
-    css_font_weight m_font_weight = css_font_weight::normal;
+    css_font_weight m_font_weight = font_weight_normal;
     css_font_style m_font_style = css_font_style::normal;
 
     css_alignment_baseline m_alignment_baseline = css_alignment_baseline::auto_;

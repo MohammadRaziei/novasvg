@@ -171,7 +171,7 @@ inline unsigned char foreign_object_style_of_opening(const std::string& tag, std
     if(!inline_style.empty()) {
         if(auto weight = foreign_object_declaration(inline_style, "font-weight"); !weight.empty()) {
             style &= (unsigned char)~foreign_object_fonts::bold;
-            if(parse_font_weight(weight) == css_font_weight::bold)
+            if(parse_font_weight(weight) >= 600)
                 style |= foreign_object_fonts::bold;
         }
         if(auto font_style_ = foreign_object_declaration(inline_style, "font-style"); !font_style_.empty()) {

@@ -110,7 +110,7 @@ svg_layout_state::svg_layout_state(const svg_layout_state& parent, const svg_ele
             m_clip_rule = parse_fill_rule(input);
             break;
         case property_id::font_weight_:
-            m_font_weight = parse_font_weight(input);
+            m_font_weight = parse_font_weight(input, m_font_weight);
             break;
         case property_id::font_style_:
             m_font_style = parse_font_style(input);
@@ -178,23 +178,23 @@ svg_layout_state::svg_layout_state(const svg_layout_state& parent, const svg_ele
     }
 }
 
-sized_font make_font(const std::string& family, float size_, bool bold, bool italic)
+sized_font make_font(const std::string& family, float size_, int weight, bool italic)
 {
     // Walk the font-family stack name by name (see
     // FontFaceCache::getFontFaceForFamilyStack()): an @font-face-embedded
     // font wins under its exact declared name, an uninstalled name falls
     // back to a metric-compatible substitute, unresolvable names are skipped.
-    font_face face = global_font_face_cache()->get_font_face_for_family_stack(family, bold, italic);
+    font_face face = global_font_face_cache()->get_font_face_for_family_stack(family, weight, italic);
 
     // Absolute last resort: the hardcoded generic-family table.
     if(face.is_null())
-        face = global_font_face_cache()->get_font_face(empty_string, bold, italic);
+        face = global_font_face_cache()->get_font_face(empty_string, weight, italic);
     return sized_font(face, size_);
 }
 
 sized_font svg_layout_state::font() const
 {
-    return make_font(m_font_family, m_font_size, m_font_weight == css_font_weight::bold, m_font_style == css_font_style::italic);
+    return make_font(m_font_family, m_font_size, m_font_weight, m_font_style == css_font_style::italic);
 }
 
 } // namespace nova::svg

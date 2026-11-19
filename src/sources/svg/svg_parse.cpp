@@ -350,25 +350,23 @@ css_pointer_events parse_pointer_events(std::string_view input)
     return parse_enum_value(input, entries, css_pointer_events::auto_);
 }
 
-css_font_weight parse_font_weight(std::string_view input)
+css_font_weight parse_font_weight(std::string_view input, css_font_weight inherited)
 {
-    static const svg_enumeration_entry<css_font_weight> entries[] = {
-        {css_font_weight::normal, "normal"},
-        {css_font_weight::bold, "bold"},
-        {css_font_weight::bold, "bolder"},
-        {css_font_weight::normal, "lighter"},
-        {css_font_weight::normal, "100"},
-        {css_font_weight::normal, "200"},
-        {css_font_weight::normal, "300"},
-        {css_font_weight::normal, "400"},
-        {css_font_weight::normal, "500"},
-        {css_font_weight::bold, "600"},
-        {css_font_weight::bold, "700"},
-        {css_font_weight::bold, "800"},
-        {css_font_weight::bold, "900"}
-    };
-
-    return parse_enum_value(input, entries, css_font_weight::normal);
+    strip_leading_and_trailing_spaces(input);
+    if(input == "normal")
+        return font_weight_normal;
+    if(input == "bold")
+        return font_weight_bold;
+    // Relative to the parent's weight (CSS Fonts 4, "bolder" and "lighter").
+    if(input == "bolder")
+        return inherited < 400 ? 400 : inherited < 600 ? 700 : 900;
+    if(input == "lighter")
+        return inherited < 550 ? 100 : inherited < 750 ? 400 : 700;
+    // A number, 1 to 1000. Anything else (or out of range) is regular, as it always was here.
+    float number = 0.f;
+    if(!parse_number(input, number) || !input.empty() || !(number >= 1.f && number <= 1000.f))
+        return font_weight_normal;
+    return int(number + 0.5f);
 }
 
 css_font_style parse_font_style(std::string_view input)

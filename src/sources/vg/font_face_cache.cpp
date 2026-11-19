@@ -51,6 +51,14 @@ bool font_face_cache::add_font_face(const std::string& family, bool bold, bool i
     e.bold = bold;
     e.italic = italic;
     e.weight = e.weight_min = e.weight_max = bold ? 700 : 400;
+    // A variable font reaches every weight of its axis, whatever weight the caller declared for it.
+    for(const stb::font_axis& axis : face.get()->axes()) {
+        if(axis.tag != "wght")
+            continue;
+        e.weight_min = int(std::lround(axis.min));
+        e.weight_max = int(std::lround(axis.max));
+        e.weight = std::min(std::max(e.weight, e.weight_min), e.weight_max);
+    }
     add_entry(family, std::move(e));
     return true;
 }
@@ -75,8 +83,9 @@ namespace {
 
 // The better of two faces of a family for a request, first argument wins only if it is better.
 template <class Entry>
-bool entry_better(const Entry& a, const Entry& b, bool bold, bool italic)
+bool entry_better(const Entry& a, const Entry& b, int target, bool italic)
 {
+    const bool bold = target >= 600;  // the face's own bold flag only knows regular and bold
     const int a_score = (bold == a.bold) + (italic == a.italic);
     const int b_score = (bold == b.bold) + (italic == b.italic);
     if(a_score != b_score)
@@ -84,19 +93,25 @@ bool entry_better(const Entry& a, const Entry& b, bool bold, bool italic)
     if(std::abs(a.width - 5) != std::abs(b.width - 5))
         return std::abs(a.width - 5) < std::abs(b.width - 5);
     // a variable font reaches every weight of its axis: the distance is to the range, not to the default instance
-    const int target = bold ? 700 : 400;
     const auto distance = [target](const Entry& e) {
         return target < e.weight_min ? e.weight_min - target : target > e.weight_max ? target - e.weight_max : 0;
     };
     const int da = distance(a), db = distance(b);
     if(da != db)
         return da < db;
-    return std::abs(a.weight - target) < std::abs(b.weight - target);
+    if(std::abs(a.weight - target) != std::abs(b.weight - target))
+        return std::abs(a.weight - target) < std::abs(b.weight - target);
+    // equally far on both sides: CSS takes the heavier face for a heavy request and the lighter one for a light request
+    if(target > 500)
+        return a.weight > b.weight;
+    if(target < 400)
+        return a.weight < b.weight;
+    return false;
 }
 
 }  // namespace
 
-font_face font_face_cache::get_font_face_local(const std::string& family, bool bold, bool italic) const
+font_face font_face_cache::get_font_face_local(const std::string& family, int weight, bool italic) const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -108,7 +123,7 @@ font_face font_face_cache::get_font_face_local(const std::string& family, bool b
     const std::vector<entry>& faces = found->second;
     const entry* selected = &faces.back();
     for(std::size_t i = faces.size() - 1; i-- > 0;) {
-        if(entry_better(faces[i], *selected, bold, italic))
+        if(entry_better(faces[i], *selected, weight, italic))
             selected = &faces[i];
     }
 
@@ -116,10 +131,11 @@ font_face font_face_cache::get_font_face_local(const std::string& family, bool b
     if(!s.filename.empty() && s.face.is_null())
         s.face = font_face::from_file(s.filename.c_str(), s.ttcindex);
 
-    // A variable font is one face for every weight it has: set the weight the request means (bold is 700, regular 400).
-    const int target = bold ? 700 : 400;
-    if(!s.face.is_null() && selected->weight_min < selected->weight_max && target >= selected->weight_min &&
-       target <= selected->weight_max && target != s.face.get()->weight()) {
+    // A variable font is one face for every weight it has: set the weight the request asks for.
+    // (a weight the axis does not reach gets the nearest one it has, as for a family of static faces)
+    const bool variable = selected->weight_min < selected->weight_max;
+    const int target = variable ? std::min(std::max(weight, selected->weight_min), selected->weight_max) : weight;
+    if(!s.face.is_null() && variable && target != s.face.get()->weight()) {
         auto [at, made] = s.weighted.try_emplace(target);
         if(made)
             at->second = s.face.with_weight(target);

@@ -84,9 +84,9 @@ std::vector<char32_t> font_face::codepoints() const
     return is_null() ? std::vector<char32_t>() : m_font->codepoints();
 }
 
-font_face font_face_cache::get_font_face(const std::string& family, bool bold, bool italic) const
+font_face font_face_cache::get_font_face(const std::string& family, int weight, bool italic) const
 {
-    if(auto face = get_font_face_local(family, bold, italic); !face.is_null()) {
+    if(auto face = get_font_face_local(family, weight, italic); !face.is_null()) {
         return face;
     }
 
@@ -109,18 +109,18 @@ font_face font_face_cache::get_font_face(const std::string& family, bool bold, b
 
     for(auto value : generic_fallbacks) {
         if(value.generic == family || family.empty()) {
-            if(auto face = get_font_face_local(value.fallback, bold, italic); !face.is_null())
+            if(auto face = get_font_face_local(value.fallback, weight, italic); !face.is_null())
                 return face;
             // Not even the platform's stand-in is installed: use the embedded font
             // so text is still drawn (and drawn the same way) on a machine without fonts.
-            return embedded_fallback_font(bold, italic);
+            return embedded_fallback_font(weight >= 600, italic);
         }
     }
 
     return font_face();
 }
 
-font_face font_face_cache::get_font_face_for_family_stack(const std::string& family_stack, bool bold, bool italic) const
+font_face font_face_cache::get_font_face_for_family_stack(const std::string& family_stack, int weight, bool italic) const
 {
     // Metric-compatible stand-ins only: a substitute must lay text out the
     // same way as the font it replaces, so a name with no such stand-in
@@ -161,7 +161,7 @@ font_face font_face_cache::get_font_face_for_family_stack(const std::string& fam
             continue;
 
         std::string name(family);
-        if(auto face = get_font_face_local(name, bold, italic); !face.is_null())
+        if(auto face = get_font_face_local(name, weight, italic); !face.is_null())
             return face;
 
         std::string lower(name);
@@ -174,17 +174,17 @@ font_face font_face_cache::get_font_face_for_family_stack(const std::string& fam
                 ch = utils::to_lower(ch);
             if(lower != key)
                 continue;
-            if(auto face = get_font_face_local(alias.family, bold, italic); !face.is_null())
+            if(auto face = get_font_face_local(alias.family, weight, italic); !face.is_null())
                 return face;
             for(auto substitute = alias.substitutes; *substitute; ++substitute) {
-                if(auto face = get_font_face_local(*substitute, bold, italic); !face.is_null())
+                if(auto face = get_font_face_local(*substitute, weight, italic); !face.is_null())
                     return face;
             }
         }
 
         // Generic keywords ("sans-serif", ...). Anything else is not a
         // generic name, so this stays empty for it and the walk goes on.
-        if(auto face = get_font_face(lower, bold, italic); !face.is_null())
+        if(auto face = get_font_face(lower, weight, italic); !face.is_null())
             return face;
     }
 

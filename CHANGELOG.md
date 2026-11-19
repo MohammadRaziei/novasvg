@@ -2,7 +2,8 @@
 
 ### Added
 
-- **Variable fonts render at the weight asked for.** An installed variable font (Open Sans, Inter, Roboto Flex) is one face for every weight; `font_face_cache` now sets its weight axis to 700 for bold and 400 for regular (the result is made once per face and kept), so `font-weight: bold` is no longer drawn regular. This needs libstb with `font::with_weight` (variable fonts). Only regular and bold reach the cache: a numeric `font-weight` is not passed on yet, and a variable font added by hand (`add_font_face`) has no weight range.
+- **Variable fonts render at the weight asked for.** An installed variable font (Open Sans, Inter, Roboto Flex) is one face for every weight; `font_face_cache` now sets its weight axis to 700 for bold and 400 for regular (the result is made once per face and kept), so `font-weight: bold` is no longer drawn regular. This needs libstb with `font::with_weight` (variable fonts).
+- **`font-weight` is a number from 1 to 1000** end to end (`css_font_weight` is an `int` now; it was `normal` or `bold`). `bolder` and `lighter` follow the parent's weight as CSS asks, an invalid value is regular as before, and a variable font is set to that weight (clamped to its axis); for static faces the nearest weight wins and, on a tie, the heavier face for a heavy request. `font_face_cache::get_font_face*` take an `int weight` (the `bool bold` forms stay). A variable font added by hand (`add_font_face`, `@font-face`) takes its weight range from its own `wght` axis.
 - **`nova::svg::measure_text()` and `nova::svg::text_metrics`**: size a piece of text (width, ascent, descent, line gap) without building a document. It uses the same font-family list lookup, shaping and kerning as `<text>`, and the tests check it against the box of a real `<text>` element.
 
 ### Changed
