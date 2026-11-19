@@ -50,7 +50,7 @@ bool font_face_cache::add_font_face(const std::string& family, bool bold, bool i
     e.slot_->face = face;
     e.bold = bold;
     e.italic = italic;
-    e.weight = bold ? 700 : 400;
+    e.weight = e.weight_min = e.weight_max = bold ? 700 : 400;
     add_entry(family, std::move(e));
     return true;
 }
@@ -83,7 +83,14 @@ bool entry_better(const Entry& a, const Entry& b, bool bold, bool italic)
         return a_score > b_score;
     if(std::abs(a.width - 5) != std::abs(b.width - 5))
         return std::abs(a.width - 5) < std::abs(b.width - 5);
+    // a variable font reaches every weight of its axis: the distance is to the range, not to the default instance
     const int target = bold ? 700 : 400;
+    const auto distance = [target](const Entry& e) {
+        return target < e.weight_min ? e.weight_min - target : target > e.weight_max ? target - e.weight_max : 0;
+    };
+    const int da = distance(a), db = distance(b);
+    if(da != db)
+        return da < db;
     return std::abs(a.weight - target) < std::abs(b.weight - target);
 }
 
@@ -108,6 +115,16 @@ font_face font_face_cache::get_font_face_local(const std::string& family, bool b
     slot& s = *selected->slot_;
     if(!s.filename.empty() && s.face.is_null())
         s.face = font_face::from_file(s.filename.c_str(), s.ttcindex);
+
+    // A variable font is one face for every weight it has: set the weight the request means (bold is 700, regular 400).
+    const int target = bold ? 700 : 400;
+    if(!s.face.is_null() && selected->weight_min < selected->weight_max && target >= selected->weight_min &&
+       target <= selected->weight_max && target != s.face.get()->weight()) {
+        auto [at, made] = s.weighted.try_emplace(target);
+        if(made)
+            at->second = s.face.with_weight(target);
+        return at->second;
+    }
     return s.face;
 }
 
@@ -116,7 +133,7 @@ font_face font_face_cache::get_font_face_local(const std::string& family, bool b
 // A face found by libstb goes in under its family (name id 16, "DejaVu Sans") and, when that differs, under the name a
 // program that knows only regular and bold uses (id 1, "DejaVu Sans Light"): font-family can say either.
 int font_face_cache::add_found(const std::string& path, int index, bool bold, bool italic, int weight, int width,
-                               const std::string& family_name, const std::string& legacy_family_name)
+                               const std::string& family_name, const std::string& legacy_family_name, int weight_min, int weight_max)
 {
     entry e;
     e.slot_ = std::make_shared<slot>();
@@ -125,6 +142,8 @@ int font_face_cache::add_found(const std::string& path, int index, bool bold, bo
     e.bold = bold;
     e.italic = italic;
     e.weight = weight;
+    e.weight_min = weight_min;
+    e.weight_max = weight_max;
     e.width = width;
 
     int added = 0;
@@ -145,7 +164,7 @@ int font_face_cache::load_file(const char* filename)
         const std::filesystem::path path(filename);
         int num_faces = 0;
         for(const stb::font_face_info& info : stb::font::scan(path))
-            num_faces += add_found(path.string(), info.index, info.bold, info.italic, info.weight, info.width, info.family_name, info.legacy_family_name);
+            num_faces += add_found(path.string(), info.index, info.bold, info.italic, info.weight, info.width, info.family_name, info.legacy_family_name, info.weight_min, info.weight_max);
         return num_faces;
     } catch(const std::exception&) {
         return 0; // not a font, or not readable
@@ -156,7 +175,7 @@ int font_face_cache::load_dir(const char* dirname)
 {
     int num_faces = 0;
     for(const stb::system_font_info& info : stb::font::system_fonts({std::filesystem::path(dirname)}))
-        num_faces += add_found(info.path.string(), info.index, info.bold, info.italic, info.weight, info.width, info.family_name, info.legacy_family_name);
+        num_faces += add_found(info.path.string(), info.index, info.bold, info.italic, info.weight, info.width, info.family_name, info.legacy_family_name, info.weight_min, info.weight_max);
     return num_faces;
 }
 
@@ -164,13 +183,13 @@ int font_face_cache::load_system()
 {
     int num_faces = 0;
     for(const stb::system_font_info& info : stb::font::system_fonts())
-        num_faces += add_found(info.path.string(), info.index, info.bold, info.italic, info.weight, info.width, info.family_name, info.legacy_family_name);
+        num_faces += add_found(info.path.string(), info.index, info.bold, info.italic, info.weight, info.width, info.family_name, info.legacy_family_name, info.weight_min, info.weight_max);
     return num_faces;
 }
 
 #else
 
-int font_face_cache::add_found(const std::string&, int, bool, bool, int, int, const std::string&, const std::string&) { return 0; }
+int font_face_cache::add_found(const std::string&, int, bool, bool, int, int, const std::string&, const std::string&, int, int) { return 0; }
 int font_face_cache::load_file(const char*) { return -1; }
 int font_face_cache::load_dir(const char*) { return -1; }
 int font_face_cache::load_system() { return -1; }

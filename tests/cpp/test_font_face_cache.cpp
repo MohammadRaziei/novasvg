@@ -127,3 +127,29 @@ TEST_CASE("Font face cache: of one family the face nearest the normal width and 
     CHECK(condensed != regular);
     CHECK(light != condensed);
 }
+
+TEST_CASE("Font face cache: a variable font is one face that is set to the weight asked for")
+{
+    using namespace nova::vg;
+    font_face_cache cache;
+
+    // tests/data/libstb-variable-test.ttf: a subset of Open Sans with a weight axis 300..800 (SIL OFL, OFL-OpenSans.txt).
+    const std::string file = (std::filesystem::path(__FILE__).parent_path().parent_path() / "data" / "libstb-variable-test.ttf").string();
+    REQUIRE(cache.load_file(file.c_str()) == 1);
+
+    const font_face regular = cache.get_font_face_local("Open Sans", false, false);
+    const font_face bold = cache.get_font_face_local("Open Sans", true, false);
+    REQUIRE_FALSE(regular.is_null());
+    REQUIRE_FALSE(bold.is_null());
+    CHECK(regular.get()->weight() == 400);
+    CHECK(bold.get()->weight() == 700);                                       // not the default instance
+    CHECK(bold.get() != regular.get());
+
+    // the same weight is made once and then served from the cache
+    CHECK(cache.get_font_face_local("Open Sans", true, false).get() == bold.get());
+    CHECK(cache.get_font_face_local("Open Sans", false, false).get() == regular.get());
+
+    // and it is a heavier shape: a wider H
+    const std::uint32_t h = regular.get()->glyph_index(U'H');
+    CHECK(bold.get()->glyph_info(h).advance > regular.get()->glyph_info(h).advance);
+}

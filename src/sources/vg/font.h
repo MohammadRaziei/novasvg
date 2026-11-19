@@ -47,6 +47,10 @@ public:
     bool is_null() const { return m_font == nullptr; }
     const stb::font* get() const { return m_font.get(); }
 
+    /// The same face set to `weight` when it is a variable font with a weight axis (clamped to the axis); the face itself
+    /// for any other font and for a null face.
+    font_face with_weight(int weight) const { return m_font ? font_face(m_font->with_weight(weight)) : font_face(); }
+
     // Raw font design units (unscaled by any particular pixel size) -- the
     // same space a font file's own tables (head.unitsPerEm, hmtx advance
     // widths) are defined in. Together these let a caller build a
@@ -158,17 +162,20 @@ private:
         font_face face;
         std::string filename;   // empty for a face that was added directly
         int ttcindex = 0;
+        std::map<int, font_face> weighted;   // a variable font at the weights asked for so far, made once
     };
     struct entry {
         std::shared_ptr<slot> slot_;
         bool bold = false;
         bool italic = false;
         int weight = 400;       // OS/2 usWeightClass
+        int weight_min = 400;   // the range of a variable font's weight axis; both equal `weight` for any other font
+        int weight_max = 400;
         int width = 5;          // OS/2 usWidthClass, 5 is normal
     };
     void add_entry(const std::string& family, entry e);
     int add_found(const std::string& path, int index, bool bold, bool italic, int weight, int width,
-                  const std::string& family_name, const std::string& legacy_family_name);
+                  const std::string& family_name, const std::string& legacy_family_name, int weight_min, int weight_max);
 
     mutable std::mutex m_mutex;
     std::map<std::string, std::vector<entry>> m_families;   // the faces of a family, oldest first

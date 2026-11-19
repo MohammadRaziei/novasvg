@@ -25,9 +25,7 @@ constexpr std::uint32_t kTransparent = 0x00000000u;
 
 stb::image decode(const std::vector<std::uint8_t>& bytes)
 {
-    stb::load_options options;
-    options.format = stb::pixel_format::rgba;
-    return stb::image::decode(bytes.data(), bytes.size(), options);
+    return stb::loader(bytes.data(), bytes.size()).format(stb::pixel_format::rgba).run();
 }
 
 struct rgba {

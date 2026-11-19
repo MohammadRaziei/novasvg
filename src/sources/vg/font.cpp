@@ -237,13 +237,11 @@ float sized_font::shape(const std::u32string_view& text, std::vector<shaped_glyp
         if(!context.run.empty() && text.data() >= context.run.data() && text.data() + text.size() <= context.run.data() + context.run.size()) {
             // A part of a longer run: libstb shapes [begin, end) with the context of the whole run, and its byte offsets
             // are those of the run's UTF-8.
-            stb::shape_options options;
-            options.ligatures = context.ligatures;
             const size_t begin = size_t(text.data() - context.run.data());
             const std::string utf8 = stb::utf8_encode(context.run);
             const size_t begin_byte = stb::utf8_encode(context.run.substr(0, begin)).size();
             const size_t end_byte = stb::utf8_encode(context.run.substr(0, begin + text.size())).size();
-            shaped = m_face.get()->shape(utf8, begin_byte, end_byte, options);
+            shaped = stb::shaping(*m_face.get(), utf8).range(begin_byte, end_byte).ligatures(context.ligatures).run();
         } else {
             shaped = m_face.get()->shape(stb::utf8_encode(text));
         }

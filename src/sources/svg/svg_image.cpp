@@ -5,6 +5,7 @@
 
 #include <stb/util.hpp>
 
+#include <filesystem>
 #include <optional>
 #include <vector>
 
@@ -65,8 +66,6 @@ pixmap load_image_resource(const std::string& href)
 {
     // libstb decodes to straight-alpha RGBA; pixmap_from_image premultiplies it. Any decode problem (unknown
     // format, corrupt data, too large) is an exception from libstb and an empty pixmap here.
-    stb::load_options options;
-    options.format = stb::pixel_format::rgba;
     try {
         if(nova::utils::starts_with(href, "data:")) {
             std::string_view input(href);
@@ -77,9 +76,9 @@ pixmap load_image_resource(const std::string& href)
             const std::optional<std::vector<uint8_t>> bytes = stb::try_base64_decode(input);
             if(!bytes)
                 return pixmap();
-            return pixmap_from_image(image::decode(bytes->data(), bytes->size(), options));
+            return pixmap_from_image(stb::loader(bytes->data(), bytes->size()).format(stb::pixel_format::rgba).run());
         }
-        return pixmap_from_image(image::open(href.c_str(), options));
+        return pixmap_from_image(stb::loader(std::filesystem::path(href)).format(stb::pixel_format::rgba).run());
     } catch(const std::exception&) {
         return pixmap();
     }
