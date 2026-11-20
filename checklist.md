@@ -459,7 +459,7 @@
 - [x] API عمومی اندازه‌گیری متن: `nova::svg::measure_text(text, font_family, size, bold, italic)` → `text_metrics` (عرض، ascent، descent، line_gap)؛ فقط C++، پایتون هنوز ندارد
 - [ ] پارسر: اول اندازه‌گیری (perf/massif)، بعد فقط اگر ارزش داشت تکنیک‌های pugixml (parse درجا، arena، جدول کاراکتر) در `document::parse` — طبق ADR-0013؛ تست `<!ENTITY>` هم اضافه شود
 - [ ] یک مرحله‌ی اسکریپتی: namespace + جابه‌جایی پوشه‌ها + rename به `snake_case` + target جدای CMake برای `nova::vg`
-- [ ] لایه‌ها (`begin_layer`، pattern، mask) به‌صورت virtual در `canvas`؛ بهبودهای PDF
+- [ ] لایه‌ها (`begin_layer`، pattern، mask) به‌صورت virtual در `canvas`؛ بهبودهای PDF (طرح در ADR-0014، منتظر تأیید؛ هنوز کدی نوشته نشده)
 - [ ] Step 7 (README، Doxygen، CI، wheel) و پاک‌سازی `refactor/`
 - ASAN با `ASAN_OPTIONS=detect_odr_violation=0` اجرا می‌شه (`std::_Sp_make_shared_tag` هم توی exe هست هم توی libstb.so: false positive شناخته‌شده).
 
