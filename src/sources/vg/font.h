@@ -115,6 +115,10 @@ public:
 
     /// Adds a face under `family` ("" makes it a fallback); a null face is refused. The newest face wins a tie.
     bool add_font_face(const std::string& family, bool bold, bool italic, const font_face& face);
+    /// The same for a face that declares the weights it serves, as an `@font-face` `font-weight` descriptor does (one
+    /// weight, or a range `300 800`): a static font serves `weight_min` (it is the face of that weight), a variable
+    /// font serves the part of its own `wght` axis that lies inside the declared range.
+    bool add_font_face(const std::string& family, int weight_min, int weight_max, bool italic, const font_face& face);
     /// Loads face `ttcindex` of a font file and adds it; false (and a warning) when that is not a font.
     bool add_file(const std::string& family, bool bold, bool italic, const char* filename, int ttcindex = 0);
 
@@ -177,6 +181,7 @@ private:
         int weight = 400;       // OS/2 usWeightClass
         int weight_min = 400;   // the range of a variable font's weight axis; both equal `weight` for any other font
         int weight_max = 400;
+        bool variable = false;  // a variable font: its weight is set to the one asked for, within weight_min..weight_max
         int width = 5;          // OS/2 usWidthClass, 5 is normal
     };
     void add_entry(const std::string& family, entry e);

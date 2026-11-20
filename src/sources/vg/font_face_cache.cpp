@@ -41,6 +41,23 @@ void font_face_cache::add_entry(const std::string& family, entry e)
     m_families[family].push_back(std::move(e));
 }
 
+namespace {
+
+// The weight range of a variable font: its own `wght` axis, or false when it has none.
+bool weight_axis_of(const font_face& face, int& lo, int& hi)
+{
+    for(const stb::font_axis& axis : face.get()->axes()) {
+        if(axis.tag != "wght")
+            continue;
+        lo = int(std::lround(axis.min));
+        hi = int(std::lround(axis.max));
+        return true;
+    }
+    return false;
+}
+
+}  // namespace
+
 bool font_face_cache::add_font_face(const std::string& family, bool bold, bool italic, const font_face& face)
 {
     if(face.is_null())
@@ -51,13 +68,41 @@ bool font_face_cache::add_font_face(const std::string& family, bool bold, bool i
     e.bold = bold;
     e.italic = italic;
     e.weight = e.weight_min = e.weight_max = bold ? 700 : 400;
-    // A variable font reaches every weight of its axis, whatever weight the caller declared for it.
-    for(const stb::font_axis& axis : face.get()->axes()) {
-        if(axis.tag != "wght")
-            continue;
-        e.weight_min = int(std::lround(axis.min));
-        e.weight_max = int(std::lround(axis.max));
-        e.weight = std::min(std::max(e.weight, e.weight_min), e.weight_max);
+    // No weights declared: a variable font reaches every weight of its axis.
+    if(int lo, hi; weight_axis_of(face, lo, hi)) {
+        e.variable = true;
+        e.weight_min = lo;
+        e.weight_max = hi;
+        e.weight = std::min(std::max(e.weight, lo), hi);
+    }
+    add_entry(family, std::move(e));
+    return true;
+}
+
+bool font_face_cache::add_font_face(const std::string& family, int weight_min, int weight_max, bool italic, const font_face& face)
+{
+    if(face.is_null())
+        return false;
+    weight_min = std::min(std::max(weight_min, 1), 1000);
+    weight_max = std::min(std::max(weight_max, 1), 1000);
+    if(weight_min > weight_max)
+        std::swap(weight_min, weight_max);
+
+    entry e;
+    e.slot_ = std::make_shared<slot>();
+    e.slot_->face = face;
+    e.italic = italic;
+    e.bold = weight_max >= 600;
+    e.weight = weight_min;
+    e.weight_min = weight_min;
+    e.weight_max = weight_min;  // a static font is the face of one weight
+    if(int lo, hi; weight_axis_of(face, lo, hi)) {
+        e.variable = true;
+        // a variable font serves the declared range as far as its axis goes (nothing in common: all of its axis)
+        const int from = std::max(weight_min, lo), to = std::min(weight_max, hi);
+        e.weight_min = from <= to ? from : lo;
+        e.weight_max = from <= to ? to : hi;
+        e.weight = std::min(std::max(400, e.weight_min), e.weight_max);
     }
     add_entry(family, std::move(e));
     return true;
@@ -86,8 +131,12 @@ template <class Entry>
 bool entry_better(const Entry& a, const Entry& b, int target, bool italic)
 {
     const bool bold = target >= 600;  // the face's own bold flag only knows regular and bold
-    const int a_score = (bold == a.bold) + (italic == a.italic);
-    const int b_score = (bold == b.bold) + (italic == b.italic);
+    // a face with a weight range (a variable font) agrees when the range holds the weight, whatever its bold flag says
+    const auto weight_match = [&](const Entry& e) {
+        return e.variable && target >= e.weight_min && target <= e.weight_max ? true : bold == e.bold;
+    };
+    const int a_score = weight_match(a) + (italic == a.italic);
+    const int b_score = weight_match(b) + (italic == b.italic);
     if(a_score != b_score)
         return a_score > b_score;
     if(std::abs(a.width - 5) != std::abs(b.width - 5))
@@ -101,12 +150,9 @@ bool entry_better(const Entry& a, const Entry& b, int target, bool italic)
         return da < db;
     if(std::abs(a.weight - target) != std::abs(b.weight - target))
         return std::abs(a.weight - target) < std::abs(b.weight - target);
-    // equally far on both sides: CSS takes the heavier face for a heavy request and the lighter one for a light request
-    if(target > 500)
-        return a.weight > b.weight;
-    if(target < 400)
-        return a.weight < b.weight;
-    return false;
+    // equally far on both sides: CSS looks at the heavier faces first for a request above 500 and at the lighter ones first
+    // for any other
+    return target > 500 ? a.weight > b.weight : a.weight < b.weight;
 }
 
 }  // namespace
@@ -133,7 +179,7 @@ font_face font_face_cache::get_font_face_local(const std::string& family, int we
 
     // A variable font is one face for every weight it has: set the weight the request asks for.
     // (a weight the axis does not reach gets the nearest one it has, as for a family of static faces)
-    const bool variable = selected->weight_min < selected->weight_max;
+    const bool variable = selected->variable;
     const int target = variable ? std::min(std::max(weight, selected->weight_min), selected->weight_max) : weight;
     if(!s.face.is_null() && variable && target != s.face.get()->weight()) {
         auto [at, made] = s.weighted.try_emplace(target);
@@ -160,6 +206,7 @@ int font_face_cache::add_found(const std::string& path, int index, bool bold, bo
     e.weight = weight;
     e.weight_min = weight_min;
     e.weight_max = weight_max;
+    e.variable = weight_min < weight_max;
     e.width = width;
 
     int added = 0;

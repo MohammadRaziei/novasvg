@@ -238,7 +238,7 @@ NB_MODULE(novasvg_py, m) {
         if(!renderer)
             throw std::runtime_error("novasvg was built without the simple foreignObject renderer");
         nova::svg::foreign_object_size size;
-        if(auto measured = nova::svg::measure_foreign_object(*renderer, html, font, family.value_or(std::string()), bold, italic, max_width.value_or(-1.f)))
+        if(auto measured = nova::svg::measure_foreign_object(*renderer, html, font, family.value_or(std::string()), bold ? 700 : 400, italic, max_width.value_or(-1.f)))
             size = *measured;
         nb::dict result;
         result["height"] = size.height;

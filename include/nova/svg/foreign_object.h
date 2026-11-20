@@ -26,7 +26,8 @@ namespace nova::svg {
 struct foreign_object_font {
     std::string family;
     float size = 16.f; ///< user units
-    bool bold = false;
+    int weight = 400;  ///< CSS font-weight, 1 to 1000 (400 normal, 700 bold)
+    bool bold = false; ///< weight >= 600: for a painter that only knows regular and bold; novasvg sets it with `weight`
     bool italic = false;
 };
 

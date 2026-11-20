@@ -179,10 +179,6 @@ private:
 // inherits and what the renderer prepared from the CSS.
 class svg_foreign_object_element final : public svg_graphics_element {
 public:
-    // Bold/italic bits of font_style(); also the index into the faces a renderer asks for.
-    static constexpr unsigned char style_bold = 1;
-    static constexpr unsigned char style_italic = 2;
-
     svg_foreign_object_element(document* dom);
 
     const svg_length& x() const { return m_x; }
@@ -193,8 +189,9 @@ public:
     const std::string& font_family() const { return m_font_family; }
     const svg_paint_server& fill() const { return m_fill; }
 
-    /// style_bold / style_italic bits the element itself inherits, i.e. the style of font().
-    unsigned char base_font_style() const { return m_base_font_style; }
+    /// The weight and italic the element itself inherits, i.e. the style of font().
+    int base_font_weight() const { return m_base_font_weight; }
+    bool base_font_italic() const { return m_base_font_italic; }
 
     /// The markup between <foreignObject ...> and </foreignObject>, exactly as it appeared in the source.
     const std::string& raw_content() const { return m_raw_content; }
@@ -216,7 +213,8 @@ private:
     svg_length m_height;
     sized_font m_font;
     std::string m_font_family;
-    unsigned char m_base_font_style = 0;
+    int m_base_font_weight = 400;
+    bool m_base_font_italic = false;
     svg_paint_server m_fill;
     std::string m_raw_content;
     std::shared_ptr<void> m_prepared;
@@ -225,7 +223,7 @@ private:
 /// What `renderer` says the markup measures when drawn with `base` (and, with a `family`, the bold / italic variants of
 /// it), without rendering anything. For callers that size their own layout from it (the Python binding).
 std::optional<foreign_object_size> measure_foreign_object(const foreign_object_renderer& renderer, std::string_view markup, const sized_font& base,
-                                                          const std::string& family, bool bold, bool italic, float max_width);
+                                                          const std::string& family, int weight, bool italic, float max_width);
 
 class svg_symbol_element final : public svg_graphics_element, public svg_fit_to_view_box {
 public:

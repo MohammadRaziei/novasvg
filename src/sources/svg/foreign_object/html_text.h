@@ -3,6 +3,8 @@
 // The HTML subset a <foreignObject> understands: parser, wrapping, measuring. Part of the built-in simple
 // renderer (foreign_object/simple.cpp); the core does not include it (ADR-0010).
 
+#include <map>
+
 #include "utils/text.h"
 #include "../svg_css_utils.h"
 #include "nova/svg/foreign_object.h"
@@ -23,28 +25,51 @@ struct foreign_object_face {
     float measure_text(std::u32string_view text) const { return painter->measure_text(text, spec); }
 };
 
-/// The faces a <foreignObject> can paint with: the inherited one plus the bold / italic variants that <b>,
-/// <strong>, <i>, <em> and inline `font-weight` / `font-style` ask for. Indexed by style bits (bit 0 bold,
-/// bit 1 italic). What a variant looks like is up to the painter.
-struct foreign_object_fonts {
-    static constexpr unsigned char bold = 1;
-    static constexpr unsigned char italic = 2;
+/// What a run of text looks like apart from its family and size: a `font-weight` (1..1000) and whether it is italic.
+struct foreign_object_style {
+    int weight = 400;
+    bool italic = false;
 
-    foreign_object_face face[4];
-    const foreign_object_face& get(unsigned char style) const { return face[style & 3]; }
+    bool operator==(const foreign_object_style& other) const { return weight == other.weight && italic == other.italic; }
+    bool operator!=(const foreign_object_style& other) const { return !(*this == other); }
+    bool operator<(const foreign_object_style& other) const
+    {
+        return weight != other.weight ? weight < other.weight : italic < other.italic;
+    }
+};
+
+/// The faces a <foreignObject> can paint with: the inherited one plus the variants that <b>, <strong>, <i>, <em> and
+/// inline `font-weight` / `font-style` ask for, made when first asked for. What a variant looks like is up to the
+/// painter. One object serves one layout or paint call: it is not shared between threads.
+class foreign_object_fonts {
+public:
+    foreign_object_fonts() = default;
+    foreign_object_fonts(const foreign_object_font& base, const foreign_object_painter& painter) : m_base(base), m_painter(&painter) {}
+
+    const foreign_object_face& get(foreign_object_style style) const
+    {
+        auto found = m_faces.find(style);
+        if(found == m_faces.end()) {
+            foreign_object_face face;
+            face.painter = m_painter;
+            face.spec = m_base;
+            face.spec.weight = style.weight;
+            face.spec.bold = style.weight >= 600;  // for a painter that only knows regular and bold
+            face.spec.italic = style.italic;
+            found = m_faces.emplace(style, face).first;
+        }
+        return found->second;
+    }
 
     static foreign_object_fonts of(const foreign_object_font& base, const foreign_object_painter& painter)
     {
-        foreign_object_fonts fonts;
-        for(unsigned style = 0; style < 4; ++style) {
-            fonts.face[style].painter = &painter;
-            fonts.face[style].spec = base;
-            fonts.face[style].spec.bold = (style & bold) != 0;
-            fonts.face[style].spec.italic = (style & italic) != 0;
-        }
-
-        return fonts;
+        return foreign_object_fonts(base, painter);
     }
+
+private:
+    foreign_object_font m_base;
+    const foreign_object_painter* m_painter = nullptr;
+    mutable std::map<foreign_object_style, foreign_object_face> m_faces;
 };
 
 // ---------------------------------------------------------------
@@ -87,7 +112,7 @@ inline std::optional<std::string_view> html_attribute(std::string_view tag, std:
 // ---------------------------------------------------------------------------------------------------
 struct foreign_object_segment {
     std::string text; ///< UTF-8; '\n' marks a forced line break (<br>, <p>, <div>, ...)
-    unsigned char style = 0;
+    foreign_object_style style;
 };
 
 inline bool foreign_object_is_void_tag(const std::string& tag)
@@ -158,32 +183,28 @@ inline std::string foreign_object_declaration(std::string_view block, std::strin
     return result;
 }
 
-// The style in effect inside an el that is being opened.
-inline unsigned char foreign_object_style_of_opening(const std::string& tag, std::string_view attributes, unsigned char inherited)
+// The style in effect inside an el that is being opened. <b> and <strong> are `font-weight: bolder` (relative to the
+// weight they sit in), an inline `font-weight` is a weight or a keyword and may also turn a weight off again
+// (`font-weight: normal` inside a bold stretch).
+inline foreign_object_style foreign_object_style_of_opening(const std::string& tag, std::string_view attributes, foreign_object_style inherited)
 {
-    unsigned char style = inherited;
+    foreign_object_style style = inherited;
     if(tag == "b" || tag == "strong")
-        style |= foreign_object_fonts::bold;
+        style.weight = parse_font_weight("bolder", style.weight);
     else if(tag == "i" || tag == "em" || tag == "cite" || tag == "var" || tag == "dfn")
-        style |= foreign_object_fonts::italic;
+        style.italic = true;
 
     auto inline_style = foreign_object_style_attribute(attributes);
     if(!inline_style.empty()) {
-        if(auto weight = foreign_object_declaration(inline_style, "font-weight"); !weight.empty()) {
-            style &= (unsigned char)~foreign_object_fonts::bold;
-            if(parse_font_weight(weight) >= 600)
-                style |= foreign_object_fonts::bold;
-        }
-        if(auto font_style_ = foreign_object_declaration(inline_style, "font-style"); !font_style_.empty()) {
-            style &= (unsigned char)~foreign_object_fonts::italic;
-            if(parse_font_style(font_style_) == css_font_style::italic)
-                style |= foreign_object_fonts::italic;
-        }
+        if(auto weight = foreign_object_declaration(inline_style, "font-weight"); !weight.empty())
+            style.weight = parse_font_weight(weight, style.weight);
+        if(auto font_style_ = foreign_object_declaration(inline_style, "font-style"); !font_style_.empty())
+            style.italic = parse_font_style(font_style_) == css_font_style::italic;
     }
     return style;
 }
 
-inline std::vector<foreign_object_segment> foreign_object_styled_text(std::string_view html, unsigned char base_style = 0)
+inline std::vector<foreign_object_segment> foreign_object_styled_text(std::string_view html, foreign_object_style base_style = {})
 {
     // Tag names that force a line break, matching their real-browser default of `display: block` (so a
     // `<br>`/`<p>`/`<div>` boundary becomes '\n', preserved through the whitespace-collapse pass below,
@@ -195,7 +216,7 @@ inline std::vector<foreign_object_segment> foreign_object_styled_text(std::strin
     static const std::set<std::string_view> block_tags = {"br", "p", "div", "tr", "li"};
 
     std::vector<foreign_object_segment> raw;
-    auto put = [&](char c, unsigned char style) {
+    auto put = [&](char c, foreign_object_style style) {
         if(raw.empty() || raw.back().style != style)
             raw.push_back({std::string(), style});
         raw.back().text += c;
@@ -203,10 +224,10 @@ inline std::vector<foreign_object_segment> foreign_object_styled_text(std::strin
 
     struct open_element {
         std::string tag;
-        unsigned char style;
+        foreign_object_style style;
     };
     std::vector<open_element> open;
-    unsigned char style = base_style;
+    foreign_object_style style = base_style;
 
     for(size_t i = 0; i < html.size();) {
         char c = html[i];
@@ -247,7 +268,7 @@ inline std::vector<foreign_object_segment> foreign_object_styled_text(std::strin
             // Every tag boundary is a word boundary (a space), so "Hello<br/>world" and "a</td><td>b"
             // never glue together; block tags force a line break instead; and the tags that sit inside
             // a line of text (<b>, <span>, ...) are no boundary at all.
-            auto boundary = [&](unsigned char at) {
+            auto boundary = [&](foreign_object_style at) {
                 if(block_tags.count(name))
                     put('\n', at);
                 else if(!foreign_object_is_inline_tag(name))
@@ -291,7 +312,7 @@ inline std::vector<foreign_object_segment> foreign_object_styled_text(std::strin
     // line-break marker rather than being folded into that, and spaces immediately touching a '\n' are
     // dropped rather than kept as a redundant space before/after the break.
     std::vector<foreign_object_segment> collapsed;
-    auto append = [&](char c, unsigned char at) {
+    auto append = [&](char c, foreign_object_style at) {
         if(collapsed.empty() || collapsed.back().style != at)
             collapsed.push_back({std::string(), at});
         collapsed.back().text += c;
@@ -509,7 +530,7 @@ inline std::vector<std::u32string> wrap_foreign_object_text(const std::string& t
 // One stretch of a line in a single style; a line is a few of them in a row.
 struct foreign_object_run {
     std::u32string text;
-    unsigned char style = 0;
+    foreign_object_style style;
 };
 using foreign_object_line = std::vector<foreign_object_run>;
 
@@ -535,7 +556,7 @@ inline std::vector<std::vector<foreign_object_segment>> split_foreign_object_par
 
 // Width of text whose characters each have a style: every stretch of one style is measured on its own
 // with that style's face (kerning is not applied ACROSS a style change, which no face could do anyway).
-inline float measure_foreign_object_cells(const std::u32string& chars, const std::vector<unsigned char>& styles, const foreign_object_fonts& fonts)
+inline float measure_foreign_object_cells(const std::u32string& chars, const std::vector<foreign_object_style>& styles, const foreign_object_fonts& fonts)
 {
     float width = 0.f;
     size_t begin = 0;
@@ -549,7 +570,7 @@ inline float measure_foreign_object_cells(const std::u32string& chars, const std
     return width;
 }
 
-inline foreign_object_line make_foreign_object_line(const std::u32string& chars, const std::vector<unsigned char>& styles)
+inline foreign_object_line make_foreign_object_line(const std::u32string& chars, const std::vector<foreign_object_style>& styles)
 {
     foreign_object_line line;
     for(size_t i = 0; i < chars.size(); ++i) {
@@ -588,7 +609,7 @@ inline void wrap_foreign_object_styled_paragraph(const std::vector<foreign_objec
     }
 
     std::u32string chars;
-    std::vector<unsigned char> styles;
+    std::vector<foreign_object_style> styles;
     for(const auto& segment : paragraph) {
         auto piece = utf8_to_u32(segment.text);
         chars += piece;
@@ -603,10 +624,10 @@ inline void wrap_foreign_object_styled_paragraph(const std::vector<foreign_objec
     // measured style stretch by style stretch. A space takes the style it has in the source.
     const float limit = max_width + 1.f / 128.f;
     std::u32string current;
-    std::vector<unsigned char> current_styles;
+    std::vector<foreign_object_style> current_styles;
     size_t i = 0;
     while(i < chars.size()) {
-        unsigned char space_style = 0;
+        foreign_object_style space_style;
         while(i < chars.size() && (chars[i] == U' ' || chars[i] == U'\t')) {
             space_style = styles[i];
             ++i;
@@ -617,7 +638,7 @@ inline void wrap_foreign_object_styled_paragraph(const std::vector<foreign_objec
         if(word_end == i)
             break;
         auto word = chars.substr(i, word_end - i);
-        std::vector<unsigned char> word_styles(styles.begin() + long(i), styles.begin() + long(word_end));
+        std::vector<foreign_object_style> word_styles(styles.begin() + long(i), styles.begin() + long(word_end));
         i = word_end;
 
         if(current.empty()) {
@@ -665,16 +686,6 @@ inline float measure_foreign_object_line(const foreign_object_line& line, const 
     return width;
 }
 
-// Bit n set = style n appears somewhere in the text.
-inline unsigned foreign_object_styles_used(const std::vector<foreign_object_segment>& segments)
-{
-    unsigned used = 0;
-    for(const auto& segment : segments)
-        used |= 1u << (segment.style & 3);
-    return used;
-}
-
-
 /**
  * @brief Metrics for how ForeignObjectSimple::render() will lay out and
  * size a <foreignObject>'s content, computed WITHOUT actually rendering it.
@@ -718,7 +729,7 @@ struct foreign_object_metrics {
  * size it to, and the widest line at this exact font is the only figure
  * that guarantees render() never needs to condense anything afterward.
  */
-inline foreign_object_metrics measure_foreign_object_segments(std::string_view raw_html, const std::vector<foreign_object_segment>& segments, const foreign_object_fonts& fonts, unsigned char base_style, float max_width)
+inline foreign_object_metrics measure_foreign_object_segments(std::string_view raw_html, const std::vector<foreign_object_segment>& segments, const foreign_object_fonts& fonts, foreign_object_style base_style, float max_width)
 {
     foreign_object_metrics metrics;
     const auto& font_ = fonts.get(base_style);
@@ -753,7 +764,7 @@ inline foreign_object_metrics measure_foreign_object_segments(std::string_view r
  * does), `baseStyle` is the style the foreignObject itself has. This is exactly what painting does, so the
  * metrics and the painted box cannot disagree about a bold label being wider than a regular one.
  */
-inline foreign_object_metrics measure_foreign_object_content(std::string_view raw_html, const foreign_object_fonts& fonts, float max_width = -1.f, unsigned char base_style = 0)
+inline foreign_object_metrics measure_foreign_object_content(std::string_view raw_html, const foreign_object_fonts& fonts, float max_width = -1.f, foreign_object_style base_style = {})
 {
     return measure_foreign_object_segments(raw_html, foreign_object_styled_text(raw_html, base_style), fonts, base_style, max_width);
 }

@@ -646,9 +646,8 @@ static font_face font_face_from_base64(std::string_view payload)
 
 // Loads an `@font-face` rule's embedded font (a `src: url(data:...)`
 // entry) and registers it, matching what the CSS itself declares:
-// `font-family`, `font-weight`/`font-style` (bold/italic only -- numeric
-// weights other than "bold" all collapse to regular, matching the rest
-// of this codebase's Font handling elsewhere). Only *embedded* fonts
+// `font-family`, `font-weight` (one weight or a range, `300 800`) and
+// `font-style` (italic or oblique). Only *embedded* fonts
 // (data: URIs) are in scope -- a `url("external.ttf")` reference isn't
 // something we can resolve without filesystem/network context the svg
 // doesn't provide, and is silently skipped, same as before this existed.
@@ -682,12 +681,25 @@ static void parse_font_face_rule(std::string_view block)
         return value ? value : find_raw_declaration_value(after, property);
     };
 
-    auto bold = false;
+    // font-weight descriptor: `normal`, `bold`, one number or a range of two (`300 800`); absent means none declared.
+    std::optional<std::pair<int, int>> declared_weight;
     if(auto weight_value = find_outside_src("font-weight")) {
-        std::string weight(*weight_value);
-        for(auto& ch : weight)
+        std::string_view rest = *weight_value;
+        strip_leading_and_trailing_spaces(rest);
+        const auto space = rest.find_first_of(" \t\r\n");
+        std::string first_text(rest.substr(0, space)), second_text;
+        if(space != std::string_view::npos) {
+            std::string_view tail = rest.substr(space);
+            strip_leading_and_trailing_spaces(tail);
+            second_text = std::string(tail);
+        }
+        for(auto& ch : first_text)
             ch = utils::to_lower(ch);
-        bold = weight.find("bold") != std::string::npos || std::strtof(weight.c_str(), nullptr) >= 600.f;
+        if(second_text.find_first_of(" \t\r\n") == std::string::npos) {  // at most two values
+            const int first = parse_font_weight(first_text, font_weight_normal);
+            const int second = second_text.empty() ? first : parse_font_weight(second_text, font_weight_normal);
+            declared_weight = std::make_pair(std::min(first, second), std::max(first, second));
+        }
     }
 
     auto italic = false;
@@ -719,7 +731,10 @@ static void parse_font_face_rule(std::string_view block)
         if(face.is_null())
             continue; // malformed, or a format libstb does not read (WOFF2) -- try the next alternative
 
-        global_font_face_cache()->add_font_face(std::string(family), bold, italic, face);
+        if(declared_weight)
+            global_font_face_cache()->add_font_face(std::string(family), declared_weight->first, declared_weight->second, italic, face);
+        else
+            global_font_face_cache()->add_font_face(std::string(family), false, italic, face);
         return; // first successfully-loaded alternative wins
     }
 }

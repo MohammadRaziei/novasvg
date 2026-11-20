@@ -29,14 +29,14 @@ public:
                                                float max_width) const override;
 };
 
-unsigned char style_bits(const foreign_object_font& font_)
+foreign_object_style style_of(const foreign_object_font& font_)
 {
-    return (unsigned char)((font_.bold ? foreign_object_fonts::bold : 0) | (font_.italic ? foreign_object_fonts::italic : 0));
+    return {font_.weight, font_.italic};
 }
 
 void foreign_object_simple::render(const foreign_object_context& context, foreign_object_painter& painter) const
 {
-    const auto base_style = style_bits(context.font);
+    const auto base_style = style_of(context.font);
     auto segments = foreign_object_styled_text(std::string(context.markup), base_style);
     if(segments.empty())
         return;
@@ -116,7 +116,7 @@ void foreign_object_simple::render(const foreign_object_context& context, foreig
 std::optional<foreign_object_size> foreign_object_simple::measure(const foreign_object_context& context,
                                                                   const foreign_object_painter& painter, float max_width) const
 {
-    const auto base_style = style_bits(context.font);
+    const auto base_style = style_of(context.font);
     const auto fonts = foreign_object_fonts::of(context.font, painter);
     const auto metrics = measure_foreign_object_content(context.markup, fonts, max_width, base_style);
     foreign_object_size size_;
