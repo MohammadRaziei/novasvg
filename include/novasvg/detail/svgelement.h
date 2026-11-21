@@ -6832,11 +6832,30 @@ inline std::optional<float> foreignObjectDeclaredWidth(std::string_view rawHtml)
     return std::nullopt;
 }
 
+// Where the piece of a word that starts at `from` ends. A browser may break a line right after a hyphen-minus
+// inside a word (Unicode line breaking, class HY): "DELIVERY-ADDRESS" can wrap to "DELIVERY-" / "ADDRESS". Not
+// after a hyphen that opens the piece or follows another hyphen, and not before a digit or another hyphen
+// ("a-1", "--x" stay whole). Without such a hyphen the piece runs to `wordEnd`.
+inline size_t foreignObjectWordPieceEnd(const std::u32string& chars, size_t from, size_t wordEnd)
+{
+    for(size_t k = from + 1; k + 1 < wordEnd; ++k) {
+        if(chars[k] != U'-' || chars[k - 1] == U'-')
+            continue;
+        const auto next = chars[k + 1];
+        if(next == U'-' || (next >= U'0' && next <= U'9'))
+            continue;
+        return k + 1;
+    }
+    return wordEnd;
+}
+
 // Greedy word-wrap of ONE paragraph to `maxWidth`: a line takes the next word
 // while the whole candidate line ("a b c", measured as one string so kerning
-// across the space counts, like a browser's shaping) still fits. A single
-// word wider than maxWidth stays alone on an overflowing line -- CSS never
-// breaks inside a word by default; render() condenses that one line.
+// across the space counts, like a browser's shaping) still fits. A word may
+// also be taken a piece at a time, a piece ending right after a hyphen (see
+// foreignObjectWordPieceEnd()). A single piece wider than maxWidth stays
+// alone on an overflowing line -- CSS never breaks inside a word by default;
+// render() condenses that one line.
 inline void wrapForeignObjectParagraph(const std::u32string& paragraph, const Font& font, float maxWidth, std::vector<std::u32string>& lines)
 {
     // Browsers lay out in 1/64px units, so "fits" tolerates that much slack.
@@ -6851,21 +6870,29 @@ inline void wrapForeignObjectParagraph(const std::u32string& paragraph, const Fo
             ++wordEnd;
         if(wordEnd == i)
             break;
-        auto word = paragraph.substr(i, wordEnd - i);
-        i = wordEnd;
 
-        if(current.empty()) {
-            current = std::move(word);
-            continue;
-        }
-        auto candidate = current;
-        candidate += U' ';
-        candidate += word;
-        if(font.measureText(std::u32string_view(candidate)) <= limit) {
-            current = std::move(candidate);
-        } else {
-            lines.push_back(std::move(current));
-            current = std::move(word);
+        bool firstPiece = true;
+        while(i < wordEnd) {
+            const auto pieceEnd = foreignObjectWordPieceEnd(paragraph, i, wordEnd);
+            auto piece = paragraph.substr(i, pieceEnd - i);
+            i = pieceEnd;
+
+            if(current.empty()) {
+                current = std::move(piece);
+                firstPiece = false;
+                continue;
+            }
+            auto candidate = current;
+            if(firstPiece)
+                candidate += U' '; // a space only between words, not between the pieces of one
+            candidate += piece;
+            firstPiece = false;
+            if(font.measureText(std::u32string_view(candidate)) <= limit) {
+                current = std::move(candidate);
+            } else {
+                lines.push_back(std::move(current));
+                current = std::move(piece);
+            }
         }
     }
     if(!current.empty())
@@ -6994,8 +7021,9 @@ inline void wrapForeignObjectStyledParagraph(const std::vector<ForeignObjectSegm
         return;
     }
 
-    // Same greedy word-wrap as wrapForeignObjectParagraph(), a word at a time, but a candidate line is
-    // measured style stretch by style stretch. A space takes the style it has in the source.
+    // Same greedy word-wrap as wrapForeignObjectParagraph(), a word (or a piece of one, see
+    // foreignObjectWordPieceEnd()) at a time, but a candidate line is measured style stretch by style
+    // stretch. A space takes the style it has in the source.
     const float limit = maxWidth + 1.f / 128.f;
     std::u32string current;
     std::vector<unsigned char> currentStyles;
@@ -7011,28 +7039,37 @@ inline void wrapForeignObjectStyledParagraph(const std::vector<ForeignObjectSegm
             ++wordEnd;
         if(wordEnd == i)
             break;
-        auto word = chars.substr(i, wordEnd - i);
-        std::vector<unsigned char> wordStyles(styles.begin() + long(i), styles.begin() + long(wordEnd));
-        i = wordEnd;
 
-        if(current.empty()) {
-            current = std::move(word);
-            currentStyles = std::move(wordStyles);
-            continue;
-        }
-        auto candidate = current;
-        auto candidateStyles = currentStyles;
-        candidate += U' ';
-        candidateStyles.push_back(spaceStyle);
-        candidate += word;
-        candidateStyles.insert(candidateStyles.end(), wordStyles.begin(), wordStyles.end());
-        if(measureForeignObjectCells(candidate, candidateStyles, fonts) <= limit) {
-            current = std::move(candidate);
-            currentStyles = std::move(candidateStyles);
-        } else {
-            lines.push_back(makeForeignObjectLine(current, currentStyles));
-            current = std::move(word);
-            currentStyles = std::move(wordStyles);
+        bool firstPiece = true;
+        while(i < wordEnd) {
+            const auto pieceEnd = foreignObjectWordPieceEnd(chars, i, wordEnd);
+            auto piece = chars.substr(i, pieceEnd - i);
+            std::vector<unsigned char> pieceStyles(styles.begin() + long(i), styles.begin() + long(pieceEnd));
+            i = pieceEnd;
+
+            if(current.empty()) {
+                current = std::move(piece);
+                currentStyles = std::move(pieceStyles);
+                firstPiece = false;
+                continue;
+            }
+            auto candidate = current;
+            auto candidateStyles = currentStyles;
+            if(firstPiece) {
+                candidate += U' ';
+                candidateStyles.push_back(spaceStyle);
+            }
+            candidate += piece;
+            candidateStyles.insert(candidateStyles.end(), pieceStyles.begin(), pieceStyles.end());
+            firstPiece = false;
+            if(measureForeignObjectCells(candidate, candidateStyles, fonts) <= limit) {
+                current = std::move(candidate);
+                currentStyles = std::move(candidateStyles);
+            } else {
+                lines.push_back(makeForeignObjectLine(current, currentStyles));
+                current = std::move(piece);
+                currentStyles = std::move(pieceStyles);
+            }
         }
     }
     if(!current.empty())

@@ -56,20 +56,9 @@ if(NOT NOVASVG_EMBED_DEFAULT_FONT)
     target_compile_definitions(novasvg_noflag INTERFACE NOVASVG_DISABLE_EMBEDDED_FONT)
 endif()
 
-include(GNUInstallDirs)
-# Inside a Python wheel (scikit-build-core) everything lives in the novasvg package, so that
-# `python -m novasvg --cmake-dir` can point CMake at it (see novasvg.get_cmake_dir()).
-if(DEFINED SKBUILD)
-    set(NOVASVG_INSTALL_INCLUDEDIR "novasvg/include")
-    set(_NOVASVG_DEFAULT_CMAKEDIR "novasvg/lib/cmake/novasvg")
-else()
-    set(NOVASVG_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}")
-    set(_NOVASVG_DEFAULT_CMAKEDIR "${CMAKE_INSTALL_DATADIR}/cmake/novasvg")
-endif()
-
 target_include_directories(novasvg_noflag INTERFACE
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-    "$<INSTALL_INTERFACE:${NOVASVG_INSTALL_INCLUDEDIR}>")
+    "$<INSTALL_INTERFACE:include>")
 
 add_library(novasvg INTERFACE)
 add_library(novasvg::novasvg ALIAS novasvg)
@@ -85,38 +74,6 @@ novasvg_optimize(novasvg_cli)
 
 # target_compile_features(novasvg INTERFACE cxx_std_17)
 
-
-# CMake package: find_package(novasvg) -> novasvg::novasvg (optimised) / novasvg::noflag.
-# Only the top-level project installs it by default, so that embedding novasvg through
-# FetchContent/add_subdirectory doesn't change the parent project's install tree.
-option(NOVASVG_INSTALL "Install the CMake package (novasvgConfig.cmake, novasvg::novasvg, novasvg::noflag)" ${PROJECT_IS_TOP_LEVEL})
-if(NOVASVG_INSTALL)
-    include(CMakePackageConfigHelpers)
-    set(NOVASVG_INSTALL_CMAKEDIR "${_NOVASVG_DEFAULT_CMAKEDIR}" CACHE STRING
-        "Where novasvgConfig.cmake is installed (relative to the install prefix)")
-
-    install(TARGETS novasvg_noflag novasvg EXPORT novasvgTargets)
-    install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/" DESTINATION "${NOVASVG_INSTALL_INCLUDEDIR}")
-    install(EXPORT novasvgTargets
-        FILE novasvgTargets.cmake
-        NAMESPACE novasvg::
-        DESTINATION "${NOVASVG_INSTALL_CMAKEDIR}")
-
-    configure_package_config_file(
-        "${PROJECT_SOURCE_DIR}/cmake/novasvgConfig.cmake.in"
-        "${PROJECT_BINARY_DIR}/novasvgConfig.cmake"
-        INSTALL_DESTINATION "${NOVASVG_INSTALL_CMAKEDIR}")
-    # 0.x: the API is not frozen yet, so only the same minor version is considered compatible.
-    write_basic_package_version_file(
-        "${PROJECT_BINARY_DIR}/novasvgConfigVersion.cmake"
-        VERSION ${PROJECT_VERSION}
-        COMPATIBILITY SameMinorVersion
-        ARCH_INDEPENDENT)
-    install(FILES
-        "${PROJECT_BINARY_DIR}/novasvgConfig.cmake"
-        "${PROJECT_BINARY_DIR}/novasvgConfigVersion.cmake"
-        DESTINATION "${NOVASVG_INSTALL_CMAKEDIR}")
-endif()
 
 if(NOVASVG_BUILD_PYTHON OR DEFINED SKBUILD)
     add_subdirectory(${PROJECT_SOURCE_DIR}/src/bindings/python)
@@ -176,3 +133,38 @@ if(NOVASVG_BUILD_DOCS)
     add_subdirectory(${PROJECT_SOURCE_DIR}/docs)
 endif()
 
+
+# Installation
+install(DIRECTORY include/ DESTINATION include)
+
+# CMake package: find_package(novasvg) -> novasvg::novasvg (optimised) / novasvg::noflag.
+# Only the top-level project installs it by default, so that embedding novasvg through
+# FetchContent/add_subdirectory doesn't change the parent project's install tree.
+option(NOVASVG_INSTALL "Install the CMake package (novasvgConfig.cmake, novasvg::novasvg, novasvg::noflag)" ${PROJECT_IS_TOP_LEVEL})
+if(NOVASVG_INSTALL)
+    include(CMakePackageConfigHelpers)
+    include(GNUInstallDirs)
+    set(NOVASVG_INSTALL_CMAKEDIR "${CMAKE_INSTALL_DATADIR}/cmake/novasvg" CACHE STRING
+        "Where novasvgConfig.cmake is installed (relative to the install prefix)")
+
+    install(TARGETS novasvg_noflag novasvg EXPORT novasvgTargets)
+    install(EXPORT novasvgTargets
+        FILE novasvgTargets.cmake
+        NAMESPACE novasvg::
+        DESTINATION "${NOVASVG_INSTALL_CMAKEDIR}")
+
+    configure_package_config_file(
+        "${PROJECT_SOURCE_DIR}/cmake/novasvgConfig.cmake.in"
+        "${PROJECT_BINARY_DIR}/novasvgConfig.cmake"
+        INSTALL_DESTINATION "${NOVASVG_INSTALL_CMAKEDIR}")
+    # 0.x: the API is not frozen yet, so only the same minor version is considered compatible.
+    write_basic_package_version_file(
+        "${PROJECT_BINARY_DIR}/novasvgConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMinorVersion
+        ARCH_INDEPENDENT)
+    install(FILES
+        "${PROJECT_BINARY_DIR}/novasvgConfig.cmake"
+        "${PROJECT_BINARY_DIR}/novasvgConfigVersion.cmake"
+        DESTINATION "${NOVASVG_INSTALL_CMAKEDIR}")
+endif()

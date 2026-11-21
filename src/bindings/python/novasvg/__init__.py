@@ -33,21 +33,9 @@ from .utils import svg2png
 __version__ = version_string()
 __author__ = "Mohammad Raziei"
 
-
-def get_include_dir() -> str:
-    """Directory to put on the include path: `#include <novasvg/novasvg.h>` resolves inside it."""
-    from pathlib import Path
-    return str(Path(__file__).resolve().parent / "include")
-
-
-def get_cmake_dir() -> str:
-    """Directory of novasvgConfig.cmake, for `find_package(novasvg CONFIG)` / CMAKE_PREFIX_PATH."""
-    from pathlib import Path
-    return str(Path(__file__).resolve().parent / "lib" / "cmake" / "novasvg")
-
 __all__ = [
     "Bitmap", "Box", "Color", "Document", "Element", "InvalidColorError", "Matrix", "Node", "TextNode",
     "fonts",
     "svg2png",
-    "__version__", "__author__", "get_include_dir", "get_cmake_dir",
+    "__version__", "__author__",
 ]

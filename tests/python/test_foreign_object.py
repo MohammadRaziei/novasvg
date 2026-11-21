@@ -56,6 +56,25 @@ class TestMeasureWrapping:
         m = fonts.measure_foreign_object(_html("", text="Supercalifragilisticexpialidocious"), font, max_width=50)
         assert m["line_count"] == 1 and m["width"] > 50
 
+    def test_wraps_after_a_hyphen_like_a_browser(self, font):
+        # Mermaid's `DELIVERY-ADDRESS` ER entity: no space in it, but a browser breaks after the hyphen.
+        m = fonts.measure_foreign_object(_html("line-height:1.5", text="DELIVERY-ADDRESS"), font, max_width=120)
+        assert m["line_count"] == 2
+        assert m["width"] <= 120 + 1 / 64
+
+    def test_hyphen_break_only_when_the_line_is_full(self, font):
+        m = fonts.measure_foreign_object(_html("line-height:1.5", text="DELIVERY-ADDRESS"), font, max_width=300)
+        assert m["line_count"] == 1
+
+    def test_hyphen_before_a_digit_or_another_hyphen_does_not_break(self, font):
+        for text in ("WIDEWORD-12345678", "WIDEWORD--WIDEWORD", "-WIDEWORD"):
+            m = fonts.measure_foreign_object(_html("", text=text), font, max_width=60)
+            assert m["line_count"] == 1, text
+
+    def test_hyphen_and_space_breaks_mix(self, font):
+        m = fonts.measure_foreign_object(_html("", text="one-two three-four"), font, max_width=60)
+        assert m["line_count"] >= 3
+
     def test_forced_breaks_are_kept(self, font):
         m = fonts.measure_foreign_object(_html("white-space:nowrap", text="one<br/>two<br/>three"), font)
         assert m["line_count"] == 3

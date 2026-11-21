@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Fixed
+
+- **`<foreignObject>` text now wraps after a hyphen, like a browser.** The soft-wrap only broke a line at a
+  space, so a label such as Mermaid's `DELIVERY-ADDRESS` (an ER entity, wrapped at 120 px) stayed one line:
+  `measure_foreign_object()` counted one line and `render()` condensed it into the box, while a browser (and
+  `mmdc`) puts `DELIVERY-` and `ADDRESS` on two lines and makes the box taller. A line may now break right
+  after a hyphen-minus inside a word, except after a hyphen that opens the word or follows another hyphen and
+  before a digit or another hyphen (`a-1`, `--x` stay whole). Measure and paint use the same rule.
+
 ## [0.11.5] - 2026-11-05
 
 ### Fixed

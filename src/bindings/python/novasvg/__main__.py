@@ -112,8 +112,7 @@ def main():
         help="Print path to binary executable and exit"
     )
     parser.add_argument(
-        "--cmake-path", "--cmake-dir",
-        dest="cmake_path",
+        "--cmake-path", 
         action="store_true", 
         help="Print path to CMake config directory and exit"
     )
@@ -130,7 +129,7 @@ def main():
     base_path = Path(__file__).resolve().parent
     
     if args.header_path:
-        header_path = base_path / "include" / "novasvg" / "novasvg.h"
+        header_path = base_path / "include" / "novasvg.h"
         sys.stdout.write(f"{header_path}\n")
         sys.exit(0)
 
