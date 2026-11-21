@@ -66,3 +66,20 @@ TEST_CASE("measure_text: empty text, family lists, bold, invalid UTF-8")
     // Invalid UTF-8 is replaced, not rejected; the call must not fail.
     CHECK(nova::svg::measure_text("a\xff" "b", "DejaVu Sans", 20.f).width > 0.f);
 }
+
+TEST_CASE("measure_text: numeric weight, the bool forms and clamping")
+{
+    load_dejavu();
+    const auto normal = nova::svg::measure_text("Hello", "DejaVu Sans", 20.f);
+    const auto bold = nova::svg::measure_text("Hello", "DejaVu Sans", 20.f, true);
+
+    // 400 is normal and 700 is bold: the bool forms are these two.
+    CHECK(nova::svg::measure_text("Hello", "DejaVu Sans", 20.f, 400).width == doctest::Approx(normal.width));
+    CHECK(nova::svg::measure_text("Hello", "DejaVu Sans", 20.f, 700).width == doctest::Approx(bold.width));
+    CHECK(nova::svg::measure_text("Hello", "DejaVu Sans", 20.f, 700, true).width ==
+          doctest::Approx(nova::svg::measure_text("Hello", "DejaVu Sans", 20.f, true, true).width));
+
+    // Out of range is clamped, not rejected.
+    CHECK(nova::svg::measure_text("Hello", "DejaVu Sans", 20.f, 0).width > 0.f);
+    CHECK(nova::svg::measure_text("Hello", "DejaVu Sans", 20.f, 5000).width > 0.f);
+}

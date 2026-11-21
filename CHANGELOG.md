@@ -2,6 +2,8 @@
 
 ### Added
 
+- **`NOVA_SANITIZE`** CMake option: builds novasvg and the libstb it fetches with AddressSanitizer and UndefinedBehaviorSanitizer (GCC and Clang). Off by default in every build type, and `pyproject.toml` pins it off for wheels. With `NOVA_BUILD_PYTHON` it warns that `import novasvg` needs `libasan` preloaded; run the C++ tests under it instead.
+- **`measure_text(text, family, size, int weight, bool italic = false)`**: the numeric `font-weight` form (1 to 1000, clamped). `measure_text(..., 700)` equals `measure_text(..., true)`; the `bool bold` form stays.
 - **PDF output: gradients with `spreadMethod` reflect and repeat** are painted as such (they were written as pad), and a `pdf_canvas::set_info()` / `/Info` entry with the producer and, for callers of the canvas, a title. A page has no date, so the same drawing still gives the same bytes.
 - **`foreign_object_font::weight`** (`nova/svg/foreign_object.h`): the CSS font-weight (1 to 1000) a foreignObject painter is asked to draw with. `bold` stays and is `weight >= 600`, for painters that only know regular and bold; novasvg sets both.
 - **`@font-face` `font-weight` descriptor**: one weight, a keyword or a range (`300 800`). A static font is registered as the face of that weight (two rules of one family, 300 and 700, used to be two regular faces and the newest won); a variable font serves the declared range as far as its own axis goes. With no descriptor a variable font keeps its whole axis. New `font_face_cache::add_font_face(family, weight_min, weight_max, italic, face)`.
@@ -11,6 +13,7 @@
 
 ### Changed
 
+- **`novasvg query --json` printed invalid JSON**: the `global_bbox` object was never closed (and had a stray quote), and strings were not escaped, so an attribute value or a Windows path in `info --json` could break it too. All strings go through one `json_escape` now.
 - **Layers and patterns are part of the `canvas` interface.** `canvas` gained `begin_layer` / `end_layer` (a group with opacity, blend mode and, for masks, clip masks and filters, a callback that runs on its pixels), `set_pattern` and `raster_scale`. The svg layer no longer casts to `pdf_canvas` or `raster_canvas`; a PDF page decides itself whether a group is a vector transparency group or a bitmap. Output is unchanged: the sample renders and 68 sample PDFs match the build before the change byte for byte (except the fix below).
 - **foreignObject text uses numeric weights.** A run's style is `{weight, italic}` instead of two bits: `font-weight: 300` or `550` inside the HTML reaches the face (a variable font is set to it), `<b>` and `<strong>` are `bolder` than the weight they sit in (400 gives 700, 700 gives 900), and `lighter` and `bolder` follow the parent. `measure_foreign_object` takes an `int weight` instead of `bool bold`.
 - Faces of equal distance in the cache: up to 500 the lighter face wins, above 500 the heavier one (the CSS font matching order); a variable font's bold flag no longer counts against it when its weight range holds the request.

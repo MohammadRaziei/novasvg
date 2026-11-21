@@ -499,6 +499,15 @@ struct text_metrics {
 NOVA_API text_metrics measure_text(const std::string& utf8_text, const std::string& font_family, float font_size,
                                    bool bold = false, bool italic = false);
 
+/**
+ * @brief The same, for a numeric `font-weight` (`300`, `550`, `700`: a variable font is set to that weight).
+ *
+ * @param weight CSS font-weight; values outside 1 to 1000 are clamped. 400 is `normal` and 700 is `bold`, so
+ *               `measure_text(t, f, s, 700)` and `measure_text(t, f, s, true)` give the same result.
+ */
+NOVA_API text_metrics measure_text(const std::string& utf8_text, const std::string& font_family, float font_size,
+                                   int weight, bool italic = false);
+
 } // namespace nova::svg
 
 #endif // NOVA_H

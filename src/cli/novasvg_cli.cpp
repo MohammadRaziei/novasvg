@@ -19,11 +19,37 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
 
 namespace fs = std::filesystem;
+
+// A JSON string body: quotes, backslashes and control characters escaped (Windows paths and attribute values
+// both used to produce invalid JSON).
+static std::string json_escape(const std::string& text)
+{
+    std::string out;
+    for(const unsigned char c : text) {
+        switch(c) {
+        case '"': out += "\\\""; break;
+        case '\\': out += "\\\\"; break;
+        case '\n': out += "\\n"; break;
+        case '\r': out += "\\r"; break;
+        case '\t': out += "\\t"; break;
+        default:
+            if(c < 0x20) {
+                char buf[8];
+                std::snprintf(buf, sizeof buf, "\\u%04x", c);
+                out += buf;
+            } else {
+                out += static_cast<char>(c);
+            }
+        }
+    }
+    return out;
+}
 
 // Picks the encoder from the extension (.png .bmp .tga .jpg .jpeg, case-insensitive); anything else is PNG, and
 // JPEG quality is 80 -- the behaviour the CLI always had. stb::image::write() would throw on an unknown extension.
@@ -191,12 +217,7 @@ int cmd_info(const std::string& input, bool json_output = false) {
             readable_size = human_readable_size(file_size);
         }
         
-        std::string escaped_file = input;
-        size_t pos = 0;
-        while ((pos = escaped_file.find('"', pos)) != std::string::npos) {
-            escaped_file.replace(pos, 1, "\\\"");
-            pos += 2;
-        }
+        const std::string escaped_file = json_escape(input);
         
         std::cout << "{\"file\":\"" << escaped_file << "\",\"width\":" << doc->width() 
                   << ",\"height\":" << doc->height() << ",\"bounding_box\":{\"x\":" 
@@ -241,7 +262,7 @@ int cmd_query(const std::string& selector, const std::string& input, bool json_o
     auto elements = doc->query_selector_all(selector);
     
     if (json_output) {
-        std::cout << "{\"selector\":\"" << selector << "\",\"count\":" << elements.size() << ",\"elements\":[";
+        std::cout << "{\"selector\":\"" << json_escape(selector) << "\",\"count\":" << elements.size() << ",\"elements\":[";
         for (size_t i = 0; i < elements.size(); i++) {
             const auto& elem = elements[i];
             auto bbox = elem.bounding_box();
@@ -256,27 +277,27 @@ int cmd_query(const std::string& selector, const std::string& input, bool json_o
                       << local_bbox.w << ",\"height\":" << local_bbox.h 
                       << "},\"global_bbox\":{\"x\":" << global_bbox.x << ",\"y\":" 
                       << global_bbox.y << ",\"width\":" << global_bbox.w << ",\"height\":" 
-                      << global_bbox.h << "\"";
+                      << global_bbox.h << "}";
             
             std::cout << ",\"attributes\":{";
             bool first_attr = true;
             if (elem.has_attribute("id")) {
-                std::cout << "\"id\":\"" << elem.attribute("id") << "\"";
+                std::cout << "\"id\":\"" << json_escape(elem.attribute("id")) << "\"";
                 first_attr = false;
             }
             if (elem.has_attribute("class")) {
                 if (!first_attr) std::cout << ",";
-                std::cout << "\"class\":\"" << elem.attribute("class") << "\"";
+                std::cout << "\"class\":\"" << json_escape(elem.attribute("class")) << "\"";
                 first_attr = false;
             }
             if (elem.has_attribute("fill")) {
                 if (!first_attr) std::cout << ",";
-                std::cout << "\"fill\":\"" << elem.attribute("fill") << "\"";
+                std::cout << "\"fill\":\"" << json_escape(elem.attribute("fill")) << "\"";
                 first_attr = false;
             }
             if (elem.has_attribute("stroke")) {
                 if (!first_attr) std::cout << ",";
-                std::cout << "\"stroke\":\"" << elem.attribute("stroke") << "\"";
+                std::cout << "\"stroke\":\"" << json_escape(elem.attribute("stroke")) << "\"";
                 first_attr = false;
             }
             std::cout << "}}";

@@ -16,7 +16,12 @@ Today the core knows HTML. What is already an extension point is `foreign_object
 1. **Public interface**, `include/nova/svg/foreign_object.h`, built only from public types (`Box`, `stb::color`, `stb::image`, `element`):
 
 ```cpp
-struct foreign_object_font { std::string family; float size; bool bold, italic; };
+struct foreign_object_font {
+    std::string family;
+    float size;
+    int weight;        // CSS font-weight, 1 to 1000 (400 normal, 700 bold)
+    bool bold, italic; // bold is `weight >= 600`, for painters that only know regular and bold
+};
 
 // How a renderer asks the document's CSS about HTML it parsed itself (mermaid's `.section-0 span {...}`
 // reaches through the foreignObject into the svg around it).

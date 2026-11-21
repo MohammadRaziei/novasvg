@@ -1,4 +1,5 @@
 // Implementation of the public API declared in include/nova/svg/svg.h.
+#include <algorithm>
 #include "vg/pixmap.h"
 #include "nova/svg/svg.h"
 
@@ -873,7 +874,12 @@ element_list document::query_selector_all(const std::string& content) const
 
 text_metrics measure_text(const std::string& utf8_text, const std::string& font_family, float font_size, bool bold, bool italic)
 {
-    const sized_font font = make_font(font_family, font_size, bold, italic);
+    return measure_text(utf8_text, font_family, font_size, bold ? font_weight_bold : font_weight_normal, italic);
+}
+
+text_metrics measure_text(const std::string& utf8_text, const std::string& font_family, float font_size, int weight, bool italic)
+{
+    const sized_font font = make_font(font_family, font_size, std::clamp(weight, 1, 1000), italic);
     text_metrics metrics;
     metrics.width = font.measure_text(utf8_to_u32(utf8_text));
     metrics.ascent = font.ascent();

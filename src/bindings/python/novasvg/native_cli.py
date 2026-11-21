@@ -5,7 +5,7 @@ from pathlib import Path
 
 def novasvg_cli_path():
     """
-    Locates the 'novasvg-cli' binary relative to this file.
+    Locates the 'novasvg' CLI binary (the CMake OUTPUT_NAME of the novasvg_cli target) relative to this file.
     Ensures executable permissions on Unix-like systems.
     Returns the Path object to the binary.
     """
@@ -13,7 +13,7 @@ def novasvg_cli_path():
     current_path = Path(__file__).resolve().parent
     
     # Determine the binary name based on the operating system
-    binary_name = "novasvg-cli.exe" if sys.platform == "win32" else "novasvg-cli"
+    binary_name = "novasvg.exe" if sys.platform == "win32" else "novasvg"
     
     # Construct the full path to the binary: ../bin/novasvg
     binary_path = current_path / "bin" / binary_name
