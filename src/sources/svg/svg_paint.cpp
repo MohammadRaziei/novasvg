@@ -1,5 +1,4 @@
 #include "vg/pixmap.h"
-#include "vg/pdf_canvas.h"
 #include "svgelement.h"
 
 namespace nova::svg {
@@ -32,84 +31,60 @@ bool svg_render_state::has_cycle_reference(const svg_element* el) const
 
 void svg_render_state::begin_group(const svg_blend_info& blend_info)
 {
-    auto requires_compositing = blend_info.requires_compositing(m_mode);
-    pdf_canvas* pdf = dynamic_cast<pdf_canvas*>(m_canvas.get());
-    m_layer = layer_kind::none;
-    if(requires_compositing && pdf) {
-        // On a vector page: opacity and blend mode alone stay vector (a transparency group); what PDF cannot
-        // express (masks, clip masks, filters) is drawn into pixels at raster_scale() and placed as an image.
-        const bool masking = (blend_info.clipper() && blend_info.clipper()->requires_masking()) || blend_info.masker() || blend_info.filter_element();
-        if(m_mode == svg_render_mode::painting && !masking) {
-            pdf->begin_group();
-            m_layer = layer_kind::pdf_group;
-            if(blend_info.clipper())
-                blend_info.clipper()->apply_clip_path(*this);
-        } else {
-            auto bounding_box = m_current_transform.map_rect(m_element->paint_bounding_box());
-            if(m_mode == svg_render_mode::painting && blend_info.filter_element()) {
-                bounding_box.inflate(blend_info.filter_element()->pixel_margin() * m_current_transform.x_scale());
-            }
-            bounding_box.intersect(pdf->extents());
-            m_layer_scale = pdf->raster_scale();
-            m_canvas = raster_canvas::create(rect(bounding_box.x * m_layer_scale, bounding_box.y * m_layer_scale, bounding_box.w * m_layer_scale, bounding_box.h * m_layer_scale));
-            m_current_transform = transform::scaled(m_layer_scale, m_layer_scale) * m_current_transform;
-            m_layer = layer_kind::raster_in_pdf;
-        }
+    m_layer.reset();
+    if(!blend_info.requires_compositing(m_mode)) {
+        m_canvas->save();
+        if(blend_info.clipper())
+            blend_info.clipper()->apply_clip_path(*this);
         return;
     }
 
-    if(requires_compositing) {
-        auto bounding_box = m_current_transform.map_rect(m_element->paint_bounding_box());
-        if(m_mode == svg_render_mode::painting && blend_info.filter_element()) {
-            bounding_box.inflate(blend_info.filter_element()->pixel_margin() * m_current_transform.x_scale());
-        }
-        bounding_box.intersect(static_cast<raster_canvas&>(*m_canvas).extents());
-        m_canvas = raster_canvas::create(bounding_box);
-        m_layer = layer_kind::raster;
-    } else {
-        m_canvas->save();
-    }
+    const bool painting = m_mode == svg_render_mode::painting;
+    layer_params params;
+    params.bounds = m_current_transform.map_rect(m_element->paint_bounding_box());
+    if(painting && blend_info.filter_element())
+        params.bounds.inflate(blend_info.filter_element()->pixel_margin() * m_current_transform.x_scale());
+    // the finished group is blended into what is already painted under it, with its mix-blend-mode
+    params.blend = painting ? blend_info.mix_blend_mode() : blend_mode::normal;
+    params.opacity = m_mode == svg_render_mode::clipping ? 1.f : blend_info.opacity();
+    // Opacity and blend mode alone a canvas can keep as vectors; a mask, a clip mask or a filter needs the pixels.
+    const bool masking = (blend_info.clipper() && blend_info.clipper()->requires_masking()) || blend_info.masker() || blend_info.filter_element();
+    params.needs_pixels = !painting || masking;
 
-    if(!requires_compositing && blend_info.clipper()) {
-        blend_info.clipper()->apply_clip_path(*this);
+    layer_scope scope = m_canvas->begin_layer(params);
+    if(scope.in_place()) {
+        // the canvas keeps the group as a vector group of its own, so a plain clip path stays a vector clip
+        if(blend_info.clipper())
+            blend_info.clipper()->apply_clip_path(*this);
+    } else {
+        m_canvas = scope.target;
+        m_current_transform = scope.pre_transform * m_current_transform;
     }
+    m_layer = std::move(scope);
 }
 
 void svg_render_state::end_group(const svg_blend_info& blend_info)
 {
-    if(m_layer == layer_kind::none) {
+    if(!m_layer) {
         m_canvas->restore();
         return;
     }
 
-    // the finished group is blended into what is already painted under it, with its mix-blend-mode
-    const blend_mode blend_mode_ = m_mode == svg_render_mode::painting ? blend_info.mix_blend_mode() : blend_mode::normal;
-
-    auto opacity = m_mode == svg_render_mode::clipping ? 1.f : blend_info.opacity();
-    if(m_layer == layer_kind::pdf_group) {
-        static_cast<pdf_canvas&>(*m_canvas).end_group(blend_mode_, opacity);
-        m_layer = layer_kind::none;
-        return;
+    layer_scope scope = std::move(*m_layer);
+    m_layer.reset();
+    const bool painting = m_mode == svg_render_mode::painting;
+    layer_effects effects;
+    if(scope.params.needs_pixels) {
+        effects = [&](raster_canvas& layer) {
+            if(blend_info.clipper())
+                blend_info.clipper()->apply_clip_mask(*this, layer);
+            if(painting && blend_info.masker())
+                blend_info.masker()->apply_mask(*this, layer);
+            if(painting && blend_info.filter_element())
+                blend_info.filter_element()->apply_filter(layer, m_current_transform.x_scale());
+        };
     }
-
-    if(blend_info.clipper())
-        blend_info.clipper()->apply_clip_mask(*this);
-    if(m_mode == svg_render_mode::painting && blend_info.masker()) {
-        blend_info.masker()->apply_mask(*this);
-    }
-    if(m_mode == svg_render_mode::painting && blend_info.filter_element()) {
-        blend_info.filter_element()->apply_filter(*this, m_current_transform.x_scale());
-    }
-
-    if(m_layer == layer_kind::raster_in_pdf) {
-        auto& layer = static_cast<raster_canvas&>(*m_canvas);
-        auto& page = static_cast<pdf_canvas&>(*m_parent->m_canvas);
-        const rect e = layer.extents();
-        page.draw_raster_group(pixmap(layer.surface()), rect(e.x / m_layer_scale, e.y / m_layer_scale, e.w / m_layer_scale, e.h / m_layer_scale), blend_mode_, opacity);
-        return;
-    }
-
-    static_cast<raster_canvas&>(*m_parent->m_canvas).blend_canvas(static_cast<raster_canvas&>(*m_canvas), composite_op::source_over, blend_mode_, opacity);
+    m_parent->m_canvas->end_layer(std::move(scope), effects);
 }
 
 svg_paint_element::svg_paint_element(document* dom, element_id id)
@@ -392,9 +367,8 @@ bool svg_pattern_element::apply_paint(svg_render_state& state, float opacity) co
     }
 
     auto current_transform = attributes.pattern_transform() * state.current_transform();
-    // On a vector page the tile is a bitmap too; make it sharp at the page's raster scale.
-    auto* pdf = dynamic_cast<pdf_canvas*>(&*state);
-    const float tile_scale = pdf ? pdf->raster_scale() : 1.f;
+    // The tile is a bitmap on every backend; make it sharp at the resolution the canvas wants.
+    const float tile_scale = state->raster_scale();
     auto x_scale = current_transform.x_scale() * tile_scale;
     auto y_scale = current_transform.y_scale() * tile_scale;
 
@@ -416,10 +390,7 @@ bool svg_pattern_element::apply_paint(svg_render_state& state, float opacity) co
     auto pattern_transform = attributes.pattern_transform();
     pattern_transform.translate(pattern_rect.x, pattern_rect.y);
     pattern_transform.scale(pattern_rect.w / pattern_image->width(), pattern_rect.h / pattern_image->height());
-    if(pdf)
-        pdf->set_tiled_image(pixmap(pattern_image->surface()), pattern_transform, opacity);
-    else
-        state.raster()->set_texture(*pattern_image, texture_type::tiled, opacity, pattern_transform);
+    state->set_pattern(pixmap(pattern_image->surface()), pattern_transform, opacity);
     return true;
 }
 

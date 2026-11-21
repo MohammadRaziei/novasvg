@@ -7,6 +7,7 @@
 #include <cmath>
 #include <algorithm>
 #include <utility>
+#include <functional>
 #include <memory>
 #include <vector>
 #include <array>
@@ -339,13 +340,41 @@ using gradient_stop = gradient_stop_t;
 using gradient_stops = std::vector<gradient_stop>;
 
 class pixmap;
+class canvas;
+class raster_canvas;
 
-/// Backend-independent vector drawing target.
+/// What a group of drawing operations (a layer) asks of the canvas it is drawn on.
+struct layer_params {
+    rect bounds;                          ///< the part of the canvas the group may touch, in the canvas's coordinates; the canvas clips it to itself
+    blend_mode blend = blend_mode::normal; ///< how the finished group is composited back
+    float opacity = 1.f;                  ///< and with how much of it
+    bool needs_pixels = false;            ///< the group's pixels are needed when it ends, for `layer_effects` (masks, filters)
+};
+
+/// Changes to the finished pixels of a group, which only pixels can express (clip masks, masks, filters).
+/// The canvas calls it from end_layer() with the group's pixels, before compositing the group back. It is only
+/// called for a group begun with `needs_pixels` set.
+using layer_effects = std::function<void(raster_canvas& layer)>;
+
+/// A group in progress: what begin_layer() hands out and end_layer() takes back.
+struct layer_scope {
+    layer_params params;
+    /// Where the group's content is drawn. Null when the canvas takes the group in place (a vector backend that
+    /// composites groups itself): draw on the canvas as usual and, unlike a layer, a plain clip stays a vector clip.
+    std::shared_ptr<canvas> target;
+    /// Applied to the transform of everything drawn on `target`: the identity, or the scale of the bitmap a vector
+    /// backend made for a group that needs pixels.
+    transform pre_transform = transform::identity;
+
+    bool in_place() const { return target == nullptr; }
+};
+
+/// Backend-independent drawing target.
 ///
-/// Holds exactly the operations every backend (raster today, PDF later) can express: a paint source,
-/// fill/stroke of paths and text, clipping, images, and a save/restore stack. Pixel-level operations
-/// (textures, layer blending, masks, filters) are NOT part of it yet: they live in `raster_canvas`
-/// and are the remaining work before an SVG document can be rendered to a non-raster backend.
+/// What every backend (raster, PDF) can express: a paint source (colour, gradient, pattern), fill and stroke of
+/// paths and text, clipping, images, groups with opacity and blending (layers), and a save/restore stack.
+/// Masks and filters need pixels; a group that wants them says so (`layer_params::needs_pixels`) and passes
+/// `layer_effects` to end_layer(). A vector backend then makes a bitmap for that group only.
 class canvas {
 public:
     virtual ~canvas() = default;
@@ -366,11 +395,27 @@ public:
 
     virtual void draw_image(const pixmap& image, const rect& dst_rect, const rect& src_rect, const transform& transform_) = 0;
 
+    /// Makes `tile` the paint source: an image repeated over the plane, mapped by `tile_to_user`, at `opacity`.
+    /// The tile should have been drawn at raster_scale() pixels per user unit.
+    virtual void set_pattern(const pixmap& tile, const transform& tile_to_user, float opacity) = 0;
+
+    /// Pixels per user unit of the bitmaps this canvas wants made for it (pattern tiles, groups with effects):
+    /// 1 for a pixel canvas, whose own coordinates are pixels.
+    virtual float raster_scale() const { return 1.f; }
+
+    /// Starts a group: draw its content on `scope.target`, or on this canvas when `scope.in_place()`, and hand
+    /// the scope back to end_layer(). Groups nest and must end in the reverse order; every save() made inside
+    /// one must be restored inside it.
+    virtual layer_scope begin_layer(const layer_params& params) = 0;
+    /// Ends the group: runs `effects` on its pixels if `params.needs_pixels`, then composites it with its
+    /// blend mode and opacity.
+    virtual void end_layer(layer_scope&& scope, const layer_effects& effects = {}) = 0;
+
     virtual void save() = 0;
     virtual void restore() = 0;
 };
 
-class raster_canvas final : public canvas {
+class raster_canvas final : public canvas, public std::enable_shared_from_this<raster_canvas> {
 public:
     static std::shared_ptr<raster_canvas> create(const pixmap& bitmap);
     static std::shared_ptr<raster_canvas> create(float x, float y, float width, float height);
@@ -393,6 +438,10 @@ public:
 
     void draw_image(const pixmap& image, const rect& dst_rect, const rect& src_rect, const transform& transform_) override;
     void blend_canvas(const raster_canvas& canvas, composite_op op, blend_mode mode, float opacity);
+
+    void set_pattern(const pixmap& tile, const transform& tile_to_user, float opacity) override;
+    layer_scope begin_layer(const layer_params& params) override;
+    void end_layer(layer_scope&& scope, const layer_effects& effects = {}) override;
 
     void save() override;
     void restore() override;

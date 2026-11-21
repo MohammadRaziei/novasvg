@@ -87,7 +87,7 @@ TEST_CASE("logging: failures and PDF limits reach a stb::logging handler")
     CHECK_FALSE(document::load_file("/nonexistent/none.svg"));
     CHECK_FALSE(document::load_data("<svg"));
     auto doc = document::load_data("<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><defs>"
-        "<linearGradient id='g' spreadMethod='reflect'><stop offset='0' stop-color='red'/><stop offset='1' stop-color='blue'/></linearGradient>"
+        "<linearGradient id='g'><stop offset='0' stop-color='red'/><stop offset='1' stop-color='blue' stop-opacity='0'/></linearGradient>"
         "</defs><rect width='10' height='10' fill='url(#g)'/></svg>");
     REQUIRE(doc);
     CHECK_FALSE(doc->render_to_pdf().empty());
@@ -103,5 +103,5 @@ TEST_CASE("logging: failures and PDF limits reach a stb::logging handler")
     };
     CHECK(has("novasvg.svg: cannot open"));
     CHECK(has("novasvg.svg: cannot parse"));
-    CHECK(has("novasvg.pdf: gradient spreadMethod"));
+    CHECK(has("novasvg.pdf: a gradient whose stops have different alpha"));  // a fade: PDF paints it opaque
 }

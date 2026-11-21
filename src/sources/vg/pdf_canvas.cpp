@@ -1,9 +1,11 @@
 #include "pdf_canvas.h"
 #include <stb/logging.hpp>
+#include <stb/util.hpp>
 
 #include <stb/zlib.hpp>
 
 #include <atomic>
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 
@@ -142,30 +144,115 @@ void pdf_canvas::set_color(float r, float g, float b, float a)
 }
 
 namespace {
-// Once per process: a document with many gradients would otherwise repeat the same message.
-void warn_gradient_limits(spread_method_value spread, const gradient_stops& stops)
+// The one alpha of a gradient whose stops all share it (what `fill-opacity` makes of a gradient), 0..1; -1 when the
+// stops differ, a fade that this backend cannot paint.
+float uniform_stop_alpha(const gradient_stops& stops)
 {
-    static std::atomic<bool> spread_said{false}, alpha_said{false};
-    if(spread != spread_method_value::pad && !spread_said.exchange(true))
-        pdf_log().warning("gradient spreadMethod reflect/repeat is written as pad in PDF output");
-    if(!alpha_said.load()) {
-        for(const auto& s : stops) {
-            if(s.color_.a() < 255) {
-                if(!alpha_said.exchange(true))
-                    pdf_log().warning("per-stop alpha of a gradient is ignored in PDF output");
-                break;
+    if(stops.empty())
+        return 1.f;
+    for(const auto& s : stops)
+        if(s.color_.a() != stops.front().color_.a())
+            return -1.f;
+    return alpha_f(stops.front().color_);
+}
+
+// A PDF text string: plain ASCII in parentheses, anything else as UTF-16BE with a byte order mark.
+std::string pdf_text_string(const std::string& utf8)
+{
+    bool ascii = true;
+    for(const unsigned char c : utf8)
+        if(c < 0x20 || c > 0x7e)
+            ascii = false;
+    if(ascii) {
+        std::string out = "(";
+        for(const char c : utf8) {
+            if(c == '(' || c == ')' || c == '\\')
+                out += '\\';
+            out += c;
+        }
+        return out + ")";
+    }
+    std::string out = "<FEFF";
+    char unit[8];
+    for(const char32_t cp : stb::utf8_decode_lossy(utf8)) {
+        if(cp >= 0x10000) {  // a surrogate pair
+            const char32_t v = cp - 0x10000;
+            snprintf(unit, sizeof unit, "%04X", unsigned(0xD800 + (v >> 10)));
+            out += unit;
+            snprintf(unit, sizeof unit, "%04X", unsigned(0xDC00 + (v & 0x3FF)));
+        } else {
+            snprintf(unit, sizeof unit, "%04X", unsigned(cp));
+        }
+        out += unit;
+    }
+    return out + ">";
+}
+
+// The inverse of `m`, false when it has none.
+bool invert_matrix(const stb::matrix& m, stb::matrix& out)
+{
+    const float det = m.a * m.d - m.b * m.c;
+    if(!(std::fabs(det) > 1e-12f))
+        return false;
+    out.a = m.d / det;
+    out.b = -m.b / det;
+    out.c = -m.c / det;
+    out.d = m.a / det;
+    out.e = (m.c * m.f - m.d * m.e) / det;
+    out.f = (m.b * m.e - m.a * m.f) / det;
+    return true;
+}
+
+// A gradient that repeats or reflects is painted as one shading over a stretch of `periods` periods, long enough to
+// cover the page; past that the last colour is padded. The cap keeps the function a sane size.
+constexpr int max_spread_periods = 128;
+
+// `periods` copies of the stops side by side as one function over [0, 1]. With `reflect`, the copies whose index
+// (counted from `first_period`, which may be negative) is odd run backwards.
+std::string spread_function(const std::vector<gradient_stop_t>& stops, int periods, bool reflect, int first_period)
+{
+    std::string functions, bounds, encode;
+    float previous_bound = 0.f;
+    const size_t segments = stops.size() - 1;
+    for(int j = 0; j < periods; ++j) {
+        const bool backwards = reflect && ((first_period + j) & 1);
+        for(size_t k = 0; k < segments; ++k) {
+            const size_t i = backwards ? segments - 1 - k : k;
+            const auto& from = backwards ? stops[i + 1] : stops[i];
+            const auto& to = backwards ? stops[i] : stops[i + 1];
+            functions += "<< /FunctionType 2 /Domain [0 1] /N 1 /C0 [" + rgb_str(red_f(from.color_), green_f(from.color_), blue_f(from.color_))
+                + "] /C1 [" + rgb_str(red_f(to.color_), green_f(to.color_), blue_f(to.color_)) + "] >> ";
+            encode += "0 1 ";
+            const bool last = j + 1 == periods && k + 1 == segments;
+            if(!last) {
+                const float end = backwards ? 1.f - stops[i].offset : stops[i + 1].offset;
+                float bound = (float(j) + end) / float(periods);
+                if(bound <= previous_bound)  // a hard stop: bounds must increase
+                    bound = previous_bound + 1e-6f;
+                bounds += num(bound) + " ";
+                previous_bound = bound;
             }
         }
     }
+    return "<< /FunctionType 3 /Domain [0 1] /Functions [" + functions + "] /Bounds [" + bounds + "] /Encode [" + encode + "] >>";
 }
 }  // namespace
+
+// Once per page: a drawing with many gradients would otherwise repeat the same message.
+void pdf_canvas::warn_about_fade(const gradient_stops& stops)
+{
+    if(uniform_stop_alpha(stops) < 0.f && !m_said_fade) {
+        m_said_fade = true;
+        pdf_log().warning("a gradient whose stops have different alpha is painted opaque in PDF output");
+    }
+}
 
 void pdf_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stops& stops, const transform& transform_)
 {
     paint& p = m_paints.back();
     p = paint();
     p.type_ = paint::kind::linear;
-    warn_gradient_limits(spread, stops);
+    warn_about_fade(stops);
     p.p[0] = x1; p.p[1] = y1; p.p[2] = x2; p.p[3] = y2;
     p.spread = spread;
     p.stops = stops;
@@ -177,7 +264,7 @@ void pdf_canvas::set_radial_gradient(float cx, float cy, float r, float fx, floa
     paint& p = m_paints.back();
     p = paint();
     p.type_ = paint::kind::radial;
-    warn_gradient_limits(spread, stops);
+    warn_about_fade(stops);
     p.p[0] = cx; p.p[1] = cy; p.p[2] = r; p.p[3] = fx; p.p[4] = fy;
     p.spread = spread;
     p.stops = stops;
@@ -202,8 +289,45 @@ int pdf_canvas::shading_pattern(const stb::matrix& transform_)
         if(stops[i].offset < stops[i - 1].offset)
             stops[i].offset = stops[i - 1].offset;
 
-    std::string function;
-    if(stops.size() == 2) {
+    // reflect and repeat: one shading over as many periods as the page needs (see spread_function)
+    std::string function, coords;
+    if(p.spread != spread_method_value::pad && stops.size() >= 2) {
+        const bool reflect = p.spread == spread_method_value::reflect;
+        stb::matrix to_gradient;
+        if(invert_matrix(then(p.matrix, transform_), to_gradient)) {
+            const point corners[4] = {apply(to_gradient, 0, 0), apply(to_gradient, m_width, 0), apply(to_gradient, 0, m_height),
+                                      apply(to_gradient, m_width, m_height)};
+            if(p.type_ == paint::kind::linear) {
+                const float dx = p.p[2] - p.p[0], dy = p.p[3] - p.p[1], length_squared = dx * dx + dy * dy;
+                if(length_squared > 0.f) {
+                    float t_min = 1e30f, t_max = -1e30f;
+                    for(const point& c : corners) {
+                        const float t = ((c.x - p.p[0]) * dx + (c.y - p.p[1]) * dy) / length_squared;
+                        t_min = std::min(t_min, t);
+                        t_max = std::max(t_max, t);
+                    }
+                    const int first = int(std::floor(t_min));
+                    const int last = std::min(std::max(int(std::ceil(t_max)), first + 1), first + max_spread_periods);
+                    function = spread_function(stops, last - first, reflect, first);
+                    coords = num(p.p[0] + float(first) * dx) + " " + num(p.p[1] + float(first) * dy) + " " + num(p.p[0] + float(last) * dx) + " "
+                        + num(p.p[1] + float(last) * dy);
+                }
+            } else if(p.p[2] > 0.f) {
+                const float reach = std::hypot(p.p[3] - p.p[0], p.p[4] - p.p[1]);
+                float farthest = 0.f;
+                for(const point& c : corners)
+                    farthest = std::max(farthest, std::hypot(c.x - p.p[0], c.y - p.p[1]));
+                const int periods = std::min(std::max(int(std::ceil((farthest + reach) / p.p[2])), 1), max_spread_periods);
+                function = spread_function(stops, periods, reflect, 0);
+                coords = num(p.p[3]) + " " + num(p.p[4]) + " 0 " + num(p.p[3] + float(periods) * (p.p[0] - p.p[3])) + " "
+                    + num(p.p[4] + float(periods) * (p.p[1] - p.p[4])) + " " + num(float(periods) * p.p[2]);
+            }
+        }
+    }
+
+    if(!function.empty()) {
+        // done above
+    } else if(stops.size() == 2) {
         function = "<< /FunctionType 2 /Domain [0 1] /N 1 /C0 [" + rgb_str(red_f(stops[0].color_), green_f(stops[0].color_), blue_f(stops[0].color_))
             + "] /C1 [" + rgb_str(red_f(stops[1].color_), green_f(stops[1].color_), blue_f(stops[1].color_)) + "] >>";
     } else {
@@ -225,12 +349,14 @@ int pdf_canvas::shading_pattern(const stb::matrix& transform_)
 
     std::string shading;
     if(p.type_ == paint::kind::linear) {
-        shading = "<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [" + num(p.p[0]) + " " + num(p.p[1]) + " " + num(p.p[2]) + " " + num(p.p[3])
-            + "] /Function " + function + " /Extend [true true] >>";
+        if(coords.empty())
+            coords = num(p.p[0]) + " " + num(p.p[1]) + " " + num(p.p[2]) + " " + num(p.p[3]);
+        shading = "<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [" + coords + "] /Function " + function + " /Extend [true true] >>";
     } else {
         // Focal point as a zero-radius start circle.
-        shading = "<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [" + num(p.p[3]) + " " + num(p.p[4]) + " 0 " + num(p.p[0]) + " " + num(p.p[1]) + " "
-            + num(p.p[2]) + "] /Function " + function + " /Extend [true true] >>";
+        if(coords.empty())
+            coords = num(p.p[3]) + " " + num(p.p[4]) + " 0 " + num(p.p[0]) + " " + num(p.p[1]) + " " + num(p.p[2]);
+        shading = "<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [" + coords + "] /Function " + function + " /Extend [true true] >>";
     }
 
     // The pattern matrix maps pattern space to the *default page space*, not to the current CTM.
@@ -265,7 +391,9 @@ void pdf_canvas::begin_paint(bool stroke, const stb::matrix& transform_)
         m_content += "/" + alpha_state(0.f) + " gs\n";
         return;
     }
-    m_content += "/" + alpha_state(1.f) + " gs\n";
+    // what `fill-opacity` makes of a gradient is one alpha shared by all its stops; a fade is painted opaque
+    const float gradient_alpha = uniform_stop_alpha(p.stops);
+    m_content += "/" + alpha_state(gradient_alpha < 0.f ? 1.f : gradient_alpha) + " gs\n";
     m_content += stroke ? "/Pattern CS /" : "/Pattern cs /";
     m_content += m_patterns.back().first + (stroke ? " SCN\n" : " scn\n");
 }
@@ -472,7 +600,7 @@ void pdf_canvas::draw_raster_group(const pixmap& image, const rect& dst, blend_m
     place_image(object, w, h, dst, rect(0, 0, float(w), float(h)), nullptr, opacity, blend_mode_);
 }
 
-void pdf_canvas::set_tiled_image(const pixmap& tile, const transform& transform_, float opacity)
+void pdf_canvas::set_pattern(const pixmap& tile, const transform& transform_, float opacity)
 {
     if(tile.is_null())
         return;
@@ -504,6 +632,37 @@ int pdf_canvas::tiling_pattern(const stb::matrix& transform_)
     std::string name = "P" + std::to_string(m_patterns.size());
     m_patterns.emplace_back(name, obj);
     return obj;
+}
+
+layer_scope pdf_canvas::begin_layer(const layer_params& params)
+{
+    layer_scope scope;
+    scope.params = params;
+    if(!params.needs_pixels) {
+        begin_group();
+        return scope;
+    }
+    // The group needs its pixels: a bitmap the size of its bounds on this page, drawn at raster_scale().
+    auto bounds = params.bounds;
+    bounds.intersect(extents());
+    const float s = m_raster_scale;
+    scope.target = raster_canvas::create(rect(bounds.x * s, bounds.y * s, bounds.w * s, bounds.h * s));
+    scope.pre_transform = transform::scaled(s, s);
+    return scope;
+}
+
+void pdf_canvas::end_layer(layer_scope&& scope, const layer_effects& effects)
+{
+    if(scope.in_place()) {
+        end_group(scope.params.blend, scope.params.opacity);
+        return;
+    }
+    auto& layer = static_cast<raster_canvas&>(*scope.target);
+    if(effects)
+        effects(layer);
+    const float s = m_raster_scale;
+    const rect e = layer.extents();
+    draw_raster_group(pixmap(layer.surface()), rect(e.x / s, e.y / s, e.w / s, e.h / s), scope.params.blend, scope.params.opacity);
 }
 
 void pdf_canvas::begin_group()
@@ -595,6 +754,15 @@ std::vector<uint8_t> pdf_canvas::data() const
         + " /Group << /S /Transparency /CS /DeviceRGB >> >>");
     const int pages = add("<< /Type /Pages /Kids [" + std::to_string(page) + " 0 R] /Count 1 >>");
     const int catalog = add("<< /Type /Catalog /Pages " + std::to_string(pages) + " 0 R >>");
+    int info_object = 0;
+    if(!m_info.title.empty() || !m_info.producer.empty()) {
+        std::string dict = "<<";
+        if(!m_info.title.empty())
+            dict += " /Title " + pdf_text_string(m_info.title);
+        if(!m_info.producer.empty())
+            dict += " /Producer " + pdf_text_string(m_info.producer);
+        info_object = add(dict + " >>");
+    }
 
     std::string out = "%PDF-1.5\n%\xE2\xE3\xCF\xD3\n";
     std::vector<size_t> offsets;
@@ -613,7 +781,8 @@ std::vector<uint8_t> pdf_canvas::data() const
         snprintf(line, sizeof line, "%010zu 00000 n \n", off);
         out += line;
     }
-    out += "trailer\n<< /Size " + std::to_string(objects.size() + 1) + " /Root " + std::to_string(catalog) + " 0 R >>\nstartxref\n" + std::to_string(xref) + "\n%%EOF\n";
+    out += "trailer\n<< /Size " + std::to_string(objects.size() + 1) + " /Root " + std::to_string(catalog) + " 0 R"
+        + (info_object ? " /Info " + std::to_string(info_object) + " 0 R" : std::string()) + " >>\nstartxref\n" + std::to_string(xref) + "\n%%EOF\n";
     return std::vector<uint8_t>(out.begin(), out.end());
 }
 

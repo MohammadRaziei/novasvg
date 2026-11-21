@@ -292,6 +292,29 @@ void raster_canvas::draw_image(const pixmap& image, const rect& dst_rect, const 
     canvas_fill_rect(m_canvas, 0, 0, dst_rect.w, dst_rect.h);
 }
 
+void raster_canvas::set_pattern(const pixmap& tile, const transform& tile_to_user, float opacity)
+{
+    canvas_set_texture(m_canvas, tile.surface(), texture_type::tiled, opacity, &tile_to_user.matrix());
+}
+
+layer_scope raster_canvas::begin_layer(const layer_params& params)
+{
+    layer_scope scope;
+    scope.params = params;
+    auto bounds = params.bounds;
+    bounds.intersect(extents());
+    scope.target = raster_canvas::create(bounds);
+    return scope;
+}
+
+void raster_canvas::end_layer(layer_scope&& scope, const layer_effects& effects)
+{
+    auto& layer = static_cast<raster_canvas&>(*scope.target);
+    if(effects && scope.params.needs_pixels)
+        effects(layer);
+    blend_canvas(layer, composite_op::source_over, scope.params.blend, scope.params.opacity);
+}
+
 void raster_canvas::blend_canvas(const raster_canvas& canvas, composite_op op, blend_mode mode, float opacity)
 {
     stb::matrix matrix = { 1, 0, 0, 1, static_cast<float>(canvas.x()), static_cast<float>(canvas.y()) };

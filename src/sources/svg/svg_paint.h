@@ -2,6 +2,8 @@
 
 // Render state, blend info, paint elements: stop, gradients, pattern, marker position.
 
+#include <optional>
+
 #include "svg_elements.h"
 
 namespace nova::svg {
@@ -53,29 +55,24 @@ public:
     const svg_render_state* parent() const { return m_parent; }
     const transform& current_transform() const { return m_current_transform; }
     const svg_render_mode mode() const { return m_mode; }
-    // The pixel canvas this state draws on, or null when the target is a vector page (pdf_canvas).
-    std::shared_ptr<raster_canvas> raster() const { return std::dynamic_pointer_cast<raster_canvas>(m_canvas); }
 
     rect fill_bounding_box() const { return m_element->fill_bounding_box(); }
     rect paint_bounding_box() const { return m_element->paint_bounding_box(); }
 
     bool has_cycle_reference(const svg_element* el) const;
 
+    // Everything between the two is painted as one group when the element asks for opacity, a blend mode, a mask, a
+    // clip mask or a filter (a layer of the canvas), else it is just a save() / restore().
     void begin_group(const svg_blend_info& blend_info);
     void end_group(const svg_blend_info& blend_info);
 
 private:
-    // What beginGroup() made for this element: nothing (a save()), a pixel layer, a transparency group on a pdf_canvas,
-    // or a pixel layer that goes onto a pdf_canvas as an image when the group ends.
-    enum class layer_kind { none, raster, pdf_group, raster_in_pdf };
-
     const svg_element* m_element;
     const svg_render_state* m_parent;
     transform m_current_transform;
     const svg_render_mode m_mode;
     std::shared_ptr<canvas> m_canvas;
-    layer_kind m_layer = layer_kind::none;
-    float m_layer_scale = 1.f; // raster_in_pdf: pixels per user unit of the layer
+    std::optional<layer_scope> m_layer; // the layer begin_group() made on the parent's canvas; empty for a plain save()
 };
 
 // ---- svgpaintelement ----

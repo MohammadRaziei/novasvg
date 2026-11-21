@@ -1,7 +1,7 @@
 # ADR-0014: layers and patterns belong to the canvas interface; PDF fidelity comes after
 
-**Status:** Proposed, not implemented. Nothing in the code has changed for this record.
-**Date:** 2026-11-19
+**Status:** Accepted. Step 1 and items 1 and 2 of step 2 are implemented (STEP 54); what is left is listed under Action Items.
+**Date:** 2026-11-19 (implemented 2026-11-20)
 **Deciders:** Mohammad Raziei (maintainer)
 
 ## Context
@@ -89,7 +89,34 @@ which is acceptable because `raster_canvas` is the pixel type of the whole libra
 - The size is an estimate from reading: about 150 lines touched for step 1 (svg_paint.cpp loses most of begin / end group,
   pdf_canvas.cpp gains the raster layer path, canvas.h and raster_canvas gain the virtuals).
 
+## Outcome
+As built, the interface differs from the sketch above in small ways, all in canvas.h:
+- `layer_params` carries `needs_pixels` itself (a flag the svg layer sets when the group has a mask, a clip mask or a filter),
+  instead of a separate `has_effects` argument. `layer_scope` is `{params, target, pre_transform}` and `in_place()` is true when
+  `target` is null (a vector backend that keeps the group as a group of its own). `layer_effects` is
+  `std::function<void(raster_canvas&)>`: the scale is not passed, the svg layer reads it from its own transform.
+- `begin_layer`, `end_layer` and `set_pattern` are pure virtual; `raster_scale()` is virtual with the default 1.
+  `raster_canvas` is `enable_shared_from_this` (the filter code needs a `shared_ptr` to the layer).
+- `apply_clip_mask`, `apply_mask` and `apply_filter` take the layer as an argument; `svg_render_state::raster()`, `layer_kind` and
+  the `dynamic_cast` / `static_cast` of a backend are gone from the svg layer (only `novasvg.cpp` still names `pdf_canvas`, to make one).
+- `pdf_canvas::begin_group`, `end_group` and `draw_raster_group` are private; `set_tiled_image` became `set_pattern`.
+
+Checked by: 126 C++ tests (7 new ones for the layer and pattern calls on both backends), the 68 sample renders unchanged, and the
+**68 sample PDFs byte for byte against the build from before the change**, 10 of which hold a bitmap object, 10 a transparency
+group and 5 a tiling pattern (so the new paths are exercised). A first attempt at that comparison was wrong: the command line
+tool writes a PNG whatever the file name says, so it compared PNGs. The PDFs come from `document::render_to_pdf` through the
+tooling test in `refactor/temp-tests/test_pdf_dump.cpp`.
+
+Step 2, items 1 and 2:
+- Gradient `spreadMethod` reflect and repeat are written as one shading over as many periods as the page needs (at most 128; the
+  last colour is padded beyond that). Checked against the raster render with poppler and pdfium.
+- Stops that all share one alpha (what `fill-opacity` makes of a gradient) become a constant alpha. This fixed a bug found on the
+  way: `fill-opacity` on a gradient was lost in PDF output, so the translucent links of a sankey diagram came out opaque. It is
+  the one sample PDF that changed. A gradient whose stops differ in alpha (a fade) is still painted opaque, with a warning once per page.
+- `/Info` with the producer (`novasvg x.y.z`) and, through `pdf_canvas::set_info`, a title. No date, so the output stays deterministic.
+  The document does not expose its `<title>` element, so `render_to_pdf` sets only the producer.
+
 ## Action Items
-- [ ] Settle the interface above (names, whether `has_effects` is a flag or the callback's presence).
-- [ ] Step 1, then the PDF byte comparison.
-- [ ] Step 2, items 1 and 2.
+- [x] The interface, step 1, the PDF byte comparison, step 2 items 1 and 2.
+- [ ] A gradient whose stops differ in alpha (a fade) as a soft mask; `<mask>` and clip masks as soft masks; font subsets; several pages. Each needs its own record.
+- [ ] Pass the document's `<title>` to `set_info` (the DOM does not keep it yet).

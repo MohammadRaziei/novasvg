@@ -1,5 +1,4 @@
 #include "vg/pixmap.h"
-#include "vg/pdf_canvas.h"
 #include "svgelement.h"
 
 #include <stb/image.hpp>

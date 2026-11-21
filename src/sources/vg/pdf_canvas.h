@@ -4,10 +4,10 @@
 // drawing commands instead of pixels. 1 user unit is 1 CSS px (1/96 in), so a 100x50 canvas is a 75x37.5 pt page.
 //
 // Vector: solid and gradient paints, fills and strokes of paths and text (text is written as glyph outlines, so no
-// font embedding), clipping, images, save/restore, and transparency groups (begin_group/end_group: opacity and
-// blend mode). Raster inside the vector page: what PDF cannot express (masks, filters, clip masks) is rendered by
-// the svg layer to a bitmap at raster_scale() and placed with draw_raster_group(); pattern tiles come as bitmaps too
-// (set_tiled_image()).
+// font embedding), clipping, images, save/restore, and transparency groups (a layer that needs no pixels: opacity and
+// blend mode). Raster inside the vector page: a layer that needs pixels (masks, filters, clip masks) is drawn to a
+// bitmap at raster_scale(), run through the caller's effects and placed as an image; pattern tiles come as bitmaps
+// too (set_pattern()).
 #include "canvas.h"
 
 #include <map>
@@ -36,25 +36,29 @@ public:
 
     void draw_image(const pixmap& image, const rect& dst_rect, const rect& src_rect, const transform& transform_) override;
 
-    // ---- beyond the `canvas` interface; the svg layer calls these when its target is a pdf_canvas ----
+    // `tile` repeated as a PDF tiling pattern, `tile_to_user` mapping tile pixels to user space.
+    void set_pattern(const pixmap& tile, const transform& tile_to_user, float opacity) override;
 
-    // The page in user units: where a group's bitmap may be placed.
-    rect extents() const { return rect(0, 0, m_width, m_height); }
+    // A layer that needs no pixels is a transparency group of the page (a Form XObject with a /Group), composited with
+    // the layer's opacity and blend mode. One that does is a bitmap at raster_scale(): it goes through the effects and
+    // lands on the page as an image.
+    layer_scope begin_layer(const layer_params& params) override;
+    void end_layer(layer_scope&& scope, const layer_effects& effects = {}) override;
 
-    // Pixels per user unit used for the bitmaps the svg layer makes for this page (96 dpi * raster_scale()).
-    float raster_scale() const { return m_raster_scale; }
+    // Pixels per user unit of the bitmaps made for this page (pattern tiles, layers with effects): 1 is 96 dpi.
+    float raster_scale() const override { return m_raster_scale; }
     void set_raster_scale(float scale) { m_raster_scale = scale > 0.f ? scale : 1.f; }
 
-    // Everything drawn between begin_group() and end_group() is one transparency group, composited
-    // with `opacity` and `blend_mode` (Form XObject with a /Group). Groups nest.
-    void begin_group();
-    void end_group(blend_mode blend_mode_, float opacity);
+    // The page in user units.
+    rect extents() const { return rect(0, 0, m_width, m_height); }
 
-    // A finished raster group (premultiplied ARGB32) placed at `dst` (user units).
-    void draw_raster_group(const pixmap& image, const rect& dst, blend_mode blend_mode_, float opacity);
-
-    // Makes the current paint a tiled image: `tile` repeated, `transform` mapping tile pixels to user space.
-    void set_tiled_image(const pixmap& tile, const transform& transform_, float opacity);
+    // What the PDF says about itself (its /Info entry). Fields left empty are not written; the file has no date, so
+    // the same drawing always gives the same bytes.
+    struct info {
+        std::string title;
+        std::string producer;
+    };
+    void set_info(const info& document_info) { m_info = document_info; }
 
     void save() override;
     void restore() override;
@@ -65,6 +69,15 @@ public:
 
 private:
     pdf_canvas(float width, float height);
+
+    void warn_about_fade(const gradient_stops& stops);
+    bool m_said_fade = false;
+
+    // Everything drawn between begin_group() and end_group() is one transparency group.
+    void begin_group();
+    void end_group(blend_mode blend_mode_, float opacity);
+    // A finished bitmap (premultiplied ARGB32) placed at `dst` (user units).
+    void draw_raster_group(const pixmap& image, const rect& dst, blend_mode blend_mode_, float opacity);
 
     struct paint {
         enum class kind { solid, linear, radial, tiled } type_ = kind::solid;
@@ -97,6 +110,7 @@ private:
     void place_image(int object, int width, int height, const rect& dst, const rect& src, const stb::matrix* transform_, float alpha, blend_mode blend_mode_);
 
     float m_width, m_height;
+    info m_info;
     std::vector<object> m_objects; // object number = index + 1
     std::string m_content;
     std::vector<paint> m_paints;   // top = current paint; one entry per open save()

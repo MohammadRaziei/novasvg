@@ -1,5 +1,4 @@
 #include "vg/pixmap.h"
-#include "vg/pdf_canvas.h"
 #include "svgelement.h"
 
 namespace nova::svg {
@@ -106,7 +105,7 @@ rect svg_clip_path_element::clip_bounding_box(const svg_element* el) const
     return local_transform().map_rect(clip_bounding_box);
 }
 
-void svg_clip_path_element::apply_clip_mask(svg_render_state& state) const
+void svg_clip_path_element::apply_clip_mask(svg_render_state& state, raster_canvas& layer) const
 {
     if(state.has_cycle_reference(this))
         return;
@@ -121,10 +120,10 @@ void svg_clip_path_element::apply_clip_mask(svg_render_state& state) const
     svg_render_state new_state(this, &state, current_transform, svg_render_mode::clipping, mask_image);
     render_children(new_state);
     if(clipper()) {
-        clipper()->apply_clip_mask(new_state);
+        clipper()->apply_clip_mask(new_state, *mask_image);
     }
 
-    state.raster()->blend_canvas(*mask_image, composite_op::destination_in, blend_mode::normal, 1.f);
+    layer.blend_canvas(*mask_image, composite_op::destination_in, blend_mode::normal, 1.f);
 }
 
 void svg_clip_path_element::apply_clip_path(svg_render_state& state) const
@@ -240,7 +239,7 @@ rect svg_mask_element::mask_bounding_box(const svg_element* el) const
     return mask_bounding_box.intersected(mask_rect(el));
 }
 
-void svg_mask_element::apply_mask(svg_render_state& state) const
+void svg_mask_element::apply_mask(svg_render_state& state, raster_canvas& layer) const
 {
     if(state.has_cycle_reference(this))
         return;
@@ -257,14 +256,13 @@ void svg_mask_element::apply_mask(svg_render_state& state) const
     svg_render_state new_state(this, &state, current_transform, svg_render_mode::painting, mask_image);
     render_children(new_state);
     if(clipper())
-        clipper()->apply_clip_mask(new_state);
-    if(masker()) {
-        masker()->apply_mask(new_state);
-    }
+        clipper()->apply_clip_mask(new_state, *mask_image);
+    if(masker())
+        masker()->apply_mask(new_state, *mask_image);
 
     if(m_mask_type == css_mask_type::luminance)
         mask_image->convert_to_luminance_mask();
-    state.raster()->blend_canvas(*mask_image, composite_op::destination_in, blend_mode::normal, 1.f);
+    layer.blend_canvas(*mask_image, composite_op::destination_in, blend_mode::normal, 1.f);
 }
 
 svg_filter_element::svg_filter_element(document* dom)
@@ -300,9 +298,9 @@ float svg_filter_element::pixel_margin() const
     return margin;
 }
 
-void svg_filter_element::apply_filter(svg_render_state& state, float scale) const
+void svg_filter_element::apply_filter(raster_canvas& layer, float scale) const
 {
-    svg_filter_context context(state.raster(), scale);
+    svg_filter_context context(layer.shared_from_this(), scale);
     for(const auto& child : children()) {
         auto el = to_svg_element(child);
         if(!el)
@@ -313,7 +311,7 @@ void svg_filter_element::apply_filter(svg_render_state& state, float scale) cons
         context.set_result(el->attribute(property_id::result), std::move(output));
     }
 
-    state.raster()->copy_pixels_from(*context.last_result());
+    layer.copy_pixels_from(*context.last_result());
 }
 
 void svg_mask_element::layout_element(const svg_layout_state& state)

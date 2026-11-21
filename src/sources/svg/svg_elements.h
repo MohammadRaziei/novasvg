@@ -294,7 +294,8 @@ public:
     const svg_enumeration<units>& clip_path_units() const { return m_clip_path_units; }
     rect clip_bounding_box(const svg_element* el) const;
 
-    void apply_clip_mask(svg_render_state& state) const;
+    // Multiplies `layer` (the pixels of the group being clipped) by this clip path's coverage.
+    void apply_clip_mask(svg_render_state& state, raster_canvas& layer) const;
     void apply_clip_path(svg_render_state& state) const;
 
     bool requires_masking() const;
@@ -316,7 +317,8 @@ public:
 
     rect mask_rect(const svg_element* el) const;
     rect mask_bounding_box(const svg_element* el) const;
-    void apply_mask(svg_render_state& state) const;
+    // Multiplies `layer` (the pixels of the masked group) by the mask.
+    void apply_mask(svg_render_state& state, raster_canvas& layer) const;
 
     void layout_element(const svg_layout_state& state) final;
 
@@ -540,7 +542,8 @@ public:
     // result through svg_filter_context, then writes the final result back
     // into `state`'s current (already-rendered) canvas. `scale` converts
     // user-space stdDeviation/dx/dy to device pixels.
-    void apply_filter(svg_render_state& state, float scale) const;
+    // Replaces `layer` (the pixels of the filtered group, `scale` pixels per user unit) by the filter's result.
+    void apply_filter(raster_canvas& layer, float scale) const;
 };
 
 // ---- svgrenderstate ----

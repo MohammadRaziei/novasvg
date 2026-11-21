@@ -395,6 +395,7 @@ std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
 
     auto pdf = pdf_canvas::create(width, height);
     pdf->set_raster_scale(scale);
+    pdf->set_info({"", "novasvg " + std::to_string(NOVA_VERSION_MAJOR) + "." + std::to_string(NOVA_VERSION_MINOR) + "." + std::to_string(NOVA_VERSION_PATCH)});
     if(mode == pdf_mode::raster) {
         const int pixel_width = static_cast<int>(std::ceil(width * scale));
         const int pixel_height = static_cast<int>(std::ceil(height * scale));

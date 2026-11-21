@@ -2,6 +2,7 @@
 
 ### Added
 
+- **PDF output: gradients with `spreadMethod` reflect and repeat** are painted as such (they were written as pad), and a `pdf_canvas::set_info()` / `/Info` entry with the producer and, for callers of the canvas, a title. A page has no date, so the same drawing still gives the same bytes.
 - **`foreign_object_font::weight`** (`nova/svg/foreign_object.h`): the CSS font-weight (1 to 1000) a foreignObject painter is asked to draw with. `bold` stays and is `weight >= 600`, for painters that only know regular and bold; novasvg sets both.
 - **`@font-face` `font-weight` descriptor**: one weight, a keyword or a range (`300 800`). A static font is registered as the face of that weight (two rules of one family, 300 and 700, used to be two regular faces and the newest won); a variable font serves the declared range as far as its own axis goes. With no descriptor a variable font keeps its whole axis. New `font_face_cache::add_font_face(family, weight_min, weight_max, italic, face)`.
 - **Variable fonts render at the weight asked for.** An installed variable font (Open Sans, Inter, Roboto Flex) is one face for every weight; `font_face_cache` now sets its weight axis to 700 for bold and 400 for regular (the result is made once per face and kept), so `font-weight: bold` is no longer drawn regular. This needs libstb with `font::with_weight` (variable fonts).
@@ -10,6 +11,7 @@
 
 ### Changed
 
+- **Layers and patterns are part of the `canvas` interface.** `canvas` gained `begin_layer` / `end_layer` (a group with opacity, blend mode and, for masks, clip masks and filters, a callback that runs on its pixels), `set_pattern` and `raster_scale`. The svg layer no longer casts to `pdf_canvas` or `raster_canvas`; a PDF page decides itself whether a group is a vector transparency group or a bitmap. Output is unchanged: the sample renders and 68 sample PDFs match the build before the change byte for byte (except the fix below).
 - **foreignObject text uses numeric weights.** A run's style is `{weight, italic}` instead of two bits: `font-weight: 300` or `550` inside the HTML reaches the face (a variable font is set to it), `<b>` and `<strong>` are `bolder` than the weight they sit in (400 gives 700, 700 gives 900), and `lighter` and `bolder` follow the parent. `measure_foreign_object` takes an `int weight` instead of `bool bold`.
 - Faces of equal distance in the cache: up to 500 the lighter face wins, above 500 the heavier one (the CSS font matching order); a variable font's bold flag no longer counts against it when its weight range holds the request.
 - novasvg builds against the builder-style libstb API: `stb::loader(...)` for decoding images and `stb::shaping(...)` for shaping a part of a run replace `stb::load_options` and `stb::shape_options`, which libstb no longer has.
@@ -41,6 +43,7 @@
 
 ### Fixed
 
+- **PDF output kept the opacity of a gradient fill.** `fill-opacity` (and any alpha shared by all stops) on a gradient was dropped, so translucent gradients came out opaque in PDF. A gradient whose stops differ in alpha (a fade) is still painted opaque, with a warning.
 - **Right-to-left and Arabic text.** Text is now laid out by libstb's `font::shape`: bidirectional order, joined
   Arabic letters, ligatures, mirrored brackets and kerning come from one place, in the canvas, the PDF canvas and
   `font::measure_text` / `glyph_boxes`. Before, Hebrew came out in reverse order and Arabic letters were not joined.

@@ -1,6 +1,5 @@
 #include <stb/util.hpp>
 #include "vg/pixmap.h"
-#include "vg/pdf_canvas.h"
 #include "svgelement.h"
 
 namespace nova::svg {
