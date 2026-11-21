@@ -1185,8 +1185,8 @@ public:
  * @brief The faces a <foreignObject> can paint with: its own font plus the bold / italic variants
  * of it that <b>, <strong>, <i>, <em> and inline `font-weight` / `font-style` ask for.
  *
- * Indexed by style bits (bit 0 = bold, bit 1 = italic), so `get(Bold | Italic)` is the bold italic
- * face. Variants nothing asked for may stay null. Each one is looked up exactly like SVG <text>
+ * Indexed by style bits (bit 0 = bold, bit 1 = italic, bit 2 = monospace), so `get(Bold | Italic)` is the
+ * bold italic face and `get(Mono | Bold)` the bold monospace one. Variants nothing asked for may stay null. Each one is looked up exactly like SVG <text>
  * looks up its font for the same weight/style, so the result is whatever faces the machine (or an
  * @font-face) provides -- there is no synthetic emboldening or slanting: with no bold face
  * installed, bold text simply renders in the regular face, as it does for <text>.
@@ -1194,9 +1194,12 @@ public:
 struct ForeignObjectFonts {
     static constexpr unsigned char Bold = 1;
     static constexpr unsigned char Italic = 2;
+    /// <code>, <tt>, <kbd>, <samp> and an inline `font-family: monospace`: the generic `monospace` family
+    /// (whatever face the machine, or an @font-face / registered family of that name, provides).
+    static constexpr unsigned char Mono = 4;
 
-    Font face[4];
-    const Font& get(unsigned char style) const { return face[style & 3]; }
+    Font face[8];
+    const Font& get(unsigned char style) const { return face[style & 7]; }
 };
 
 class SVGForeignObjectElement final : public SVGGraphicsElement {
@@ -6241,14 +6244,16 @@ NOVASVG_INLINE Rect SVGForeignObjectElement::strokeBoundingBox() const
 NOVASVG_INLINE ForeignObjectFonts SVGForeignObjectElement::fontsFor(unsigned usedStyles) const
 {
     ForeignObjectFonts fonts;
-    for(unsigned style = 0; style < 4; ++style) {
+    for(unsigned style = 0; style < 8; ++style) {
         if(!(usedStyles & (1u << style)))
             continue;
         if(style == m_baseFontStyle) {
             fonts.face[style] = m_font;
             continue;
         }
-        auto variant = makeFont(m_fontFamily, m_font.size(), (style & ForeignObjectFonts::Bold) != 0, (style & ForeignObjectFonts::Italic) != 0);
+        // Monospace text takes the generic `monospace` family, not the element's own stack.
+        auto variant = makeFont((style & ForeignObjectFonts::Mono) ? std::string("monospace") : m_fontFamily, m_font.size(),
+                                (style & ForeignObjectFonts::Bold) != 0, (style & ForeignObjectFonts::Italic) != 0);
         // A variant the machine can't provide at all must not blank the text: use the element's own face.
         fonts.face[style] = variant.isNull() ? m_font : variant;
     }
@@ -6470,11 +6475,12 @@ inline std::optional<std::string_view> htmlAttribute(std::string_view tag, std::
 // SVG-generating tools) only put one short run of text, perhaps with <br>, <b>/<strong> and <i>/<em>
 // in it.
 //
-// Style bits (ForeignObjectFonts::Bold / Italic) come from, in this order:
+// Style bits (ForeignObjectFonts::Bold / Italic / Mono) come from, in this order:
 //   * the style the foreignObject itself inherits from the SVG around it (the `baseStyle` argument);
-//   * the tag: <b> <strong> = bold, <i> <em> <cite> <var> <dfn> = italic;
-//   * an inline style="font-weight: ..." / style="font-style: ...", which wins over the tag and may
-//     also turn a style OFF again (`font-weight: normal` inside a bold stretch).
+//   * the tag: <b> <strong> = bold, <i> <em> <cite> <var> <dfn> = italic, <code> <tt> <kbd> <samp> = monospace;
+//   * an inline style="font-weight: ..." / style="font-style: ..." / style="font-family: ...", which wins
+//     over the tag and may also turn a style OFF again (`font-weight: normal` inside a bold stretch; of
+//     font-family only the generic `monospace` is understood).
 // Styles nest and are inherited by everything inside the element, and end with its closing tag.
 // ---------------------------------------------------------------------------------------------------
 struct ForeignObjectSegment {
@@ -6561,6 +6567,8 @@ inline unsigned char foreignObjectStyleOfOpening(const std::string& tag, std::st
         style |= ForeignObjectFonts::Bold;
     else if(tag == "i" || tag == "em" || tag == "cite" || tag == "var" || tag == "dfn")
         style |= ForeignObjectFonts::Italic;
+    else if(tag == "code" || tag == "tt" || tag == "kbd" || tag == "samp")
+        style |= ForeignObjectFonts::Mono;
 
     auto inlineStyle = foreignObjectStyleAttribute(attributes);
     if(!inlineStyle.empty()) {
@@ -6568,6 +6576,12 @@ inline unsigned char foreignObjectStyleOfOpening(const std::string& tag, std::st
             style &= (unsigned char)~ForeignObjectFonts::Bold;
             if(parseFontWeight(weight) == FontWeight::Bold)
                 style |= ForeignObjectFonts::Bold;
+        }
+        if(auto family = foreignObjectDeclaration(inlineStyle, "font-family"); !family.empty()) {
+            // Only the generic keyword is understood here; any other family is the element's own stack again.
+            style &= (unsigned char)~ForeignObjectFonts::Mono;
+            if(family.find("monospace") != std::string::npos)
+                style |= ForeignObjectFonts::Mono;
         }
         if(auto fontStyle = foreignObjectDeclaration(inlineStyle, "font-style"); !fontStyle.empty()) {
             style &= (unsigned char)~ForeignObjectFonts::Italic;
@@ -7102,7 +7116,7 @@ inline unsigned foreignObjectStylesUsed(const std::vector<ForeignObjectSegment>&
 {
     unsigned used = 0;
     for(const auto& segment : segments)
-        used |= 1u << (segment.style & 3);
+        used |= 1u << (segment.style & 7);
     return used;
 }
 
@@ -7222,7 +7236,8 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
 
     auto box = element->fillBoundingBox();
     // A browser wraps HTML text at its box's edge unless CSS says nowrap/pre.
-    auto lines = layoutForeignObjectText(segments, fonts, foreignObjectAllowsWrap(element->rawContent()) ? box.w : 0.f);
+    const bool softWraps = foreignObjectAllowsWrap(element->rawContent());
+    auto lines = layoutForeignObjectText(segments, fonts, softWraps ? box.w : 0.f);
 
     // Real line-height from the HTML's own `line-height:` (mermaid's
     // content usually says 1.5) when present and parseable; falls back
@@ -7265,12 +7280,17 @@ NOVASVG_INLINE void ForeignObjectSimple::render(const SVGForeignObjectElement* e
         // reliable way to know how much wider without the real font, so
         // rather than truncating (tried before, still didn't match a
         // real Chromium render) we condense that one line horizontally.
+        //
+        // A label that is allowed to wrap is different: a line still wider than the box can only be one word
+        // with no break opportunity in it, and CSS lets that word overflow (from the box's start edge, it is
+        // not centred) at its natural size instead of squeezing it.
         float scale = 1.f;
-        if(lineWidth > box.w && lineWidth > 0.f)
+        const bool overflowsAsWord = softWraps && lineWidth > box.w;
+        if(lineWidth > box.w && lineWidth > 0.f && !softWraps)
             scale = box.w / lineWidth;
 
         Point origin(
-            box.x + (box.w - lineWidth * scale) / 2.f,
+            overflowsAsWord ? box.x : box.x + (box.w - lineWidth * scale) / 2.f,
             // Baseline for this line = top of the text block + however
             // many line-heights precede it + half the leading (the extra
             // space line-height adds beyond the font's own ascent+descent,

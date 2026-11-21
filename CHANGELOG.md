@@ -1,6 +1,22 @@
 ## [Unreleased]
 
+### Added
+
+- **`<code>`, `<tt>`, `<kbd>`, `<samp>` and `style="font-family: monospace"` inside a `<foreignObject>` use a
+  monospace face**, as a browser does. It is a third style bit next to bold and italic
+  (`ForeignObjectFonts::Mono`), so measuring and painting both use it, and it looks up the generic `monospace`
+  family: a face registered under that name (or `@font-face`) wins, else the platform's stand-in. Before, such
+  text was drawn and measured in the proportional face, so a label that a browser lays out wider than that came
+  out too narrow. Not covered: any other `font-family` on a nested element, and `font-size` on a nested
+  element (the whole `<foreignObject>` still has one size).
+
 ### Fixed
+
+- **A word too long for a wrapping `<foreignObject>` label is no longer squeezed.** When the HTML lets the text
+  wrap (the default, `white-space: break-spaces`, ...) and one word is still wider than the box (`promise.get_return_object()`
+  in a 120 px mermaid label), CSS lets that word overflow the box at its natural size, starting at the box's
+  left edge; novasvg condensed it horizontally to fit. A `white-space: nowrap` line wider than its box is
+  still condensed, as before.
 
 - **`<foreignObject>` text now wraps after a hyphen, like a browser.** The soft-wrap only broke a line at a
   space, so a label such as Mermaid's `DELIVERY-ADDRESS` (an ER entity, wrapped at 120 px) stayed one line:

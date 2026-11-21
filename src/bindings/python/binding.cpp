@@ -208,12 +208,13 @@ NB_MODULE(novasvg_py, m) {
             const unsigned char base = (unsigned char)((bold ? novasvg::ForeignObjectFonts::Bold : 0)
                                                        | (italic ? novasvg::ForeignObjectFonts::Italic : 0));
             novasvg::ForeignObjectFonts fonts;
-            for(unsigned style = 0; style < 4; ++style) {
+            for(unsigned style = 0; style < 8; ++style) {
                 if(style == base) {
                     fonts.face[style] = font;
                     continue;
                 }
-                auto variant = novasvg::makeFont(*family, font.size(), (style & novasvg::ForeignObjectFonts::Bold) != 0,
+                auto variant = novasvg::makeFont((style & novasvg::ForeignObjectFonts::Mono) ? std::string("monospace") : *family,
+                                                 font.size(), (style & novasvg::ForeignObjectFonts::Bold) != 0,
                                                  (style & novasvg::ForeignObjectFonts::Italic) != 0);
                 fonts.face[style] = variant.isNull() ? font : variant;
             }
