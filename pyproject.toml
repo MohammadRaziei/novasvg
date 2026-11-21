@@ -53,6 +53,7 @@ define.NOVA_BUILD_PYTHON = "ON"
 define.NOVA_BUILD_TESTS = "OFF"
 define.NOVA_BUILD_DOCS = "OFF"
 define.NOVA_BUILD_EXAMPLES = "OFF"
+define.NOVA_SANITIZE = "OFF"
 
 
 [tool.scikit-build.metadata.version]

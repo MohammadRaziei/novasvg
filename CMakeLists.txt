@@ -40,9 +40,26 @@ option(NOVA_EMBED_DEFAULT_FONT "Compile a Latin subset of DejaVu Sans in as the 
 option(NOVA_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
 option(NOVA_BUILD_PYTHON "Build Python" ${PROJECT_IS_TOP_LEVEL})
 option(NOVA_BUILD_DOCS "Build documentation" OFF)
+# Off unless a developer asks for it explicitly (-DNOVA_SANITIZE=ON), in every build type, so release
+# builds and wheels never carry it. It must be set before libstb is fetched below: the flags are
+# directory-scoped, and libstb (font and image parsers) is where untrusted input is decoded.
+option(NOVA_SANITIZE "Build with AddressSanitizer and UndefinedBehaviorSanitizer (GCC/Clang only)" OFF)
 
 
 set(NOVA_SOURCE_DIR ${PROJECT_SOURCE_DIR})
+
+if(NOVA_SANITIZE)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        message(FATAL_ERROR "NOVA_SANITIZE needs GCC or Clang, not ${CMAKE_CXX_COMPILER_ID}")
+    endif()
+    message(STATUS "NovaSVG: AddressSanitizer + UndefinedBehaviorSanitizer enabled (libstb included)")
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
+    if(NOVA_BUILD_PYTHON)
+        message(WARNING "NOVA_SANITIZE with NOVA_BUILD_PYTHON: `import novasvg` needs libasan preloaded "
+                        "(LD_PRELOAD=$(gcc -print-file-name=libasan.so)); run the C++ tests instead.")
+    endif()
+endif()
 
 # ---- libstb: image/zlib/font engine, linked DYNAMICALLY ---------------------------------------
 # Fetched from git with FetchContent. Point FETCHCONTENT_SOURCE_DIR_LIBSTB at a local checkout to
