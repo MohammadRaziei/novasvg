@@ -28,6 +28,26 @@ TEST_CASE("foreignObject style: bold and italic tags")
     CHECK(describe("<b>a <i>b</i> c</b>") == "[a :1][b:3][ c:1]");
 }
 
+TEST_CASE("foreignObject style: monospace tags and font-family")
+{
+    CHECK(describe("<code>x</code>") == "[x:4]");
+    CHECK(describe("<tt>x</tt>") == "[x:4]");
+    CHECK(describe("<kbd>x</kbd>") == "[x:4]");
+    CHECK(describe("<samp>x</samp>") == "[x:4]");
+    CHECK(describe("a <code>b</code> c") == "[a :0][b:4][ c:0]");
+    CHECK(describe("<b><code>x</code></b>") == "[x:5]");
+    CHECK(describe("<span style=\"font-family: monospace\">x</span>") == "[x:4]");
+    CHECK(describe("<span style=\"font-family: 'Courier New', monospace\">x</span>") == "[x:4]");
+    // Any other family on a nested element is the element's own stack again.
+    CHECK(describe("<code><span style=\"font-family: Arial\">x</span></code>") == "[x:0]");
+}
+
+TEST_CASE("foreignObject style: spaces before a line break are dropped")
+{
+    CHECK(describe("one <br>two") == "[one|two:0]");
+    CHECK(describe("<b>one </b><br><i> two</i>") == "[one:1][|:0][two:2]");
+}
+
 TEST_CASE("foreignObject style: inline style attribute")
 {
     CHECK(describe("<span style=\"font-weight: bold\">x</span>") == "[x:1]");

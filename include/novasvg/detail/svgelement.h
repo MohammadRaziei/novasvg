@@ -3740,7 +3740,9 @@ NOVASVG_INLINE Rect SVGLineElement::updateShape(Path& path)
 
     path.moveTo(x1, y1);
     path.lineTo(x2, y2);
-    return Rect(x1, y1, x2 - x1, y2 - y1);
+    // A line that runs left or up (x2 < x1, y2 < y1) still has a box of positive size; a negative width or height made
+    // the box empty, so a group with `opacity` holding only such a line (d3's axis ticks: y2="-111") drew nothing.
+    return Rect(NOVASVG_MIN(x1, x2), NOVASVG_MIN(y1, y2), std::abs(x2 - x1), std::abs(y2 - y1));
 }
 
 NOVASVG_INLINE SVGRectElement::SVGRectElement(Document* document)
@@ -6577,10 +6579,15 @@ inline unsigned char foreignObjectStyleOfOpening(const std::string& tag, std::st
             if(parseFontWeight(weight) == FontWeight::Bold)
                 style |= ForeignObjectFonts::Bold;
         }
-        if(auto family = foreignObjectDeclaration(inlineStyle, "font-family"); !family.empty()) {
+        // The raw value: a family list may hold quoted names (`'Courier New', monospace`), which end the value of
+        // findDeclarationValue() at the first quote.
+        if(auto family = findRawDeclarationValue(inlineStyle, "font-family"); family && !family->empty()) {
             // Only the generic keyword is understood here; any other family is the element's own stack again.
+            std::string lower;
+            for(char c : *family)
+                lower += char(std::tolower(static_cast<unsigned char>(c)));
             style &= (unsigned char)~ForeignObjectFonts::Mono;
-            if(family.find("monospace") != std::string::npos)
+            if(lower.find("monospace") != std::string::npos)
                 style |= ForeignObjectFonts::Mono;
         }
         if(auto fontStyle = foreignObjectDeclaration(inlineStyle, "font-style"); !fontStyle.empty()) {

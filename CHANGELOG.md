@@ -10,7 +10,20 @@
   out too narrow. Not covered: any other `font-family` on a nested element, and `font-size` on a nested
   element (the whole `<foreignObject>` still has one size).
 
+
+### Changed
+
+- **Version metadata uses `[[tool.dynamic-metadata]]`.** scikit-build-core 1.x deprecates the `tool.scikit-build.metadata`
+  table (`WARNING: tool.scikit-build.metadata is deprecated`); the regex that reads the version from `novasvg.h` is now
+  a `[[tool.dynamic-metadata]]` entry with `field = "version"`, same provider and regex, and the build requires
+  `scikit-build-core>=1.0.0`, the first release that reads that table (it needs Python 3.8+, novasvg needs 3.9+).
+  The wheel's version is unchanged (0.11.5 from the header).
 ### Fixed
+
+- **A line that runs left or up has a box of positive size.** `<line>` returned `Rect(x1, y1, x2 - x1, y2 - y1)`, which has a
+  negative width or height when `x2 < x1` or `y2 < y1`, so the box was empty. A group with `opacity` that held only such a
+  line was drawn into an empty layer, i.e. not at all: d3's axis ticks (`<g class="tick" opacity="..."><line y2="-111"/></g>`),
+  the vertical grid of mermaid's gantt chart, vanished (mermaidx#58).
 
 - **A word too long for a wrapping `<foreignObject>` label is no longer squeezed.** When the HTML lets the text
   wrap (the default, `white-space: break-spaces`, ...) and one word is still wider than the box (`promise.get_return_object()`
