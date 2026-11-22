@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "scikit-build-core>=0.8.0",
+    "scikit-build-core>=1.0.0",
     "nanobind>=2.0.0"
 ]
 build-backend = "scikit_build_core.build"
@@ -56,7 +56,8 @@ define.NOVA_BUILD_EXAMPLES = "OFF"
 define.NOVA_SANITIZE = "OFF"
 
 
-[tool.scikit-build.metadata.version]
+[[tool.dynamic-metadata]]
+field = "version"
 provider = "scikit_build_core.metadata.regex"
 input = "include/nova/svg/svg.h"
 regex = '''(?sx)

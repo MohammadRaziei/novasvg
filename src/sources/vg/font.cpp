@@ -113,7 +113,7 @@ font_face font_face_cache::get_font_face(const std::string& family, int weight, 
                 return face;
             // Not even the platform's stand-in is installed: use the embedded font
             // so text is still drawn (and drawn the same way) on a machine without fonts.
-            return embedded_fallback_font(weight >= 600, italic);
+            return embedded_fallback_font(weight >= 600, italic, family == "monospace" ? fallback_family::mono : family == "serif" ? fallback_family::serif : fallback_family::sans);
         }
     }
 

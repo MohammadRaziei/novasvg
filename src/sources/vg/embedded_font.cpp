@@ -1,69 +1,76 @@
-// The embedded fallback font (a zlib+base64 payload in default_font.h), declared in src/sources/vg/font.h.
+// The embedded fallback fonts: byte arrays that cmake/EmbedFile.cmake generates (nova_embedded_fonts.hpp), declared in
+// src/sources/vg/font.h.
 #include "font.h"
 
-#include <stb/util.hpp>
 #include <stb/zlib.hpp>
 
 #include "render.h"
 
 #ifndef NOVA_DISABLE_EMBEDDED_FONT
-#include "default_font.h"
+#include "nova_embedded_fonts.hpp"
 #endif
 
-#include <cstdlib>
-#include <optional>
-#include <string>
-#include <vector>
+#include <cstddef>
+#include <exception>
 
 namespace nova::vg {
 
+#ifndef NOVA_DISABLE_EMBEDDED_FONT
 namespace {
-// fontFaceFromBase64() for a payload that was zlib-compressed before it was base64-encoded. The inflater is
-// libstb's (stb::zlib_decompress), which reports bad input by exception: that becomes an empty FontFace.
-font_face font_face_from_zlib_base64(std::string_view payload)
+// A face from an embedded array: the zlib stream of the TrueType bytes (tools/gen_default_font.py). The inflater is
+// libstb's (stb::zlib_decompress), which reports bad input by exception: that becomes an empty font_face.
+font_face font_face_from_embedded(const unsigned char* data, std::size_t size)
 {
-    const std::optional<std::vector<uint8_t>> compressed = stb::try_base64_decode(payload);
-    if(!compressed)
-        return font_face();
-    std::vector<uint8_t> inflated;
     try {
-        inflated = stb::zlib_decompress(compressed->data(), compressed->size());
+        return font_face(stb::zlib_decompress(data, size));
     } catch(const std::exception&) {
-        inflated.clear();
+        return font_face();
     }
-    return font_face(std::move(inflated));
 }
-
 }  // namespace
+#endif
 
-font_face embedded_fallback_font(bool bold, bool italic)
+font_face embedded_fallback_font(bool bold, bool italic, fallback_family family)
 {
 #ifdef NOVA_DISABLE_EMBEDDED_FONT
     (void)bold;
     (void)italic;
+    (void)family;
     return font_face();
 #else
-    // Each face is built on first use only: a machine with fonts never pays for the decode, and a
-    // program that never asks for bold never decodes the bold face.
-    auto build = [](const char* const* chunks) {
-        std::string payload;
-        for(auto chunk = chunks; *chunk; ++chunk)
-            payload += *chunk;
-        return font_face_from_zlib_base64(payload);
-    };
+    // Each face is built on first use only: a machine with fonts never pays for the decode, and a program that
+    // never asks for bold never decodes the bold face.
+    using namespace detail;
+    // Mono and Serif have no oblique: an italic request gets the upright face.
+    if(family == fallback_family::mono) {
+        if(bold) {
+            static const font_face face = font_face_from_embedded(embedded_font_mono_bold, embedded_font_mono_bold_size);
+            return face;
+        }
+        static const font_face face = font_face_from_embedded(embedded_font_mono, embedded_font_mono_size);
+        return face;
+    }
+    if(family == fallback_family::serif) {
+        if(bold) {
+            static const font_face face = font_face_from_embedded(embedded_font_serif_bold, embedded_font_serif_bold_size);
+            return face;
+        }
+        static const font_face face = font_face_from_embedded(embedded_font_serif, embedded_font_serif_size);
+        return face;
+    }
     if(bold && italic) {
-        static const font_face face = build(detail::k_embedded_font_bold_italic_zlib_base64);
+        static const font_face face = font_face_from_embedded(embedded_font_bold_italic, embedded_font_bold_italic_size);
         return face;
     }
     if(bold) {
-        static const font_face face = build(detail::k_embedded_font_bold_zlib_base64);
+        static const font_face face = font_face_from_embedded(embedded_font_bold, embedded_font_bold_size);
         return face;
     }
     if(italic) {
-        static const font_face face = build(detail::k_embedded_font_italic_zlib_base64);
+        static const font_face face = font_face_from_embedded(embedded_font_italic, embedded_font_italic_size);
         return face;
     }
-    static const font_face face = build(detail::k_embedded_font_zlib_base64);
+    static const font_face face = font_face_from_embedded(embedded_font_regular, embedded_font_regular_size);
     return face;
 #endif
 }

@@ -51,8 +51,15 @@ static std::string json_escape(const std::string& text)
     return out;
 }
 
+static bool has_extension(const std::string& filename, const char* wanted) {
+    std::string ext = fs::path(filename).extension().string();
+    for (auto& c : ext) c = char(std::tolower(static_cast<unsigned char>(c)));
+    return ext == wanted;
+}
+
 // Picks the encoder from the extension (.png .bmp .tga .jpg .jpeg, case-insensitive); anything else is PNG, and
 // JPEG quality is 80 -- the behaviour the CLI always had. stb::image::write() would throw on an unknown extension.
+// (.pdf never gets here: cmd_convert writes a vector PDF.)
 static bool write_image(const stb::image& image, const std::string& filename) {
     std::string ext = fs::path(filename).extension().string();
     for (auto& c : ext) c = char(std::tolower(static_cast<unsigned char>(c)));
@@ -150,7 +157,20 @@ int cmd_convert(const std::string& input,
 
     std::cout << "Converting: " << input << " -> " << output_path.string() << "\n";
     std::cout << "Original size: " << doc->width() << "x" << doc->height() << "px\n";
-    
+
+    // A .pdf is a real one-page vector PDF at the document's own size (1 px = 0.75 pt), not a bitmap: there is no
+    // output size or background to choose.
+    if (has_extension(output_path.string(), ".pdf")) {
+        if (width > 0 || height > 0 || (scale > 0.0f && scale != 1.0f) || !bg_color_str.empty())
+            cli_log().warning("PDF output has the SVG's own size and no background: -w, -H, -s and -b are ignored");
+        if (!doc->save_pdf(output_path.string())) {
+            cli_log().error("Failed to save PDF file: %s", output_path.string().c_str());
+            return 1;
+        }
+        std::cout << "Successfully converted to " << output_path.string() << "\n";
+        return 0;
+    }
+
     // Calculate Dimensions
     if (scale > 0.0f && scale != 1.0f) {
         width = static_cast<int>(doc->width() * scale);
@@ -178,7 +198,7 @@ int cmd_convert(const std::string& input,
     }
     
     if (!write_image(image, output_path.string())) {
-        cli_log().error("Failed to save PNG file: %s", output_path.string().c_str());
+        cli_log().error("Failed to save image file: %s", output_path.string().c_str());
         return 1;
     }
     
@@ -404,7 +424,7 @@ int main(int argc, char** argv) {
     float convert_scale = 0.0f;
 
     app.add_option("input", convert_input, "Input SVG file")->check(CLI::ExistingFile);
-    app.add_option("-o,--output", convert_output, "Output PNG file (default: input name with .png extension)");
+    app.add_option("-o,--output", convert_output, "Output file: .png .bmp .tga .jpg or .pdf (default: input name with .png extension)");
     app.add_option("-w,--width", convert_width, "Output width in pixels");
     app.add_option("-H,--height", convert_height, "Output height in pixels");
     app.add_option("-s,--scale", convert_scale, "Scale factor (e.g., 2.0)");
@@ -418,7 +438,7 @@ int main(int argc, char** argv) {
     // the same thing to CLI11, not two code paths kept in sync by hand.
     auto convert_cmd = app.add_subcommand("convert", "Convert SVG to PNG (also the default action -- see below).");
     convert_cmd->add_option("input", convert_input, "Input SVG file")->check(CLI::ExistingFile);
-    convert_cmd->add_option("-o,--output", convert_output, "Output PNG file (default: input name with .png extension)");
+    convert_cmd->add_option("-o,--output", convert_output, "Output file: .png .bmp .tga .jpg or .pdf (default: input name with .png extension)");
     convert_cmd->add_option("-w,--width", convert_width, "Output width in pixels");
     convert_cmd->add_option("-H,--height", convert_height, "Output height in pixels");
     convert_cmd->add_option("-s,--scale", convert_scale, "Scale factor (e.g., 2.0)");

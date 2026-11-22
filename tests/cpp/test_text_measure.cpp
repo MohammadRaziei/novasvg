@@ -5,18 +5,21 @@
 
 #include <nova/svg/svg.h>
 
-#include "vg/font.h"
+#include <nova/vg/font.h>
 
 // nova::svg::measure_text(): the public way to size a text without building a document. It goes through the same
 // font lookup and shaping as <text>, so it must agree with the box of a real <text> element.
 
 namespace {
+std::string dejavu_path()
+{
+    return (std::filesystem::path(__FILE__).parent_path().parent_path().parent_path() / "data" / "fonts" / "DejaVuSans.ttf").string();
+}
+
 void load_dejavu()
 {
-    static const bool loaded = nova::vg::add_font_face_from_file(
-        "DejaVu Sans", false, false,
-        (std::filesystem::path(__FILE__).parent_path().parent_path().parent_path() / "data" / "fonts" / "DejaVuSans.ttf").string().c_str());
-    REQUIRE(loaded);
+    static const int faces = nova::vg::add_font_file(dejavu_path());
+    REQUIRE(faces > 0);
 }
 
 double element_width(const std::string& content, float size)
@@ -82,4 +85,13 @@ TEST_CASE("measure_text: numeric weight, the bool forms and clamping")
     // Out of range is clamped, not rejected.
     CHECK(nova::svg::measure_text("Hello", "DejaVu Sans", 20.f, 0).width > 0.f);
     CHECK(nova::svg::measure_text("Hello", "DejaVu Sans", 20.f, 5000).width > 0.f);
+}
+
+TEST_CASE("add_font_file: registers a font under its own family name, refuses what is not a font")
+{
+    CHECK(nova::vg::add_font_file(dejavu_path()) > 0);
+    CHECK(nova::vg::add_font_file((std::filesystem::path(dejavu_path()).parent_path() / "no-such-file.ttf").string()) == 0);
+    // A readable file that is not a font.
+    CHECK(nova::vg::add_font_file((std::filesystem::path(__FILE__).parent_path() / "CMakeLists.txt").string()) == 0);
+    CHECK(nova::svg::measure_text("Hello", "DejaVu Sans", 20.f).width > 0.f);
 }

@@ -117,6 +117,23 @@ target_include_directories(nova_vg PUBLIC
 target_link_libraries(nova_vg PUBLIC libstb::libstb)
 if(NOT NOVA_EMBED_DEFAULT_FONT)
     target_compile_definitions(nova_vg PUBLIC NOVA_DISABLE_EMBEDDED_FONT)
+else()
+    # The last-resort fonts (zlib-compressed Latin subsets of DejaVu Sans, Sans Mono and Serif, made by tools/gen_default_font.py and
+    # committed) become a header of byte arrays in the build tree (see cmake/EmbedFile.cmake).
+    include(EmbedFile)
+    set(_nova_fonts "${CMAKE_CURRENT_SOURCE_DIR}/data/fonts/embedded")
+    embed_files(
+        OUTPUT    "${CMAKE_CURRENT_BINARY_DIR}/generated/nova_embedded_fonts.hpp"
+        NAMESPACE nova::vg::detail
+        FILES     embedded_font_regular     "${_nova_fonts}/DejaVuSans.ttf.z"
+                  embedded_font_bold        "${_nova_fonts}/DejaVuSans-Bold.ttf.z"
+                  embedded_font_italic      "${_nova_fonts}/DejaVuSans-Oblique.ttf.z"
+                  embedded_font_bold_italic "${_nova_fonts}/DejaVuSans-BoldOblique.ttf.z"
+                  embedded_font_mono        "${_nova_fonts}/DejaVuSansMono.ttf.z"
+                  embedded_font_mono_bold   "${_nova_fonts}/DejaVuSansMono-Bold.ttf.z"
+                  embedded_font_serif       "${_nova_fonts}/DejaVuSerif.ttf.z"
+                  embedded_font_serif_bold  "${_nova_fonts}/DejaVuSerif-Bold.ttf.z")
+    target_include_directories(nova_vg PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 endif()
 novasvg_optimize(nova_vg)
 

@@ -99,11 +99,12 @@ private:
     std::shared_ptr<const stb::font> m_font;
 };
 
-// The last-resort fonts: Latin subsets of DejaVu Sans (regular, bold, oblique and bold oblique)
-// compiled into the library (see default_font.h); the face matching `bold` / `italic` is returned.
-// A null face when built with NOVA_DISABLE_EMBEDDED_FONT.
-// Defined in svg_style.cpp, next to the base64 decoding it shares with @font-face.
-font_face embedded_fallback_font(bool bold = false, bool italic = false);
+// The last-resort fonts: Latin subsets of DejaVu Sans (regular, bold, oblique and bold oblique), of DejaVu Sans Mono
+// and of DejaVu Serif (regular and bold each), compiled into the library (see embedded_font.cpp). The face matching
+// `bold` / `italic` is returned. Mono and Serif have no oblique here, so an italic request for them gets the upright
+// face. A null face when built with NOVA_DISABLE_EMBEDDED_FONT.
+enum class fallback_family { sans, serif, mono };
+font_face embedded_fallback_font(bool bold = false, bool italic = false, fallback_family family = fallback_family::sans);
 
 // The faces a family name can be asked for: installed ones (known by their file, loaded on first use) and added ones.
 // Thread-safe. A request is answered by the face of that family that fits bold and italic best (see get_font_face_local).

@@ -46,3 +46,15 @@ def test_batch_converts_every_svg(cli, svg, tmp_path):
     out = tmp_path / "out"
     run(cli, "batch", svg.parent, out)
     assert (out / "in.png").exists()
+
+
+def test_pdf_output_is_a_pdf_not_a_renamed_png(cli, svg, tmp_path):
+    out = tmp_path / "out.pdf"
+    run(cli, svg, "-o", out)
+    assert out.read_bytes().startswith(b"%PDF-")
+
+
+def test_png_output_is_still_a_png(cli, svg, tmp_path):
+    out = tmp_path / "out.png"
+    run(cli, svg, "-o", out)
+    assert out.read_bytes().startswith(b"\x89PNG")

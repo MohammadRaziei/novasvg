@@ -2,6 +2,7 @@
 // called (family, weight, width, bold, italic: font::scan and font::system_fonts) and reads the font; this file only
 // keeps the table and picks.
 #include "font.h"
+#include <nova/vg/font.h>
 #include "internal.h"
 #include "../utils/text.h"
 #include <stb/logging.hpp>
@@ -258,6 +259,11 @@ int font_face_cache::load_dir(const char*) { return -1; }
 int font_face_cache::load_system() { return -1; }
 
 #endif // NOVA_DISABLE_FONT_FACE_CACHE_LOAD
+
+int add_font_file(const std::string& path)
+{
+    return global_font_face_cache()->load_file(path.c_str());
+}
 
 } // namespace vg
 } // namespace nova

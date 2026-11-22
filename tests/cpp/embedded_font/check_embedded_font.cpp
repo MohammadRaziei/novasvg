@@ -122,6 +122,36 @@ TEST_CASE("bold and italic requests get the bold / oblique embedded faces, laid 
     }
 }
 
+TEST_CASE("monospace gets the embedded Mono face: every character is as wide as every other")
+{
+    // DejaVu Sans Mono advances 1233 of 2048 units for every character; Sans is proportional.
+    const float size = 20.f;
+    const double advance = size * 1233.0 / 2048.0;
+    const auto narrow = nova::svg::measure_text("iiiii", "monospace", size).width;
+    const auto wide = nova::svg::measure_text("WWWWW", "monospace", size).width;
+    CHECK(narrow == doctest::Approx(wide).epsilon(0.001));
+    CHECK(narrow == doctest::Approx(5 * advance).epsilon(0.01));
+    CHECK(nova::svg::measure_text("WWWWW", "monospace", size, true).width == doctest::Approx(5 * advance).epsilon(0.01));
+
+    // The same text in sans-serif is proportional, so the check above does tell the two apart.
+    CHECK(nova::svg::measure_text("iiiii", "sans-serif", size).width <
+          nova::svg::measure_text("WWWWW", "sans-serif", size).width);
+}
+
+TEST_CASE("serif gets the embedded Serif face, not the proportional Sans")
+{
+    // DejaVu Serif advances (of 2048 units): i 655, W 2105 regular; W 2300 bold. DejaVu Sans: i 569.
+    const float size = 20.f;
+    const double unit = size / 2048.0;
+    CHECK(nova::svg::measure_text("iiiii", "serif", size).width == doctest::Approx(5 * 655 * unit).epsilon(0.01));
+    CHECK(nova::svg::measure_text("WWWWW", "serif", size).width == doctest::Approx(5 * 2105 * unit).epsilon(0.01));
+    CHECK(nova::svg::measure_text("WWWWW", "serif", size, true).width == doctest::Approx(5 * 2300 * unit).epsilon(0.01));
+    CHECK(nova::svg::measure_text("iiiii", "sans-serif", size).width == doctest::Approx(5 * 569 * unit).epsilon(0.01));
+    // No oblique Serif: italic gets the upright face.
+    CHECK(nova::svg::measure_text("WWWWW", "serif", size, false, true).width ==
+          doctest::Approx(nova::svg::measure_text("WWWWW", "serif", size).width));
+}
+
 TEST_CASE("bold text is drawn heavier than regular text although the machine has no fonts")
 {
     auto text = [](const char* attrs) {
