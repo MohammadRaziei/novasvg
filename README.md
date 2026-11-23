@@ -60,6 +60,7 @@ int main() {
 ```bash
 novasvg input.svg                                  # -> input.png
 novasvg input.svg -o out.png -w 800 -b FFFFFF      # width 800, white background
+novasvg input.svg -o out.pdf                       # a vector PDF, not a bitmap
 novasvg input.svg --style "rect { fill: tomato; }" # restyle before rendering
 novasvg info input.svg                             # size, bounding box, element count
 novasvg query "circle" input.svg --json            # CSS-selector search
@@ -151,10 +152,12 @@ Not implemented yet: per-primitive filter regions, `feColorMatrix` / `feTurbulen
 
 ### Fonts
 
-Font lookup works like a browser, with no OS font library involved. A `font-family` stack is walked name by name: an installed or registered font first, then a metric-compatible stand-in (`arial` → Liberation Sans / Arimo, `times new roman` → Liberation Serif / Tinos, `calibri` → Carlito, ...), then the generic keywords. A ~40 KB Latin subset of DejaVu Sans is compiled in as the last resort, so text renders even on a machine with no fonts installed. For the best fidelity, install a metric-compatible family such as `fonts-liberation`.
+Font lookup works like a browser, with no OS font library involved. A `font-family` stack is walked name by name: an installed or registered font first, then a metric-compatible stand-in (`arial` → Liberation Sans / Arimo, `times new roman` → Liberation Serif / Tinos, `calibri` → Carlito, ...), then the generic keywords. Latin subsets of DejaVu Sans (regular, bold, oblique, bold oblique), DejaVu Sans Mono and DejaVu Serif (regular and bold) are compiled in as the last resort (125 KB, zlib-compressed), so text renders even on a machine with no fonts installed: `monospace` gets equal-width characters and `serif` gets serifs. For the best fidelity, install a metric-compatible family such as `fonts-liberation`.
 
 ```cpp
-nova::vg::addFontFaceFromFile("Inter", /*bold=*/false, /*italic=*/false, "Inter-Regular.ttf");
+#include <nova/vg/font.h>
+
+nova::vg::add_font_file("Inter-Regular.ttf");   // every face of the file, under the family and weight the font declares
 ```
 
 Disable the embedded font with `-DNOVA_EMBED_DEFAULT_FONT=OFF` or by defining `NOVA_DISABLE_EMBEDDED_FONT`.
@@ -164,7 +167,10 @@ Disable the embedded font with `-DNOVA_EMBED_DEFAULT_FONT=OFF` or by defining `N
 | Class | Main members |
 |---|---|
 | `nova::svg::document` | `load_file()` · `load_data()` · `render_to_image()` · `render_to_pixmap()` · `query_selector_all()` · `apply_style_sheet()` · `width()` / `height()` · `bounding_box()` |
+| `nova::svg::document` (PDF) | `render_to_pdf()` · `save_pdf()`: a one-page vector PDF (C++ and the CLI; not in Python) |
 | `nova::svg::element` | `attribute()` / `set_attribute()` / `has_attribute()` · `render()` · `local_bounding_box()` / `global_bounding_box()` · `local_matrix()` / `global_matrix()` |
+| `nova::svg` (free functions) | `measure_text()` size a text without building a document · `is_valid_selector()` tell a wrong selector from one that matches nothing |
+| `nova::vg` | `add_font_file()` register a font file (`nova/vg/font.h`) |
 | `stb::image` (libstb) | `write_png()` / `write_jpg()` / `write_bmp()` / `write_tga()` · `data()` · `width()` / `height()` / `stride()` |
 | `nova::vg::pixmap` | the drawing layer's surface (ARGB32 premultiplied), for `nova::vg` users |
 | `stb::matrix` (libstb) | `translate()` · `scale()` · `rotate()` · `shear()` · `inverse()` · `then()` |
@@ -175,7 +181,7 @@ Full reference: [mohammadraziei.github.io/novasvg](https://mohammadraziei.github
 
 | Option | Description |
 |---|---|
-| `-o, --output <file>` | Output PNG (default: input name with `.png`) |
+| `-o, --output <file>` | Output file, by extension: `.png` `.bmp` `.tga` `.jpg` or `.pdf` (default: input name with `.png`). A `.pdf` is a one-page vector PDF at the SVG's own size, so `-w`, `-H`, `-s` and `-b` do not apply to it |
 | `-w, --width <px>` / `-H, --height <px>` | Output size |
 | `-s, --scale <factor>` | Scale factor, e.g. `2.0` |
 | `-b, --background-color <hex>` | `RRGGBB` or `RRGGBBAA` (default: transparent) |
@@ -183,9 +189,9 @@ Full reference: [mohammadraziei.github.io/novasvg](https://mohammadraziei.github
 
 | Subcommand | Description |
 |---|---|
-| `convert` | Convert to PNG. This is the default, so `novasvg in.svg` works on its own |
+| `convert` | Convert to an image or PDF. This is the default, so `novasvg in.svg` works on its own |
 | `info` | Size, bounding box and element count; add `--json` for machine-readable output |
-| `query` | Find elements by CSS selector, e.g. `novasvg query "rect[fill='red']" in.svg` |
+| `query` | Find elements by CSS selector, e.g. `novasvg query "rect[fill='red']" in.svg`; a selector that is not valid is an error (exit 1), `--json` for machine-readable output |
 | `batch` | Convert every SVG in a directory |
 
 `novasvg --help` and `novasvg <subcommand> --help` always list the current options.
@@ -199,7 +205,9 @@ Full reference: [mohammadraziei.github.io/novasvg](https://mohammadraziei.github
 | `NOVA_BUILD_PYTHON` | Build the Python bindings | `ON` when top-level |
 | `NOVA_BUILD_DOCS` | Build the docs with Doxygen | `OFF` |
 | `NOVA_INSTALL` | Install the CMake package (`novasvg::novasvg`, `novasvg::noflag`) | `ON` when top-level |
-| `NOVA_EMBED_DEFAULT_FONT` | Compile in the fallback font | `ON` |
+| `NOVA_EMBED_DEFAULT_FONT` | Compile in the fallback fonts (DejaVu Sans, Sans Mono and Serif subsets) | `ON` |
+| `NOVA_FOREIGN_OBJECT_SIMPLE` | Build the built-in simple HTML renderer for `<foreignObject>` | `ON` |
+| `NOVA_SANITIZE` | Build novasvg and libstb with AddressSanitizer and UndefinedBehaviorSanitizer (GCC and Clang) | `OFF` |
 
 ## Repository layout
 

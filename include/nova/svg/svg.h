@@ -496,6 +496,15 @@ struct text_metrics {
  * @param bold `font-weight: bold` when true, `normal` otherwise.
  * @param italic `font-style: italic` when true, `normal` otherwise.
  */
+/**
+ * @brief Whether document::query_selector_all() understands a CSS selector (or a comma-separated list of them).
+ *
+ * query_selector_all() returns an empty list both when nothing matches and when the selector is wrong, so a caller
+ * that wants to tell the two apart asks this first. False means a syntax error, an empty string, or a selector
+ * novasvg does not support.
+ */
+NOVA_API bool is_valid_selector(const std::string& selector);
+
 NOVA_API text_metrics measure_text(const std::string& utf8_text, const std::string& font_family, float font_size,
                                    bool bold = false, bool italic = false);
 

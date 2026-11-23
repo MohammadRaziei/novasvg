@@ -74,7 +74,7 @@ TEST_CASE("render_to_pdf: no size, no page")
 }
 
 // novasvg logs through stb::logging ("novasvg", "novasvg.svg", "novasvg.pdf"): a handler on "novasvg" sees them.
-TEST_CASE("logging: failures and PDF limits reach a stb::logging handler")
+TEST_CASE("logging: failures reach a stb::logging handler")
 {
     std::vector<std::string> seen;
     auto& lg = stb::logging::get_logger("novasvg");
@@ -103,5 +103,31 @@ TEST_CASE("logging: failures and PDF limits reach a stb::logging handler")
     };
     CHECK(has("novasvg.svg: cannot open"));
     CHECK(has("novasvg.svg: cannot parse"));
-    CHECK(has("novasvg.pdf: a gradient whose stops have different alpha"));  // a fade: PDF paints it opaque
+    CHECK_FALSE(has("novasvg.pdf: a gradient whose stops have different alpha"));  // a fade is a soft mask now, nothing to warn about
 }
+
+// Stops with different alpha (a fade) are a luminosity soft mask over the same gradient; one shared alpha is an
+// ordinary constant alpha. Checked by eye against pdfium and poppler when it was written (mean difference under 0.5
+// from the raster render): here the structure.
+TEST_CASE("render_to_pdf: a fade gradient is a soft mask, a uniform one is not")
+{
+    auto pdf = [](const char* second_stop) {
+        const std::string svg = std::string("<svg xmlns='http://www.w3.org/2000/svg' width='100' height='50'><defs>"
+            "<linearGradient id='g'><stop offset='0' stop-color='red'/><stop offset='1' stop-color='red' ") + second_stop +
+            "/></linearGradient></defs><rect width='100' height='50' fill='url(#g)'/></svg>";
+        auto doc = document::load_data(svg);
+        REQUIRE(doc);
+        return text_of(doc->render_to_pdf(document::pdf_mode::vector));
+    };
+
+    const std::string fade = pdf("stop-opacity='0'");
+    CHECK(fade.find("/SMask << /Type /Mask /S /Luminosity /G ") != std::string::npos);
+    CHECK(fade.find("/Subtype /Form") != std::string::npos);
+    CHECK(fade.find("/ShadingType 2") != std::string::npos);
+
+    const std::string plain = pdf("stop-opacity='1'");
+    CHECK(plain.find("/S /Luminosity") == std::string::npos);
+    // every graphics state names its mask, so a mask can never leak into the next operation
+    CHECK(plain.find("/SMask /None") != std::string::npos);
+}
+

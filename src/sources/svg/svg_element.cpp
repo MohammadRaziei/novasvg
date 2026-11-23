@@ -1,3 +1,4 @@
+#include <cmath>
 #include "vg/pixmap.h"
 #include "svgelement.h"
 
@@ -702,8 +703,16 @@ stroke_data svg_graphics_element::get_stroke_data(const svg_layout_state& state)
     stroke_data_.set_dash_offset(length_context_.value_for_length(state.stroke_dashoffset(), length_direction::diagonal));
 
     dash_pattern dash_array_;
-    for(const auto& dash : state.stroke_dasharray())
+    float dash_total = 0.f;
+    for(const auto& dash : state.stroke_dasharray()) {
         dash_array_.push_back(length_context_.value_for_length(dash, length_direction::diagonal));
+        dash_total += dash_array_.back();
+    }
+    // SVG 1.1 section 11.4: a dash array that sums to zero is `none` (mermaid writes `stroke-dasharray: 0`). Passed
+    // on, libstb would log "the dash pattern is not usable" for every stroke. The same goes for a value that
+    // resolved to something non-finite.
+    if(!(dash_total > 0.f) || !std::isfinite(dash_total))
+        dash_array_.clear();
     stroke_data_.set_dash_array(std::move(dash_array_));
     return stroke_data_;
 }

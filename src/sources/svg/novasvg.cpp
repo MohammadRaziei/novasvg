@@ -872,6 +872,11 @@ element_list document::query_selector_all(const std::string& content) const
     return elements;
 }
 
+bool is_valid_selector(const std::string& selector)
+{
+    return !parse_query_selectors(selector).empty();
+}
+
 text_metrics measure_text(const std::string& utf8_text, const std::string& font_family, float font_size, bool bold, bool italic)
 {
     return measure_text(utf8_text, font_family, font_size, bold ? font_weight_bold : font_weight_normal, italic);

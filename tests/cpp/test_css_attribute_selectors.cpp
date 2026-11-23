@@ -61,3 +61,16 @@ TEST_CASE("custom attributes are copied by <use>")
     CHECK(image(20, 20, 0) == 255);
     CHECK(image(20, 20, 1) == 0);
 }
+
+TEST_CASE("is_valid_selector: tells a wrong selector from one that matches nothing")
+{
+    CHECK(nova::svg::is_valid_selector("rect"));
+    CHECK(nova::svg::is_valid_selector("#a, .b > path"));
+    CHECK(nova::svg::is_valid_selector("[fill=\"red\"]"));
+    CHECK(nova::svg::is_valid_selector("circle.that-does-not-exist"));  // valid, it just matches nothing
+
+    CHECK_FALSE(nova::svg::is_valid_selector(""));
+    CHECK_FALSE(nova::svg::is_valid_selector("[["));
+    CHECK_FALSE(nova::svg::is_valid_selector("rect >"));
+}
+

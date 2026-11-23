@@ -274,6 +274,10 @@ int cmd_info(const std::string& input, bool json_output = false) {
 }
 
 int cmd_query(const std::string& selector, const std::string& input, bool json_output = false) {
+    if (!nova::svg::is_valid_selector(selector)) {
+        cli_log().error("Invalid or unsupported selector: %s", selector.c_str());
+        return 1;
+    }
     std::unique_ptr<nova::svg::document> doc = nova::svg::document::load_file(input);
     if (!doc) {
         cli_log().error("Failed to load SVG file: %s", std::string(input).c_str());

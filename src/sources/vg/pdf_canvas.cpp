@@ -102,29 +102,39 @@ int pdf_canvas::add_stream(std::string dict, const std::string& bytes, bool comp
     return int(m_objects.size());
 }
 
+// The PDF names of the W3C blend modes (ISO 32000-1 11.3.5). `add` has none and stays Normal.
 static const char* pdf_blend_name(blend_mode mode)
 {
     switch(mode) {
     case blend_mode::multiply: return "Multiply";
     case blend_mode::screen: return "Screen";
+    case blend_mode::overlay: return "Overlay";
     case blend_mode::darken: return "Darken";
     case blend_mode::lighten: return "Lighten";
+    case blend_mode::color_dodge: return "ColorDodge";
+    case blend_mode::color_burn: return "ColorBurn";
+    case blend_mode::hard_light: return "HardLight";
+    case blend_mode::soft_light: return "SoftLight";
     case blend_mode::difference: return "Difference";
     case blend_mode::exclusion: return "Exclusion";
+    case blend_mode::hue: return "Hue";
+    case blend_mode::saturation: return "Saturation";
+    case blend_mode::color: return "Color";
+    case blend_mode::luminosity: return "Luminosity";
     default: return "Normal";
     }
 }
 
-std::string pdf_canvas::alpha_state(float alpha, blend_mode blend_mode_)
+std::string pdf_canvas::alpha_state(float alpha, blend_mode blend_mode_, int soft_mask)
 {
     std::string alpha_text = num(clamp01(alpha));
     std::string blend = pdf_blend_name(blend_mode_);
-    std::string key = alpha_text + "|" + blend;
+    std::string key = alpha_text + "|" + blend + "|" + std::to_string(soft_mask);
     auto it = m_ext_gstates.find(key);
     if(it != m_ext_gstates.end())
         return it->second.name;
     std::string name = "GS" + std::to_string(m_ext_gstates.size());
-    m_ext_gstates.emplace(key, ext_gstate{name, alpha_text, blend});
+    m_ext_gstates.emplace(key, ext_gstate{name, alpha_text, blend, soft_mask});
     return name;
 }
 
@@ -239,20 +249,11 @@ std::string spread_function(const std::vector<gradient_stop_t>& stops, int perio
 }  // namespace
 
 // Once per page: a drawing with many gradients would otherwise repeat the same message.
-void pdf_canvas::warn_about_fade(const gradient_stops& stops)
-{
-    if(uniform_stop_alpha(stops) < 0.f && !m_said_fade) {
-        m_said_fade = true;
-        pdf_log().warning("a gradient whose stops have different alpha is painted opaque in PDF output");
-    }
-}
-
 void pdf_canvas::set_linear_gradient(float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stops& stops, const transform& transform_)
 {
     paint& p = m_paints.back();
     p = paint();
     p.type_ = paint::kind::linear;
-    warn_about_fade(stops);
     p.p[0] = x1; p.p[1] = y1; p.p[2] = x2; p.p[3] = y2;
     p.spread = spread;
     p.stops = stops;
@@ -264,23 +265,23 @@ void pdf_canvas::set_radial_gradient(float cx, float cy, float r, float fx, floa
     paint& p = m_paints.back();
     p = paint();
     p.type_ = paint::kind::radial;
-    warn_about_fade(stops);
     p.p[0] = cx; p.p[1] = cy; p.p[2] = r; p.p[3] = fx; p.p[4] = fy;
     p.spread = spread;
     p.stops = stops;
     p.matrix = transform_.matrix();
 }
 
-// A shading pattern for the current gradient paint, drawn through `transform` (the matrix of the operation).
-// Returns the pattern's object number, or 0 when the gradient has no stops (nothing to paint).
-int pdf_canvas::shading_pattern(const stb::matrix& transform_)
+// A shading pattern with the geometry of the current gradient paint and the colours of `gradient` (the paint's own
+// stops, or grey levels for a fade mask), drawn through `transform` (the matrix of the operation). Returns the
+// pattern's object number, or 0 when there are no stops (nothing to paint).
+int pdf_canvas::shading_pattern(const stb::matrix& transform_, const gradient_stops& gradient, bool in_form)
 {
     const paint& p = m_paints.back();
-    if(p.stops.empty())
+    if(gradient.empty())
         return 0;
 
     // Stops, extended to cover 0..1 so pad works through /Extend alone.
-    std::vector<gradient_stop_t> stops = p.stops;
+    std::vector<gradient_stop_t> stops = gradient;
     if(stops.front().offset > 0.f)
         stops.insert(stops.begin(), gradient_stop_t{0.f, stops.front().color_});
     if(stops.back().offset < 1.f)
@@ -359,13 +360,30 @@ int pdf_canvas::shading_pattern(const stb::matrix& transform_)
         shading = "<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [" + coords + "] /Function " + function + " /Extend [true true] >>";
     }
 
-    // The pattern matrix maps pattern space to the *default page space*, not to the current CTM.
+    // The pattern matrix maps pattern space to the default space of the content stream that uses it, not to the
+    // current CTM: for the page that is point space with y up (hence `base`), for a Form XObject it is the form's
+    // own space, which is the pixel space already.
     stb::matrix base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
-    stb::matrix m = then(then(p.matrix, transform_), base);
+    stb::matrix m = in_form ? then(p.matrix, transform_) : then(then(p.matrix, transform_), base);
     int obj = add_object("<< /Type /Pattern /PatternType 2 /Shading " + shading + " /Matrix [" + matrix_str(m) + "] >>");
     std::string name = "P" + std::to_string(m_patterns.size());
     m_patterns.emplace_back(name, obj);
     return obj;
+}
+
+int pdf_canvas::fade_mask(const stb::matrix& transform_)
+{
+    // The stop alphas as grey: luminosity of (a, a, a) is a, so the soft mask passes exactly the stops' alpha.
+    gradient_stops grey = m_paints.back().stops;
+    for(auto& stop : grey)
+        stop.color_ = stb::color(stop.color_.a(), stop.color_.a(), stop.color_.a(), 255);
+    if(shading_pattern(transform_, grey, true) == 0)
+        return 0;
+    const std::string pattern = m_patterns.back().first;
+    const std::string page = "0 0 " + num(m_width) + " " + num(m_height);
+    // BBox and the rectangle are in pixels: the soft mask is read in the space the `gs` that names it runs in.
+    return add_stream("/Type /XObject /Subtype /Form /BBox [" + page + "] /Group << /S /Transparency /CS /DeviceRGB >> /Resources %%RES%%",
+                      "/Pattern cs /" + pattern + " scn\n" + page + " re f\n", true);
 }
 
 // Selects the current paint as fill or stroke color in the content stream. `transform` is the operation's matrix
@@ -387,15 +405,18 @@ void pdf_canvas::begin_paint(bool stroke, const stb::matrix& transform_)
         return;
     }
 
-    if(shading_pattern(transform_) == 0) {
+    if(shading_pattern(transform_, p.stops) == 0) {
         m_content += "/" + alpha_state(0.f) + " gs\n";
         return;
     }
-    // what `fill-opacity` makes of a gradient is one alpha shared by all its stops; a fade is painted opaque
+    const std::string color_pattern = m_patterns.back().first;
+    // What `fill-opacity` makes of a gradient is one alpha shared by all its stops: an ordinary constant alpha. Stops
+    // with different alpha (a fade) become a soft mask over the same gradient.
     const float gradient_alpha = uniform_stop_alpha(p.stops);
-    m_content += "/" + alpha_state(gradient_alpha < 0.f ? 1.f : gradient_alpha) + " gs\n";
+    const int mask = gradient_alpha < 0.f ? fade_mask(transform_) : 0;
+    m_content += "/" + alpha_state(gradient_alpha < 0.f ? 1.f : gradient_alpha, blend_mode::normal, mask) + " gs\n";
     m_content += stroke ? "/Pattern CS /" : "/Pattern cs /";
-    m_content += m_patterns.back().first + (stroke ? " SCN\n" : " scn\n");
+    m_content += color_pattern + (stroke ? " SCN\n" : " scn\n");
 }
 
 void pdf_canvas::emit_path(const outline& path_, const stb::matrix* transform_)
@@ -737,7 +758,8 @@ std::vector<uint8_t> pdf_canvas::data() const
 
     std::string gs, pat, xo;
     for(const auto& e : m_ext_gstates)
-        gs += "/" + e.second.name + " << /ca " + e.second.alpha + " /CA " + e.second.alpha + " /BM /" + e.second.blend + " >> ";
+        gs += "/" + e.second.name + " << /ca " + e.second.alpha + " /CA " + e.second.alpha + " /BM /" + e.second.blend
+            + (e.second.soft_mask ? " /SMask << /Type /Mask /S /Luminosity /G " + std::to_string(e.second.soft_mask) + " 0 R >> >> " : " /SMask /None >> ");
     for(const auto& p : m_patterns)
         pat += "/" + p.first + " " + std::to_string(p.second) + " 0 R ";
     for(const auto& x : m_xobjects)

@@ -1,7 +1,7 @@
 # ADR-0013: measure the parser first, then borrow pugixml's techniques instead of its DOM
 
-**Status:** Proposed, not implemented. Nothing in the code has changed for this record.
-**Date:** 2026-11-18
+**Status:** Measured (2026-11-22). Step 2 is not done: for ordinary SVGs parsing is a small share of a render. Nothing in the parser has changed.
+**Date:** 2026-11-18, measured 2026-11-22
 **Deciders:** Mohammad Raziei (maintainer)
 
 ## Context
@@ -43,6 +43,40 @@ usually the larger part of a render.
 3. **Do not** vendor or copy pugixml code, and do not adopt its DOM. The techniques are ideas; the code is
    template- and macro-heavy and does not come apart cleanly.
 
+## Measurements (step 1, 2026-11-22)
+`perf` and `valgrind` are not installed on the machine used, so the numbers come from a small harness (not kept in
+the repository) linked against the Release build: `document::load_data` and `render_to_image()` timed with
+`steady_clock`, the median of 14 runs after a warm-up (4 for the two large files), and `operator new` replaced by a
+counter for the allocation count and bytes. One core, so timings are noisy to a few percent; allocation counts are exact.
+
+| file | bytes | parse | render | parse share | allocs parse / render | bytes allocated parse / render |
+|---|---|---|---|---|---|---|
+| tiger.svg | 68,630 | 0.70 ms | 14.25 ms | 4.7% | 5,545 / 5,747 | 593 KB / 12,751 KB |
+| mermaid 21-flowchart-shapes-styles | 77,144 | 0.75 ms | 4.33 ms | 14.7% | 4,492 / 4,196 | 577 KB / 4,863 KB |
+| mermaid 11-flowchart-multiline-entities | 63,844 | 0.53 ms | 2.89 ms | 15.4% | 2,975 / 2,424 | 426 KB / 3,315 KB |
+| mermaid 40-erd-relations | 62,254 | 0.73 ms | 4.44 ms | 14.1% | 5,404 / 5,750 | 595 KB / 6,289 KB |
+| mermaid 05-data-flow | 55,796 | 0.37 ms | 1.46 ms | 20.2% | 2,116 / 907 | 336 KB / 1,016 KB |
+| feature-embedded-font.svg | 548,137 | 2.02 ms | 0.44 ms | 82% | 75 / 532 | 2,018 KB / 439 KB |
+| download-novasvg.svg | 1,619,284 | 21.20 ms | 0.39 ms | 98% | 355 / 236 | 7,284 KB / 461 KB |
+
+Reading it:
+- For a drawing (tiger, the mermaid diagrams) parsing is 5% to 20% of the render and under 1 ms. Even doubling the
+  tokenizer's speed would shorten the whole render by 2% to 10%, on files that take a few milliseconds. The allocation
+  counts of parse and render are about equal, but the bytes are an order of magnitude smaller in parse.
+- The two large files are not a measure of the tokenizer. `download-novasvg.svg` is 23 elements and one 1.6 MB
+  `data:image/png;base64` href; `feature-embedded-font.svg` is one big embedded font. Their "parse" time includes the
+  base64 and image or font decode that happens while the document is built, and their render is near zero because the
+  work is already done. What they do show is that an embedded blob is copied several times (7.3 MB allocated for a
+  1.6 MB input).
+- Not measured: peak resident memory under `massif`, a map or an icon sheet with tens of thousands of elements, and
+  the split inside parse between tokenizing, the CSS cascade and decoding.
+
+## Outcome
+Step 2 (string views, an arena, a character-class table) is **not** worth doing for drawings: closed as "measured, not
+worth it". The one thing the numbers point at is the copying of large embedded attribute values (base64 data URIs); if
+that matters in practice, the fix is narrow (read the value as a view, decode it once) and does not need the
+attribute-ownership redesign this record worried about. No new dependency, as before.
+
 ## Trade-off Analysis
 Ownership gets more subtle: the public `set_attribute(name, std::string)` and `set_data` need an owned `std::string`,
 while parsed values would be views into the document's buffer, so an attribute needs to hold either. This is the main
@@ -55,6 +89,6 @@ design cost of step 2 and has to be settled before the code is written.
 - No new dependency in any outcome.
 
 ## Action Items
-- [ ] Measure (step 1) and write the numbers into this record.
-- [ ] Decide the attribute ownership model (view or owned) if step 2 goes ahead.
-- [ ] Add the DTD `<!ENTITY>` test.
+- [x] Measure (step 1) and write the numbers into this record.
+- [x] Attribute ownership model: not needed, step 2 is not going ahead.
+- [x] Add the DTD `<!ENTITY>` test (`tests/cpp/test_xml_prolog.cpp`): the prolog, DOCTYPE, comment, predefined entities, character references and CDATA all load and decode; an entity declared in the DTD is not expanded (`fill="&c;"` is not `red`).

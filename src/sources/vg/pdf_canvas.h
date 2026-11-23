@@ -70,9 +70,6 @@ public:
 private:
     pdf_canvas(float width, float height);
 
-    void warn_about_fade(const gradient_stops& stops);
-    bool m_said_fade = false;
-
     // Everything drawn between begin_group() and end_group() is one transparency group.
     void begin_group();
     void end_group(blend_mode blend_mode_, float opacity);
@@ -102,8 +99,15 @@ private:
     void emit_path(const outline& path_, const stb::matrix* transform_);
     void emit_rect_path(const rect& rect_, const stb::matrix* transform_);
     void emit_text_path(const std::u32string_view& text, const sized_font& font_, const point& origin, const stb::matrix* transform_, const shaping_context& context);
-    std::string alpha_state(float alpha, blend_mode blend_mode_ = blend_mode::normal);
-    int shading_pattern(const stb::matrix& transform_);
+    // `soft_mask` is the object number of a luminosity soft mask (see fade_mask), or 0 for none: every state names its
+    // mask, because an ExtGState that does not would leave the previous one in force.
+    std::string alpha_state(float alpha, blend_mode blend_mode_ = blend_mode::normal, int soft_mask = 0);
+    // `in_form` is for a pattern used inside a Form XObject: its matrix then maps to the form's space, which is the
+    // pixel space the page content already works in, not to the page's own (point, y up) space.
+    int shading_pattern(const stb::matrix& transform_, const gradient_stops& stops, bool in_form = false);
+    // The alpha of a gradient whose stops differ (a fade) as a soft mask: the same gradient geometry painted in
+    // grey levels equal to the stop alphas, in a transparency group that /SMask reads as luminosity.
+    int fade_mask(const stb::matrix& transform_);
     int tiling_pattern(const stb::matrix& transform_);
     // Adds `image` as an Image XObject (Flate RGB, plus an SMask when it has alpha). Returns its object number.
     int add_image(const pixmap& image, int* width, int* height);
@@ -119,8 +123,9 @@ private:
         std::string name;
         std::string alpha;
         std::string blend;
+        int soft_mask = 0;
     };
-    std::map<std::string, ext_gstate> m_ext_gstates; // key: alpha + blend mode
+    std::map<std::string, ext_gstate> m_ext_gstates; // key: alpha + blend mode + soft mask
     float m_raster_scale = 1.f;
     struct group_frame {
         std::string outer_content; // what was being written before begin_group()

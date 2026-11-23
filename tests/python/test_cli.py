@@ -58,3 +58,12 @@ def test_png_output_is_still_a_png(cli, svg, tmp_path):
     out = tmp_path / "out.png"
     run(cli, svg, "-o", out)
     assert out.read_bytes().startswith(b"\x89PNG")
+
+
+def test_query_rejects_a_selector_that_is_not_one(cli, svg):
+    result = subprocess.run([cli, "query", "[[", str(svg)], capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "selector" in result.stderr.lower()
+    # ... and one that is valid but matches nothing still succeeds.
+    assert json.loads(run(cli, "query", "circle", svg, "--json"))["count"] == 0
+
