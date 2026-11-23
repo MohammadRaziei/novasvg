@@ -4998,7 +4998,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 // ---- end inlined stb_truetype ----
 
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 static int text_iterator_length(const void* data, text_encoding_t encoding)
@@ -5104,9 +5104,9 @@ NOVASVG_INLINE codepoint_t text_iterator_next(text_iterator_t* it)
 #if defined(_WIN32)
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <windows.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 typedef CRITICAL_SECTION mutex_t;
@@ -5119,9 +5119,9 @@ typedef CRITICAL_SECTION mutex_t;
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && defined(HAVE_THREADS_H) && !defined(__STDC_NO_THREADS__)
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <threads.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 typedef mtx_t mutex_t;
@@ -5851,57 +5851,57 @@ NOVASVG_INLINE font_face_t* font_face_cache_get(font_face_cache_t* cache, const 
 #ifndef NOVASVG_DISABLE_FONT_FACE_CACHE_LOAD
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <ctype.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 #ifdef _WIN32
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <windows.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 #else
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <fcntl.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <unistd.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <dirent.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 #ifdef __linux__
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <linux/limits.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 #else
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <limits.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 #endif
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <sys/mman.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <sys/stat.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 #endif
 
@@ -6264,4 +6264,4 @@ NOVASVG_INLINE int font_face_cache_load_sys(font_face_cache_t* cache)
 
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg

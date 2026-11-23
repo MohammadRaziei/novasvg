@@ -8,7 +8,7 @@
 
 int main() {
     // Load an SVG document from a file
-    auto doc = novasvg::Document::loadFromFile("artwork.svg");
+    auto doc = nova::svg::Document::loadFromFile("artwork.svg");
     if (!doc) return 1;
 
     // Render to a bitmap (auto-sized) and save it as PNG

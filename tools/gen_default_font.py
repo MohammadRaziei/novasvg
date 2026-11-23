@@ -79,7 +79,7 @@ def render(faces):
         "// style is decoded on first use. DejaVu fonts are free software: see data/fonts/LICENSE-DejaVu.txt.",
         "#pragma once",
         "",
-        "namespace novasvg {",
+        "namespace nova::svg {",
         "namespace detail {",
     ]
     for (name, src), data in zip(FACES, faces):
@@ -88,7 +88,7 @@ def render(faces):
                   "inline constexpr const char* const %s[] = {" % name]
         lines += ['    "%s",' % x for x in encoded]
         lines += ["    nullptr,", "};"]
-    lines += ["", "} // namespace detail", "} // namespace novasvg", ""]
+    lines += ["", "} // namespace detail", "} // namespace nova::svg", ""]
     return "\n".join(lines)
 
 

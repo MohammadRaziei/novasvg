@@ -41,11 +41,11 @@
 #include <iostream>
 
 int main() {
-    auto doc = novasvg::Document::loadFromFile("artwork.svg");
+    auto doc = nova::svg::Document::loadFromFile("artwork.svg");
     if (!doc) return 1;
 
     // 640 px wide, height follows the aspect ratio, white background
-    auto bitmap = doc->renderToBitmap(640, -1, novasvg::Color::white());
+    auto bitmap = doc->renderToBitmap(640, -1, nova::svg::Color::white());
     bitmap.writeToPng("artwork.png");        // also writeToJpg / writeToBmp / writeToTga
 
     // Query it like a DOM
@@ -163,7 +163,7 @@ Not implemented yet: per-primitive filter regions, `feColorMatrix` / `feTurbulen
 Font lookup works like a browser, with no OS font library involved. A `font-family` stack is walked name by name: an installed or registered font first, then a metric-compatible stand-in (`arial` → Liberation Sans / Arimo, `times new roman` → Liberation Serif / Tinos, `calibri` → Carlito, ...), then the generic keywords. A ~40 KB Latin subset of DejaVu Sans is compiled in as the last resort, so text renders even on a machine with no fonts installed. For the best fidelity, install a metric-compatible family such as `fonts-liberation`.
 
 ```cpp
-novasvg::addFontFaceFromFile("Inter", /*bold=*/false, /*italic=*/false, "Inter-Regular.ttf");
+nova::svg::addFontFaceFromFile("Inter", /*bold=*/false, /*italic=*/false, "Inter-Regular.ttf");
 ```
 
 Disable the embedded font with `-DNOVASVG_EMBED_DEFAULT_FONT=OFF` or by defining `NOVASVG_DISABLE_EMBEDDED_FONT`.

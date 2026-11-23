@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.11.6] - 2026-11-22
+
 ### Added
 
 - **`<code>`, `<tt>`, `<kbd>`, `<samp>` and `style="font-family: monospace"` inside a `<foreignObject>` use a
@@ -13,11 +15,19 @@
 
 ### Changed
 
+- **BREAKING (C++): the namespace `novasvg` is now `nova::svg`.** `novasvg::Document` is `nova::svg::Document`, `novasvg::render`
+  is `nova::svg::render`, `novasvg::color_literals` is `nova::svg::color_literals`, and so on; there is no `novasvg`
+  alias left, so C++ code that names the old namespace has to change. Unchanged: the CMake package and targets
+  (`find_package(novasvg)`, `novasvg::novasvg`, `novasvg::noflag`), the include path `<novasvg/...>`, the `NOVASVG_*`
+  macros, the Python module `novasvg`, the wheel name and the CLI. The shared `nova::` prefix is for the sibling
+  libraries (`nova::vg`, ...).
+
 - **Version metadata uses `[[tool.dynamic-metadata]]`.** scikit-build-core 1.x deprecates the `tool.scikit-build.metadata`
   table (`WARNING: tool.scikit-build.metadata is deprecated`); the regex that reads the version from `novasvg.h` is now
   a `[[tool.dynamic-metadata]]` entry with `field = "version"`, same provider and regex, and the build requires
   `scikit-build-core>=1.0.0`, the first release that reads that table (it needs Python 3.8+, novasvg needs 3.9+).
-  The wheel's version is unchanged (0.11.5 from the header).
+  The wheel's version is still read from the header.
+
 ### Fixed
 
 - **A line that runs left or up has a box of positive size.** `<line>` returned `Rect(x1, y1, x2 - x1, y2 - y1)`, which has a

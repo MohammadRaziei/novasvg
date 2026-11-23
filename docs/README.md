@@ -31,10 +31,10 @@ See \ref about for the full origin story.
 
 int main() {
     // Load SVG from file
-    auto document = novasvg::Document::loadFromFile("image.svg");
+    auto document = nova::svg::Document::loadFromFile("image.svg");
     
     // Create bitmap for rendering
-    novasvg::Bitmap bitmap(800, 600);
+    nova::svg::Bitmap bitmap(800, 600);
     
     // Render SVG to bitmap
     document.render(bitmap);

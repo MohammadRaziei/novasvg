@@ -48,7 +48,7 @@ int main() {
         std::cout << "Processing: " << svg_path.filename() << " ... ";
 
         // Load SVG document
-        auto document = novasvg::Document::loadFromFile(svg_path.string());
+        auto document = nova::svg::Document::loadFromFile(svg_path.string());
         if (!document) {
             std::cerr << "FAILED (load)\n";
             failure_count++;

@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <limits.h>
 
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 #define COLOR_TABLE_SIZE 1024
@@ -101,9 +101,9 @@ NOVASVG_INLINE uint32_t BYTE_MUL(uint32_t x, uint32_t a)
 #ifdef __SSE2__
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <emmintrin.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 NOVASVG_INLINE void memfill32(unsigned int* dest, int length, unsigned int value)
@@ -1236,4 +1236,4 @@ NOVASVG_INLINE void blend(canvas_t* canvas, const span_buffer_t* span_buffer)
 
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg

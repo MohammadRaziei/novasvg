@@ -55,7 +55,7 @@ int cmd_convert(const std::string& input,
                 const std::string& css_file) {
     
     // Load SVG
-    std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
+    std::unique_ptr<nova::svg::Document> doc = nova::svg::Document::loadFromFile(input);
     if (!doc) {
         std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
@@ -108,9 +108,9 @@ int cmd_convert(const std::string& input,
     // Render. An empty bg_color_str means -b/--background-color wasn't
     // given (see its default in the CLI11 option below) -- that's this
     // command's own "use transparent" convention, not something
-    // novasvg::Color should have an opinion about, so it's resolved
+    // nova::svg::Color should have an opinion about, so it's resolved
     // here rather than by asking Color to treat "" as a color.
-    auto bg_color = bg_color_str.empty() ? novasvg::Color::Transparent : novasvg::Color(bg_color_str);
+    auto bg_color = bg_color_str.empty() ? nova::svg::Color::Transparent : nova::svg::Color(bg_color_str);
     auto bitmap = doc->renderToBitmap(width, height, bg_color);
     if (bitmap.isNull()) {
         std::cerr << "Error: Failed to render SVG\n";
@@ -127,7 +127,7 @@ int cmd_convert(const std::string& input,
 }
 
 // Helper function to count all elements recursively
-size_t count_all_elements(const novasvg::Element& element) {
+size_t count_all_elements(const nova::svg::Element& element) {
     size_t count = 1; 
     auto children = element.children();
     for (const auto& child : children) {
@@ -139,7 +139,7 @@ size_t count_all_elements(const novasvg::Element& element) {
 }
 
 int cmd_info(const std::string& input, bool json_output = false) {
-    std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
+    std::unique_ptr<nova::svg::Document> doc = nova::svg::Document::loadFromFile(input);
     if (!doc) {
         std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
@@ -199,7 +199,7 @@ int cmd_info(const std::string& input, bool json_output = false) {
 }
 
 int cmd_query(const std::string& selector, const std::string& input, bool json_output = false) {
-    std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input);
+    std::unique_ptr<nova::svg::Document> doc = nova::svg::Document::loadFromFile(input);
     if (!doc) {
         std::cerr << "Error: Failed to load SVG file: " << input << "\n";
         return 1;
@@ -300,7 +300,7 @@ int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
         std::cout << "Processing: " << path.filename() << " -> " 
                   << fs::path(output_file).filename() << "\n";
         
-        std::unique_ptr<novasvg::Document> doc = novasvg::Document::loadFromFile(input_file);
+        std::unique_ptr<nova::svg::Document> doc = nova::svg::Document::loadFromFile(input_file);
         if (!doc) { std::cerr << "  Failed to load\n"; failed++; continue; }
         
         auto bitmap = doc->renderToBitmap();
@@ -324,7 +324,7 @@ int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
 // ============================================================
 
 int main(int argc, char** argv) {
-    const std::string version_str = novasvg::versionString();
+    const std::string version_str = nova::svg::versionString();
 
     CLI::App app{"novasvg Command Line Interface v" + version_str + " - High-performance SVG rendering toolkit."};
     app.name("novasvg");

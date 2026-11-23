@@ -91,7 +91,7 @@
 
 #define NOVASVG_VERSION_MAJOR 0
 #define NOVASVG_VERSION_MINOR 11
-#define NOVASVG_VERSION_PATCH 5
+#define NOVASVG_VERSION_PATCH 6
 
 #define NOVASVG_VERSION_ENCODE(major, minor, patch) (((major) * 10000) + ((minor) * 100) + ((patch) * 1))
 #define NOVASVG_VERSION NOVASVG_VERSION_ENCODE(NOVASVG_VERSION_MAJOR, NOVASVG_VERSION_MINOR, NOVASVG_VERSION_PATCH)
@@ -102,14 +102,14 @@
 
 #include "detail/color.h"
 
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 struct surface;
 struct matrix;
 using surface_t = surface;
 using matrix_t = matrix;
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 
 /**
  * @brief Callback for cleaning up resources.
@@ -129,7 +129,7 @@ typedef void (*novasvg_destroy_func_t)(void* closure);
 typedef void (*novasvg_write_func_t)(void* closure, void* data, int size);
 
 
-namespace novasvg {
+namespace nova::svg {
 using namespace render;
 
 /**
@@ -152,13 +152,13 @@ int version();
  */
 std::string versionString();
 
-} // namespace novasvg
+} // namespace nova::svg
 
 #include "detail/font.h"
 
 #include "detail/bitmap.h"
 
-namespace novasvg {
+namespace nova::svg {
 using namespace render;
 
 class Rect;
@@ -672,7 +672,7 @@ private:
     friend class SVGNode;
 };
 
-} // namespace novasvg
+} // namespace nova::svg
 
 // Always included -- see the NOVASVG_INLINE note above. Defining
 // NOVASVG_IMPLEMENTATION is no longer required and has no effect; it is
@@ -697,7 +697,7 @@ private:
 #include "detail/svgelement.h"
 #include "detail/svgparser.hpp"
 
-namespace novasvg {
+namespace nova::svg {
 using namespace render;
 
 // ---------------------------------------------------------------
@@ -706,7 +706,7 @@ using namespace render;
 // to keep the public declarations and their definitions apart).
 // ---------------------------------------------------------------
 
-using namespace render; // render/ layer (novasvg::render), the former plutovg
+using namespace render; // render/ layer (nova::svg::render), the former plutovg
 
 NOVASVG_INLINE int version()
 {
@@ -1167,6 +1167,6 @@ NOVASVG_INLINE Document& Document::operator=(Document&&) = default;
 NOVASVG_INLINE Document::Document() = default;
 NOVASVG_INLINE Document::~Document() = default;
 
-} // namespace novasvg
+} // namespace nova::svg
 
 #endif // NOVASVG_H

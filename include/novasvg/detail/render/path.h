@@ -5,7 +5,7 @@
 
 #include <assert.h>
 
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 NOVASVG_INLINE void path_iterator_init(path_iterator_t* it, const path_t* path)
@@ -924,4 +924,4 @@ NOVASVG_INLINE bool path_parse(path_t* path, const char* data, int length)
 
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg

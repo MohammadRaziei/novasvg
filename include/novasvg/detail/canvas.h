@@ -28,8 +28,8 @@
 #include "render/surface.h"
 #include "render/canvas.h"
 
-namespace novasvg {
-using namespace render; // render/ layer (novasvg::render), the former plutovg
+namespace nova::svg {
+using namespace render; // render/ layer (nova::svg::render), the former plutovg
 
 enum class LineCap : uint8_t {
     Butt = NOVASVG_LINE_CAP_BUTT,
@@ -377,9 +377,9 @@ private:
     int m_index;
 };
 
-} // namespace novasvg
+} // namespace nova::svg
 
-namespace novasvg {
+namespace nova::svg {
 using namespace render;
 
 enum class TextureType {
@@ -537,7 +537,7 @@ private:
 // here is NOVASVG_INLINE, so there is no more reason to keep
 // declarations and definitions in separate files).
 // ---------------------------------------------------------------
-using namespace render; // render/ layer (novasvg::render), the former plutovg
+using namespace render; // render/ layer (nova::svg::render), the former plutovg
 
 // Color::Black/White/Transparent are defined once, in color.h.
 
@@ -1374,6 +1374,6 @@ NOVASVG_INLINE Canvas::Canvas(int x, int y, int width, int height)
 {
 }
 
-} // namespace novasvg
+} // namespace nova::svg
 
 #endif // NOVASVG_CANVAS_H

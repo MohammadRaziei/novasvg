@@ -29,8 +29,8 @@
 // already visible).
 // ---------------------------------------------------------------
 
-namespace novasvg {
-using namespace render; // render/ layer (novasvg::render), the former plutovg
+namespace nova::svg {
+using namespace render; // render/ layer (nova::svg::render), the former plutovg
 
 // ---- svgproperty ----
 enum class PropertyID : uint8_t {
@@ -2333,7 +2333,7 @@ private:
 // ================================================================
 
 // ---- svgproperty (impl) ----
-using namespace render; // render/ layer (novasvg::render), the former plutovg
+using namespace render; // render/ layer (nova::svg::render), the former plutovg
 
 NOVASVG_INLINE PropertyID propertyid(std::string_view name)
 {
@@ -3558,7 +3558,7 @@ NOVASVG_INLINE SVGPatternAttributes SVGPatternElement::collectPatternAttributes(
 }
 
 // ---- svggeometryelement (impl) ----
-using namespace render; // render/ layer (novasvg::render), the former plutovg
+using namespace render; // render/ layer (nova::svg::render), the former plutovg
 
 NOVASVG_INLINE Rect SVGMarkerPosition::markerBoundingBox(float strokeWidth) const
 {
@@ -3878,7 +3878,7 @@ NOVASVG_INLINE Rect SVGPathElement::updateShape(Path& path)
 }
 
 // ---- svgtextelement (impl) ----
-using namespace render; // render/ layer (novasvg::render), the former plutovg
+using namespace render; // render/ layer (nova::svg::render), the former plutovg
 
 inline const SVGTextNode* toSVGTextNode(const SVGNode* node)
 {
@@ -4451,7 +4451,7 @@ NOVASVG_INLINE Rect SVGTextElement::boundingBox(bool includeStroke) const
 }
 
 // ---- svglayoutstate (impl) ----
-using namespace render; // render/ layer (novasvg::render), the former plutovg
+using namespace render; // render/ layer (nova::svg::render), the former plutovg
 
 NOVASVG_INLINE std::optional<Color> parseColorValue(std::string_view& input, const SVGLayoutState* state)
 {
@@ -5071,7 +5071,7 @@ NOVASVG_INLINE Font SVGLayoutState::font() const
 }
 
 // ---- svgelement (impl) ----
-using namespace render; // render/ layer (novasvg::render), the former plutovg
+using namespace render; // render/ layer (nova::svg::render), the former plutovg
 
 NOVASVG_INLINE ElementID elementid(std::string_view name)
 {
@@ -7760,6 +7760,6 @@ NOVASVG_INLINE void SVGMaskElement::layoutElement(const SVGLayoutState& state)
     SVGElement::layoutElement(state);
 }
 
-} // namespace novasvg
+} // namespace nova::svg
 
 #endif // NOVASVG_SVGELEMENT_H

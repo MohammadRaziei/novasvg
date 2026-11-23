@@ -16,7 +16,7 @@
 #include <utility>
 #include <vector>
 
-namespace novasvg {
+namespace nova::svg {
 using namespace render;
 
 class FontFace {
@@ -204,9 +204,9 @@ bool addFontFaceFromFile(const char* family, bool bold, bool italic, const char*
 */
 bool addFontFaceFromData(const char* family, bool bold, bool italic, const void* data, size_t length, novasvg_destroy_func_t destroy_func, void* closure);
 
-} // namespace novasvg
+} // namespace nova::svg
 
-namespace novasvg {
+namespace nova::svg {
 
 NOVASVG_INLINE FontFace::FontFace(font_face_t* face)
     : m_face(font_face_reference(face))
@@ -514,4 +514,4 @@ NOVASVG_INLINE bool addFontFaceFromData(const char* family, bool bold, bool ital
     return fontFaceCache()->addFontFace(family, bold, italic, FontFace(data, length, destroy_func, closure));
 }
 
-} // namespace novasvg
+} // namespace nova::svg

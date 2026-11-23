@@ -5,7 +5,7 @@
 
 #include <ctype.h>
 
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 NOVASVG_INLINE void color_init_rgb(color_t* color, float r, float g, float b)
@@ -510,4 +510,4 @@ NOVASVG_INLINE int paint_get_reference_count(const paint_t* paint)
 
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg

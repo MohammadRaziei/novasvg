@@ -3,7 +3,7 @@
 #include "private.h"
 #include "utils.h"
 
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 NOVASVG_INLINE int render_version(void)
@@ -772,4 +772,4 @@ NOVASVG_INLINE float canvas_text_extents(canvas_t* canvas, const void* text, int
 
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg

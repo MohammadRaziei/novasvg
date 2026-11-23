@@ -8,7 +8,7 @@
 
 #include <limits.h>
 
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 NOVASVG_INLINE void span_buffer_init(span_buffer_t* span_buffer)
@@ -416,4 +416,4 @@ NOVASVG_INLINE void rasterize(span_buffer_t* span_buffer, const path_t* path, co
 
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg

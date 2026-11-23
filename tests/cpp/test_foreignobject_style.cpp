@@ -2,7 +2,7 @@
 #include <novasvg/novasvg.h>
 
 // Bold / italic runs inside <foreignObject>: the HTML scanner (no fonts needed).
-using namespace novasvg;
+using namespace nova::svg;
 
 namespace {
 std::string describe(std::string_view html, unsigned char base = 0)

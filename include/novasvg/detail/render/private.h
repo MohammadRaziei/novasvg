@@ -5,15 +5,15 @@
 
 #include "render.h"
 
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 #if defined(_WIN32)
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <windows.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 typedef LONG ref_count_t;
@@ -26,9 +26,9 @@ typedef LONG ref_count_t;
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_ATOMICS__)
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 #include <stdatomic.h>
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 typedef atomic_int ref_count_t;
@@ -191,6 +191,6 @@ void blend(canvas_t* canvas, const span_buffer_t* span_buffer);
 void memfill32(unsigned int* dest, int length, unsigned int value);
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 
 #endif // NOVASVG_PRIVATE_H

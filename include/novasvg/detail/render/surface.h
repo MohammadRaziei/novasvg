@@ -3,7 +3,7 @@
 #include "private.h"
 #include "utils.h"
 
-// stb_image_write lives with novasvg::Bitmap (novasvg.h) now -- writing
+// stb_image_write lives with nova::svg::Bitmap (novasvg.h) now -- writing
 // images is entirely Bitmap's job, this layer only rasterizes.
 #define STB_IMAGE_STATIC
 #define STB_IMAGE_IMPLEMENTATION
@@ -7730,7 +7730,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 // ---- end inlined stb_image ----
 
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 static surface_t* surface_create_uninitialized(int width, int height)
@@ -8023,4 +8023,4 @@ NOVASVG_INLINE void convert_rgba_to_argb(unsigned char* dst, const unsigned char
 
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg

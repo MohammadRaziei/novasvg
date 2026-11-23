@@ -14,7 +14,7 @@ using Pixel = std::array<int, 4>;
 
 Pixel centre(const std::string& svg)
 {
-    auto document = novasvg::Document::loadFromData(svg);
+    auto document = nova::svg::Document::loadFromData(svg);
     REQUIRE(document != nullptr);
     auto bitmap = document->renderToBitmap(40, 40);
     bitmap.convertToRGBA();
@@ -117,7 +117,7 @@ TEST_CASE("var(): a <use> copy gets the value its original computed")
 
 TEST_CASE("var(): a stylesheet applied after loading changes what var() gives")
 {
-    auto document = novasvg::Document::loadFromData(svg("--c:red", rect + "fill=\"var(--c)\"/>"));
+    auto document = nova::svg::Document::loadFromData(svg("--c:red", rect + "fill=\"var(--c)\"/>"));
     REQUIRE(document != nullptr);
     document->applyStyleSheet(":root{--c:blue !important}");
     auto bitmap = document->renderToBitmap(40, 40);

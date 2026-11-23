@@ -32,9 +32,9 @@
 // Pure C++ project: no separate C translation units link against this,
 // so the extern "C" wrapper this file used to have (for use as a
 // standalone C library) has been dropped along with the novasvg_ prefix
-// below -- everything here now lives in namespace novasvg::render
+// below -- everything here now lives in namespace nova::svg::render
 // instead.
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 // NovaSVG is header-only: every function is NOVASVG_INLINE, so the default
@@ -2523,6 +2523,6 @@ NOVASVG_API void canvas_glyph_metrics(canvas_t* canvas, codepoint_t codepoint, f
 NOVASVG_API float canvas_text_extents(canvas_t* canvas, const void* text, int length, text_encoding_t encoding, rect_t* extents);
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 
 #endif // NOVASVG_RENDER_H

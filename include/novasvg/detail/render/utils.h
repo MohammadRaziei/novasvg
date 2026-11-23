@@ -12,7 +12,7 @@
 #include <math.h>
 #include <algorithm>
 
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 #define NOVASVG_IS_NUM(c) ((c) >= '0' && (c) <= '9')
@@ -260,6 +260,6 @@ NOVASVG_INLINE void skip_css_unit(const char** begin, const char* end, float* nu
 }
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg
 
 #endif // NOVASVG_UTILS_H

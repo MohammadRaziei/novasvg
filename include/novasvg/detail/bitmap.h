@@ -20,7 +20,7 @@
 #include <string>
 #include <utility>
 
-namespace novasvg {
+namespace nova::svg {
 using namespace render;
 
 class NOVASVG_API Bitmap {
@@ -210,7 +210,7 @@ private:
 // Bitmap's own image encoder (PNG/BMP/TGA/JPEG), used only by the
 // writeTo*()/write() methods above -- a class (BitmapCodec), not a pile
 // of free functions, precisely so nothing about writing an image needs a
-// symbol outside novasvg::Bitmap's own world. Ported from stb_image_write
+// symbol outside nova::svg::Bitmap's own world. Ported from stb_image_write
 // v1.16 (Sean Barrett, public domain / MIT): every identifier renamed to
 // this project's naming and every function turned into a static method.
 // Upstream: https://github.com/nothings/stb
@@ -1860,4 +1860,4 @@ NOVASVG_INLINE surface_t* Bitmap::release()
 }
 
 
-} // namespace novasvg
+} // namespace nova::svg

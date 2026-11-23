@@ -2,7 +2,7 @@
 
 #include "utils.h"
 
-namespace novasvg {
+namespace nova::svg {
 namespace render {
 
 NOVASVG_INLINE void matrix_init(matrix_t* matrix, float a, float b, float c, float d, float e, float f)
@@ -235,4 +235,4 @@ NOVASVG_INLINE bool matrix_parse(matrix_t* matrix, const char* data, int length)
 
 
 } // namespace render
-} // namespace novasvg
+} // namespace nova::svg

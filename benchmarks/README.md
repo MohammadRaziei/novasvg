@@ -101,7 +101,7 @@ the same fontconfig, e.g. `FONTCONFIG_FILE` pointing at a config that exposes on
   the whole benchmark to a Release build (an empty build type means no `-O`
   flags at all) -- which also gives every other engine the same fair flags.
   `native/novasvg_native_bench.cpp` links `novasvg::novasvg` and calls
-  `novasvg::Document` / `novasvg::Bitmap` directly.
+  `nova::svg::Document` / `nova::svg::Bitmap` directly.
 - **lunasvg** — `cmake/FetchLunasvg.cmake` fetches it (a real CMake
   project, pulls in its own `plutovg` dependency via git submodule);
   `native/lunasvg_native_bench.cpp` links `lunasvg::lunasvg` and calls

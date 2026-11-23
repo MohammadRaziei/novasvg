@@ -5,7 +5,7 @@
 #include "default_font.h"
 #endif
 
-namespace novasvg {
+namespace nova::svg {
 
 struct SimpleSelector;
 
@@ -1849,4 +1849,4 @@ NOVASVG_INLINE ElementList Document::querySelectorAll(const std::string& content
     return elements;
 }
 
-} // namespace novasvg
+} // namespace nova::svg

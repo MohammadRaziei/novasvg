@@ -2,8 +2,8 @@
 #include "doctest.h"
 #include "novasvg/detail/color.h"
 
-using namespace novasvg;
-using namespace novasvg::color_literals;
+using namespace nova::svg;
+using namespace nova::svg::color_literals;
 
 TEST_CASE("Color - Default Constructor") {
     Color c;

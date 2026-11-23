@@ -51,7 +51,7 @@ modindex_common_prefix = ['novasvg.']
 def _fix_novasvg_py(app, what, name, obj, options, lines):
     """Rewrite novasvg_py → novasvg in docstring lines."""
     for i, line in enumerate(lines):
-        lines[i] = line.replace('novasvg_py.', 'novasvg.').replace('novasvg_py::', 'novasvg::')
+        lines[i] = line.replace('novasvg_py.', 'novasvg.').replace('novasvg_py::', 'nova::svg::')
 
 def _fix_novasvg_py_sig(app, what, name, obj, options, signature, return_annotation):
     """Rewrite novasvg_py → novasvg in signatures."""
