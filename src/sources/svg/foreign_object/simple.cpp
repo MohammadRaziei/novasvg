@@ -31,7 +31,7 @@ public:
 
 foreign_object_style style_of(const foreign_object_font& font_)
 {
-    return {font_.weight, font_.italic};
+    return {font_.weight, font_.italic, false};
 }
 
 void foreign_object_simple::render(const foreign_object_context& context, foreign_object_painter& painter) const
@@ -48,7 +48,8 @@ void foreign_object_simple::render(const foreign_object_context& context, foreig
 
     const auto& box_ = context.box;
     // A browser wraps HTML text at its box's edge unless CSS says nowrap/pre.
-    auto lines = layout_foreign_object_text(segments, fonts, foreign_object_allows_wrap(std::string(context.markup)) ? box_.w : 0.f);
+    const bool soft_wraps = foreign_object_allows_wrap(std::string(context.markup));
+    auto lines = layout_foreign_object_text(segments, fonts, soft_wraps ? box_.w : 0.f);
 
     // Real line-height from the HTML's own `line-height:` (mermaid's content usually says 1.5) when present and
     // parseable; falls back to a 1.2x default (roughly a browser's own "normal") otherwise -- e.g. for %/em
@@ -84,11 +85,16 @@ void foreign_object_simple::render(const foreign_object_context& context, foreig
         // Trebuchet MS). There's no reliable way to know how much wider without the real font, so rather than
         // truncating (tried before, still didn't match a real Chromium render) we condense that one line
         // horizontally.
+        //
+        // A label that is allowed to wrap is different: a line still wider than the box can only be one word with no
+        // break opportunity in it, and CSS lets that word overflow (from the box's start edge, it is not centred) at
+        // its natural size instead of squeezing it.
         float scale = 1.f;
-        if(line_width > box_.w && line_width > 0.f)
+        const bool overflows_as_word = soft_wraps && line_width > box_.w;
+        if(line_width > box_.w && line_width > 0.f && !soft_wraps)
             scale = box_.w / line_width;
 
-        const float origin_x = box_.x + (box_.w - line_width * scale) / 2.f;
+        const float origin_x = overflows_as_word ? box_.x : box_.x + (box_.w - line_width * scale) / 2.f;
         // Baseline for this line = top of the text block + however many line-heights precede it + half the leading
         // (the extra space line-height adds beyond the font's own ascent+descent, split evenly above and below --
         // standard CSS line-box behavior) + this font's ascent. Without the half-leading term, text sits noticeably

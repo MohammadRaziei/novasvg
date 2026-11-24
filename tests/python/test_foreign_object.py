@@ -13,12 +13,17 @@ import novasvg.fonts as fonts
 _FONT_PATH = Path(__file__).resolve().parents[2] / "data" / "fonts" / "DejaVuSans.ttf"
 
 FAMILY = "DejaVu Sans"
+# The `monospace` family is registered with an existing face (DejaVu Sans Bold) on purpose: the tests only need the
+# generic `monospace` lookup to land on a face that measures differently from the regular one, and that way no
+# monospace font has to ship in data/fonts/.
+MONO_STAND_IN_PATH = Path(__file__).resolve().parents[2] / "data" / "fonts" / "DejaVuSans-Bold.ttf"
 TEXT = "This is a very long label that should wrap across several lines when the maximum text width is reached"
 
 
 @pytest.fixture(scope="module")
 def font():
     fonts.add_font_face_from_file(FAMILY, False, False, str(_FONT_PATH))
+    fonts.add_font_face_from_file("monospace", False, False, str(MONO_STAND_IN_PATH))
     return fonts.Font(fonts.get_font_face(FAMILY, False, False), 16.0)
 
 
@@ -56,6 +61,50 @@ class TestMeasureWrapping:
         m = fonts.measure_foreign_object(_html("", text="Supercalifragilisticexpialidocious"), font, max_width=50)
         assert m["line_count"] == 1 and m["width"] > 50
 
+    def test_wraps_after_a_hyphen_like_a_browser(self, font):
+        # Mermaid's `DELIVERY-ADDRESS` ER entity: no space in it, but a browser breaks after the hyphen.
+        m = fonts.measure_foreign_object(_html("line-height:1.5", text="DELIVERY-ADDRESS"), font, max_width=120)
+        assert m["line_count"] == 2
+        assert m["width"] <= 120 + 1 / 64
+
+    def test_hyphen_break_only_when_the_line_is_full(self, font):
+        m = fonts.measure_foreign_object(_html("line-height:1.5", text="DELIVERY-ADDRESS"), font, max_width=300)
+        assert m["line_count"] == 1
+
+    def test_hyphen_before_a_digit_or_another_hyphen_does_not_break(self, font):
+        for text in ("WIDEWORD-12345678", "WIDEWORD--WIDEWORD", "-WIDEWORD"):
+            m = fonts.measure_foreign_object(_html("", text=text), font, max_width=60)
+            assert m["line_count"] == 1, text
+
+    def test_hyphen_and_space_breaks_mix(self, font):
+        m = fonts.measure_foreign_object(_html("", text="one-two three-four"), font, max_width=60)
+        assert m["line_count"] >= 3
+
+    def test_code_is_measured_with_the_monospace_face(self, font):
+        # <code> takes the face registered as `monospace` (here the bold stand-in), not the element's own family.
+        text = "promise_type promise {};"
+        plain = fonts.measure_foreign_object(_html("white-space:nowrap", text=text), font, family=FAMILY)
+        code = fonts.measure_foreign_object(_html("white-space:nowrap", text=f"<code>{text}</code>"), font, family=FAMILY)
+        assert code["width"] != pytest.approx(plain["width"], abs=1.0)
+        mono = fonts.Font(fonts.get_font_face("monospace", False, False), 16.0)
+        assert code["width"] == pytest.approx(mono.measure_text(text), abs=0.1)
+
+    def test_code_stays_in_the_run_it_is_in(self, font):
+        m = fonts.measure_foreign_object(_html("white-space:nowrap", text="a <code>b</code> c"), font, family=FAMILY)
+        assert m["line_count"] == 1
+
+    @pytest.mark.parametrize("tag", ["tt", "kbd", "samp"])
+    def test_other_monospace_tags(self, font, tag):
+        plain = fonts.measure_foreign_object(_html("white-space:nowrap", text="iiiiiiiiii"), font, family=FAMILY)
+        mono = fonts.measure_foreign_object(_html("white-space:nowrap", text=f"<{tag}>iiiiiiiiii</{tag}>"), font, family=FAMILY)
+        assert mono["width"] > plain["width"]  # the `monospace` stand-in (bold) is wider than the regular face
+
+    def test_inline_font_family_monospace(self, font):
+        plain = fonts.measure_foreign_object(_html("white-space:nowrap", text="iiiiiiiiii"), font, family=FAMILY)
+        span = fonts.measure_foreign_object(
+            _html("white-space:nowrap", text='<span style="font-family: monospace">iiiiiiiiii</span>'), font, family=FAMILY)
+        assert span["width"] > plain["width"]
+
     def test_forced_breaks_are_kept(self, font):
         m = fonts.measure_foreign_object(_html("white-space:nowrap", text="one<br/>two<br/>three"), font)
         assert m["line_count"] == 3
@@ -81,6 +130,33 @@ class TestPaintWrapping:
 
     def test_paint_keeps_nowrap_on_one_line(self, font):
         assert _ink_height(self._svg("white-space:nowrap;line-height:1.5")) < 24  # one line
+
+
+def _ink_width(svg):
+    """Width in px of the columns that contain dark (text) pixels."""
+    arr = novasvg.Document.load_from_data(svg).render_to_bitmap().numpy()
+    dark = (arr[:, :, 3] > 0) & (arr[:, :, :3].sum(axis=2) < 300)
+    cols = np.where(dark.any(axis=0))[0]
+    return int(cols[-1] - cols[0] + 1) if len(cols) else 0
+
+
+class TestPaintOverflow:
+    WORD = "Supercalifragilisticexpialidocious"
+
+    def _svg(self, style):
+        return (f'<svg xmlns="http://www.w3.org/2000/svg" width="500" height="60">'
+                f'<rect width="100%" height="100%" fill="white"/>'
+                f'<foreignObject x="5" y="5" width="100" height="40" font-family="{FAMILY}" font-size="16">'
+                f'{_html(style, text=self.WORD)}</foreignObject></svg>')
+
+    def test_unbreakable_word_in_a_wrapping_label_overflows_at_natural_size(self, font):
+        natural = font.measure_text(self.WORD)
+        ink = _ink_width(self._svg("white-space:break-spaces;line-height:1.5;width:100px"))
+        assert ink > 100            # not squeezed into the 100 px box
+        assert ink == pytest.approx(natural, rel=0.05)
+
+    def test_nowrap_line_wider_than_its_box_is_still_condensed(self, font):
+        assert _ink_width(self._svg("white-space:nowrap;line-height:1.5")) <= 100
 
 
 class TestLigatures:

@@ -128,3 +128,53 @@ TEST_CASE("mix-blend-mode: every CSS keyword follows the W3C formulas")
     CHECK(int(p[1]) == 0x80);
     CHECK(int(p[2]) == 0xc0);
 }
+
+TEST_CASE("a group with opacity that holds only a line running left or up is drawn")
+{
+    // d3's axis ticks (`<g class="tick" opacity="..."><line y2="-111"/></g>`, mermaid's gantt grid): the line's box
+    // used to have a negative height, so the group's layer was empty and nothing reached the page.
+    const auto covered = [](const std::string& body) {
+        auto doc = nova::svg::document::load_data(svg(body));
+        REQUIRE(doc != nullptr);
+        const stb::image image = doc->render_to_image(40, 40);
+        REQUIRE(!image.empty());
+        int n = 0;
+        for(int y = 0; y < image.height(); ++y)
+            for(int x = 0; x < image.width(); ++x)
+                n += image.data()[y * image.stride() + x * 4 + 3] > 0;
+        return n;
+    };
+    const char* stroke = "stroke='black'";
+    CHECK(covered(std::string("<g transform='translate(20.5,35)' opacity='0.8'><line y2='-30' ") + stroke + "/></g>") == 30);  // up
+    CHECK(covered(std::string("<g transform='translate(35,20.5)' opacity='0.8'><line x2='-30' ") + stroke + "/></g>") == 30);  // left
+    CHECK(covered(std::string("<g opacity='0.8'><line x1='20.5' x2='20.5' y1='35' y2='5' ") + stroke + "/></g>") == 30);        // y1 > y2
+    CHECK(covered(std::string("<g transform='translate(20.5,5)' opacity='0.8'><line y2='30' ") + stroke + "/></g>") == 30);   // down: unchanged
+}
+
+TEST_CASE("foreignObject: a word too long for a wrapping label overflows at its natural size, a nowrap line is condensed")
+{
+    // CSS lets an unbreakable word overflow the box of a label that may wrap, starting at the box's left edge; only a
+    // `white-space: nowrap` line wider than its box is condensed to fit.
+    const auto ink_width = [](const std::string& div_style) {
+        const std::string html = "<div xmlns='http://www.w3.org/1999/xhtml' style='" + div_style +
+                                 "'>Supercalifragilisticexpialidocious</div>";
+        auto doc = nova::svg::document::load_data(
+            "<svg xmlns='http://www.w3.org/2000/svg' width='300' height='60'>"
+            "<foreignObject x='5' y='5' width='60' height='40' font-size='16'>" + html + "</foreignObject></svg>");
+        REQUIRE(doc != nullptr);
+        const stb::image image = doc->render_to_image(300, 60);
+        REQUIRE(!image.empty());
+        int first = -1, last = -1;
+        for(int x = 0; x < image.width(); ++x)
+            for(int y = 0; y < image.height(); ++y)
+                if(image.data()[y * image.stride() + x * 4 + 3] > 0) {
+                    if(first < 0)
+                        first = x;
+                    last = x;
+                    break;
+                }
+        return first < 0 ? 0 : last - first + 1;
+    };
+    CHECK(ink_width("white-space: break-spaces; line-height: 1.5") > 60);  // not squeezed into the 60 px box
+    CHECK(ink_width("white-space: nowrap; line-height: 1.5") <= 62);       // still condensed (AA edge pixels: +2)
+}

@@ -1,5 +1,6 @@
 #include "vg/pixmap.h"
 #include "svgelement.h"
+#include <cmath>
 
 namespace nova::svg {
 using namespace vg;
@@ -191,7 +192,9 @@ rect svg_line_element::update_shape(outline& path_)
 
     path_.move_to(x1, y1);
     path_.line_to(x2, y2);
-    return rect(x1, y1, x2 - x1, y2 - y1);
+    // A line that runs left or up (x2 < x1, y2 < y1) still has a box of positive size: a negative width or height
+    // made the box empty, so a group with `opacity` holding only such a line (d3's axis ticks, y2="-111") drew nothing.
+    return rect(STB_MIN(x1, x2), STB_MIN(y1, y2), std::abs(x2 - x1), std::abs(y2 - y1));
 }
 
 svg_rect_element::svg_rect_element(document* dom)

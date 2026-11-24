@@ -10,14 +10,15 @@ using namespace nova::svg;
 using namespace nova::vg;
 
 namespace {
-// "[text:weight]" per run, with an "i" after the weight for italic: bold is 700, bold italic 700i.
+// "[text:weight]" per run, with an "i" after the weight for italic and an "m" for monospace: bold is 700, bold
+// italic 700i, a <code> run 400m.
 std::string describe(std::string_view html, foreign_object_style base = {})
 {
     std::string out;
     for(const auto& s : foreign_object_styled_text(html, base)) {
         std::string t = s.text;
         for(auto& c : t) if(c == '\n') c = '|';
-        out += "[" + t + ":" + std::to_string(s.style.weight) + (s.style.italic ? "i" : "") + "]";
+        out += "[" + t + ":" + std::to_string(s.style.weight) + (s.style.italic ? "i" : "") + (s.style.mono ? "m" : "") + "]";
     }
     return out;
 }
@@ -33,6 +34,21 @@ TEST_CASE("foreignObject style: bold and italic tags")
     CHECK(describe("a<b><i>x</i></b>b") == "[a:400][x:700i][b:400]");
     CHECK(describe("<b>a <i>b</i> c</b>") == "[a :700][b:700i][ c:700]");
     CHECK(describe("<b><b>x</b></b>") == "[x:900]");   // <b> is `bolder`: relative to where it sits
+}
+
+TEST_CASE("foreignObject style: monospace tags and font-family")
+{
+    CHECK(describe("<code>x</code>") == "[x:400m]");
+    CHECK(describe("<tt>x</tt>") == "[x:400m]");
+    CHECK(describe("<kbd>x</kbd>") == "[x:400m]");
+    CHECK(describe("<samp>x</samp>") == "[x:400m]");
+    CHECK(describe("a <code>b</code> c") == "[a :400][b:400m][ c:400]");
+    CHECK(describe("<b><code>x</code></b>") == "[x:700m]");
+    CHECK(describe("<span style=\"font-family: monospace\">x</span>") == "[x:400m]");
+    CHECK(describe("<span style=\"font-family: 'Courier New', monospace\">x</span>") == "[x:400m]");  // a quoted name first
+    CHECK(describe("<span style=\"font-family: MONOSPACE\">x</span>") == "[x:400m]");
+    // Any other family on a nested element is the element's own stack again.
+    CHECK(describe("<code><span style=\"font-family: Arial\">x</span></code>") == "[x:400]");
 }
 
 TEST_CASE("foreignObject style: inline style attribute")

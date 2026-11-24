@@ -25,16 +25,21 @@ struct foreign_object_face {
     float measure_text(std::u32string_view text) const { return painter->measure_text(text, spec); }
 };
 
-/// What a run of text looks like apart from its family and size: a `font-weight` (1..1000) and whether it is italic.
+/// What a run of text looks like apart from its size: a `font-weight` (1..1000), whether it is italic, and whether it
+/// is monospace (<code>, <tt>, <kbd>, <samp>, an inline `font-family: monospace`): that one takes the generic
+/// `monospace` family instead of the element's own stack.
 struct foreign_object_style {
     int weight = 400;
     bool italic = false;
+    bool mono = false;
 
-    bool operator==(const foreign_object_style& other) const { return weight == other.weight && italic == other.italic; }
+    bool operator==(const foreign_object_style& other) const { return weight == other.weight && italic == other.italic && mono == other.mono; }
     bool operator!=(const foreign_object_style& other) const { return !(*this == other); }
     bool operator<(const foreign_object_style& other) const
     {
-        return weight != other.weight ? weight < other.weight : italic < other.italic;
+        if(weight != other.weight)
+            return weight < other.weight;
+        return italic != other.italic ? italic < other.italic : mono < other.mono;
     }
 };
 
@@ -56,6 +61,8 @@ public:
             face.spec.weight = style.weight;
             face.spec.bold = style.weight >= 600;  // for a painter that only knows regular and bold
             face.spec.italic = style.italic;
+            if(style.mono)
+                face.spec.family = "monospace";
             found = m_faces.emplace(style, face).first;
         }
         return found->second;
@@ -106,8 +113,10 @@ inline std::optional<std::string_view> html_attribute(std::string_view tag, std:
 // Style bits (ForeignObjectFonts::Bold / Italic) come from, in this order:
 //   * the style the foreignObject itself inherits from the svg around it (the `baseStyle` argument);
 //   * the tag: <b> <strong> = bold, <i> <em> <cite> <var> <dfn> = italic;
-//   * an inline style="font-weight: ..." / style="font-style: ...", which wins over the tag and may
-//     also turn a style OFF again (`font-weight: normal` inside a bold stretch).
+//   * the tag: <code> <tt> <kbd> <samp> = monospace;
+//   * an inline style="font-weight: ..." / style="font-style: ..." / style="font-family: ...", which wins over
+//     the tag and may also turn a style OFF again (`font-weight: normal` inside a bold stretch; of font-family
+//     only the generic `monospace` is understood).
 // Styles nest and are inherited by everything inside the el, and end with its closing tag.
 // ---------------------------------------------------------------------------------------------------
 struct foreign_object_segment {
@@ -193,6 +202,8 @@ inline foreign_object_style foreign_object_style_of_opening(const std::string& t
         style.weight = parse_font_weight("bolder", style.weight);
     else if(tag == "i" || tag == "em" || tag == "cite" || tag == "var" || tag == "dfn")
         style.italic = true;
+    else if(tag == "code" || tag == "tt" || tag == "kbd" || tag == "samp")
+        style.mono = true;
 
     auto inline_style = foreign_object_style_attribute(attributes);
     if(!inline_style.empty()) {
@@ -200,6 +211,10 @@ inline foreign_object_style foreign_object_style_of_opening(const std::string& t
             style.weight = parse_font_weight(weight, style.weight);
         if(auto font_style_ = foreign_object_declaration(inline_style, "font-style"); !font_style_.empty())
             style.italic = parse_font_style(font_style_) == css_font_style::italic;
+        // Only the generic keyword is understood; any other family is the element's own stack again. The raw value is
+        // read because a quoted name (`'Courier New', monospace`) ends the plain one at its first quote.
+        if(auto family = find_raw_declaration_value(inline_style, "font-family"); family && !family->empty())
+            style.mono = utils::to_lower(*family).find("monospace") != std::string::npos;
     }
     return style;
 }
@@ -458,11 +473,30 @@ inline std::optional<float> foreign_object_declared_width(std::string_view raw_h
     return std::nullopt;
 }
 
+// Where the piece of a word that starts at `from` ends. A browser may break a line right after a hyphen-minus inside a
+// word (Unicode line breaking, class HY): "DELIVERY-ADDRESS" can wrap to "DELIVERY-" / "ADDRESS". Not after a hyphen
+// that opens the piece or follows another hyphen, and not before a digit or another hyphen ("a-1", "--x" stay
+// whole). Without such a hyphen the piece runs to `word_end`.
+inline size_t foreign_object_word_piece_end(const std::u32string& chars, size_t from, size_t word_end)
+{
+    for(size_t k = from + 1; k + 1 < word_end; ++k) {
+        if(chars[k] != U'-' || chars[k - 1] == U'-')
+            continue;
+        const auto next = chars[k + 1];
+        if(next == U'-' || (next >= U'0' && next <= U'9'))
+            continue;
+        return k + 1;
+    }
+    return word_end;
+}
+
 // Greedy word-wrap of ONE paragraph to `maxWidth`: a line takes the next word
 // while the whole candidate line ("a b c", measured as one string so kerning
-// across the space counts, like a browser's shaping) still fits. A single
-// word wider than maxWidth stays alone on an overflowing line -- CSS never
-// breaks inside a word by default; render() condenses that one line.
+// across the space counts, like a browser's shaping) still fits. A word may also
+// be taken a piece at a time, a piece ending right after a hyphen (see
+// foreign_object_word_piece_end()). A single piece wider than maxWidth stays
+// alone on an overflowing line -- CSS never breaks inside a word by default;
+// render() lets that one line overflow, or condenses it for a nowrap label.
 inline void wrap_foreign_object_paragraph(const std::u32string& paragraph, const foreign_object_face& font_, float max_width, std::vector<std::u32string>& lines)
 {
     // Browsers lay out in 1/64px units, so "fits" tolerates that much slack.
@@ -477,21 +511,29 @@ inline void wrap_foreign_object_paragraph(const std::u32string& paragraph, const
             ++word_end;
         if(word_end == i)
             break;
-        auto word = paragraph.substr(i, word_end - i);
-        i = word_end;
 
-        if(current.empty()) {
-            current = std::move(word);
-            continue;
-        }
-        auto candidate = current;
-        candidate += U' ';
-        candidate += word;
-        if(font_.measure_text(std::u32string_view(candidate)) <= limit) {
-            current = std::move(candidate);
-        } else {
-            lines.push_back(std::move(current));
-            current = std::move(word);
+        bool first_piece = true;
+        while(i < word_end) {
+            const auto piece_end = foreign_object_word_piece_end(paragraph, i, word_end);
+            auto piece = paragraph.substr(i, piece_end - i);
+            i = piece_end;
+
+            if(current.empty()) {
+                current = std::move(piece);
+                first_piece = false;
+                continue;
+            }
+            auto candidate = current;
+            if(first_piece)
+                candidate += U' ';  // a space only between words, not between the pieces of one
+            candidate += piece;
+            first_piece = false;
+            if(font_.measure_text(std::u32string_view(candidate)) <= limit) {
+                current = std::move(candidate);
+            } else {
+                lines.push_back(std::move(current));
+                current = std::move(piece);
+            }
         }
     }
     if(!current.empty())
@@ -620,8 +662,9 @@ inline void wrap_foreign_object_styled_paragraph(const std::vector<foreign_objec
         return;
     }
 
-    // Same greedy word-wrap as wrapForeignObjectParagraph(), a word at a time, but a candidate line is
-    // measured style stretch by style stretch. A space takes the style it has in the source.
+    // Same greedy word-wrap as wrap_foreign_object_paragraph(), a word (or a piece of one, see
+    // foreign_object_word_piece_end()) at a time, but a candidate line is measured style stretch by style stretch.
+    // A space takes the style it has in the source.
     const float limit = max_width + 1.f / 128.f;
     std::u32string current;
     std::vector<foreign_object_style> current_styles;
@@ -637,28 +680,37 @@ inline void wrap_foreign_object_styled_paragraph(const std::vector<foreign_objec
             ++word_end;
         if(word_end == i)
             break;
-        auto word = chars.substr(i, word_end - i);
-        std::vector<foreign_object_style> word_styles(styles.begin() + long(i), styles.begin() + long(word_end));
-        i = word_end;
 
-        if(current.empty()) {
-            current = std::move(word);
-            current_styles = std::move(word_styles);
-            continue;
-        }
-        auto candidate = current;
-        auto candidate_styles = current_styles;
-        candidate += U' ';
-        candidate_styles.push_back(space_style);
-        candidate += word;
-        candidate_styles.insert(candidate_styles.end(), word_styles.begin(), word_styles.end());
-        if(measure_foreign_object_cells(candidate, candidate_styles, fonts) <= limit) {
-            current = std::move(candidate);
-            current_styles = std::move(candidate_styles);
-        } else {
-            lines.push_back(make_foreign_object_line(current, current_styles));
-            current = std::move(word);
-            current_styles = std::move(word_styles);
+        bool first_piece = true;
+        while(i < word_end) {
+            const auto piece_end = foreign_object_word_piece_end(chars, i, word_end);
+            auto piece = chars.substr(i, piece_end - i);
+            std::vector<foreign_object_style> piece_styles(styles.begin() + long(i), styles.begin() + long(piece_end));
+            i = piece_end;
+
+            if(current.empty()) {
+                current = std::move(piece);
+                current_styles = std::move(piece_styles);
+                first_piece = false;
+                continue;
+            }
+            auto candidate = current;
+            auto candidate_styles = current_styles;
+            if(first_piece) {
+                candidate += U' ';
+                candidate_styles.push_back(space_style);
+            }
+            candidate += piece;
+            candidate_styles.insert(candidate_styles.end(), piece_styles.begin(), piece_styles.end());
+            first_piece = false;
+            if(measure_foreign_object_cells(candidate, candidate_styles, fonts) <= limit) {
+                current = std::move(candidate);
+                current_styles = std::move(candidate_styles);
+            } else {
+                lines.push_back(make_foreign_object_line(current, current_styles));
+                current = std::move(piece);
+                current_styles = std::move(piece_styles);
+            }
         }
     }
     if(!current.empty())

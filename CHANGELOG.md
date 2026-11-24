@@ -56,6 +56,12 @@
 
 ### Fixed
 
+- **Fixes of 0.11.5 and 0.11.6, brought over from the header-only line.**
+  - A `<line>` that runs left or up (`x2 < x1`, `y2 < y1`) has a box of positive size. A negative one made the box empty, so a group with `opacity` that held only such a line (d3's axis ticks, `y2="-111"`; Mermaid's gantt grid) drew nothing.
+  - `<foreignObject>` text wraps after a hyphen, like a browser: Mermaid's `DELIVERY-ADDRESS` is two lines at 120 px. A line breaks right after a hyphen-minus inside a word, except after a hyphen that opens the word or follows another hyphen and before a digit or another hyphen (`a-1`, `--x` stay whole). Measure and paint use the same rule.
+  - `<foreignObject>`: `<code>`, `<tt>`, `<kbd>`, `<samp>` and an inline `font-family: monospace` (also after a quoted name, `'Courier New', monospace`) are drawn and measured with the `monospace` face.
+  - `<foreignObject>`: a word too long for a label that may wrap overflows at its natural size from the box's left edge instead of being condensed into the box; only a `white-space: nowrap` line wider than its box is condensed.
+
 - **PDF output kept the opacity of a gradient fill.** `fill-opacity` (and any alpha shared by all stops) on a gradient was dropped, so translucent gradients came out opaque in PDF. A gradient whose stops differ in alpha (a fade) is still painted opaque, with a warning.
 - **Right-to-left and Arabic text.** Text is now laid out by libstb's `font::shape`: bidirectional order, joined
   Arabic letters, ligatures, mirrored brackets and kerning come from one place, in the canvas, the PDF canvas and
