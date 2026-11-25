@@ -53,10 +53,10 @@ public:
     pixmap(uint8_t* data, int width, int height, int stride);
 
     /**
-     * @brief Copy constructor.
-     * @param bitmap The bitmap to copy.
+     * @brief Copying is not allowed: a copy of a handle onto the same pixels is a trap (drawing into one changes the
+     * other, convert_to_rgba() corrupts both). Move it, or make an explicit copy of the pixels with clone().
      */
-    pixmap(const pixmap& bitmap) = default;
+    pixmap(const pixmap&) = delete;
 
     /**
      * @brief Move constructor.
@@ -74,7 +74,7 @@ public:
      * @param bitmap The bitmap to copy.
      * @return A reference to this bitmap.
      */
-    pixmap& operator=(const pixmap& bitmap) = default;
+    pixmap& operator=(const pixmap&) = delete;
 
     /**
      * @brief Move assignment operator.
@@ -82,6 +82,12 @@ public:
      * @return A reference to this bitmap.
      */
     pixmap& operator=(pixmap&& bitmap) = default;
+
+    /**
+     * @brief An independent copy of the pixels, in memory this copy owns (also when this one sits on caller-owned
+     * memory). The only way to copy a pixmap. A null pixmap clones to a null one.
+     */
+    pixmap clone() const;
 
     /**
      * @brief Swaps the content of this bitmap with another.

@@ -1,4 +1,5 @@
 // Definitions declared in src/sources/vg/pixmap.h.
+#include <cstring>
 #include "pixmap.h"
 
 namespace nova::vg {
@@ -22,6 +23,17 @@ pixmap::pixmap(uint8_t* data, int width, int height, int stride)
         m_surface = std::make_shared<surface_t>(surface_t::wrap(width, height, data, size_t(stride)));
     } catch(const std::exception&) {
     }
+}
+
+pixmap pixmap::clone() const
+{
+    pixmap copy(width(), height());  // null when this one is null, or when memory runs out
+    if(copy.is_null())
+        return copy;
+    const size_t row_bytes = size_t(width()) * 4;  // ARGB32: the strides may differ, the rows are what is copied
+    for(int y = 0; y < height(); ++y)
+        std::memcpy(copy.data() + size_t(y) * size_t(copy.stride()), data() + size_t(y) * size_t(stride()), row_bytes);
+    return copy;
 }
 
 void pixmap::swap(pixmap& bitmap)

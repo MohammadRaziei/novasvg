@@ -271,11 +271,11 @@ Today each concept is defined in several layers (public, `detail/canvas.h`, `gfx
 - [ ] Ownership and lifetime in the public API
 - [ ] Thread safety (as `stb::font`: immutable and cheap to copy)
 - [ ] Findings from step 2b to settle here (seen in the code, not yet changed):
-  - `Bitmap` copies alias the same mutable pixels (`surface_reference`), yet `convertToRGBA()` converts in place and
+  - [x] (2026-11-25: `pixmap` is move-only, `clone()` copies the pixels) `Bitmap` copies alias the same mutable pixels (`surface_reference`), yet `convertToRGBA()` converts in place and
     `bitmap_release_to_image` relies on unique ownership. Make it move-only with an explicit `clone()`, or split the
     states into two types (premultiplied surface / straight image) so a double conversion cannot compile. The Python
     docs already warn about the double-convert corruption of `convert_to_rgba()`
-  - `render` / `renderToBitmap` / `render(stb::image&)` / `renderToImage` are written twice (`Element` and `Document`);
+  - [x] (2026-11-25: shared `fit_size()` / `blend_layer_over()` in novasvg.cpp) `render` / `renderToBitmap` / `render(stb::image&)` / `renderToImage` are written twice (`Element` and `Document`);
     `Document` should delegate to its root element, and layer + blend lives in one place
   - `convert_argb_to_rgba` / `convert_rgba_to_argb` in `render.h` are now one-line wrappers over libstb: remove them
   - Two pixel types are still public through Python until the Python `Bitmap` moves to libstb's image type

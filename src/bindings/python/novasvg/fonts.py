@@ -20,6 +20,9 @@ Typical usage::
 
 from .novasvg_py import FontFace
 from .novasvg_py import Font
+from .novasvg_py import TextMetrics
+from .novasvg_py import add_font_file
+from .novasvg_py import measure_text
 from .novasvg_py import add_font_face_from_file
 from .novasvg_py import add_font_face_from_data
 from .novasvg_py import get_font_face
@@ -29,6 +32,9 @@ from .novasvg_py import measure_foreign_object
 __all__ = [
     "FontFace",
     "Font",
+    "TextMetrics",
+    "add_font_file",
+    "measure_text",
     "add_font_face_from_file",
     "add_font_face_from_data",
     "get_font_face",

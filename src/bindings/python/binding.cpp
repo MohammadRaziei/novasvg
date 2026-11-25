@@ -16,6 +16,7 @@
 
 // Include the main library header
 #include "nova/svg/svg.h"
+#include "nova/vg/font.h" // public: add_font_file()
 #include "vg/canvas.h" // Transform, Path, ...
 #include "vg/font.h"
 #include "svg/svgelement.h" // private: foreignObject text measurement
@@ -231,6 +232,30 @@ NB_MODULE(novasvg_py, m) {
         }, nb::is_method(), "text"_a,
         "Per-glyph (pen_x, ink_left, ink_right, ink_top, ink_bottom) in pixels (top/bottom relative to the baseline, y down) for every glyph that has an outline "
         "(spaces are skipped), shaped by libstb, like measure_text().");
+
+    m.def("add_font_file", &nova::vg::add_font_file, "path"_a,
+          "Register every face of a font file (.ttf, .otf, .ttc) with the font cache, under the family names the "
+          "file declares. Returns how many faces were added; 0 when the file cannot be read.");
+
+    nb::class_<nova::svg::text_metrics>(m, "TextMetrics")
+        .def_ro("width", &nova::svg::text_metrics::width, "Advance of the whole text (kerning and ligatures included).")
+        .def_ro("ascent", &nova::svg::text_metrics::ascent, "Baseline up to the top of the line box; never negative.")
+        .def_ro("descent", &nova::svg::text_metrics::descent, "Baseline down to the bottom of the line box; never negative.")
+        .def_ro("line_gap", &nova::svg::text_metrics::line_gap, "Extra leading between two lines.")
+        .def("__repr__", [](const nova::svg::text_metrics& t) {
+            return "TextMetrics(width=" + std::to_string(t.width) + ", ascent=" + std::to_string(t.ascent) +
+                   ", descent=" + std::to_string(t.descent) + ", line_gap=" + std::to_string(t.line_gap) + ")";
+        });
+    // bool first: Python's True is also an int, and must stay `bold`, not weight 1.
+    m.def("measure_text", nb::overload_cast<const std::string&, const std::string&, float, bool, bool>(&nova::svg::measure_text),
+          "text"_a, "font_family"_a, "font_size"_a, "bold"_a = false, "italic"_a = false,
+          "Measure one run of text the way <text> does: `font_family` is a CSS font-family list.");
+    m.def("measure_text", nb::overload_cast<const std::string&, const std::string&, float, int, bool>(&nova::svg::measure_text),
+          "text"_a, "font_family"_a, "font_size"_a, "weight"_a, "italic"_a = false,
+          "The same for a numeric font-weight (a variable font is set to it).");
+    m.def("is_valid_selector", &nova::svg::is_valid_selector, "selector"_a,
+          "Whether Document.query_selector_all() understands the CSS selector. query_selector_all() returns [] for a "
+          "selector that matches nothing and for one that is wrong; this tells the two apart.");
 
     m.def("measure_foreign_object", [](const std::string& html, const nova::vg::sized_font& font, std::optional<float> max_width,
                                        std::optional<std::string> family, bool bold, bool italic) {
@@ -449,6 +474,10 @@ NB_MODULE(novasvg_py, m) {
         .def("children", &nova::svg::element::children, "Get child nodes.");
 
     // --- Bind document Class ---
+    nb::enum_<nova::svg::document::pdf_mode>(m, "PdfMode")
+        .value("VECTOR", nova::svg::document::pdf_mode::vector)
+        .value("RASTER", nova::svg::document::pdf_mode::raster);
+
     nb::class_<nova::svg::document>(m, "Document")
         .def_static("load_from_file", &nova::svg::document::load_file, "filename"_a, "Load an SVG document from a file.")
         .def_static("load_from_data", 
@@ -475,6 +504,15 @@ NB_MODULE(novasvg_py, m) {
             return dom.render_to_pixmap(width, height, stb::color::from_value(background_color));
         }, "width"_a = -1, "height"_a = -1, "backgroundColor"_a = 0u,
            "Render the document using a packed 0xRRGGBBAA background color.")
+        .def("render_to_pdf", [](const nova::svg::document& dom, nova::svg::document::pdf_mode mode, float dpi) {
+            const auto bytes = dom.render_to_pdf(mode, dpi);
+            return nb::bytes(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+        }, "mode"_a = nova::svg::document::pdf_mode::vector, "dpi"_a = 192.f,
+           "Render the document as a one-page PDF and return its bytes (empty when the document has no size). "
+           "PdfMode.VECTOR keeps shapes and text vector, PdfMode.RASTER makes the page one bitmap at `dpi`.")
+        .def("save_pdf", &nova::svg::document::save_pdf, "filename"_a,
+             "mode"_a = nova::svg::document::pdf_mode::vector, "dpi"_a = 192.f,
+             "Write render_to_pdf() to a file; False when nothing could be rendered or written.")
         .def("element_from_point", &nova::svg::document::element_from_point, "x"_a, "y"_a, "Get the topmost element at a specific point.")
         .def("get_element_by_id", &nova::svg::document::element_by_id, "id"_a, "Get an element by its ID.")
         .def("document_element", &nova::svg::document::document_element, "Get the root element of the document.");

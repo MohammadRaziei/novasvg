@@ -2,6 +2,7 @@
 
 ### Added
 
+- **Python: what the C++ API and the CLI had.** `novasvg.fonts.add_font_file(path)` (every face of a .ttf/.otf/.ttc, returns how many), `novasvg.fonts.measure_text(text, font_family, font_size, bold=False, italic=False)` and the numeric-weight form `measure_text(text, font_family, font_size, 700)` (returns `TextMetrics`: `width`, `ascent`, `descent`, `line_gap`; `True` means bold, not weight 1), `novasvg.is_valid_selector(selector)`, and `Document.render_to_pdf(mode=PdfMode.VECTOR, dpi=192.0)` / `Document.save_pdf(filename, mode, dpi)` with `novasvg.PdfMode.VECTOR | RASTER`.
 - **`nova::svg::is_valid_selector(selector)`**: `query_selector_all()` returns an empty list both for a selector that matches nothing and for one that is wrong; this tells them apart. `novasvg query` uses it, so a bad selector is an error (exit 1, "Invalid or unsupported selector") instead of "Found 0 element(s)" with exit 0.
 - Tests for the XML prolog and entities (`test_xml_prolog.cpp`: DOCTYPE, comments, predefined entities, character references, CDATA; a DTD `<!ENTITY>` is not expanded, now a documented limit) and for the dash fix (`test_stroke_dash.cpp`). ADR-0013 now holds the measured parse shares (5% to 20% of a render for drawings) and is closed as not worth a rewrite.
 - **`monospace` and `serif` have an embedded fallback**: DejaVu Sans Mono and DejaVu Serif (regular and bold each, Latin subsets, 12 to 17 KB each) are compiled in next to DejaVu Sans, so on a machine without fonts `font-family: monospace` is drawn with equal-width characters and `serif` with serifs, instead of the proportional Sans. There is no oblique Mono or Serif, so an italic request gets the upright face. The Mono and Serif subsets are from DejaVu 2.37, the Sans ones from 2.35. The full Mono and Serif fonts are not kept in the repository, only the subsets: `tools/gen_default_font.py` takes the directory that holds them as its argument.
@@ -56,6 +57,7 @@
 
 ### Fixed
 
+- `Element` and `Document` shared their size-fitting and layer-blending code by copy; it is one helper now. No change in output.
 - **Fixes of 0.11.5 and 0.11.6, brought over from the header-only line.**
   - A `<line>` that runs left or up (`x2 < x1`, `y2 < y1`) has a box of positive size. A negative one made the box empty, so a group with `opacity` that held only such a line (d3's axis ticks, `y2="-111"`; Mermaid's gantt grid) drew nothing.
   - `<foreignObject>` text wraps after a hyphen, like a browser: Mermaid's `DELIVERY-ADDRESS` is two lines at 120 px. A line breaks right after a hyphen-minus inside a word, except after a hyphen that opens the word or follows another hyphen and before a digit or another hyphen (`a-1`, `--x` stay whole). Measure and paint use the same rule.

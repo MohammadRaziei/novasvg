@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <cstring>
+#include <type_traits>
 #include <fstream>
 
 #include <nova/svg/svg.h>
@@ -144,8 +145,9 @@ TEST_CASE("Bitmap operations") {
     // Test clear
     bitmap.clear(stb::color::from_value(0xFF0000FF)); // Red color
     
-    // Test copy constructor
-    nova::vg::pixmap bitmap2 = bitmap;
+    // A pixmap cannot be copied by accident (a copy would share the pixels); clone() copies them
+    static_assert(!std::is_copy_constructible_v<nova::vg::pixmap> && !std::is_copy_assignable_v<nova::vg::pixmap>);
+    nova::vg::pixmap bitmap2 = bitmap.clone();
     CHECK(bitmap2.width() == 100);
     CHECK(bitmap2.height() == 150);
     
@@ -373,7 +375,7 @@ TEST_CASE("Bitmap edge cases") {
     CHECK(negativeBitmap.is_null());
     
     // Test copy of null bitmap
-    nova::vg::pixmap copiedNull = nullBitmap;
+    nova::vg::pixmap copiedNull = nullBitmap.clone();
     CHECK(copiedNull.is_null());
     
     // Test move of null bitmap
@@ -403,4 +405,30 @@ TEST_CASE("Matrix inverse and advanced operations") {
     auto product2 = back->then(*inverse);
     CHECK(product2.a == doctest::Approx(1.0f).epsilon(0.001f));
     CHECK(product2.d == doctest::Approx(1.0f).epsilon(0.001f));
+}
+
+TEST_CASE("pixmap::clone copies the pixels, not the handle")
+{
+    nova::vg::pixmap original(8, 4);
+    REQUIRE(!original.is_null());
+    original.clear(stb::color::from_value(0xFF0000FF));
+    nova::vg::pixmap copy = original.clone();
+    REQUIRE(!copy.is_null());
+    CHECK(copy.data() != original.data());
+    CHECK(copy.width() == 8);
+    CHECK(copy.height() == 4);
+    CHECK(std::memcmp(copy.data(), original.data(), size_t(original.stride()) * 4) == 0);
+
+    // Drawing into one leaves the other alone
+    copy.clear(stb::color::from_value(0xFF00FF00));
+    CHECK(std::memcmp(copy.data(), original.data(), size_t(original.stride()) * 4) != 0);
+
+    // A pixmap over caller-owned memory clones into memory of its own, whatever the caller's stride
+    std::vector<uint8_t> memory(16 * 4, 0x7f);  // 4 x 4 px, stride 16
+    nova::vg::pixmap wrapped(memory.data(), 3, 4, 16);
+    nova::vg::pixmap owned = wrapped.clone();
+    REQUIRE(!owned.is_null());
+    CHECK(owned.data() != wrapped.data());
+    CHECK(owned.data()[0] == 0x7f);
+    CHECK(owned.data()[owned.stride() * 3 + 11] == 0x7f);
 }

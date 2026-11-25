@@ -141,6 +141,40 @@ void element::set_attribute(const std::string& name, const std::string& value)
     }
 }
 
+namespace {
+
+// The pixel size to draw a `source_width` x `source_height` box at. A side that is not given (<= 0) follows the other
+// one and keeps the aspect ratio; with neither given, the box's own size, rounded up. Shared by element and document
+// so the two cannot drift apart.
+void fit_size(int& width, int& height, float source_width, float source_height)
+{
+    if(width <= 0 && height <= 0) {
+        width = static_cast<int>(std::ceil(source_width));
+        height = static_cast<int>(std::ceil(source_height));
+    } else if(width > 0 && height <= 0) {
+        height = static_cast<int>(std::ceil(width * source_height / source_width));
+    } else if(height > 0 && width <= 0) {
+        width = static_cast<int>(std::ceil(height * source_width / source_height));
+    }
+}
+
+// Draw onto a transparent layer the size of `target` with `render_into(pixmap&)`, then blend the layer over it.
+template<class Render>
+void blend_layer_over(stb::image& target, Render&& render_into)
+{
+    if(target.empty())
+        return;
+    pixmap layer(target.width(), target.height());  // transparent
+    if(layer.is_null())
+        return;
+    render_into(layer);
+    stb::image over = pixmap_release_to_image(std::move(layer));
+    if(!over.empty())
+        target.blend(over);
+}
+
+}  // namespace
+
 void element::render(pixmap& bitmap, const stb::matrix& matrix) const
 {
     if(m_node == nullptr || bitmap.is_null())
@@ -157,14 +191,7 @@ pixmap element::render_to_pixmap(int width, int height, const color& background_
     auto element_bounds = el(true)->local_transform().map_rect(el()->paint_bounding_box());
     if(element_bounds.empty())
         return pixmap();
-    if(width <= 0 && height <= 0) {
-        width = static_cast<int>(std::ceil(element_bounds.w));
-        height = static_cast<int>(std::ceil(element_bounds.h));
-    } else if(width > 0 && height <= 0) {
-        height = static_cast<int>(std::ceil(width * element_bounds.h / element_bounds.w));
-    } else if(height > 0 && width <= 0) {
-        width = static_cast<int>(std::ceil(height * element_bounds.w / element_bounds.h));
-    }
+    fit_size(width, height, element_bounds.w, element_bounds.h);
 
     auto x_scale = width / element_bounds.w;
     auto y_scale = height / element_bounds.h;
@@ -178,15 +205,9 @@ pixmap element::render_to_pixmap(int width, int height, const color& background_
 
 void element::render(image& image, const stb::matrix& matrix) const
 {
-    if(m_node == nullptr || image.empty())
+    if(m_node == nullptr)
         return;
-    pixmap layer(image.width(), image.height());  // transparent
-    if(layer.is_null())
-        return;
-    render(layer, matrix);
-    stb::image over = pixmap_release_to_image(std::move(layer));
-    if(!over.empty())
-        image.blend(over);
+    blend_layer_over(image, [&](pixmap& layer) { render(layer, matrix); });
 }
 
 image element::render_to_image(int width, int height, const color& background_color) const
@@ -325,20 +346,6 @@ void document::render(pixmap& bitmap, const stb::matrix& matrix) const
     // (this runs after that clear) since that argument means "what to
     // show through transparent content", and content here isn't actually
     // transparent -- it explicitly asked for this color.
-    // A `background-color` in the root <svg>'s own style isn't a real svg
-    // presentation property -- it's a CSS box-model property that only
-    // means something when an svg is displayed as a standalone
-    // dom/replaced el (exactly how a browser navigated straight
-    // to a .svg file treats it, painting that color behind everything).
-    // Most pure-vector svg renderers ignore it entirely, but since
-    // generated svgs (Mermaid in particular) rely on it for a
-    // correct-looking standalone render, honor it here the same way:
-    // clear the bitmap to it before any content paints, so it sits under
-    // everything and behind any transparency in the content itself. Takes
-    // priority over render_to_pixmap()'s own `backgroundColor` argument
-    // (this runs after that clear) since that argument means "what to
-    // show through transparent content", and content here isn't actually
-    // transparent -- it explicitly asked for this color.
     if(const auto& bg = root_element(true)->attribute(property_id::background_color); !bg.empty()) {
         if(const auto parsed = color::try_parse(bg)) {
             const color color_ = *parsed;
@@ -362,14 +369,7 @@ pixmap document::render_to_pixmap(int width, int height, const color& background
     auto intrinsic_height = root_element()->intrinsic_height();
     if(intrinsic_width == 0.f || intrinsic_height == 0.f)
         return pixmap();
-    if(width <= 0 && height <= 0) {
-        width = static_cast<int>(std::ceil(intrinsic_width));
-        height = static_cast<int>(std::ceil(intrinsic_height));
-    } else if(width > 0 && height <= 0) {
-        height = static_cast<int>(std::ceil(width * intrinsic_height / intrinsic_width));
-    } else if(height > 0 && width <= 0) {
-        width = static_cast<int>(std::ceil(height * intrinsic_width / intrinsic_height));
-    }
+    fit_size(width, height, intrinsic_width, intrinsic_height);
 
     auto x_scale = width / intrinsic_width;
     auto y_scale = height / intrinsic_height;
@@ -439,15 +439,7 @@ bool document::save_pdf(const std::string& filename, pdf_mode mode, float dpi) c
 
 void document::render(image& image, const stb::matrix& matrix) const
 {
-    if(image.empty())
-        return;
-    pixmap layer(image.width(), image.height());  // transparent
-    if(layer.is_null())
-        return;
-    render(layer, matrix);
-    stb::image over = pixmap_release_to_image(std::move(layer));
-    if(!over.empty())
-        image.blend(over);
+    blend_layer_over(image, [&](pixmap& layer) { render(layer, matrix); });
 }
 
 image document::render_to_image(int width, int height, const color& background_color) const
