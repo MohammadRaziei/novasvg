@@ -47,15 +47,37 @@ void svg_render_state::begin_group(const svg_blend_info& blend_info)
     // the finished group is blended into what is already painted under it, with its mix-blend-mode
     params.blend = painting ? blend_info.mix_blend_mode() : blend_mode::normal;
     params.opacity = m_mode == svg_render_mode::clipping ? 1.f : blend_info.opacity();
-    // Opacity and blend mode alone a canvas can keep as vectors; a mask, a clip mask or a filter needs the pixels.
-    const bool masking = (blend_info.clipper() && blend_info.clipper()->requires_masking()) || blend_info.masker() || blend_info.filter_element();
-    params.needs_pixels = !painting || masking;
+    // Opacity and blend mode alone a canvas can keep as vectors; a mask, a clip mask or a filter needs the pixels,
+    // unless the canvas keeps a mask as a vector too. It can do that for one mask or one clip mask on a group (the mask
+    // is then one thing the group is composited through), without a filter.
+    const auto* clipper = blend_info.clipper();
+    const auto* masker = blend_info.masker();
+    const bool clip_mask = clipper && clipper->requires_masking();
+    const bool masking = clip_mask || masker || blend_info.filter_element();
+    const bool vector_capable = painting && m_canvas->vector_masks() && !blend_info.filter_element();
+    const bool vector_clip = vector_capable && clip_mask && !masker && clipper->can_stay_vector(*this);
+    const bool vector_mask = vector_capable && masker && !clip_mask && masker->can_stay_vector(*this);
+    params.needs_pixels = !painting || (masking && !vector_clip && !vector_mask);
+    if(vector_clip || vector_mask) {
+        // painted by the canvas when the group ends, on the canvas the group is on (it is in place)
+        params.mask = layer_mask{
+            [this, target = m_canvas, vector_clip, clipper, masker] {
+                target->save();
+                if(vector_clip)
+                    clipper->paint_content(*this, target);
+                else
+                    masker->paint_content(*this, target);
+                target->restore();
+            },
+            vector_mask && masker->is_luminance()};
+    }
 
     layer_scope scope = m_canvas->begin_layer(params);
     if(scope.in_place()) {
-        // the canvas keeps the group as a vector group of its own, so a plain clip path stays a vector clip
-        if(blend_info.clipper())
-            blend_info.clipper()->apply_clip_path(*this);
+        // the canvas keeps the group as a vector group of its own, so a plain clip path stays a vector clip; a clip
+        // path that is the group's mask is not one (its shapes are united, not intersected)
+        if(clipper && !vector_clip)
+            clipper->apply_clip_path(*this);
     } else {
         m_canvas = scope.target;
         m_current_transform = scope.pre_transform * m_current_transform;

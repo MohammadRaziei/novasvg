@@ -298,6 +298,14 @@ public:
     void apply_clip_mask(svg_render_state& state, raster_canvas& layer) const;
     void apply_clip_path(svg_render_state& state) const;
 
+    // Paints the clip path's shapes on `target`, in the coordinates of `state` (the clipped element's). `then` is
+    // called with the state they were painted with, for what this clip path has to apply on top of them.
+    void paint_content(svg_render_state& state, const std::shared_ptr<canvas>& target,
+                       const std::function<void(svg_render_state&)>& then = {}) const;
+    // Whether a canvas can keep this clip path as a vector mask (its alpha): not with a clip path of its own, and not
+    // through a reference cycle.
+    bool can_stay_vector(const svg_render_state& state) const;
+
     bool requires_masking() const;
 
 private:
@@ -319,6 +327,16 @@ public:
     rect mask_bounding_box(const svg_element* el) const;
     // Multiplies `layer` (the pixels of the masked group) by the mask.
     void apply_mask(svg_render_state& state, raster_canvas& layer) const;
+
+    // Paints the mask's content on `target`, clipped to the mask region, in the coordinates of `state` (the masked
+    // element's). `then` is called with the state it was painted with, for what this mask has to apply on top.
+    void paint_content(svg_render_state& state, const std::shared_ptr<canvas>& target,
+                       const std::function<void(svg_render_state&)>& then = {}) const;
+    // Whether a canvas can keep this mask as a vector mask: not with a clip path or a mask of its own on it, and not
+    // through a reference cycle.
+    bool can_stay_vector(const svg_render_state& state) const;
+    // The mask is the luminance of its content (mask-type: luminance, the default), else its alpha.
+    bool is_luminance() const { return m_mask_type == css_mask_type::luminance; }
 
     void layout_element(const svg_layout_state& state) final;
 

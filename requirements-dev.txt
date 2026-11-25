@@ -19,3 +19,4 @@ numpy
 sphinx
 markdown-it-py
 doxygen-awesome-css
+pypdfium2

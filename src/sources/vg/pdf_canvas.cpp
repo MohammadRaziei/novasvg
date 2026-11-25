@@ -125,16 +125,16 @@ static const char* pdf_blend_name(blend_mode mode)
     }
 }
 
-std::string pdf_canvas::alpha_state(float alpha, blend_mode blend_mode_, int soft_mask)
+std::string pdf_canvas::alpha_state(float alpha, blend_mode blend_mode_, int soft_mask, bool mask_alpha)
 {
     std::string alpha_text = num(clamp01(alpha));
     std::string blend = pdf_blend_name(blend_mode_);
-    std::string key = alpha_text + "|" + blend + "|" + std::to_string(soft_mask);
+    std::string key = alpha_text + "|" + blend + "|" + std::to_string(soft_mask) + (mask_alpha ? "a" : "l");
     auto it = m_ext_gstates.find(key);
     if(it != m_ext_gstates.end())
         return it->second.name;
     std::string name = "GS" + std::to_string(m_ext_gstates.size());
-    m_ext_gstates.emplace(key, ext_gstate{name, alpha_text, blend, soft_mask});
+    m_ext_gstates.emplace(key, ext_gstate{name, alpha_text, blend, soft_mask, mask_alpha});
     return name;
 }
 
@@ -397,15 +397,17 @@ void pdf_canvas::begin_paint(bool stroke, const stb::matrix& transform_)
         return;
     }
 
+    // Inside a group (a Form XObject, drawn in pixels) a pattern matrix is read in the form's space, not the page's.
+    const bool in_form = !m_groups.empty();
     if(p.type_ == paint::kind::tiled) {
-        tiling_pattern(transform_);
+        tiling_pattern(transform_, in_form);
         m_content += "/" + alpha_state(p.a) + " gs\n";
         m_content += stroke ? "/Pattern CS /" : "/Pattern cs /";
         m_content += m_patterns.back().first + (stroke ? " SCN\n" : " scn\n");
         return;
     }
 
-    if(shading_pattern(transform_, p.stops) == 0) {
+    if(shading_pattern(transform_, p.stops, in_form) == 0) {
         m_content += "/" + alpha_state(0.f) + " gs\n";
         return;
     }
@@ -640,11 +642,11 @@ void pdf_canvas::set_pattern(const pixmap& tile, const transform& transform_, fl
 }
 
 // A tiling pattern for the current tiled paint, drawn through `transform` (the matrix of the operation).
-int pdf_canvas::tiling_pattern(const stb::matrix& transform_)
+int pdf_canvas::tiling_pattern(const stb::matrix& transform_, bool in_form)
 {
     const paint& p = m_paints.back();
     stb::matrix base = {k_px_to_pt, 0, 0, -k_px_to_pt, 0, m_height * k_px_to_pt};
-    stb::matrix m = then(then(p.matrix, transform_), base);
+    stb::matrix m = in_form ? then(p.matrix, transform_) : then(then(p.matrix, transform_), base);
     const std::string w = std::to_string(p.tile_w), h = std::to_string(p.tile_h);
     // Tile space is y-down like the bitmap: the image's top row sits at y = 0.
     std::string content = w + " 0 0 -" + h + " 0 " + h + " cm\n/T Do\n";
@@ -675,7 +677,10 @@ layer_scope pdf_canvas::begin_layer(const layer_params& params)
 void pdf_canvas::end_layer(layer_scope&& scope, const layer_effects& effects)
 {
     if(scope.in_place()) {
-        end_group(scope.params.blend, scope.params.opacity);
+        // The mask is painted now, after the content, as a group of its own that the group is composited through.
+        const auto& mask = scope.params.mask;
+        const int soft_mask = mask && mask->draw ? mask_group(*mask) : 0;
+        end_group(scope.params.blend, scope.params.opacity, soft_mask, mask && !mask->luminance);
         return;
     }
     auto& layer = static_cast<raster_canvas&>(*scope.target);
@@ -693,10 +698,10 @@ void pdf_canvas::begin_group()
     m_paints.push_back(m_paints.back());
 }
 
-void pdf_canvas::end_group(blend_mode blend_mode_, float opacity)
+int pdf_canvas::finish_group()
 {
     if(m_groups.empty())
-        return;
+        return 0;
     group_frame frame = std::move(m_groups.back());
     m_groups.pop_back();
 
@@ -710,11 +715,28 @@ void pdf_canvas::end_group(blend_mode blend_mode_, float opacity)
 
     std::string body = std::move(m_content);
     m_content = std::move(frame.outer_content);
-    int form = add_stream("/Type /XObject /Subtype /Form /BBox [0 0 " + num(m_width) + " " + num(m_height)
+    return add_stream("/Type /XObject /Subtype /Form /BBox [0 0 " + num(m_width) + " " + num(m_height)
         + "] /Group << /S /Transparency /CS /DeviceRGB >> /Resources %%RES%%", body, true);
+}
+
+void pdf_canvas::end_group(blend_mode blend_mode_, float opacity, int soft_mask, bool mask_alpha)
+{
+    const int form = finish_group();
+    if(form == 0)
+        return;
     std::string name = "Fm" + std::to_string(m_xobjects.size());
     m_xobjects.emplace_back(name, form);
-    m_content += "q\n/" + alpha_state(opacity, blend_mode_) + " gs\n/" + name + " Do\nQ\n";
+    m_content += "q\n/" + alpha_state(opacity, blend_mode_, soft_mask, mask_alpha) + " gs\n/" + name + " Do\nQ\n";
+}
+
+int pdf_canvas::mask_group(const layer_mask& mask)
+{
+    // Painted in the page's own space: a soft mask is read in the space of the `gs` that names it, and the group it
+    // masks is placed in that same space. Whatever it leaves unpainted is a mask value of 0 (black backdrop for a
+    // luminosity mask, no alpha for an alpha one), so the masked group is hidden there.
+    begin_group();
+    mask.draw();
+    return finish_group();
 }
 
 void pdf_canvas::save()
@@ -759,7 +781,7 @@ std::vector<uint8_t> pdf_canvas::data() const
     std::string gs, pat, xo;
     for(const auto& e : m_ext_gstates)
         gs += "/" + e.second.name + " << /ca " + e.second.alpha + " /CA " + e.second.alpha + " /BM /" + e.second.blend
-            + (e.second.soft_mask ? " /SMask << /Type /Mask /S /Luminosity /G " + std::to_string(e.second.soft_mask) + " 0 R >> >> " : " /SMask /None >> ");
+            + (e.second.soft_mask ? std::string(" /SMask << /Type /Mask /S ") + (e.second.mask_alpha ? "/Alpha" : "/Luminosity") + " /G " + std::to_string(e.second.soft_mask) + " 0 R >> >> " : " /SMask /None >> ");
     for(const auto& p : m_patterns)
         pat += "/" + p.first + " " + std::to_string(p.second) + " 0 R ";
     for(const auto& x : m_xobjects)

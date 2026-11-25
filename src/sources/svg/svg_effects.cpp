@@ -105,11 +105,9 @@ rect svg_clip_path_element::clip_bounding_box(const svg_element* el) const
     return local_transform().map_rect(clip_bounding_box);
 }
 
-void svg_clip_path_element::apply_clip_mask(svg_render_state& state, raster_canvas& layer) const
+void svg_clip_path_element::paint_content(svg_render_state& state, const std::shared_ptr<canvas>& target,
+                                          const std::function<void(svg_render_state&)>& then) const
 {
-    if(state.has_cycle_reference(this))
-        return;
-    auto mask_image = raster_canvas::create(state.current_transform().map_rect(state.paint_bounding_box()));
     auto current_transform = state.current_transform() * local_transform();
     if(m_clip_path_units.value() == units::object_bounding_box) {
         auto bbox = state.fill_bounding_box();
@@ -117,11 +115,26 @@ void svg_clip_path_element::apply_clip_mask(svg_render_state& state, raster_canv
         current_transform.scale(bbox.w, bbox.h);
     }
 
-    svg_render_state new_state(this, &state, current_transform, svg_render_mode::clipping, mask_image);
+    svg_render_state new_state(this, &state, current_transform, svg_render_mode::clipping, target);
     render_children(new_state);
-    if(clipper()) {
-        clipper()->apply_clip_mask(new_state, *mask_image);
-    }
+    if(then)
+        then(new_state);
+}
+
+bool svg_clip_path_element::can_stay_vector(const svg_render_state& state) const
+{
+    return clipper() == nullptr && !state.has_cycle_reference(this);
+}
+
+void svg_clip_path_element::apply_clip_mask(svg_render_state& state, raster_canvas& layer) const
+{
+    if(state.has_cycle_reference(this))
+        return;
+    auto mask_image = raster_canvas::create(state.current_transform().map_rect(state.paint_bounding_box()));
+    paint_content(state, mask_image, [&](svg_render_state& content_state) {
+        if(clipper())
+            clipper()->apply_clip_mask(content_state, *mask_image);
+    });
 
     layer.blend_canvas(*mask_image, composite_op::destination_in, blend_mode::normal, 1.f);
 }
@@ -239,12 +252,10 @@ rect svg_mask_element::mask_bounding_box(const svg_element* el) const
     return mask_bounding_box.intersected(mask_rect(el));
 }
 
-void svg_mask_element::apply_mask(svg_render_state& state, raster_canvas& layer) const
+void svg_mask_element::paint_content(svg_render_state& state, const std::shared_ptr<canvas>& target,
+                                     const std::function<void(svg_render_state&)>& then) const
 {
-    if(state.has_cycle_reference(this))
-        return;
-    auto mask_image = raster_canvas::create(state.current_transform().map_rect(state.paint_bounding_box()));
-    mask_image->clip_rect(mask_rect(state.el()), fill_rule::non_zero, state.current_transform());
+    target->clip_rect(mask_rect(state.el()), fill_rule::non_zero, state.current_transform());
 
     auto current_transform = state.current_transform();
     if(m_mask_content_units.value() == units::object_bounding_box) {
@@ -253,12 +264,28 @@ void svg_mask_element::apply_mask(svg_render_state& state, raster_canvas& layer)
         current_transform.scale(bbox.w, bbox.h);
     }
 
-    svg_render_state new_state(this, &state, current_transform, svg_render_mode::painting, mask_image);
+    svg_render_state new_state(this, &state, current_transform, svg_render_mode::painting, target);
     render_children(new_state);
-    if(clipper())
-        clipper()->apply_clip_mask(new_state, *mask_image);
-    if(masker())
-        masker()->apply_mask(new_state, *mask_image);
+    if(then)
+        then(new_state);
+}
+
+bool svg_mask_element::can_stay_vector(const svg_render_state& state) const
+{
+    return clipper() == nullptr && masker() == nullptr && !state.has_cycle_reference(this);
+}
+
+void svg_mask_element::apply_mask(svg_render_state& state, raster_canvas& layer) const
+{
+    if(state.has_cycle_reference(this))
+        return;
+    auto mask_image = raster_canvas::create(state.current_transform().map_rect(state.paint_bounding_box()));
+    paint_content(state, mask_image, [&](svg_render_state& content_state) {
+        if(clipper())
+            clipper()->apply_clip_mask(content_state, *mask_image);
+        if(masker())
+            masker()->apply_mask(content_state, *mask_image);
+    });
 
     if(m_mask_type == css_mask_type::luminance)
         mask_image->convert_to_luminance_mask();

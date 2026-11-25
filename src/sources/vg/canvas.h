@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <utility>
 #include <functional>
+#include <optional>
 #include <memory>
 #include <vector>
 #include <array>
@@ -343,15 +344,27 @@ class pixmap;
 class canvas;
 class raster_canvas;
 
+/// A mask on a group, for a canvas that can keep it as a vector (canvas::vector_masks()): the group shows through
+/// only where the mask is. Without this, a mask is applied to the group's pixels by `layer_effects`.
+struct layer_mask {
+    /// Paints the mask's content, in the same coordinates as the group's content, on the canvas that begin_layer()
+    /// was called on. The canvas calls it from end_layer(), after the group's content, and sets up where it goes.
+    std::function<void()> draw;
+    /// The mask is the luminance of what `draw` paints (a luminance mask), or its alpha (an alpha mask, a clip mask).
+    bool luminance = true;
+};
+
 /// What a group of drawing operations (a layer) asks of the canvas it is drawn on.
 struct layer_params {
     rect bounds;                          ///< the part of the canvas the group may touch, in the canvas's coordinates; the canvas clips it to itself
     blend_mode blend = blend_mode::normal; ///< how the finished group is composited back
     float opacity = 1.f;                  ///< and with how much of it
     bool needs_pixels = false;            ///< the group's pixels are needed when it ends, for `layer_effects` (masks, filters)
+    std::optional<layer_mask> mask;       ///< a mask kept as a vector: only for a canvas whose vector_masks() is true, and then without needs_pixels
 };
 
-/// Changes to the finished pixels of a group, which only pixels can express (clip masks, masks, filters).
+/// Changes to the finished pixels of a group, which only pixels can express (filters; clip masks and masks too, unless
+/// the canvas keeps them as vectors: layer_mask).
 /// The canvas calls it from end_layer() with the group's pixels, before compositing the group back. It is only
 /// called for a group begun with `needs_pixels` set.
 using layer_effects = std::function<void(raster_canvas& layer)>;
@@ -402,6 +415,10 @@ public:
     /// Pixels per user unit of the bitmaps this canvas wants made for it (pattern tiles, groups with effects):
     /// 1 for a pixel canvas, whose own coordinates are pixels.
     virtual float raster_scale() const { return 1.f; }
+
+    /// Whether a group's mask can stay a vector (layer_params::mask) instead of being applied to its pixels. A mask
+    /// is then exact at any zoom and costs no bitmap; a canvas that cannot says false and gets `layer_effects`.
+    virtual bool vector_masks() const { return false; }
 
     /// Starts a group: draw its content on `scope.target`, or on this canvas when `scope.in_place()`, and hand
     /// the scope back to end_layer(). Groups nest and must end in the reverse order; every save() made inside

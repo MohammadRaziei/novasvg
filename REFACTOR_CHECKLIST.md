@@ -389,7 +389,7 @@ Scripted (not by hand): every namespace-scope `NOVA_INLINE` definition (non-temp
 - [x] `pdf_canvas` (`src/sources/vg/pdf_canvas.{h,cpp}`) for the `canvas` interface as it is: paints, gradients, fill/stroke, clip, images, text as outlines.
 - [x] `tests/cpp/test_pdf_canvas.cpp` (structure checks; `NOVA_PDF_OUT=x.pdf` writes the page). Smoke-checked once: `qpdf --check` clean, `pdftoppm` renders it right.
 - [~] Layers: done for `pdf_canvas` (`begin_group/end_group`, `draw_raster_group`) but NOT as virtuals of `canvas` (see ADR-0008, part 2); promote them when a third backend needs it.
-- [x] Pattern: tile bitmap as PDF tiling pattern. Mask, clip mask, filter: rasterized group placed as an image (a vector `SMask` luminosity mask is an upgrade).
+- [x] Pattern: tile bitmap as PDF tiling pattern. Mask, clip mask, filter: rasterized group placed as an image. [x] (2026-11-25, ADR-0016) `<mask>` and clip masks are vector `SMask` soft masks; filters, and a mask together with a clip mask, still are images.
 - [x] `svg_render_state` runs on any `canvas` (`raster()` is null on a PDF page); beginGroup/endGroup and the pattern fill know `pdf_canvas`.
 - [x] Public entry point: `document::render_to_pdf` / `save_pdf` with `pdf_mode::vector | raster` and `dpi`; `tests/cpp/test_pdf_render.cpp`.
 - [ ] Still open: gradient reflect/repeat and per-stop alpha in PDF, vector `SMask` for masks, element-level `render_to_pdf`, font embedding (selectable text), multi-page, PDF metadata (title), CLI flag, Python binding (off for now).

@@ -2,6 +2,7 @@
 
 ### Added
 
+- **PDF: `<mask>` and clip masks stay vector** (ADR-0016). A group with one `<mask>` (luminance or `mask-type: alpha`) or one clip path that needs masking (several shapes, text, `<use>`) is a PDF soft mask over a transparency group instead of a bitmap: the shapes and text stay vector at any zoom and the file does not grow with the page. Opacity and `mix-blend-mode` on the same group compose with it. A mask and a clip mask together on one element, a filter, and a mask or clip path that has a mask or clip path of its own still go through a bitmap, as before. Known difference: a PDF luminosity mask weighs R, G, B as 0.30 / 0.59 / 0.11, an SVG one as 0.2125 / 0.7154 / 0.0721, so a saturated colour in a mask differs by up to about 13 % (grey, black, white and gradients between them are identical). New in the internal canvas API: `layer_params::mask` / `layer_mask`, `canvas::vector_masks()`.
 - **Python: what the C++ API and the CLI had.** `novasvg.fonts.add_font_file(path)` (every face of a .ttf/.otf/.ttc, returns how many), `novasvg.fonts.measure_text(text, font_family, font_size, bold=False, italic=False)` and the numeric-weight form `measure_text(text, font_family, font_size, 700)` (returns `TextMetrics`: `width`, `ascent`, `descent`, `line_gap`; `True` means bold, not weight 1), `novasvg.is_valid_selector(selector)`, and `Document.render_to_pdf(mode=PdfMode.VECTOR, dpi=192.0)` / `Document.save_pdf(filename, mode, dpi)` with `novasvg.PdfMode.VECTOR | RASTER`.
 - **`nova::svg::is_valid_selector(selector)`**: `query_selector_all()` returns an empty list both for a selector that matches nothing and for one that is wrong; this tells them apart. `novasvg query` uses it, so a bad selector is an error (exit 1, "Invalid or unsupported selector") instead of "Found 0 element(s)" with exit 0.
 - Tests for the XML prolog and entities (`test_xml_prolog.cpp`: DOCTYPE, comments, predefined entities, character references, CDATA; a DTD `<!ENTITY>` is not expanded, now a documented limit) and for the dash fix (`test_stroke_dash.cpp`). ADR-0013 now holds the measured parse shares (5% to 20% of a render for drawings) and is closed as not worth a rewrite.
@@ -57,6 +58,7 @@
 
 ### Fixed
 
+- **PDF: a gradient or a tiling pattern inside a group was drawn at three quarters of its size and mirrored in y.** In a group (`opacity`, `mix-blend-mode`, a mask) the PDF content works in pixels, but the pattern matrix still carried the page's px to pt scale and flip. Only the fade mask of ADR-0015 knew it. Gradients under group opacity now reach their far end (checked against the raster render with pdfium and poppler).
 - `Element` and `Document` shared their size-fitting and layer-blending code by copy; it is one helper now. No change in output.
 - **Fixes of 0.11.5 and 0.11.6, brought over from the header-only line.**
   - A `<line>` that runs left or up (`x2 < x1`, `y2 < y1`) has a box of positive size. A negative one made the box empty, so a group with `opacity` that held only such a line (d3's axis ticks, `y2="-111"`; Mermaid's gantt grid) drew nothing.

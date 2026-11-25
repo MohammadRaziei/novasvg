@@ -5,7 +5,8 @@
 //
 // Vector: solid and gradient paints, fills and strokes of paths and text (text is written as glyph outlines, so no
 // font embedding), clipping, images, save/restore, and transparency groups (a layer that needs no pixels: opacity and
-// blend mode). Raster inside the vector page: a layer that needs pixels (masks, filters, clip masks) is drawn to a
+// blend mode, and a mask: layer_params::mask is a soft mask of the page, a luminosity one or an alpha one). Raster
+// inside the vector page: a layer that needs pixels (filters, and masks that cannot stay a vector) is drawn to a
 // bitmap at raster_scale(), run through the caller's effects and placed as an image; pattern tiles come as bitmaps
 // too (set_pattern()).
 #include "canvas.h"
@@ -40,8 +41,9 @@ public:
     void set_pattern(const pixmap& tile, const transform& tile_to_user, float opacity) override;
 
     // A layer that needs no pixels is a transparency group of the page (a Form XObject with a /Group), composited with
-    // the layer's opacity and blend mode. One that does is a bitmap at raster_scale(): it goes through the effects and
-    // lands on the page as an image.
+    // the layer's opacity and blend mode, and through its mask when it has one (see vector_masks()). One that needs
+    // pixels is a bitmap at raster_scale(): it goes through the effects and lands on the page as an image.
+    bool vector_masks() const override { return true; }
     layer_scope begin_layer(const layer_params& params) override;
     void end_layer(layer_scope&& scope, const layer_effects& effects = {}) override;
 
@@ -72,7 +74,13 @@ private:
 
     // Everything drawn between begin_group() and end_group() is one transparency group.
     void begin_group();
-    void end_group(blend_mode blend_mode_, float opacity);
+    // Closes the group begun last and returns its Form XObject; the canvas goes back to the content it had.
+    int finish_group();
+    // finish_group(), then the form is drawn onto the page with the opacity and blend mode, through `soft_mask` (the
+    // object of a mask group, 0 for none) read as luminosity, or as alpha when `mask_alpha`.
+    void end_group(blend_mode blend_mode_, float opacity, int soft_mask = 0, bool mask_alpha = false);
+    // `mask` painted as a group of its own: the group that a soft mask reads. Returns its Form XObject.
+    int mask_group(const layer_mask& mask);
     // A finished bitmap (premultiplied ARGB32) placed at `dst` (user units).
     void draw_raster_group(const pixmap& image, const rect& dst, blend_mode blend_mode_, float opacity);
 
@@ -101,14 +109,14 @@ private:
     void emit_text_path(const std::u32string_view& text, const sized_font& font_, const point& origin, const stb::matrix* transform_, const shaping_context& context);
     // `soft_mask` is the object number of a luminosity soft mask (see fade_mask), or 0 for none: every state names its
     // mask, because an ExtGState that does not would leave the previous one in force.
-    std::string alpha_state(float alpha, blend_mode blend_mode_ = blend_mode::normal, int soft_mask = 0);
+    std::string alpha_state(float alpha, blend_mode blend_mode_ = blend_mode::normal, int soft_mask = 0, bool mask_alpha = false);
     // `in_form` is for a pattern used inside a Form XObject: its matrix then maps to the form's space, which is the
     // pixel space the page content already works in, not to the page's own (point, y up) space.
     int shading_pattern(const stb::matrix& transform_, const gradient_stops& stops, bool in_form = false);
     // The alpha of a gradient whose stops differ (a fade) as a soft mask: the same gradient geometry painted in
     // grey levels equal to the stop alphas, in a transparency group that /SMask reads as luminosity.
     int fade_mask(const stb::matrix& transform_);
-    int tiling_pattern(const stb::matrix& transform_);
+    int tiling_pattern(const stb::matrix& transform_, bool in_form = false);
     // Adds `image` as an Image XObject (Flate RGB, plus an SMask when it has alpha). Returns its object number.
     int add_image(const pixmap& image, int* width, int* height);
     void place_image(int object, int width, int height, const rect& dst, const rect& src, const stb::matrix* transform_, float alpha, blend_mode blend_mode_);
@@ -124,8 +132,9 @@ private:
         std::string alpha;
         std::string blend;
         int soft_mask = 0;
+        bool mask_alpha = false; // the soft mask is read as alpha, not as luminosity
     };
-    std::map<std::string, ext_gstate> m_ext_gstates; // key: alpha + blend mode + soft mask
+    std::map<std::string, ext_gstate> m_ext_gstates; // key: alpha + blend mode + soft mask + how it is read
     float m_raster_scale = 1.f;
     struct group_frame {
         std::string outer_content; // what was being written before begin_group()
