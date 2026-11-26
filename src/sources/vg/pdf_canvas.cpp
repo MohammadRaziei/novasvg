@@ -529,6 +529,50 @@ void pdf_canvas::fill_text(const std::u32string_view& text, const sized_font& fo
     begin_paint(false, transform_.matrix());
     emit_text_path(text, font_, origin, &transform_.matrix(), context);
     m_content += "f\nQ\n";
+    emit_text_layer(text, font_, origin, transform_.matrix(), context);
+}
+
+void pdf_canvas::emit_text_layer(const std::u32string_view& text, const sized_font& font_, const point& origin,
+                                 const stb::matrix& transform_, const shaping_context& context)
+{
+    if(m_mask_depth > 0 || font_.is_null() || !(font_.size() > 0.f))
+        return;
+    // One two-byte code per character (the CID), every glyph of the font 0.5 em wide: the run is then stretched
+    // (Tz) to the width the shaper measured, so a selection covers what the outlines cover.
+    std::string codes;
+    int count = 0;
+    for(char32_t ch : text) {
+        if(ch == U'\t' || ch == U'\n' || ch == U'\r')
+            ch = U' ';
+        if(ch < 0x20 || ch == 0x7f)
+            continue;
+        auto it = m_text_cids.find(ch);
+        if(it == m_text_cids.end()) {
+            if(m_text_cids.size() >= 0xFFFF)
+                continue;
+            it = m_text_cids.emplace(ch, int(m_text_cids.size()) + 1).first;
+        }
+        char hex[8];
+        std::snprintf(hex, sizeof hex, "%04X", it->second);
+        codes += hex;
+        ++count;
+    }
+    if(count == 0)
+        return;
+    const float size = font_.size();
+    const stb::matrix& same = transform_;
+    const std::array<float, 9> at_ = {origin.x, origin.y, same.a, same.b, same.c, same.d, same.e, same.f, size};
+    if(text == m_last_text && at_ == m_last_text_at)
+        return;  // the other half of a text that is both filled and stroked
+    m_last_text.assign(text.data(), text.size());
+    m_last_text_at = at_;
+    const float advance = font_.measure_text(text, context);
+    const float scale = advance > 0.f ? 100.f * advance / (0.5f * size * float(count)) : 100.f;
+    // The matrix of the text: its x axis is the element's, its y axis points up on the page, which is -y here.
+    const stb::matrix& m = transform_;
+    const point at = apply(m, origin.x, origin.y);
+    m_content += "q\nBT\n3 Tr\n/FTxt " + num(size) + " Tf\n" + num(scale) + " Tz\n" + num(m.a) + " " + num(m.b) + " "
+        + num(-m.c) + " " + num(-m.d) + " " + num(at.x) + " " + num(at.y) + " Tm\n<" + codes + "> Tj\nET\nQ\n";
 }
 
 void pdf_canvas::stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context)
@@ -539,6 +583,7 @@ void pdf_canvas::stroke_text(const std::u32string_view& text, float stroke_width
     m_content += num(stroke_width) + " w\n0 J\n0 j\n4 M\n";
     emit_text_path(text, font_, origin, nullptr, context);
     m_content += "S\nQ\n";
+    emit_text_layer(text, font_, origin, transform_.matrix(), context);
 }
 
 void pdf_canvas::clip_path(const outline& path_, fill_rule clip_rule, const transform& transform_)
@@ -735,7 +780,9 @@ int pdf_canvas::mask_group(const layer_mask& mask)
     // masks is placed in that same space. Whatever it leaves unpainted is a mask value of 0 (black backdrop for a
     // luminosity mask, no alpha for an alpha one), so the masked group is hidden there.
     begin_group();
+    ++m_mask_depth;  // what a mask is made of is not the page's text
     mask.draw();
+    --m_mask_depth;
     return finish_group();
 }
 
@@ -778,6 +825,52 @@ std::vector<uint8_t> pdf_canvas::data() const
     objects.push_back(std::move(stream));
     const int contents = int(objects.size());
 
+    // The font of the invisible text layer, when there is any: a Type 0 font that has no glyphs, only a /ToUnicode.
+    std::string font_resource;
+    if(!m_text_cids.empty()) {
+        std::string cmap = "/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n"
+                           "/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n"
+                           "/CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n"
+                           "1 begincodespacerange\n<0000> <FFFF>\nendcodespacerange\n";
+        std::vector<std::pair<int, char32_t>> by_cid;
+        for(const auto& c : m_text_cids)
+            by_cid.emplace_back(c.second, c.first);
+        std::sort(by_cid.begin(), by_cid.end());
+        for(size_t from = 0; from < by_cid.size(); from += 100) {
+            const size_t to = std::min(by_cid.size(), from + 100);
+            cmap += std::to_string(to - from) + " beginbfchar\n";
+            for(size_t i = from; i < to; ++i) {
+                char line[40];
+                const char32_t cp = by_cid[i].second;
+                if(cp >= 0x10000) {  // a surrogate pair
+                    const char32_t v = cp - 0x10000;
+                    std::snprintf(line, sizeof line, "<%04X> <%04X%04X>\n", by_cid[i].first, unsigned(0xD800 + (v >> 10)), unsigned(0xDC00 + (v & 0x3FF)));
+                } else {
+                    std::snprintf(line, sizeof line, "<%04X> <%04X>\n", by_cid[i].first, unsigned(cp));
+                }
+                cmap += line;
+            }
+            cmap += "endbfchar\n";
+        }
+        cmap += "endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend\n";
+
+        object to_unicode;
+        to_unicode.has_stream = true;
+        const auto zc = stb::zlib_compress(cmap.data(), cmap.size());
+        to_unicode.stream.assign(reinterpret_cast<const char*>(zc.data()), zc.size());
+        to_unicode.dict = "<< /Filter /FlateDecode /Length " + std::to_string(to_unicode.stream.size()) + " >>";
+        objects.push_back(std::move(to_unicode));
+        const int to_unicode_id = int(objects.size());
+        const int descriptor = add("<< /Type /FontDescriptor /FontName /NovaSvgText /Flags 4 /FontBBox [0 -200 1000 800] "
+                                   "/ItalicAngle 0 /Ascent 800 /Descent -200 /CapHeight 700 /StemV 80 >>");
+        const int cid_font = add("<< /Type /Font /Subtype /CIDFontType2 /BaseFont /NovaSvgText "
+                                 "/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor "
+                                 + std::to_string(descriptor) + " 0 R /DW 500 /CIDToGIDMap /Identity >>");
+        const int type0 = add("<< /Type /Font /Subtype /Type0 /BaseFont /NovaSvgText /Encoding /Identity-H /DescendantFonts ["
+                              + std::to_string(cid_font) + " 0 R] /ToUnicode " + std::to_string(to_unicode_id) + " 0 R >>");
+        font_resource = " /Font << /FTxt " + std::to_string(type0) + " 0 R >>";
+    }
+
     std::string gs, pat, xo;
     for(const auto& e : m_ext_gstates)
         gs += "/" + e.second.name + " << /ca " + e.second.alpha + " /CA " + e.second.alpha + " /BM /" + e.second.blend
@@ -786,7 +879,7 @@ std::vector<uint8_t> pdf_canvas::data() const
         pat += "/" + p.first + " " + std::to_string(p.second) + " 0 R ";
     for(const auto& x : m_xobjects)
         xo += "/" + x.first + " " + std::to_string(x.second) + " 0 R ";
-    const std::string resources = "<< /ExtGState << " + gs + ">> /Pattern << " + pat + ">> /XObject << " + xo + ">> >>";
+    const std::string resources = "<< /ExtGState << " + gs + ">> /Pattern << " + pat + ">> /XObject << " + xo + ">>" + font_resource + " >>";
     for(auto& o : objects) {
         for(size_t at = o.dict.find("%%RES%%"); at != std::string::npos; at = o.dict.find("%%RES%%", at + resources.size()))
             o.dict.replace(at, 7, resources);

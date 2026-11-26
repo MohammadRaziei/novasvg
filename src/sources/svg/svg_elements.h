@@ -2,6 +2,7 @@
 
 // The structural elements: svg/g/use/image/foreignObject/symbol/switch/defs, marker, clipPath, mask, filter + fe*.
 
+#include <mutex>
 #include "svg_node.h"
 
 namespace nova::svg {
@@ -108,6 +109,11 @@ public:
 
     svg_root_element* layout_if_needed();
 
+    // Layout is done lazily, by the first call that needs it, also from const members, and paint_bounding_box() fills a
+    // memo the same way. This lock makes both safe when several threads use one document (docs/adr/0017). Recursive:
+    // they call each other.
+    std::recursive_mutex& state_mutex() const { return m_state_mutex; }
+
     svg_element* element_by_id(std::string_view id) const;
     void add_element_by_id(const std::string& id, svg_element* el);
     void layout(svg_layout_state& state) final;
@@ -122,6 +128,7 @@ public:
     void add_style_sheet(std::string text) { m_style_sheets.push_back(std::move(text)); }
 
 private:
+    mutable std::recursive_mutex m_state_mutex;
     std::map<std::string, svg_element*, std::less<>> m_id_cache;
     float m_intrinsic_width{-1.f};
     float m_intrinsic_height{-1.f};

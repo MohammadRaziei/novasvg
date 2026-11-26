@@ -11,6 +11,7 @@
 // too (set_pattern()).
 #include "canvas.h"
 
+#include <array>
 #include <map>
 #include <string>
 
@@ -79,6 +80,11 @@ private:
     // finish_group(), then the form is drawn onto the page with the opacity and blend mode, through `soft_mask` (the
     // object of a mask group, 0 for none) read as luminosity, or as alpha when `mask_alpha`.
     void end_group(blend_mode blend_mode_, float opacity, int soft_mask = 0, bool mask_alpha = false);
+    // The invisible text layer (text render mode 3): `text` once more, as characters, placed on the outlines that
+    // fill_text() drew, so that the page's text can be selected, searched and extracted. A font without glyphs: the
+    // viewer draws nothing, the font only says which Unicode character each code is (/ToUnicode).
+    void emit_text_layer(const std::u32string_view& text, const sized_font& font_, const point& origin,
+                         const stb::matrix& transform_, const shaping_context& context);
     // `mask` painted as a group of its own: the group that a soft mask reads. Returns its Form XObject.
     int mask_group(const layer_mask& mask);
     // A finished bitmap (premultiplied ARGB32) placed at `dst` (user units).
@@ -143,6 +149,10 @@ private:
     std::vector<group_frame> m_groups;
     std::vector<std::pair<std::string, int>> m_patterns;  // resource name -> object
     std::vector<std::pair<std::string, int>> m_xobjects;  // resource name -> object
+    std::map<char32_t, int> m_text_cids;  // the invisible text layer: code point -> CID, 1.. in order of first use
+    int m_mask_depth = 0;                 // > 0 while a mask group is painted: its text is not part of the page's
+    std::u32string m_last_text;           // the run of the last text layer and where it was put: a fill and a stroke of
+    std::array<float, 9> m_last_text_at{};  // the same run (either order) are the one text, not two
 };
 
 } // namespace nova::vg

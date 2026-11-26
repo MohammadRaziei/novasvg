@@ -355,6 +355,7 @@ rect svg_element::stroke_bounding_box() const
 
 rect svg_element::paint_bounding_box() const
 {
+    std::lock_guard<std::recursive_mutex> lock(root_element()->state_mutex());
     if(m_paint_bounding_box.is_valid())
         return m_paint_bounding_box;
     m_paint_bounding_box = rect::empty_rect;
@@ -774,6 +775,7 @@ svg_root_element::svg_root_element(document* dom)
 
 svg_root_element* svg_root_element::layout_if_needed()
 {
+    std::lock_guard<std::recursive_mutex> lock(m_state_mutex);
     if(needs_layout())
         force_layout();
     return this;

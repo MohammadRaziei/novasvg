@@ -341,6 +341,12 @@ public:
     element_list query_selector_all(const std::string& content) const;
 
     /**
+     * @brief Returns the text of the root `<svg>`'s first `<title>` child (entities decoded, white space trimmed),
+     * or an empty string when there is none. render_to_pdf() writes it as the PDF's /Title.
+     */
+    const std::string& title() const;
+
+    /**
      * @brief Returns the intrinsic width of the dom in pixels.
      * @return The width of the dom.
      */
@@ -467,6 +473,7 @@ private:
     svg_root_element* root_element(bool layout_if_needed = false) const;
     bool parse(const char* data, size_t length_);
     std::unique_ptr<svg_root_element> m_root_element;
+    std::string m_title;  // the root's first <title> child: the parser skips the element, this keeps its text
     std::shared_ptr<foreign_object_renderer> m_foreign_object_renderer = default_foreign_object_renderer();
     friend class svg_uri_reference;
     friend class svg_node;

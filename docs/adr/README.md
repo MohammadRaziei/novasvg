@@ -20,6 +20,8 @@ decision; each records the context, the options that were weighed, what was chos
 | [0014](0014-layers-patterns-and-the-pdf-backend.md) | Layers and patterns become virtual calls on `canvas`; PDF fidelity (gradient spread, metadata) after that | Accepted, implemented in STEP 54 |
 | [0015](0015-pdf-fade-gradients-as-soft-masks.md) | A gradient whose stops differ in alpha is a luminosity soft mask in PDF output | Accepted |
 | [0016](0016-pdf-masks-as-soft-masks.md) | `<mask>` and clip masks are soft masks in PDF output, not bitmaps | Accepted |
+| [0017](0017-errors-and-threads.md) | Errors are values, not exceptions; documents that share nothing, and one document rendered by many threads, are thread safe | Accepted |
+| [0018](0018-pdf-text-layer-and-title.md) | The text of a PDF is selectable (an invisible text layer) and `<title>` is its /Title | Accepted |
 
 The step numbers refer to [`REFACTOR_CHECKLIST.md`](../../REFACTOR_CHECKLIST.md) at the repository root.
 

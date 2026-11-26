@@ -302,6 +302,11 @@ std::unique_ptr<document> document::load_data(const char* data, size_t length_)
     return dom;
 }
 
+const std::string& document::title() const
+{
+    return m_title;
+}
+
 float document::width() const
 {
     return root_element(true)->intrinsic_width();
@@ -396,7 +401,7 @@ std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
 
     auto pdf = pdf_canvas::create(width, height);
     pdf->set_raster_scale(scale);
-    pdf->set_info({"", "novasvg " + std::to_string(NOVA_VERSION_MAJOR) + "." + std::to_string(NOVA_VERSION_MINOR) + "." + std::to_string(NOVA_VERSION_PATCH)});
+    pdf->set_info({m_title, "novasvg " + std::to_string(NOVA_VERSION_MAJOR) + "." + std::to_string(NOVA_VERSION_MINOR) + "." + std::to_string(NOVA_VERSION_PATCH)});
     if(mode == pdf_mode::raster) {
         const int pixel_width = static_cast<int>(std::ceil(width * scale));
         const int pixel_height = static_cast<int>(std::ceil(height * scale));
@@ -676,11 +681,13 @@ bool document::parse(const char* data, size_t length_)
         if(!read_identifier(input, buffer))
             return false;
         svg_element* el = nullptr;
+        bool title_of_root = false;  // a <title> directly under the root <svg>, the first one
         if(ignoring > 0) {
             ++ignoring;
         } else {
             auto id = elementid(buffer);
             if(id == element_id::unknown) {
+                title_of_root = buffer == "title" && current_element == m_root_element.get() && m_title.empty();
                 ignoring = 1;
             } else {
                 if(m_root_element && current_element == nullptr)
@@ -736,6 +743,17 @@ bool document::parse(const char* data, size_t length_)
         }
 
         if(skip_delimiter(input, '>')) {
+            if(title_of_root) {
+                // Skipped like any element the parser does not know, but its text is the document's title.
+                const auto end = input.find("</title>");
+                if(end != std::string_view::npos) {
+                    std::string text;
+                    decode_text(input.substr(0, end), text);
+                    const auto first = text.find_first_not_of(" \t\r\n");
+                    if(first != std::string::npos)
+                        m_title = text.substr(first, text.find_last_not_of(" \t\r\n") - first + 1);
+                }
+            }
             if(el != nullptr) {
                 if(el->id() == element_id::foreign_object) {
                     // foreignObject content is arbitrary HTML/XML, not svg --

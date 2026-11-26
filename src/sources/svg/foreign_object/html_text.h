@@ -3,6 +3,7 @@
 // The HTML subset a <foreignObject> understands: parser, wrapping, measuring. Part of the built-in simple
 // renderer (foreign_object/simple.cpp); the core does not include it (ADR-0010).
 
+#include <tuple>
 #include <map>
 
 #include "utils/text.h"
@@ -33,14 +34,11 @@ struct foreign_object_style {
     bool italic = false;
     bool mono = false;
 
-    bool operator==(const foreign_object_style& other) const { return weight == other.weight && italic == other.italic && mono == other.mono; }
-    bool operator!=(const foreign_object_style& other) const { return !(*this == other); }
-    bool operator<(const foreign_object_style& other) const
-    {
-        if(weight != other.weight)
-            return weight < other.weight;
-        return italic != other.italic ? italic < other.italic : mono < other.mono;
-    }
+    // A new field goes in fields() and nowhere else: all the comparisons read it.
+    auto fields() const { return std::tie(weight, italic, mono); }
+    bool operator==(const foreign_object_style& other) const { return fields() == other.fields(); }
+    bool operator!=(const foreign_object_style& other) const { return fields() != other.fields(); }
+    bool operator<(const foreign_object_style& other) const { return fields() < other.fields(); }
 };
 
 /// The faces a <foreignObject> can paint with: the inherited one plus the variants that <b>, <strong>, <i>, <em> and

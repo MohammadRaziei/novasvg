@@ -504,6 +504,8 @@ NB_MODULE(novasvg_py, m) {
             return dom.render_to_pixmap(width, height, stb::color::from_value(background_color));
         }, "width"_a = -1, "height"_a = -1, "backgroundColor"_a = 0u,
            "Render the document using a packed 0xRRGGBBAA background color.")
+        .def_prop_ro("title", &nova::svg::document::title,
+                     "The text of the root <svg>'s first <title> child, '' when there is none. It is the PDF's /Title.")
         .def("render_to_pdf", [](const nova::svg::document& dom, nova::svg::document::pdf_mode mode, float dpi) {
             const auto bytes = dom.render_to_pdf(mode, dpi);
             return nb::bytes(reinterpret_cast<const char*>(bytes.data()), bytes.size());
