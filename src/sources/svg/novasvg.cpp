@@ -386,7 +386,7 @@ pixmap document::render_to_pixmap(int width, int height, const color& background
     return bitmap;
 }
 
-std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
+std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi, pdf_text text) const
 {
     const float width = root_element(true)->intrinsic_width();
     const float height = root_element()->intrinsic_height();
@@ -401,6 +401,9 @@ std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
 
     auto pdf = pdf_canvas::create(width, height);
     pdf->set_raster_scale(scale);
+    pdf->set_text_embedding(text == pdf_text::embed ? pdf_canvas::text_embedding::embed
+                            : text == pdf_text::embed_ignore_license ? pdf_canvas::text_embedding::embed_ignore_license
+                                                                     : pdf_canvas::text_embedding::outlines);
     pdf->set_info({m_title, "novasvg " + std::to_string(NOVA_VERSION_MAJOR) + "." + std::to_string(NOVA_VERSION_MINOR) + "." + std::to_string(NOVA_VERSION_PATCH)});
     if(mode == pdf_mode::raster) {
         const int pixel_width = static_cast<int>(std::ceil(width * scale));
@@ -430,9 +433,9 @@ std::vector<uint8_t> document::render_to_pdf(pdf_mode mode, float dpi) const
     return pdf->data();
 }
 
-bool document::save_pdf(const std::string& filename, pdf_mode mode, float dpi) const
+bool document::save_pdf(const std::string& filename, pdf_mode mode, float dpi, pdf_text text) const
 {
-    auto bytes = render_to_pdf(mode, dpi);
+    auto bytes = render_to_pdf(mode, dpi, text);
     if(bytes.empty())
         return false;
     std::ofstream out(filename, std::ios::binary);

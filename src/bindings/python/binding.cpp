@@ -478,6 +478,11 @@ NB_MODULE(novasvg_py, m) {
         .value("VECTOR", nova::svg::document::pdf_mode::vector)
         .value("RASTER", nova::svg::document::pdf_mode::raster);
 
+    nb::enum_<nova::svg::document::pdf_text>(m, "PdfText")
+        .value("OUTLINES", nova::svg::document::pdf_text::outlines)
+        .value("EMBED", nova::svg::document::pdf_text::embed)
+        .value("EMBED_IGNORE_LICENSE", nova::svg::document::pdf_text::embed_ignore_license);
+
     nb::class_<nova::svg::document>(m, "Document")
         .def_static("load_from_file", &nova::svg::document::load_file, "filename"_a, "Load an SVG document from a file.")
         .def_static("load_from_data", 
@@ -506,14 +511,17 @@ NB_MODULE(novasvg_py, m) {
            "Render the document using a packed 0xRRGGBBAA background color.")
         .def_prop_ro("title", &nova::svg::document::title,
                      "The text of the root <svg>'s first <title> child, '' when there is none. It is the PDF's /Title.")
-        .def("render_to_pdf", [](const nova::svg::document& dom, nova::svg::document::pdf_mode mode, float dpi) {
-            const auto bytes = dom.render_to_pdf(mode, dpi);
+        .def("render_to_pdf", [](const nova::svg::document& dom, nova::svg::document::pdf_mode mode, float dpi, nova::svg::document::pdf_text text) {
+            const auto bytes = dom.render_to_pdf(mode, dpi, text);
             return nb::bytes(reinterpret_cast<const char*>(bytes.data()), bytes.size());
-        }, "mode"_a = nova::svg::document::pdf_mode::vector, "dpi"_a = 192.f,
+        }, "mode"_a = nova::svg::document::pdf_mode::vector, "dpi"_a = 192.f, "text"_a = nova::svg::document::pdf_text::outlines,
            "Render the document as a one-page PDF and return its bytes (empty when the document has no size). "
-           "PdfMode.VECTOR keeps shapes and text vector, PdfMode.RASTER makes the page one bitmap at `dpi`.")
+           "PdfMode.VECTOR keeps shapes and text vector, PdfMode.RASTER makes the page one bitmap at `dpi`. "
+           "`text` (PdfText, vector mode): OUTLINES draws letters as shapes (with an invisible text layer for selecting and "
+           "searching), EMBED writes real text with an embedded subset of the font (a font whose license forbids it, or that "
+           "cannot be subset, stays outlines, with a warning), EMBED_IGNORE_LICENSE embeds without reading the license: you answer for it.")
         .def("save_pdf", &nova::svg::document::save_pdf, "filename"_a,
-             "mode"_a = nova::svg::document::pdf_mode::vector, "dpi"_a = 192.f,
+             "mode"_a = nova::svg::document::pdf_mode::vector, "dpi"_a = 192.f, "text"_a = nova::svg::document::pdf_text::outlines,
              "Write render_to_pdf() to a file; False when nothing could be rendered or written.")
         .def("element_from_point", &nova::svg::document::element_from_point, "x"_a, "y"_a, "Get the topmost element at a specific point.")
         .def("get_element_by_id", &nova::svg::document::element_by_id, "id"_a, "Get an element by its ID.")

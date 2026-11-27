@@ -418,18 +418,33 @@ public:
     enum class pdf_mode { vector, raster };
 
     /**
+     * @brief How render_to_pdf() writes text in the vector mode (the raster mode has no text).
+     *
+     * - outlines: the letters are shapes. The page looks the same everywhere and no font is needed to view it; an
+     *   invisible text layer on top lets a viewer select, search and copy the text. The default.
+     * - embed: real text, shown with a subset of the font that is embedded in the file (only the glyphs the page
+     *   uses). A font that may not be embedded (its OS/2 fsType says restricted, bitmaps only, or no subsetting) or
+     *   cannot be subset (CFF outlines, a variable font at a chosen weight) keeps its text as outlines, and a warning
+     *   is logged once per font.
+     * - embed_ignore_license: embed, but the license bits of the font are not read. Whoever asks for this answers for
+     *   the license; a font that cannot be subset still stays outlines.
+     */
+    enum class pdf_text { outlines, embed, embed_ignore_license };
+
+    /**
      * @brief Renders the document as a one-page PDF (page size = the document's size, 1 px = 0.75 pt).
      * @param mode See pdf_mode.
      * @param dpi Resolution of every bitmap in the file (96 is the SVG's own pixel size).
+     * @param text How text is written, see pdf_text.
      * @return The PDF file's bytes, or empty when the document has no size.
      */
-    std::vector<uint8_t> render_to_pdf(pdf_mode mode = pdf_mode::vector, float dpi = 192.f) const;
+    std::vector<uint8_t> render_to_pdf(pdf_mode mode = pdf_mode::vector, float dpi = 192.f, pdf_text text = pdf_text::outlines) const;
 
     /**
      * @brief render_to_pdf() written to a file.
      * @return false if nothing could be rendered or the file could not be written.
      */
-    bool save_pdf(const std::string& filename, pdf_mode mode = pdf_mode::vector, float dpi = 192.f) const;
+    bool save_pdf(const std::string& filename, pdf_mode mode = pdf_mode::vector, float dpi = 192.f, pdf_text text = pdf_text::outlines) const;
 
     /**
      * @brief Returns the topmost el under the specified point.

@@ -167,7 +167,7 @@ Disable the embedded font with `-DNOVA_EMBED_DEFAULT_FONT=OFF` or by defining `N
 | Class | Main members |
 |---|---|
 | `nova::svg::document` | `load_file()` · `load_data()` · `render_to_image()` · `render_to_pixmap()` · `query_selector_all()` · `apply_style_sheet()` · `width()` / `height()` · `bounding_box()` |
-| `nova::svg::document` (PDF) | `render_to_pdf()` · `save_pdf()`: a one-page vector PDF (C++, Python and the CLI); masks and clip masks stay vector, text can be selected and searched, `title()` is the PDF's title |
+| `nova::svg::document` (PDF) | `render_to_pdf()` · `save_pdf()`: a one-page vector PDF (C++, Python and the CLI); masks and clip masks stay vector, text can be selected and searched, or embedded as real text in a font subset (`pdf_text`, `--pdf-text`), `title()` is the PDF's title |
 | `nova::svg::element` | `attribute()` / `set_attribute()` / `has_attribute()` · `render()` · `local_bounding_box()` / `global_bounding_box()` · `local_matrix()` / `global_matrix()` |
 | `nova::svg` (free functions) | `measure_text()` size a text without building a document · `is_valid_selector()` tell a wrong selector from one that matches nothing |
 | `nova::vg` | `add_font_file()` register a font file (`nova/vg/font.h`) |

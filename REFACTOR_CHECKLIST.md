@@ -392,7 +392,8 @@ Scripted (not by hand): every namespace-scope `NOVA_INLINE` definition (non-temp
 - [x] Pattern: tile bitmap as PDF tiling pattern. Mask, clip mask, filter: rasterized group placed as an image. [x] (2026-11-25, ADR-0016) `<mask>` and clip masks are vector `SMask` soft masks; filters, and a mask together with a clip mask, still are images.
 - [x] `svg_render_state` runs on any `canvas` (`raster()` is null on a PDF page); beginGroup/endGroup and the pattern fill know `pdf_canvas`.
 - [x] Public entry point: `document::render_to_pdf` / `save_pdf` with `pdf_mode::vector | raster` and `dpi`; `tests/cpp/test_pdf_render.cpp`.
-- [ ] Still open: gradient reflect/repeat and per-stop alpha in PDF, vector `SMask` for masks, element-level `render_to_pdf`, font embedding (selectable text), multi-page, PDF metadata (title), CLI flag, Python binding (off for now).
+- [x] Font embedding: `pdf_text` (outlines | embed | embed_ignore_license), ADR-0019; `tests/cpp/test_pdf_text_embed.cpp`, `tests/python/test_pdf_text_embed.py`.
+- [ ] Still open: gradient reflect/repeat and per-stop alpha in PDF, vector `SMask` for masks, element-level `render_to_pdf`, multi-page, PDF metadata (title), CLI flag, Python binding (off for now).
 - Gate note: `svg_render_state::beginGroup/endGroup` and the pattern code were edited; the pixel path is meant to be identical, the final golden gate must confirm.
 
 ## Next, in this order (written 2026-11-05)

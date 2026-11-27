@@ -119,7 +119,8 @@ int cmd_convert(const std::string& input,
                 const std::string& bg_color_str,
                 float scale,
                 const std::string& style_content,
-                const std::string& css_file) {
+                const std::string& css_file,
+                const std::string& pdf_text) {
     
     // Load svg
     std::unique_ptr<nova::svg::document> doc = nova::svg::document::load_file(input);
@@ -163,7 +164,11 @@ int cmd_convert(const std::string& input,
     if (has_extension(output_path.string(), ".pdf")) {
         if (width > 0 || height > 0 || (scale > 0.0f && scale != 1.0f) || !bg_color_str.empty())
             cli_log().warning("PDF output has the SVG's own size and no background: -w, -H, -s and -b are ignored");
-        if (!doc->save_pdf(output_path.string())) {
+        using text_mode = nova::svg::document::pdf_text;
+        const text_mode text = pdf_text == "embed" ? text_mode::embed
+                               : pdf_text == "embed-ignore-license" ? text_mode::embed_ignore_license
+                                                                    : text_mode::outlines;
+        if (!doc->save_pdf(output_path.string(), nova::svg::document::pdf_mode::vector, 192.f, text)) {
             cli_log().error("Failed to save PDF file: %s", output_path.string().c_str());
             return 1;
         }
@@ -423,7 +428,7 @@ int main(int argc, char** argv) {
     // argv rewriting: CLI11 matches a token against a subcommand name
     // before it considers consuming it as a positional here.
     // --------------------------------------------------------
-    std::string convert_input, convert_output, convert_bg_color, convert_style, convert_css_file;
+    std::string convert_input, convert_output, convert_bg_color, convert_style, convert_css_file, convert_pdf_text = "outlines";
     int convert_width = -1, convert_height = -1;
     float convert_scale = 0.0f;
 
@@ -435,6 +440,9 @@ int main(int argc, char** argv) {
     app.add_option("-b,--background-color", convert_bg_color, "Background color (hex: RRGGBB or RRGGBBAA, default: transparent)");
     app.add_option("--style", convert_style, "Apply CSS styles directly (string)");
     app.add_option("--css-file", convert_css_file, "Apply CSS styles from file")->check(CLI::ExistingFile);
+    app.add_option("--pdf-text", convert_pdf_text,
+                       "How a .pdf writes text: outlines (default), embed (real text in an embedded font subset; a font whose license forbids it stays outlines) or embed-ignore-license (embed without reading the license: you answer for it)")
+        ->check(CLI::IsMember({"outlines", "embed", "embed-ignore-license"}));
 
     // "convert" also works as an explicit subcommand, sharing the exact
     // same bound variables as the root options above -- so
@@ -449,6 +457,9 @@ int main(int argc, char** argv) {
     convert_cmd->add_option("-b,--background-color", convert_bg_color, "Background color (hex: RRGGBB or RRGGBBAA, default: transparent)");
     convert_cmd->add_option("--style", convert_style, "Apply CSS styles directly (string)");
     convert_cmd->add_option("--css-file", convert_css_file, "Apply CSS styles from file")->check(CLI::ExistingFile);
+    convert_cmd->add_option("--pdf-text", convert_pdf_text,
+                       "How a .pdf writes text: outlines (default), embed (real text in an embedded font subset; a font whose license forbids it stays outlines) or embed-ignore-license (embed without reading the license: you answer for it)")
+        ->check(CLI::IsMember({"outlines", "embed", "embed-ignore-license"}));
 
     app.footer(
         "Examples:\n"
@@ -465,7 +476,7 @@ int main(int argc, char** argv) {
 
     convert_cmd->callback([&]() {
         exit_code = cmd_convert(convert_input, convert_output, convert_width, convert_height,
-                                 convert_bg_color, convert_scale, convert_style, convert_css_file);
+                                 convert_bg_color, convert_scale, convert_style, convert_css_file, convert_pdf_text);
     });
 
     // --------------------------------------------------------
@@ -555,5 +566,5 @@ int main(int argc, char** argv) {
         return 0;
     }
     return cmd_convert(convert_input, convert_output, convert_width, convert_height,
-                        convert_bg_color, convert_scale, convert_style, convert_css_file);
+                        convert_bg_color, convert_scale, convert_style, convert_css_file, convert_pdf_text);
 }

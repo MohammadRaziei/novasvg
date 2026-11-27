@@ -22,6 +22,7 @@ decision; each records the context, the options that were weighed, what was chos
 | [0016](0016-pdf-masks-as-soft-masks.md) | `<mask>` and clip masks are soft masks in PDF output, not bitmaps | Accepted |
 | [0017](0017-errors-and-threads.md) | Errors are values, not exceptions; documents that share nothing, and one document rendered by many threads, are thread safe | Accepted |
 | [0018](0018-pdf-text-layer-and-title.md) | The text of a PDF is selectable (an invisible text layer) and `<title>` is its /Title | Accepted |
+| [0019](0019-pdf-embedded-fonts.md) | PDF text can be real text in an embedded font subset, chosen per call (`pdf_text`: outlines, embed, embed_ignore_license) | Accepted |
 
 The step numbers refer to [`REFACTOR_CHECKLIST.md`](../../REFACTOR_CHECKLIST.md) at the repository root.
 

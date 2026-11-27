@@ -41,6 +41,6 @@ sit where the outlines are, rotated or scaled with them.
   in which it reaches the canvas). Two `<text>` elements with the same text at the same place are one text.
 - Inside a run all characters are the same width, so a selection is exact at the ends of a run and proportional in
   between. A run is a `<text>`/`<tspan>` piece as the renderer lays it out.
-- No font program is embedded, so a viewer that wants a glyph for a character the layer names has none; the layer is never
+- No font program is embedded (ADR-0019 adds the choice to embed one), so a viewer that wants a glyph for a character the layer names has none; the layer is never
   drawn, so none is asked for. Not tried in Acrobat or Preview, only in pdfium and poppler.
 - `PdfMode.RASTER` is one bitmap and has no text layer.
