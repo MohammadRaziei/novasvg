@@ -2,7 +2,7 @@
 
 > کانتکست: این پروژه (`github.com/mohammadraziei/novasvg`) یه رندرر SVG→PNG/BMP/TGA/JPG هست.
 > امروز روش کار شد: رندر foreignObject (مرمید)، بازنویسی کامل stb_image_write به سبک OOP خودمون
-> (کلاس `BitmapCodec`)، یکدست‌سازی `NOVASVG_INLINE` توی کل کدبیس، و جدا کردن `detail/` به فایل‌های
+> (کلاس `BitmapCodec`)، یکدست‌سازی `NOVA_INLINE` توی کل کدبیس، و جدا کردن `detail/` به فایل‌های
 > عمومیِ مستقل (`bitmap.h`, `canvas.h`, `font.h`, `color.h`). zip آخرین نسخه رو ضمیمه کن یا از
 > `github.com/mohammadraziei/novasvg` بگیر.
 
@@ -12,7 +12,7 @@
       حداقل به `document.h` (کلاس `Document`/`Element` عمومی) و یه چیزی برای درخت DOM داخلی
       (`SVGElement` و زیرکلاس‌هاش، صرفاً داخلی) تقسیم بشه.
 - [ ] **`detail/svgparser.hpp`** رو بررسی کن ببین جدا کردنش (یا merge با svgelement) منطقی‌تره یا نه.
-- [ ] تصمیم بگیر `detail/render/` بمونه همین اسم یا به چیزی مثل `detail/engine/` تغییر کنه —
+- [ ] تصمیم بگیر `gfx/` بمونه همین اسم یا به چیزی مثل `detail/engine/` تغییر کنه —
       امروز تصمیم گرفتیم دست نزنیم چون واقعاً داخلیه و اسمش مشکلی نداره، ولی اگه نظر عوض شد اینجاست.
 - [ ] بعد از هر تغییر ساختاری: pixel-diff + ۴۶ تستِ `novasvg_test_cpp` + تستِ standalone بودنِ
       هر فایل عمومی (`bitmap.h`/`canvas.h`/`font.h`/`color.h`) رو دوباره بزن — الگوش توی همین
@@ -133,7 +133,7 @@
 ## کارهای این نشست — CLI
 
 - [x] **اسم باینری از `novasvg-cli` به `novasvg` عوض شد** — هم توی `CMakeLists.txt`
-      (`OUTPUT_NAME`) هم توی خودِ `src/novasvg_cli.cpp` (`app.name()`, تیتر، همه‌ی
+      (`OUTPUT_NAME`) هم توی خودِ `src/cli/novasvg_cli.cpp` (`app.name()`, تیتر، همه‌ی
       متن‌های help/footer). جالبه که `README_CLI.md` از قبل با فرض اسم `novasvg` نوشته
       شده بود — یعنی این تغییر باگ ناهماهنگیِ قدیمی بین کد و مستندات رو هم حل کرد.
 - [x] **`convert` دیگه لازم نیست نوشته بشه** — اگه اولین آرگومان یه subcommand شناخته‌شده
@@ -239,7 +239,7 @@
         می‌شه.
       - **سه بار روی «چطور اضافه‌ش کنیم» اشتباه کردم، هر سه ارزش ثبت‌کردن دارن:**
         ۱) اول لینکِ build-time با CMake زدم (`find_package(Fontconfig)` + یه define بنام
-        `NOVASVG_HAVE_FONTCONFIG` که فقط CMake خودمون ست می‌کرد) — این واقعاً یه باگ بود برای
+        `NOVA_HAVE_FONTCONFIG` که فقط CMake خودمون ست می‌کرد) — این واقعاً یه باگ بود برای
         یه لایبرریِ header-only: هرکی این هدرها رو بدون CMake ما توی پروژه‌ی خودش بذاره
         (که کل هدفِ header-only همینه)، بی‌سروصدا هیچی گیرش نمیاد، بدون هیچ خطا یا نشونه‌ای.
         ۲) بعد overcorrect کردم و رفتم سراغ dlopen/dlsym در runtime، که واقعاً header-only
@@ -367,7 +367,7 @@
 دو تا ریشه‌ی کاملاً جدا:
 
 - [x] **فیکس ۱ — C99 compound literal syntax.** ماکروهایی مثل
-      `#define NOVASVG_MAKE_POINT(x, y) ((point_t){x, y})` از syntax مخصوص C99 استفاده
+      `#define NOVA_MAKE_POINT(x, y) ((point_t){x, y})` از syntax مخصوص C99 استفاده
       می‌کردن که MSVC توی C++ قبول نداره (خطای `C4576`). چون `point_t`/`rect_t`/`matrix_t`/
       `color_t`/`stroke_style_t` همه‌شون plain aggregate struct هستن، حذفِ پرانتزِ اضافیِ
       دورِ نوع (`(point_t{x, y})` به‌جای `((point_t){x, y})`) دقیقاً همون معنی رو با
@@ -375,11 +375,11 @@
 - [x] **فیکس ۲ — تداخل `std::max`/`std::min` با ماکروهای `max`/`min` خودِ `<windows.h>`.**
       اول رفتم سراغ `(std::max)(...)`/`(std::min)(...)` (پرانتز دورِ اسمِ تابع، ترفندِ
       استانداردِ رایج برای خنثی‌کردنِ macro expansion) — که درست کار می‌کرد ولی خودِ کاربر
-      یادآوری کرد که قبلاً یه ماکروی امن‌تر به اسمِ `NOVASVG_MAX`/`NOVASVG_MIN` وجود داشته که
+      یادآوری کرد که قبلاً یه ماکروی امن‌تر به اسمِ `NOVA_MAX`/`NOVA_MIN` وجود داشته که
       بعداً با `std::max`/`std::min` جایگزین شده بود (که خودِ همین جایگزینی ریشه‌ی باگ بوده!).
       برگشتم سراغ اون الگو — دقیقاً همون ternary-macro که کدِ FreeTypeِ vendor-شده از قبل
-      برای خودش داره (`PVG_FT_MIN`/`PVG_FT_MAX` توی `detail/render/vendor/`)، فقط با
-      پیشوندِ `NOVASVG_` برای بقیه‌ی کدبیس. جای درستش هم `detail/config.h` بود (همون هدرِ
+      برای خودش داره (`PVG_FT_MIN`/`PVG_FT_MAX` توی `gfx/vendor/`)، فقط با
+      پیشوندِ `NOVA_` برای بقیه‌ی کدبیس. جای درستش هم `detail/config.h` بود (همون هدرِ
       پایه‌ای که خودش می‌گه «هر هدرِ top-level باید اول این رو include کنه») — که همینجا
       یه ناهماهنگیِ کوچیکِ دیگه هم پیدا شد: `color.h` با این‌که قرار بود config.h رو
       include کنه، نمی‌کرد؛ فیکس شد.
@@ -436,3 +436,34 @@
 - هنوز نمی‌تونم واقعاً روی ویندوز build بگیرم؛ این فیکس دقیقاً خطای گزارش‌شده رو هدف گرفته و
   یه الگوی استانداردِ پورتیبله (capture-less lambda به function pointer)، ولی تاییدِ قطعی با
   یه اجرای دیگه‌ی CI به دست میاد.
+
+## نشست ۱۳ نوامبر ۲۰۲۶ — وضعیت ریفکتور (برای چت بعدی)
+
+### انجام‌شده (گام ۳۹ و ۴۰)
+- [x] libstb: همه‌ی issueهای لیست libstb (۱ تا ۱۴) داخل libstb هستن و novasvg ازشون استفاده می‌کنه. دیگه issue نمی‌نویسیم: چیز عمومی که کم باشه مستقیم توی libstb پیاده می‌شه و novasvg بهش سوییچ می‌کنه.
+- [x] `blend.{h,cpp}`: کد Porter-Duff و blend mode ردیفی رفت (`stb::composite_row`/`composite_solid_row`، SSE2/AVX2)؛ فقط sampling گرادیان و بافت مونده. `vg::blend_mode` و `css_mix_blend_mode` حذف شدن: state کانواس `stb::composite_op op` + `stb::blend_mode mode` دارد، PDF فقط `stb::blend_mode` می‌گیره.
+- [x] `font_face.cpp`: خواننده‌ی sfnt (حدود ۲۶۰ خط) رفت؛ cache با `font::scan`/`system_fonts` پر می‌شه، هر face با اسم typographic و اسم قدیمی ثبت می‌شه و یک‌بار load می‌شه، انتخاب با bold/italic، بعد عرض، بعد وزن. `font_face(std::vector<uint8_t>&&)` برای بایت‌های فونت (data URI و فونت داخلی).
+- [x] `span_buffer_t` و ماکروهای `novasvg_array_*` رفتن: `stb::span_set` (clip/mask). `cubics_only` حذف شد (کد مرده).
+- [x] `base64_decode` رفت: `stb::try_base64_decode` (دیکد «forgiving» مرورگرها). `pixmap`: `clear` = `fill`، `pixmap_release_to_image` = `into_image() &&` بدون کپی وقتی سطح مال خودشه.
+- [x] `utils.cpp` پاک شد: یک parser عدد/فاصله می‌مونه (`parserutils.h`)، و `parse_number` تراکنشی شد (روی شکست ورودی دست‌نخورده). `matrix.cpp` و `outline_util.cpp` رو string_view هستن. تست تفاضلی با کد قدیمی روی ۱ میلیون ورودی تصادفی: تنها تفاوت `em`/`ex` که حالا همیشه رد می‌شه (قبلاً فقط اتفاقی).
+- [x] ماژول Python دوباره build می‌شه و کار می‌کنه (گام ۴۱): `binding.cpp` روی API فعلی (`global_font_face_cache()`، `sized_font`، `nova::svg::utf8_to_u32`)؛ `NB_DOMAIN novasvg` تا با ماژول Python خودِ libstb (که `stb::matrix` را هم ثبت می‌کنه) در یک پروسه تداخل نکنه (قبلاً import هر دو با «type Matrix was already registered» abort می‌شد)؛ RUNPATH روی `$ORIGIN/../libstb/sdk/lib` چون libstb حالا SDK خودش را آنجا نصب می‌کنه. ۴۵۰ تست Python پاس (build: `-DNOVA_BUILD_PYTHON=ON`، تست: `PYTHONPATH=<build>/python/install pytest tests/python`).
+- gate: C++ ۱۰۰ تست / ۲۳۵۲ assertion، فونت ۸۴، ctest ۴/۴، golden ۶۷ تصویر با تلرانس صفر بدون تفاوت.
+
+### قدم بعدی، به ترتیب
+- [ ] `overlay` برای `mix-blend-mode` (libstb دارد؛ golden `golden-blend-modes.svg` فعلاً overlay را normal ثبت کرده، پس با re-baseline)
+- [ ] کوچک کردن `font_face`/`font_face_data` (لایه‌ی نازک روی `stb::font`)
+- [ ] گرادیان و بافت به‌عنوان paint در `paint.cpp`/`raster_canvas.cpp` (کار خودِ ما؛ `stb/raster.hpp` عمداً coverage span می‌دهد)
+- [x] شکستن `svgelement.{h,cpp}` و حذف `NOVA_INLINE` (قبلاً انجام شده بود؛ `svgparser.hpp` هم در گام ۵۰ به `svg_style.h` + `svg_style.cpp` شکسته شد)
+- [x] وزن عددی در foreignObject (`{weight, italic}` به‌جای دو بیت؛ `<b>` = bolder) و توصیف‌گر `font-weight` در `@font-face` (یک عدد یا بازه) (STEP 53)
+- [x] فونت variable در cache: هر وزن 1 تا 1000 (`font-weight` عددی تا `make_font`)، `bolder`/`lighter` نسبی، بازه‌ی وزن برای `add_font_face` از خود فونت (STEP 52)
+- [x] API عمومی اندازه‌گیری متن: `nova::svg::measure_text(text, font_family, size, bold, italic)` → `text_metrics` (عرض، ascent، descent، line_gap)؛ فقط C++، پایتون هنوز ندارد
+- [ ] پارسر: اول اندازه‌گیری (perf/massif)، بعد فقط اگر ارزش داشت تکنیک‌های pugixml (parse درجا، arena، جدول کاراکتر) در `document::parse` — طبق ADR-0013؛ تست `<!ENTITY>` هم اضافه شود
+- [ ] یک مرحله‌ی اسکریپتی: namespace + جابه‌جایی پوشه‌ها + rename به `snake_case` + target جدای CMake برای `nova::vg`
+- [x] لایه‌ها (`begin_layer`/`end_layer`)، pattern و `raster_scale` به‌صورت virtual در `canvas`؛ PDF: spread ی gradient، alpha ی مشترک stop ها، `/Info` (ADR-0014، STEP 54)
+- [ ] PDF: gradient با alpha ی متفاوت (fade) با soft mask، `<mask>` و clip-mask برداری، embed فونت، چندصفحه‌ای؛ عنوان سند از `<title>` (DOM آن را نگه نمی‌دارد)
+- [ ] Step 7 (README، Doxygen، CI، wheel) و (مواد موقتِ refactor و هوکِ آن در `tests/cpp/CMakeLists.txt` پاک شده‌اند)
+- ASAN با `ASAN_OPTIONS=detect_odr_violation=0` اجرا می‌شه (`std::_Sp_make_shared_tag` هم توی exe هست هم توی libstb.so: false positive شناخته‌شده).
+
+### یادآوری روش کار
+- جسورانه برو؛ تست وسط کار نه، گیت آخرِ ریفکتور. بعد از هر مرحله هر پروژه‌ای که عوض شد zip بفرست، هیچ‌وقت push نکن.
+- هر دو پروژه (novasvg و libstb) و `handoff.md`/`checklist.md` هر دو دست خودمه؛ در libstb از `STB_MIN`/`STB_MAX` استفاده کن، نه `std::min`/`std::max`.

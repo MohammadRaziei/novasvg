@@ -129,7 +129,7 @@ def main():
     base_path = Path(__file__).resolve().parent
     
     if args.header_path:
-        header_path = base_path / "include" / "novasvg.h"
+        header_path = base_path / "include" / "nova" / "svg" / "svg.h"
         sys.stdout.write(f"{header_path}\n")
         sys.exit(0)
 

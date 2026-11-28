@@ -3,7 +3,7 @@
 #include <string>
 #include <algorithm>
 
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 
 namespace {
     std::filesystem::path project_root() {
@@ -11,8 +11,8 @@ namespace {
     }
 
     // Case-insensitive extension check
-    bool has_svg_extension(const std::filesystem::path& path) {
-        auto ext = path.extension().string();
+    bool has_svg_extension(const std::filesystem::path& path_) {
+        auto ext = path_.extension().string();
         std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
         return ext == ".svg";
     }
@@ -38,7 +38,7 @@ int main() {
     // Iterate over all files in the input directory
     for (const auto& entry : std::filesystem::directory_iterator(input_dir)) {
         if (!entry.is_regular_file() || !has_svg_extension(entry.path())) {
-            continue;  // Skip non-SVG files and directories
+            continue;  // Skip non-svg files and directories
         }
 
         const auto& svg_path = entry.path();
@@ -47,24 +47,26 @@ int main() {
 
         std::cout << "Processing: " << svg_path.filename() << " ... ";
 
-        // Load SVG document
-        auto document = nova::svg::Document::loadFromFile(svg_path.string());
-        if (!document) {
+        // Load svg dom
+        auto dom = nova::svg::document::load_file(svg_path.string());
+        if (!dom) {
             std::cerr << "FAILED (load)\n";
             failure_count++;
             continue;
         }
 
-        // Render to bitmap
-        auto bitmap = document->renderToBitmap();
-        if (bitmap.isNull()) {
+        // Render to a straight-alpha RGBA stb::image
+        auto image = dom->render_to_image();
+        if (image.empty()) {
             std::cerr << "FAILED (render)\n";
             failure_count++;
             continue;
         }
 
         // Write PNG
-        if (!bitmap.writeToPng(png_path.string())) {
+        try {
+            image.write_png(png_path);
+        } catch (const std::exception&) {
             std::cerr << "FAILED (write)\n";
             failure_count++;
             continue;

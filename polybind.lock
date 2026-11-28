@@ -1,0 +1,7 @@
+# polybind.lock: written by `polybind deps record`. Do not edit by hand.
+
+schema = 1
+
+[deps.libstb]
+tag      = "v0.11.0"
+provider = "uv"

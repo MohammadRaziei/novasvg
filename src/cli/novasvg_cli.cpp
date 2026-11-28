@@ -1,0 +1,570 @@
+/**
+ * NovaSVG Command Line Interface
+ * 
+ * A comprehensive CLI tool for working with svg files using the NovaSVG library.
+ * 
+ * Features:
+ * - Convert svg to PNG
+ * - Query svg information (size, bounding box, file size)
+ * - Extract elements using CSS selectors
+ * - Batch processing
+ */
+
+#include <nova/svg/svg.h>
+#include "CLI11.hpp"
+#include <stb/logging.hpp>
+#include <iostream>
+#include <fstream>
+#include <filesystem>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <iomanip>
+#include <sstream>
+
+namespace fs = std::filesystem;
+
+// A JSON string body: quotes, backslashes and control characters escaped (Windows paths and attribute values
+// both used to produce invalid JSON).
+static std::string json_escape(const std::string& text)
+{
+    std::string out;
+    for(const unsigned char c : text) {
+        switch(c) {
+        case '"': out += "\\\""; break;
+        case '\\': out += "\\\\"; break;
+        case '\n': out += "\\n"; break;
+        case '\r': out += "\\r"; break;
+        case '\t': out += "\\t"; break;
+        default:
+            if(c < 0x20) {
+                char buf[8];
+                std::snprintf(buf, sizeof buf, "\\u%04x", c);
+                out += buf;
+            } else {
+                out += static_cast<char>(c);
+            }
+        }
+    }
+    return out;
+}
+
+static bool has_extension(const std::string& filename, const char* wanted) {
+    std::string ext = fs::path(filename).extension().string();
+    for (auto& c : ext) c = char(std::tolower(static_cast<unsigned char>(c)));
+    return ext == wanted;
+}
+
+// Picks the encoder from the extension (.png .bmp .tga .jpg .jpeg, case-insensitive); anything else is PNG, and
+// JPEG quality is 80 -- the behaviour the CLI always had. stb::image::write() would throw on an unknown extension.
+// (.pdf never gets here: cmd_convert writes a vector PDF.)
+static bool write_image(const stb::image& image, const std::string& filename) {
+    std::string ext = fs::path(filename).extension().string();
+    for (auto& c : ext) c = char(std::tolower(static_cast<unsigned char>(c)));
+    try {
+        if (image.empty()) return false;
+        if (ext == ".bmp") image.write_bmp(filename);
+        else if (ext == ".tga") image.write_tga(filename);
+        else if (ext == ".jpg" || ext == ".jpeg") image.write_jpg(filename, 80);
+        else image.write_png(filename);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+// ============================================================
+// Utilities
+// ============================================================
+
+std::string human_readable_size(std::uintmax_t bytes) {
+    const char* suffixes[] = {"B", "KB", "MB", "GB", "TB"};
+    double size_ = static_cast<double>(bytes);
+    int i = 0;
+    while (size_ >= 1024 && i < 4) {
+        size_ /= 1024;
+        ++i;
+    }
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2) << size_ << " " << suffixes[i];
+    return oss.str();
+}
+
+namespace {
+stb::logging::logger& cli_log() { static auto& l = stb::logging::get_logger("novasvg.cli"); return l; }
+
+// --log-level / --log-file: handlers are the application's business, so they are attached here, never in the library.
+void setup_logging(const std::string& level_text, const std::string& file) {
+    auto& lg = stb::logging::get_logger("novasvg");
+    lg.set_propagate(false);
+    auto level = stb::logging::level_from_string(level_text).value_or(stb::logging::level::warning);
+    lg.set_level(level);
+    auto& h = lg.add_handler(stb::logging::stream_handler(stderr));
+    h.set_formatter(stb::logging::formatter("%(levelname)s: %(message)s"));
+    if (!file.empty())
+        lg.add_handler(stb::logging::file_handler(file));
+}
+}  // namespace
+
+// ============================================================
+// Command Implementations
+// ============================================================
+
+int cmd_convert(const std::string& input, 
+                const std::string& output, 
+                int width, 
+                int height, 
+                const std::string& bg_color_str,
+                float scale,
+                const std::string& style_content,
+                const std::string& css_file,
+                const std::string& pdf_text) {
+    
+    // Load svg
+    std::unique_ptr<nova::svg::document> doc = nova::svg::document::load_file(input);
+    if (!doc) {
+        cli_log().error("Failed to load SVG file: %s", std::string(input).c_str());
+        return 1;
+    }
+
+    // Handle CSS
+    std::string final_css;
+    if (!css_file.empty()) {
+        std::ifstream f(css_file);
+        if (!f) {
+            cli_log().error("Failed to open CSS file: %s", std::string(css_file).c_str());
+            return 1;
+        }
+        final_css.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+    }
+    if (!style_content.empty()) {
+        if (!final_css.empty()) final_css += "\n";
+        final_css += style_content;
+    }
+
+    if (!final_css.empty()) {
+        doc->apply_style_sheet(final_css);
+        doc->force_layout();
+    }
+
+    // Determine Output Path
+    fs::path output_path = output;
+    if (output.empty()) {
+        output_path = fs::path(input);
+        output_path.replace_extension(".png");
+    }
+
+    std::cout << "Converting: " << input << " -> " << output_path.string() << "\n";
+    std::cout << "Original size: " << doc->width() << "x" << doc->height() << "px\n";
+
+    // A .pdf is a real one-page vector PDF at the document's own size (1 px = 0.75 pt), not a bitmap: there is no
+    // output size or background to choose.
+    if (has_extension(output_path.string(), ".pdf")) {
+        if (width > 0 || height > 0 || (scale > 0.0f && scale != 1.0f) || !bg_color_str.empty())
+            cli_log().warning("PDF output has the SVG's own size and no background: -w, -H, -s and -b are ignored");
+        using text_mode = nova::svg::document::pdf_text;
+        const text_mode text = pdf_text == "embed" ? text_mode::embed
+                               : pdf_text == "embed-ignore-license" ? text_mode::embed_ignore_license
+                                                                    : text_mode::outlines;
+        if (!doc->save_pdf(output_path.string(), nova::svg::document::pdf_mode::vector, 192.f, text)) {
+            cli_log().error("Failed to save PDF file: %s", output_path.string().c_str());
+            return 1;
+        }
+        std::cout << "Successfully converted to " << output_path.string() << "\n";
+        return 0;
+    }
+
+    // Calculate Dimensions
+    if (scale > 0.0f && scale != 1.0f) {
+        width = static_cast<int>(doc->width() * scale);
+        height = static_cast<int>(doc->height() * scale);
+    }
+    
+    if (width > 0 || height > 0) {
+        std::cout << "Output size: ";
+        if (width > 0) std::cout << width;
+        if (width > 0 && height > 0) std::cout << "x";
+        if (height > 0) std::cout << height;
+        std::cout << "px\n";
+    }
+    
+    // Render. An empty bg_color_str means -b/--background-color wasn't
+    // given (see its default in the CLI11 option below) -- that's this
+    // command's own "use transparent" convention, not something
+    // stb::color should have an opinion about, so it's resolved
+    // here rather than by asking stb::color to treat "" as a color.
+    auto bg_color = bg_color_str.empty() ? stb::color::transparent() : stb::color(bg_color_str);
+    auto image = doc->render_to_image(width, height, bg_color);
+    if (image.empty()) {
+        cli_log().error("Failed to render SVG");
+        return 1;
+    }
+    
+    if (!write_image(image, output_path.string())) {
+        cli_log().error("Failed to save image file: %s", output_path.string().c_str());
+        return 1;
+    }
+    
+    std::cout << "Successfully converted to " << output_path.string() << "\n";
+    return 0;
+}
+
+// Helper function to count all elements recursively
+size_t count_all_elements(const nova::svg::element& el) {
+    size_t count = 1; 
+    auto children = el.children();
+    for (const auto& child : children) {
+        if (child.is_element()) {
+            count += count_all_elements(child.to_element());
+        }
+    }
+    return count;
+}
+
+int cmd_info(const std::string& input, bool json_output = false) {
+    std::unique_ptr<nova::svg::document> doc = nova::svg::document::load_file(input);
+    if (!doc) {
+        cli_log().error("Failed to load SVG file: %s", std::string(input).c_str());
+        return 1;
+    }
+    if (json_output) {
+        auto bbox = doc->bounding_box();
+        size_t total_elements = 0;
+        auto root = doc->document_element();
+        if (root) total_elements = count_all_elements(root);
+        
+        std::uintmax_t file_size = 0;
+        std::string readable_size = "N/A";
+        if (fs::exists(input)) {
+            file_size = fs::file_size(input);
+            readable_size = human_readable_size(file_size);
+        }
+        
+        const std::string escaped_file = json_escape(input);
+        
+        std::cout << "{\"file\":\"" << escaped_file << "\",\"width\":" << doc->width() 
+                  << ",\"height\":" << doc->height() << ",\"bounding_box\":{\"x\":" 
+                  << bbox.x << ",\"y\":" << bbox.y << ",\"width\":" << bbox.w 
+                  << ",\"height\":" << bbox.h << "},\"total_elements\":" << total_elements 
+                  << ",\"file_size\":" << file_size << ",\"readable_size\":\"" 
+                  << readable_size << "\"}\n";
+        return 0;
+    }
+    
+    std::cout << "SVG Information:\n";
+    std::cout << "  File: " << input << "\n";
+    std::cout << "  Size: " << doc->width() << "x" << doc->height() << "px\n";
+    auto bbox = doc->bounding_box();
+    std::cout << "  Bounding Box: " 
+              << bbox.x << "," << bbox.y << " "
+              << bbox.w << "x" << bbox.h << "\n";
+    
+    size_t total_elements = 0;
+    auto root = doc->document_element();
+    if (root) {
+        total_elements = count_all_elements(root);
+        std::cout << "  Total elements: " << total_elements << "\n";
+    }
+    
+    if (fs::exists(input)) {
+        auto size_ = fs::file_size(input);
+        std::cout << "  File size: " << size_ << " bytes\n";
+        std::cout << "  Readable size: " << human_readable_size(size_) << "\n";
+    } else {
+        std::cout << "  File size: N/A\n";
+    }
+    return 0;
+}
+
+int cmd_query(const std::string& selector, const std::string& input, bool json_output = false) {
+    if (!nova::svg::is_valid_selector(selector)) {
+        cli_log().error("Invalid or unsupported selector: %s", selector.c_str());
+        return 1;
+    }
+    std::unique_ptr<nova::svg::document> doc = nova::svg::document::load_file(input);
+    if (!doc) {
+        cli_log().error("Failed to load SVG file: %s", std::string(input).c_str());
+        return 1;
+    }
+    auto elements = doc->query_selector_all(selector);
+    
+    if (json_output) {
+        std::cout << "{\"selector\":\"" << json_escape(selector) << "\",\"count\":" << elements.size() << ",\"elements\":[";
+        for (size_t i = 0; i < elements.size(); i++) {
+            const auto& elem = elements[i];
+            auto bbox = elem.bounding_box();
+            auto local_bbox = elem.local_bounding_box();
+            auto global_bbox = elem.global_bounding_box();
+            
+            if (i > 0) std::cout << ",";
+            std::cout << "{\"index\":" << (i + 1) << ",\"bounding_box\":{\"x\":" 
+                      << bbox.x << ",\"y\":" << bbox.y << ",\"width\":" << bbox.w 
+                      << ",\"height\":" << bbox.h << "},\"local_bbox\":{\"x\":" 
+                      << local_bbox.x << ",\"y\":" << local_bbox.y << ",\"width\":" 
+                      << local_bbox.w << ",\"height\":" << local_bbox.h 
+                      << "},\"global_bbox\":{\"x\":" << global_bbox.x << ",\"y\":" 
+                      << global_bbox.y << ",\"width\":" << global_bbox.w << ",\"height\":" 
+                      << global_bbox.h << "}";
+            
+            std::cout << ",\"attributes\":{";
+            bool first_attr = true;
+            if (elem.has_attribute("id")) {
+                std::cout << "\"id\":\"" << json_escape(elem.attribute("id")) << "\"";
+                first_attr = false;
+            }
+            if (elem.has_attribute("class")) {
+                if (!first_attr) std::cout << ",";
+                std::cout << "\"class\":\"" << json_escape(elem.attribute("class")) << "\"";
+                first_attr = false;
+            }
+            if (elem.has_attribute("fill")) {
+                if (!first_attr) std::cout << ",";
+                std::cout << "\"fill\":\"" << json_escape(elem.attribute("fill")) << "\"";
+                first_attr = false;
+            }
+            if (elem.has_attribute("stroke")) {
+                if (!first_attr) std::cout << ",";
+                std::cout << "\"stroke\":\"" << json_escape(elem.attribute("stroke")) << "\"";
+                first_attr = false;
+            }
+            std::cout << "}}";
+        }
+        std::cout << "]}\n";
+        return 0;
+    }
+    
+    std::cout << "Found " << elements.size() << " element(s) matching: " << selector << "\n\n";
+    for (size_t i = 0; i < elements.size(); i++) {
+        const auto& elem = elements[i];
+        auto bbox = elem.bounding_box();
+        auto local_bbox = elem.local_bounding_box();
+        auto global_bbox = elem.global_bounding_box();
+        
+        std::cout << "Element #" << (i + 1) << ":\n";
+        std::cout << "  Bounding Box: " 
+                  << bbox.x << "," << bbox.y << " "
+                  << bbox.w << "x" << bbox.h << "\n";
+        std::cout << "  Local BBox: " 
+                  << local_bbox.x << "," << local_bbox.y << " "
+                  << local_bbox.w << "x" << local_bbox.h << "\n";
+        std::cout << "  Global BBox: " 
+                  << global_bbox.x << "," << global_bbox.y << " "
+                  << global_bbox.w << "x" << global_bbox.h << "\n";
+        
+        if (elem.has_attribute("id")) std::cout << "  ID: " << elem.attribute("id") << "\n";
+        if (elem.has_attribute("class")) std::cout << "  Class: " << elem.attribute("class") << "\n";
+        if (elem.has_attribute("fill")) std::cout << "  Fill: " << elem.attribute("fill") << "\n";
+        if (elem.has_attribute("stroke")) std::cout << "  Stroke: " << elem.attribute("stroke") << "\n";
+        std::cout << "\n";
+    }
+    return 0;
+}
+
+int cmd_batch(const std::string& input_dir, const std::string& output_dir) {
+    if (!fs::exists(input_dir) || !fs::is_directory(input_dir)) {
+        cli_log().error("Input directory does not exist: %s", std::string(input_dir).c_str());
+        return 1;
+    }
+    
+    fs::create_directories(output_dir);
+    
+    int success = 0;
+    int failed = 0;
+    
+    for (const auto& entry : fs::directory_iterator(input_dir)) {
+        if (!entry.is_regular_file()) continue;
+        auto path_ = entry.path();
+        if (path_.extension() != ".svg") continue;
+        
+        std::string input_file = path_.string();
+        std::string output_file = (fs::path(output_dir) / path_.stem()).string() + ".png";
+        
+        std::cout << "Processing: " << path_.filename() << " -> " 
+                  << fs::path(output_file).filename() << "\n";
+        
+        std::unique_ptr<nova::svg::document> doc = nova::svg::document::load_file(input_file);
+        if (!doc) { cli_log().error("Failed to load"); failed++; continue; }
+        
+        auto image = doc->render_to_image();
+        if (image.empty()) { cli_log().error("Failed to render"); failed++; continue; }
+        
+        if (!write_image(image, output_file)) { cli_log().error("Failed to save"); failed++; continue; }
+        
+        success++;
+    }
+    
+    std::cout << "\nBatch processing complete:\n";
+    std::cout << "  Success: " << success << "\n";
+    std::cout << "  Failed:  " << failed << "\n";
+    std::cout << "  Output:  " << output_dir << "\n";
+    
+    return failed > 0 ? 1 : 0;
+}
+
+// ============================================================
+// Main
+// ============================================================
+
+int main(int argc, char** argv) {
+    const std::string version_str = nova::svg::version_string();
+
+    CLI::App app{"novasvg Command Line Interface v" + version_str + " - High-performance SVG rendering toolkit."};
+    app.name("novasvg");
+    app.set_version_flag("-v,--version", version_str, "Show version information");
+    std::string log_level = "warning", log_file;
+    app.add_option("--log-level", log_level, "Log level: debug, info, warning, error (default: warning)")
+        ->check(CLI::IsMember({"debug", "info", "warning", "error", "critical"}, CLI::ignore_case));
+    app.add_option("--log-file", log_file, "Also append log records to this file");
+
+    // --------------------------------------------------------
+    // Convert -- the default action. Its options live directly on the
+    // root app (matching ctoon's CLI, which does the same for its
+    // primary action) rather than behind a "convert" subcommand, so
+    // `novasvg input.svg -o out.png` just works with no keyword needed.
+    // `info`/`query`/`batch` below are real CLI11 subcommands for the
+    // genuinely different actions -- both forms are ordinary CLI11, no
+    // argv rewriting: CLI11 matches a token against a subcommand name
+    // before it considers consuming it as a positional here.
+    // --------------------------------------------------------
+    std::string convert_input, convert_output, convert_bg_color, convert_style, convert_css_file, convert_pdf_text = "outlines";
+    int convert_width = -1, convert_height = -1;
+    float convert_scale = 0.0f;
+
+    app.add_option("input", convert_input, "Input SVG file")->check(CLI::ExistingFile);
+    app.add_option("-o,--output", convert_output, "Output file: .png .bmp .tga .jpg or .pdf (default: input name with .png extension)");
+    app.add_option("-w,--width", convert_width, "Output width in pixels");
+    app.add_option("-H,--height", convert_height, "Output height in pixels");
+    app.add_option("-s,--scale", convert_scale, "Scale factor (e.g., 2.0)");
+    app.add_option("-b,--background-color", convert_bg_color, "Background color (hex: RRGGBB or RRGGBBAA, default: transparent)");
+    app.add_option("--style", convert_style, "Apply CSS styles directly (string)");
+    app.add_option("--css-file", convert_css_file, "Apply CSS styles from file")->check(CLI::ExistingFile);
+    app.add_option("--pdf-text", convert_pdf_text,
+                       "How a .pdf writes text: outlines (default), embed (real text in an embedded font subset; a font whose license forbids it stays outlines) or embed-ignore-license (embed without reading the license: you answer for it)")
+        ->check(CLI::IsMember({"outlines", "embed", "embed-ignore-license"}));
+
+    // "convert" also works as an explicit subcommand, sharing the exact
+    // same bound variables as the root options above -- so
+    // `novasvg input.svg` and `novasvg convert input.svg` are genuinely
+    // the same thing to CLI11, not two code paths kept in sync by hand.
+    auto convert_cmd = app.add_subcommand("convert", "Convert SVG to PNG (also the default action -- see below).");
+    convert_cmd->add_option("input", convert_input, "Input SVG file")->check(CLI::ExistingFile);
+    convert_cmd->add_option("-o,--output", convert_output, "Output file: .png .bmp .tga .jpg or .pdf (default: input name with .png extension)");
+    convert_cmd->add_option("-w,--width", convert_width, "Output width in pixels");
+    convert_cmd->add_option("-H,--height", convert_height, "Output height in pixels");
+    convert_cmd->add_option("-s,--scale", convert_scale, "Scale factor (e.g., 2.0)");
+    convert_cmd->add_option("-b,--background-color", convert_bg_color, "Background color (hex: RRGGBB or RRGGBBAA, default: transparent)");
+    convert_cmd->add_option("--style", convert_style, "Apply CSS styles directly (string)");
+    convert_cmd->add_option("--css-file", convert_css_file, "Apply CSS styles from file")->check(CLI::ExistingFile);
+    convert_cmd->add_option("--pdf-text", convert_pdf_text,
+                       "How a .pdf writes text: outlines (default), embed (real text in an embedded font subset; a font whose license forbids it stays outlines) or embed-ignore-license (embed without reading the license: you answer for it)")
+        ->check(CLI::IsMember({"outlines", "embed", "embed-ignore-license"}));
+
+    app.footer(
+        "Examples:\n"
+        "  novasvg input.svg\n"
+        "  novasvg convert input.svg -o out.png -w 800 -H 600\n"
+        "  novasvg input.svg --css-file style.css\n"
+        "  novasvg input.svg --style \"rect { fill: red; }\"\n"
+        "  novasvg info image.svg\n"
+        "  novasvg query \"circle\" input.svg\n"
+        "  novasvg batch ./svgs ./images\n"
+    );
+
+    int exit_code = 0;
+
+    convert_cmd->callback([&]() {
+        exit_code = cmd_convert(convert_input, convert_output, convert_width, convert_height,
+                                 convert_bg_color, convert_scale, convert_style, convert_css_file, convert_pdf_text);
+    });
+
+    // --------------------------------------------------------
+    // Info Command
+    // --------------------------------------------------------
+    auto info_cmd = app.add_subcommand("info", "Display detailed SVG file information.");
+    std::string info_input;
+    bool info_json = false;
+
+    info_cmd->add_option("input", info_input, "Input SVG file")->required()->check(CLI::ExistingFile);
+    info_cmd->add_flag("--json", info_json, "Output in JSON format");
+
+    info_cmd->footer(
+        "Examples:\n"
+        "  novasvg info image.svg\n"
+        "  novasvg info image.svg --json\n"
+    );
+
+    info_cmd->callback([&]() {
+        exit_code = cmd_info(info_input, info_json);
+    });
+
+    // --------------------------------------------------------
+    // Query Command
+    // --------------------------------------------------------
+    auto query_cmd = app.add_subcommand("query", "Query SVG elements using CSS selectors.");
+    std::string query_selector, query_input;
+    bool query_json = false;
+
+    query_cmd->add_option("selector", query_selector, "CSS selector (e.g., 'circle', '#myId')")->required();
+    query_cmd->add_option("input", query_input, "Input SVG file")->required()->check(CLI::ExistingFile);
+    query_cmd->add_flag("--json", query_json, "Output in JSON format");
+
+    query_cmd->footer(
+        "Examples:\n"
+        "  novasvg query \"circle\" input.svg\n"
+        "  novasvg query \"rect[fill='red']\" input.svg\n"
+    );
+
+    query_cmd->callback([&]() {
+        exit_code = cmd_query(query_selector, query_input, query_json);
+    });
+
+    // --------------------------------------------------------
+    // Batch Command
+    // --------------------------------------------------------
+    auto batch_cmd = app.add_subcommand("batch", "Batch convert all SVGs in a directory.");
+    std::string batch_input, batch_output = "output";
+
+    batch_cmd->add_option("input", batch_input, "Input directory")->required()->check(CLI::ExistingDirectory);
+    batch_cmd->add_option("output", batch_output, "Output directory (default: ./output)");
+
+    batch_cmd->footer(
+        "Examples:\n"
+        "  novasvg batch ./svgs ./images\n"
+    );
+
+    batch_cmd->callback([&]() {
+        exit_code = cmd_batch(batch_input, batch_output);
+    });
+
+    app.require_subcommand(0, 1); // subcommand is optional -- root options are "convert"
+
+    // --------------------------------------------------------
+    // Parse
+    // --------------------------------------------------------
+    try {
+        if (argc < 2) {
+            std::cout << app.help() << std::endl;
+            return 0;
+        }
+        app.parse(argc, argv);
+        setup_logging(log_level, log_file);
+    } catch (const CLI::ParseError &e) {
+        return app.exit(e);
+    } catch (const std::exception& e) {
+        cli_log().error("%s", e.what());
+        return 1;
+    }
+
+    if (!app.get_subcommands().empty())
+        return exit_code; // info/query/batch already ran via their callback above
+
+    // No subcommand was given: this is the implicit convert action.
+    if (convert_input.empty()) {
+        std::cout << app.help() << std::endl;
+        return 0;
+    }
+    return cmd_convert(convert_input, convert_output, convert_width, convert_height,
+                        convert_bg_color, convert_scale, convert_style, convert_css_file, convert_pdf_text);
+}

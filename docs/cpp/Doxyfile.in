@@ -4,7 +4,7 @@ DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "NovaSVG"
 PROJECT_NUMBER         = @PROJECT_VERSION@
 PROJECT_BRIEF          = "A header-only SVG library"
-OUTPUT_DIRECTORY       = @NOVASVG_DOCS_CPP_OUT@
+OUTPUT_DIRECTORY       = @NOVA_DOCS_CPP_OUT@
 OUTPUT_LANGUAGE        = English
 
 EXTRACT_ALL            = YES
@@ -15,11 +15,11 @@ HIDE_UNDOC_CLASSES     = NO
 
 INPUT                  = @PROJECT_SOURCE_DIR@/docs/cpp/mainpage.md \
                          @PROJECT_SOURCE_DIR@/docs/cpp/about.md \
-                         @PROJECT_SOURCE_DIR@/include/novasvg
+                         @PROJECT_SOURCE_DIR@/include/nova
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.h *.hpp *.hxx
 RECURSIVE              = YES
-EXCLUDE_PATTERNS       = */detail/render/vendor/*
+EXCLUDE_PATTERNS       = */src/sources/vg/vendor/*
 USE_MDFILE_AS_MAINPAGE = @PROJECT_SOURCE_DIR@/docs/cpp/mainpage.md
 # INCLUDE_PATH lets Doxygen resolve <novasvg/...> includes for the include graph.
 INCLUDE_PATH           = @PROJECT_SOURCE_DIR@/include
@@ -57,5 +57,5 @@ DOT_CLEANUP            = YES
 ENABLE_PREPROCESSING   = YES
 MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = NO
-PREDEFINED             = NOVASVG_API=
+PREDEFINED             = NOVA_API=
 SKIP_FUNCTION_MACROS   = YES

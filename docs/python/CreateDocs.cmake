@@ -4,21 +4,21 @@
 #   PYTHON_EXECUTABLE        — Python interpreter
 #   SOURCE_DIR               — Sphinx source dir (contains conf.py)
 #   OUTPUT_DIR               — Output directory for generated HTML
-#   NOVASVG_PYTHON_INSTALL_DIR — Path to ${CMAKE_BINARY_DIR}/python/install
+#   NOVA_PYTHON_INSTALL_DIR — Path to ${CMAKE_BINARY_DIR}/python/install
 #                              where novasvg was installed (novasvg_build_python target)
 
 cmake_minimum_required(VERSION 3.19)
 
 # ── Validate ──────────────────────────────────────────────────────────────────
-foreach(_var PYTHON_EXECUTABLE SOURCE_DIR OUTPUT_DIR NOVASVG_PYTHON_INSTALL_DIR)
+foreach(_var PYTHON_EXECUTABLE SOURCE_DIR OUTPUT_DIR NOVA_PYTHON_INSTALL_DIR)
     if(NOT DEFINED ${_var})
         message(FATAL_ERROR "CreateDocs.cmake (python): ${_var} must be defined")
     endif()
 endforeach()
 
-if(NOT EXISTS "${NOVASVG_PYTHON_INSTALL_DIR}")
+if(NOT EXISTS "${NOVA_PYTHON_INSTALL_DIR}")
     message(FATAL_ERROR
-        "NOVASVG_PYTHON_INSTALL_DIR does not exist: ${NOVASVG_PYTHON_INSTALL_DIR}\n"
+        "NOVA_PYTHON_INSTALL_DIR does not exist: ${NOVA_PYTHON_INSTALL_DIR}\n"
         "Build the 'novasvg_build_python' target first."
     )
 endif()
@@ -41,14 +41,14 @@ file(MAKE_DIRECTORY "${PY_HTML}")
 file(MAKE_DIRECTORY "${PY_DOCTREES}")
 
 # ── Run Sphinx ────────────────────────────────────────────────────────────────
-# Pass NOVASVG_PYTHON_INSTALL_DIR as environment variable so conf.py can read it
+# Pass NOVA_PYTHON_INSTALL_DIR as environment variable so conf.py can read it
 execute_process(
     COMMAND ${PYTHON_EXECUTABLE} -m sphinx
             -b html
             -d "${PY_DOCTREES}"
             "${SOURCE_DIR}"
             "${PY_HTML}"
-    WORKING_DIRECTORY ${NOVASVG_PYTHON_INSTALL_DIR}
+    WORKING_DIRECTORY ${NOVA_PYTHON_INSTALL_DIR}
     RESULT_VARIABLE SPHINX_RESULT
 )
 

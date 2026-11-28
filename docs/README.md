@@ -27,14 +27,14 @@ See \ref about for the full origin story.
 ## Quick Start
 
 ```cpp
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 
 int main() {
     // Load SVG from file
     auto document = nova::svg::Document::loadFromFile("image.svg");
     
     // Create bitmap for rendering
-    nova::svg::Bitmap bitmap(800, 600);
+    nova::vg::Bitmap bitmap(800, 600);
     
     // Render SVG to bitmap
     document.render(bitmap);
@@ -55,7 +55,7 @@ int main() {
 - **`Matrix`**: 2D transformation matrix
 - **`Box`**: Bounding box representation
 - **`Element`**: SVG element manipulation
-- **`Color`**: Color representation and parsing
+- **`stb::color`**: stb::color representation and parsing
 
 ### Key Functions
 
@@ -77,7 +77,7 @@ Check the `examples/` directory for complete examples:
 ```bash
 mkdir build
 cd build
-cmake .. -DNOVASVG_BUILD_EXAMPLES=ON -DNOVASVG_BUILD_TESTS=ON
+cmake .. -DNOVA_BUILD_EXAMPLES=ON -DNOVA_BUILD_TESTS=ON
 make
 ```
 

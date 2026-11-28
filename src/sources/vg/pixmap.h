@@ -1,0 +1,185 @@
+#pragma once
+
+// pixmap (INTERNAL; the public pixel type is stb::image): a premultiplied-ARGB32 pixel buffer -- novasvg's
+// drawable surface, texture source, and render target all in one. Self-contained:
+// needs only stb::color and the surface_t (stb::premultiplied_image) it shares, nothing
+// from the svg/raster_canvas/Font layers, so it can be used entirely on its own
+// (e.g. to build up an image and write it out) without pulling in the
+// rest of novasvg.
+
+#include <stb/color.hpp>
+#include "render.h"  // surface_t
+
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <cctype>
+#include <climits>
+#include <exception>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <stb/image.hpp>
+
+namespace nova::vg {
+
+class NOVA_API pixmap {
+public:
+    /**
+     * @brief Constructs a null bitmap.
+     */
+    pixmap() = default;
+
+    /**
+     * @brief Constructs a bitmap with the specified width and height.
+     * @note A null bitmap will be returned if memory cannot be allocated.
+     * @param width The width of the bitmap in pixels.
+     * @param height The height of the bitmap in pixels.
+     */
+    pixmap(int width, int height);
+
+    /**
+     * @brief Constructs a bitmap with the provided pixel data, width, height, and stride.
+     *
+     * @param data A pointer to the raw pixel data in ARGB32 Premultiplied format.
+     * @param width The width of the bitmap in pixels.
+     * @param height The height of the bitmap in pixels.
+     * @param stride The number of bytes per row of pixel data (stride).
+    */
+    pixmap(uint8_t* data, int width, int height, int stride);
+
+    /**
+     * @brief Copying is not allowed: a copy of a handle onto the same pixels is a trap (drawing into one changes the
+     * other, convert_to_rgba() corrupts both). Move it, or make an explicit copy of the pixels with clone().
+     */
+    pixmap(const pixmap&) = delete;
+
+    /**
+     * @brief Move constructor.
+     * @param bitmap The bitmap to move.
+     */
+    pixmap(pixmap&& bitmap) = default;
+
+    /**
+     * @internal Shares `surface`.
+     */
+    pixmap(std::shared_ptr<surface_t> surface) : m_surface(std::move(surface)) {}
+
+    /**
+     * @brief Copy assignment operator.
+     * @param bitmap The bitmap to copy.
+     * @return A reference to this bitmap.
+     */
+    pixmap& operator=(const pixmap&) = delete;
+
+    /**
+     * @brief Move assignment operator.
+     * @param bitmap The bitmap to move.
+     * @return A reference to this bitmap.
+     */
+    pixmap& operator=(pixmap&& bitmap) = default;
+
+    /**
+     * @brief An independent copy of the pixels, in memory this copy owns (also when this one sits on caller-owned
+     * memory). The only way to copy a pixmap. A null pixmap clones to a null one.
+     */
+    pixmap clone() const;
+
+    /**
+     * @brief Swaps the content of this bitmap with another.
+     * @param bitmap The bitmap to swap with.
+     */
+    void swap(pixmap& bitmap);
+
+    /**
+     * @brief Gets the pointer to the raw pixel data.
+     * @return A pointer to the raw pixel data.
+     */
+    uint8_t* data() const;
+
+    /**
+     * @brief Gets the width of the bitmap.
+     * @return The width of the bitmap in pixels.
+     */
+    int width() const;
+
+    /**
+     * @brief Gets the height of the bitmap.
+     * @return The height of the bitmap in pixels.
+     */
+    int height() const;
+
+    /**
+     * @brief Gets the stride of the bitmap.
+     * @return The number of bytes per row of pixel data (stride).
+     */
+    int stride() const;
+
+    /**
+     * @brief Clears the bitmap with the specified color.
+     * @param value The color to clear with.
+     */
+    void clear(const color& value);
+
+    /**
+     * @brief Converts the bitmap pixel data from ARGB32 Premultiplied to RGBA Plain format in place.
+     *
+     * For a pixmap over caller-owned memory that should end up as straight RGBA (stb::premultiplied_argb_to_rgba with the
+     * same buffer as source and destination); the pixmap should not be drawn into afterwards.
+     */
+    void convert_to_rgba();
+
+    /**
+     * @brief Checks if the bitmap is null.
+     * @return True if the bitmap is null, false otherwise.
+     */
+    bool is_null() const { return m_surface == nullptr; }
+
+    /**
+     * @brief Checks if the bitmap is valid.
+     * @deprecated This function has been deprecated. Use `is_null()` instead to check whether the bitmap is null.
+     * @return True if the bitmap is valid, false otherwise.
+     */
+    bool valid() const { return !is_null(); }
+
+    /**
+     * @internal
+     */
+    const std::shared_ptr<surface_t>& surface() const { return m_surface; }
+
+private:
+    std::shared_ptr<surface_t> m_surface;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// pixmap is internal. Its pixels are premultiplied ARGB32 because that is what the rasterizer draws in and
+// what canvas_set_texture samples (<image>, patterns): both need premultiplied alpha for `over` to be correct.
+// The public pixel type is stb::image (straight RGBA); pixmap_release_to_image and pixmap_from_image are the boundary.
+
+// A straight-alpha RGBA copy of `bitmap` (the pixmap itself is left alone). Works for any stride: a pixmap over
+// caller-owned memory may be wider than width * 4, an image never is.
+image bitmap_to_rgba_image(const pixmap& bitmap);
+// The other direction: `image` premultiplied into a new pixmap. Empty, or a side of 32768 or more, gives a null pixmap.
+pixmap pixmap_from_image(const image& image);
+// The bitmap as a straight RGBA image, taking it over: when nothing else holds its pixels they are converted in place
+// and become the image (no copy: this is what render() hands to callers), otherwise they are copied.
+image pixmap_release_to_image(pixmap&& bitmap);
+
+} // namespace nova::vg

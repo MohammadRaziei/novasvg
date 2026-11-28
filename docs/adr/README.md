@@ -1,0 +1,36 @@
+# Architecture Decision Records
+
+Decisions for the 0.12 refactor (compiled library, libstb, `stb::image`, stl-like naming). One file per
+decision; each records the context, the options that were weighed, what was chosen and why, and what it costs.
+
+| ADR | Decision | Status |
+|---|---|---|
+| [0001](0001-compile-novasvg-into-a-library.md) | Compile novasvg into a library instead of shipping it header-only | Accepted (step 4 pending) |
+| [0002](0002-depend-on-libstb-via-fetchcontent-dynamic.md) | Depend on libstb: fetched with FetchContent, pinned, linked dynamically | Accepted, implemented (step 1) |
+| [0003](0003-public-image-type-is-stb-image.md) | The public pixel type is `stb::image`; the premultiplied render surface is internal | Accepted (step 2b pending) |
+| [0004](0004-stl-like-naming-and-namespace.md) | stl-like `snake_case` naming; namespace `novasvg` | Accepted (step 6 pending); namespace part superseded by 0009 |
+| [0005](0005-replace-vendored-stb-with-libstb.md) | Replace the vendored stb_image, image writer and inflater with libstb | Accepted, implemented (step 2a) |
+| [0006](0006-fonts-on-libstb.md) | Build fonts on libstb; add a glyph-outline API to libstb | Accepted; implemented in step D3 |
+| [0007](0007-refactor-in-verified-steps.md) | Refactor in verified steps, gated by tests and a pixel-level golden diff | Accepted |
+| [0008](0008-gfx-canvas-interface-and-layout.md) | Abstract `canvas` with a pixel backend and a PDF backend; `gfx/` layout | Accepted; steps A, C, F (parts 1 and 2) done |
+| [0009](0009-namespaces-nova-svg-and-nova-vg.md) | Namespaces `nova::svg` and `nova::vg`; the drawing layer is a library of its own | Accepted (direction), not implemented |
+| [0010](0010-foreign-object-extension.md) | foreignObject is an extension (public renderer interface, painter, per-document registration), not part of the core | Accepted, implemented |
+| [0012](0012-shape-text-runs-not-fragments.md) | Shape a text run once with libstb and split the glyphs into fragments, instead of shaping each fragment alone | Proposed, not implemented |
+| [0013](0013-measure-then-speed-up-the-parser.md) | Measure the parser first; borrow pugixml's techniques (in-place parse, arena, char table) instead of its DOM | Measured, step 2 not done |
+| [0014](0014-layers-patterns-and-the-pdf-backend.md) | Layers and patterns become virtual calls on `canvas`; PDF fidelity (gradient spread, metadata) after that | Accepted, implemented in STEP 54 |
+| [0015](0015-pdf-fade-gradients-as-soft-masks.md) | A gradient whose stops differ in alpha is a luminosity soft mask in PDF output | Accepted |
+| [0016](0016-pdf-masks-as-soft-masks.md) | `<mask>` and clip masks are soft masks in PDF output, not bitmaps | Accepted |
+| [0017](0017-errors-and-threads.md) | Errors are values, not exceptions; documents that share nothing, and one document rendered by many threads, are thread safe | Accepted |
+| [0018](0018-pdf-text-layer-and-title.md) | The text of a PDF is selectable (an invisible text layer) and `<title>` is its /Title | Accepted |
+| [0019](0019-pdf-embedded-fonts.md) | PDF text can be real text in an embedded font subset, chosen per call (`pdf_text`: outlines, embed, embed_ignore_license) | Accepted |
+
+The step numbers refer to [`REFACTOR_CHECKLIST.md`](../../REFACTOR_CHECKLIST.md) at the repository root.
+
+## Adding a record
+
+Copy the shape of an existing one: `# ADR-NNNN: Title`, then **Status**, **Date**, **Deciders**, and the
+sections Context, Decision, Options Considered, Trade-off Analysis, Consequences, Action Items. Number records
+in order and never reuse a number. A decision that is reversed is not edited away: set its status to
+`Superseded by ADR-NNNN` and write the new record.
+
+`bench/` holds the small programs that produced the numbers quoted in ADR-0003, so the claims can be re-run.

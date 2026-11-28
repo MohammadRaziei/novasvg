@@ -1,0 +1,53 @@
+# ADR-0008: A drawing layer (`gfx`) behind an abstract canvas; no `detail/`
+
+**Status:** Accepted (direction); steps A (layout) and F-part-1 (`pdf_canvas` for the interface as it is) done, the rest open
+**Date:** 2026-11-03
+**Deciders:** Mohammad Raziei (maintainer)
+
+## Context
+The SVG renderer drew straight into a raster surface through C-style plutovg functions (`path_t*`, `matrix_t*`),
+and the drawing code was hidden under `detail/`. The maintainer wants libstb plus novasvg to double as a general
+vector-drawing/plot library, and wants room for SVG-to-PDF later. Hiding the drawing layer and tying it to pixels
+rules both out.
+
+## Decision
+1. Three layers: **libstb** (`image`, `color`, `font`, `path`, `matrix`, later the rasterizer) -> **`novasvg::gfx`**
+   (public drawing layer) -> **svg** (DOM, parser, CSS, layout, filters).
+2. `gfx` exposes an abstract `canvas` (save/restore, transform, clip, fill, stroke, draw_image, draw_glyphs,
+   begin/end layer with opacity and blend mode) over `stb::outline`, a `paint` (solid, gradient, pattern) and a
+   `stroke_style`. Backends: `raster_canvas` (stb::image) now, `pdf_canvas` later. SVG rendering targets the
+   interface only. SVG filters stay raster-only (a PDF backend rasterizes them).
+3. No `detail/`. Public headers live in `include/novasvg/{gfx,svg}/`; private headers sit beside their `.cpp` in
+   `src/gfx/` and `src/svg/`. Headers that must stay public only because the font stack is still inline
+   (`gfx/internal.h`, `gfx/utils.h`) were marked temporary and now live in `src/gfx/` (step 2).
+4. Naming follows ADR-0004. The namespace is `novasvg::gfx` for now; a rename to a standalone name is a one-line `sed`.
+
+## Order
+A layout move (done) -> B naming by script (ADR-0004) -> C abstract `canvas` + `raster_canvas`, golden must stay
+identical -> D split `svgelement.h`, compile the svg layer -> E swap in `stb::path` / `stb::matrix` / `stb::color`
+and libstb's rasterizer when it lands (then drop `src/gfx/vendor/`) -> F `pdf_canvas`.
+
+## Consequences
+`render::` is now `gfx::`. The C-style handle API stays until C and E replace it. A header-only single-file dist is
+no longer a goal (ADR-0001).
+
+## pdf_canvas, part 1 (2026-11-04)
+`src/gfx/pdf_canvas.{h,cpp}` implements `canvas` and writes a one-page PDF 1.5 (no dependencies besides libstb's `zlib_compress`).
+Done: solid paints with alpha (ExtGState), linear/radial gradients (shading patterns, stitched functions, pad), fill/stroke with caps, joins, miter
+limit and dashes (stroke goes through `cm`, so non-uniform scale is exact), clipping, images (Flate RGB + SMask), save/restore, text as glyph outlines
+(same ligature/kerning layout as `canvas_add_text`, so no font embedding and no text selection yet).
+Open: gradient `reflect`/`repeat` (written as pad), per-stop alpha (ignored), layers (group opacity, blend mode), masks, patterns, an SVG document
+rendering through the interface (the svg layer still reaches `raster_canvas` for layers, masks, patterns and filters).
+
+## pdf_canvas, part 2: SVG to PDF, vector and raster (2026-11-04)
+`document::render_to_pdf(pdf_mode, dpi)` / `save_pdf(file, pdf_mode, dpi)`.
+- `pdf_mode::raster`: the page is one bitmap rendered at `dpi` (everything the renderer does works, nothing is vector).
+- `pdf_mode::vector`: `svg_render_state` runs on a `pdf_canvas`. Instead of growing `canvas` with a layer API first, the svg layer
+  chooses per group (`svg_render_state::beginGroup/endGroup`, `layer_kind`):
+  - opacity / mix-blend-mode only: a PDF transparency group (`pdf_canvas::begin_group/end_group`, Form XObject, `/ca` and `/BM`), still vector;
+  - mask, clip mask or filter: the group is rendered by `raster_canvas` at `dpi` (the state's transform is scaled by `dpi/96`, so masks and filters
+    work unchanged) and placed as an image (`draw_raster_group`);
+  - pattern fills: the tile is a bitmap at `dpi`, used as a PDF tiling pattern (`set_tiled_image`).
+  The pixel backend's own paths are untouched: `layer_kind::raster` is exactly what `beginGroup/endGroup` did before.
+- This is a deliberate shortcut: the svg layer knows two backends (`dynamic_cast` to `pdf_canvas`). If a third backend ever appears, the
+  layer calls above become virtuals of `canvas` (`begin_layer`, `end_layer`, `set_pattern`) and `raster_canvas` implements them with its surface stack.

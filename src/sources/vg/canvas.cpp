@@ -1,0 +1,649 @@
+#include "state.h"
+
+namespace nova {
+namespace vg {
+
+static state_t* state_create(void);
+static void state_reset(state_t* state);
+static void state_copy(state_t* state, const state_t* source);
+static void state_destroy(state_t* state);
+
+int render_version(void)
+{
+    return NOVA_RENDER_VERSION;
+}
+
+const char* render_version_string(void)
+{
+    return NOVA_RENDER_VERSION_STRING;
+}
+
+static state_t* state_create(void)
+{
+    state_t* state = new state_t();
+    state->color_ = color(0, 0, 0, 255);
+    state->matrix = stb::matrix{};
+    state->stroke = default_stroke_style();
+    state->winding = fill_rule::non_zero;
+    state->op = composite_op::source_over;
+    state->mode = blend_mode::normal;
+    state->font_size = 12.f;
+    state->opacity = 1.f;
+    state->clipping = false;
+    state->next = NULL;
+    return state;
+}
+
+static void state_reset(state_t* state)
+{
+    state->paint_.reset();
+    state->font_face_ = font_face();
+    state->color_ = color(0, 0, 0, 255);
+    state->matrix = stb::matrix{};
+    state->stroke = default_stroke_style();
+    state->clip_spans.clear();
+    state->winding = fill_rule::non_zero;
+    state->op = composite_op::source_over;
+    state->mode = blend_mode::normal;
+    state->font_size = 12.f;
+    state->opacity = 1.f;
+    state->clipping = false;
+}
+
+static void state_copy(state_t* state, const state_t* source)
+{
+    state->paint_ = source->paint_;
+    state->font_face_ = source->font_face_;
+    state->color_ = source->color_;
+    state->matrix = source->matrix;
+    state->stroke = source->stroke;
+    state->clip_spans = source->clip_spans;
+    state->winding = source->winding;
+    state->op = source->op;
+    state->mode = source->mode;
+    state->font_size = source->font_size;
+    state->opacity = source->opacity;
+    state->clipping = source->clipping;
+}
+
+static void state_destroy(state_t* state)
+{
+    delete state;
+}
+
+canvas_t* canvas_create(std::shared_ptr<surface_t> surface)
+{
+    canvas_t* canvas = new canvas_t();
+    novasvg_init_reference(canvas);
+    canvas->surface = surface;
+    canvas->path_ = new outline;
+    canvas->state = state_create();
+    canvas->freed_state = NULL;
+    canvas->clip_rect = rect_t{0, 0, static_cast<float>(surface->width()), static_cast<float>(surface->height())};
+    return canvas;
+}
+
+canvas_t* canvas_reference(canvas_t* canvas)
+{
+    novasvg_increment_reference(canvas);
+    return canvas;
+}
+
+void canvas_destroy(canvas_t* canvas)
+{
+    if(novasvg_destroy_reference(canvas)) {
+        while(canvas->state) {
+            state_t* state = canvas->state;
+            canvas->state = state->next;
+            state_destroy(state);
+        }
+
+        while(canvas->freed_state) {
+            state_t* state = canvas->freed_state;
+            canvas->freed_state = state->next;
+            state_destroy(state);
+        }
+
+        delete canvas->path_;
+        delete canvas;
+    }
+}
+
+int canvas_get_reference_count(const canvas_t* canvas)
+{
+    return novasvg_get_reference_count(canvas);
+}
+
+surface_t* canvas_get_surface(const canvas_t* canvas)
+{
+    return canvas->surface.get();
+}
+
+void canvas_save(canvas_t* canvas)
+{
+    state_t* new_state = canvas->freed_state;
+    if(new_state == NULL)
+        new_state = state_create();
+    else
+        canvas->freed_state = new_state->next;
+    state_copy(new_state, canvas->state);
+    new_state->next = canvas->state;
+    canvas->state = new_state;
+}
+
+void canvas_restore(canvas_t* canvas)
+{
+    if(canvas->state->next == NULL)
+        return;
+    state_t* old_state = canvas->state;
+    canvas->state = old_state->next;
+    state_reset(old_state);
+    old_state->next = canvas->freed_state;
+    canvas->freed_state = old_state;
+}
+
+void canvas_set_rgb(canvas_t* canvas, float r, float g, float b)
+{
+    canvas_set_rgba(canvas, r, g, b, 1.f);
+}
+
+void canvas_set_rgba(canvas_t* canvas, float r, float g, float b, float a)
+{
+    canvas->state->color_ = color_from_floats(r, g, b, a);
+    canvas->state->paint_.reset();
+}
+
+void canvas_set_color(canvas_t* canvas, const color* color_)
+{
+    canvas->state->color_ = *color_;
+    canvas->state->paint_.reset();
+}
+
+// A gradient with the offsets clamped to [0, 1] and made non-decreasing, the way SVG reads stops.
+static gradient_paint make_gradient(gradient_paint::kind type_, spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
+{
+    gradient_paint gradient;
+    gradient.type_ = type_;
+    gradient.spread = spread;
+    gradient.matrix = matrix ? *matrix : stb::matrix{};
+    gradient.stops.reserve(nstops > 0 ? nstops : 0);
+    float prev_offset = 0.f;
+    for(int i = 0; i < nstops; ++i) {
+        const float offset = STB_MAX(prev_offset, std::clamp(stops[i].offset, 0.f, 1.f));
+        gradient.stops.push_back({offset, stops[i].color_});
+        prev_offset = offset;
+    }
+    return gradient;
+}
+
+void canvas_set_linear_gradient(canvas_t* canvas, float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
+{
+    gradient_paint gradient = make_gradient(gradient_paint::kind::linear, spread, stops, nstops, matrix);
+    gradient.values[0] = x1;
+    gradient.values[1] = y1;
+    gradient.values[2] = x2;
+    gradient.values[3] = y2;
+    canvas->state->paint_ = std::make_shared<const paint_source>(std::move(gradient));
+}
+
+void canvas_set_radial_gradient(canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr, spread_method_value spread, const gradient_stop_t* stops, int nstops, const stb::matrix* matrix)
+{
+    gradient_paint gradient = make_gradient(gradient_paint::kind::radial, spread, stops, nstops, matrix);
+    gradient.values[0] = cx;
+    gradient.values[1] = cy;
+    gradient.values[2] = cr;
+    gradient.values[3] = fx;
+    gradient.values[4] = fy;
+    gradient.values[5] = fr;
+    canvas->state->paint_ = std::make_shared<const paint_source>(std::move(gradient));
+}
+
+void canvas_set_texture(canvas_t* canvas, std::shared_ptr<surface_t> surface, texture_type type_, float opacity, const stb::matrix* matrix)
+{
+    texture_paint texture;
+    texture.type_ = type_;
+    texture.opacity = std::clamp(opacity, 0.f, 1.f);
+    texture.matrix = matrix ? *matrix : stb::matrix{};
+    texture.surface = std::move(surface);
+    canvas->state->paint_ = std::make_shared<const paint_source>(std::move(texture));
+}
+
+void canvas_set_font(canvas_t* canvas, const font_face& face, float size_)
+{
+    canvas->state->font_face_ = face;
+    canvas_set_font_size(canvas, size_);
+}
+
+void canvas_set_font_size(canvas_t* canvas, float size_)
+{
+    canvas->state->font_size = size_;
+}
+
+float canvas_get_font_size(const canvas_t* canvas)
+{
+    return canvas->state->font_size;
+}
+
+void canvas_set_fill_rule(canvas_t* canvas, fill_rule winding)
+{
+    canvas->state->winding = winding;
+}
+
+fill_rule canvas_get_fill_rule(const canvas_t* canvas)
+{
+    return canvas->state->winding;
+}
+
+void canvas_set_operator(canvas_t* canvas, composite_op op, blend_mode mode)
+{
+    canvas->state->op = op;
+    canvas->state->mode = mode;
+}
+
+composite_op canvas_get_operator(const canvas_t* canvas)
+{
+    return canvas->state->op;
+}
+
+blend_mode canvas_get_blend_mode(const canvas_t* canvas)
+{
+    return canvas->state->mode;
+}
+
+void canvas_set_opacity(canvas_t* canvas, float opacity)
+{
+    canvas->state->opacity = std::clamp(opacity, 0.f, 1.f);
+}
+
+float canvas_get_opacity(const canvas_t* canvas)
+{
+    return canvas->state->opacity;
+}
+
+void canvas_set_line_width(canvas_t* canvas, float line_width)
+{
+    canvas->state->stroke.width = line_width;
+}
+
+float canvas_get_line_width(const canvas_t* canvas)
+{
+    return canvas->state->stroke.width;
+}
+
+void canvas_set_line_cap(canvas_t* canvas, line_cap line_cap_)
+{
+    canvas->state->stroke.cap = line_cap_;
+}
+
+line_cap canvas_get_line_cap(const canvas_t* canvas)
+{
+    return canvas->state->stroke.cap;
+}
+
+void canvas_set_line_join(canvas_t* canvas, line_join line_join_)
+{
+    canvas->state->stroke.join = line_join_;
+}
+
+line_join canvas_get_line_join(const canvas_t* canvas)
+{
+    return canvas->state->stroke.join;
+}
+
+void canvas_set_miter_limit(canvas_t* canvas, float miter_limit)
+{
+    canvas->state->stroke.miter_limit = miter_limit;
+}
+
+float canvas_get_miter_limit(const canvas_t* canvas)
+{
+    return canvas->state->stroke.miter_limit;
+}
+
+void canvas_set_dash(canvas_t* canvas, float offset, const float* dashes, int ndashes)
+{
+    canvas_set_dash_offset(canvas, offset);
+    canvas_set_dash_array(canvas, dashes, ndashes);
+}
+
+void canvas_set_dash_offset(canvas_t* canvas, float offset)
+{
+    canvas->state->stroke.dash_offset = offset;
+}
+
+float canvas_get_dash_offset(const canvas_t* canvas)
+{
+    return canvas->state->stroke.dash_offset;
+}
+
+void canvas_set_dash_array(canvas_t* canvas, const float* dashes, int ndashes)
+{
+    canvas->state->stroke.dashes.assign(dashes, dashes + ndashes);
+}
+
+int canvas_get_dash_array(const canvas_t* canvas, const float** dashes)
+{
+    if(dashes)
+        *dashes = canvas->state->stroke.dashes.data();
+    return static_cast<int>(canvas->state->stroke.dashes.size());
+}
+
+void canvas_translate(canvas_t* canvas, float tx, float ty)
+{
+    canvas->state->matrix.translate(tx, ty);
+}
+
+void canvas_scale(canvas_t* canvas, float sx, float sy)
+{
+    canvas->state->matrix.scale(sx, sy);
+}
+
+void canvas_shear(canvas_t* canvas, float shx, float shy)
+{
+    canvas->state->matrix.shear(shx, shy);
+}
+
+void canvas_rotate(canvas_t* canvas, float angle)
+{
+    canvas->state->matrix.rotate(angle);
+}
+
+void canvas_transform(canvas_t* canvas, const stb::matrix* matrix)
+{
+    canvas->state->matrix = (*matrix).then(canvas->state->matrix);
+}
+
+void canvas_reset_matrix(canvas_t* canvas)
+{
+    canvas->state->matrix = stb::matrix{};
+}
+
+void canvas_set_matrix(canvas_t* canvas, const stb::matrix* matrix)
+{
+    canvas->state->matrix = matrix ? *matrix : stb::matrix{};
+}
+
+void canvas_get_matrix(const canvas_t* canvas, stb::matrix* matrix)
+{
+    *matrix = canvas->state->matrix;
+}
+
+void canvas_map(const canvas_t* canvas, float x, float y, float* xx, float* yy)
+{
+    { const stb::point p_ = canvas->state->matrix.map(x, y); (*xx) = p_.x; (*yy) = p_.y; }
+}
+
+void canvas_map_point(const canvas_t* canvas, const stb::point* src, stb::point* dst)
+{
+    (*dst) = canvas->state->matrix.map((*src));
+}
+
+void canvas_map_rect(const canvas_t* canvas, const rect_t* src, rect_t* dst)
+{
+    const outline_bounds b = canvas->state->matrix.map_rect({src->x, src->y, src->x + src->w, src->y + src->h});
+    dst->x = b.x0;
+    dst->y = b.y0;
+    dst->w = b.width();
+    dst->h = b.height();
+}
+
+void canvas_move_to(canvas_t* canvas, float x, float y)
+{
+    canvas->path_->move_to(x, y);
+}
+
+void canvas_line_to(canvas_t* canvas, float x, float y)
+{
+    canvas->path_->line_to(x, y);
+}
+
+void canvas_quad_to(canvas_t* canvas, float x1, float y1, float x2, float y2)
+{
+    canvas->path_->quad_to(x1, y1, x2, y2);
+}
+
+void canvas_cubic_to(canvas_t* canvas, float x1, float y1, float x2, float y2, float x3, float y3)
+{
+    canvas->path_->cubic_to(x1, y1, x2, y2, x3, y3);
+}
+
+void canvas_arc_to(canvas_t* canvas, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y)
+{
+    canvas->path_->arc_to(rx, ry, rad_to_deg(angle), large_arc_flag, sweep_flag, x, y);
+}
+
+void canvas_rect(canvas_t* canvas, float x, float y, float w, float h)
+{
+    canvas->path_->add_rect(x, y, w, h);
+}
+
+void canvas_round_rect(canvas_t* canvas, float x, float y, float w, float h, float rx, float ry)
+{
+    canvas->path_->add_rounded_rect(x, y, w, h, rx, ry);
+}
+
+void canvas_ellipse(canvas_t* canvas, float cx, float cy, float rx, float ry)
+{
+    canvas->path_->add_ellipse(cx, cy, rx, ry);
+}
+
+void canvas_circle(canvas_t* canvas, float cx, float cy, float r)
+{
+    canvas->path_->add_circle(cx, cy, r);
+}
+
+void canvas_add_path(canvas_t* canvas, const outline& path_)
+{
+    canvas->path_->add_outline(path_);
+}
+
+void canvas_new_path(canvas_t* canvas)
+{
+    canvas->path_->clear();
+}
+
+void canvas_close_path(canvas_t* canvas)
+{
+    canvas->path_->close();
+}
+
+void canvas_get_current_point(const canvas_t* canvas, float* x, float* y)
+{
+    { const stb::point p = canvas->path_->current_point().value_or(stb::point{0.f, 0.f}); if(x) *x = p.x; if(y) *y = p.y; }
+}
+
+// The box of a span set as a rect (all zero when it is empty).
+static void span_extents(const span_set& spans, rect_t* extents)
+{
+    const std::optional<stb::clip_rect> box = spans.extents();
+    extents->x = box ? box->x : 0;
+    extents->y = box ? box->y : 0;
+    extents->w = box ? box->w : 0;
+    extents->h = box ? box->h : 0;
+}
+
+bool canvas_fill_contains(canvas_t* canvas, float x, float y)
+{
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
+    return canvas->fill_spans.contains(int(floorf(x)), int(floorf(y)));
+}
+
+bool canvas_stroke_contains(canvas_t* canvas, float x, float y)
+{
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
+    return canvas->fill_spans.contains(int(floorf(x)), int(floorf(y)));
+}
+
+bool canvas_clip_contains(canvas_t* canvas, float x, float y)
+{
+    if(canvas->state->clipping) {
+        return canvas->state->clip_spans.contains(int(floorf(x)), int(floorf(y)));
+    }
+
+    float l = canvas->clip_rect.x;
+    float t = canvas->clip_rect.y;
+    float r = canvas->clip_rect.x + canvas->clip_rect.w;
+    float b = canvas->clip_rect.y + canvas->clip_rect.h;
+
+    return x >= l && x <= r && y >= t && y <= b;
+}
+
+void canvas_fill_extents(canvas_t *canvas, rect_t* extents)
+{
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
+    span_extents(canvas->fill_spans, extents);
+}
+
+void canvas_stroke_extents(canvas_t *canvas, rect_t* extents)
+{
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, NULL, &canvas->state->stroke, fill_rule::non_zero);
+    span_extents(canvas->fill_spans, extents);
+}
+
+void canvas_clip_extents(canvas_t* canvas, rect_t* extents)
+{
+    if(canvas->state->clipping) {
+        span_extents(canvas->state->clip_spans, extents);
+    } else {
+        extents->x = canvas->clip_rect.x;
+        extents->y = canvas->clip_rect.y;
+        extents->w = canvas->clip_rect.w;
+        extents->h = canvas->clip_rect.h;
+    }
+}
+
+void canvas_fill(canvas_t* canvas)
+{
+    canvas_fill_preserve(canvas);
+    canvas_new_path(canvas);
+}
+
+void canvas_stroke(canvas_t* canvas)
+{
+    canvas_stroke_preserve(canvas);
+    canvas_new_path(canvas);
+}
+
+void canvas_clip(canvas_t* canvas)
+{
+    canvas_clip_preserve(canvas);
+    canvas_new_path(canvas);
+}
+
+void canvas_paint(canvas_t* canvas)
+{
+    if(canvas->state->clipping) {
+        blend(canvas, &canvas->state->clip_spans);
+    } else {
+        canvas->clip_spans = span_set::from_rect(0, 0, canvas->surface->width(), canvas->surface->height());
+        blend(canvas, &canvas->clip_spans);
+    }
+}
+
+void canvas_fill_preserve(canvas_t* canvas)
+{
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
+    if(canvas->state->clipping) {
+        canvas->clip_spans = span_set::intersect(canvas->fill_spans, canvas->state->clip_spans);
+        blend(canvas, &canvas->clip_spans);
+    } else {
+        blend(canvas, &canvas->fill_spans);
+    }
+}
+
+void canvas_stroke_preserve(canvas_t* canvas)
+{
+    rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, fill_rule::non_zero);
+    if(canvas->state->clipping) {
+        canvas->clip_spans = span_set::intersect(canvas->fill_spans, canvas->state->clip_spans);
+        blend(canvas, &canvas->clip_spans);
+    } else {
+        blend(canvas, &canvas->fill_spans);
+    }
+}
+
+void canvas_clip_preserve(canvas_t* canvas)
+{
+    if(canvas->state->clipping) {
+        rasterize(&canvas->fill_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
+        canvas->clip_spans = span_set::intersect(canvas->fill_spans, canvas->state->clip_spans);
+        canvas->state->clip_spans = canvas->clip_spans;
+    } else {
+        rasterize(&canvas->state->clip_spans, *canvas->path_, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
+        canvas->state->clipping = true;
+    }
+}
+
+void canvas_fill_rect(canvas_t* canvas, float x, float y, float w, float h)
+{
+    canvas_new_path(canvas);
+    canvas_rect(canvas, x, y, w, h);
+    canvas_fill(canvas);
+}
+
+void canvas_fill_path(canvas_t* canvas, const outline& path_)
+{
+    canvas_new_path(canvas);
+    canvas_add_path(canvas, path_);
+    canvas_fill(canvas);
+}
+
+void canvas_stroke_rect(canvas_t* canvas, float x, float y, float w, float h)
+{
+    canvas_new_path(canvas);
+    canvas_rect(canvas, x, y, w, h);
+    canvas_stroke(canvas);
+}
+
+void canvas_stroke_path(canvas_t* canvas, const outline& path_)
+{
+    canvas_new_path(canvas);
+    canvas_add_path(canvas, path_);
+    canvas_stroke(canvas);
+}
+
+void canvas_clip_rect(canvas_t* canvas, float x, float y, float w, float h)
+{
+    canvas_new_path(canvas);
+    canvas_rect(canvas, x, y, w, h);
+    canvas_clip(canvas);
+}
+
+void canvas_clip_path(canvas_t* canvas, const outline& path_)
+{
+    canvas_new_path(canvas);
+    canvas_add_path(canvas, path_);
+    canvas_clip(canvas);
+}
+
+float canvas_add_text(canvas_t* canvas, std::u32string_view text, float x, float y, const shaping_context& context)
+{
+    state_t* state = canvas->state;
+    const sized_font font(state->font_face_, state->font_size);
+    if(font.is_null())
+        return 0.f;
+    std::vector<shaped_glyph_t> glyphs;
+    const float advance_width = font.shape(text, &glyphs, context);
+    for(const shaped_glyph_t& g : glyphs)
+        font.add_glyph_path(g.glyph, x + g.x, y + g.y, *canvas->path_);
+    return advance_width;
+}
+
+float canvas_fill_text(canvas_t* canvas, std::u32string_view text, float x, float y, const shaping_context& context)
+{
+    canvas_new_path(canvas);
+    float advance_width = canvas_add_text(canvas, text, x, y, context);
+    canvas_fill(canvas);
+    return advance_width;
+}
+
+float canvas_stroke_text(canvas_t* canvas, std::u32string_view text, float x, float y, const shaping_context& context)
+{
+    canvas_new_path(canvas);
+    float advance_width = canvas_add_text(canvas, text, x, y, context);
+    canvas_stroke(canvas);
+    return advance_width;
+}
+
+} // namespace vg
+} // namespace nova

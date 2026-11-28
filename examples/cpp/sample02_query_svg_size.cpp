@@ -1,7 +1,7 @@
 #include <filesystem>
 #include <iostream>
 
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 
 namespace {
     std::filesystem::path project_root() {
@@ -13,13 +13,13 @@ int main()
 {
     const auto input = project_root() / "data" / "circle.svg";
 
-    auto document = nova::svg::Document::loadFromFile(input.string());
-    if(!document)
+    auto dom = nova::svg::document::load_file(input.string());
+    if(!dom)
     {
         std::cerr << "Failed to load SVG: " << input << "\n";
         return 1;
     }
 
-    std::cout << "SVG size: " << document->width() << "x" << document->height() << "\n";
+    std::cout << "SVG size: " << dom->width() << "x" << dom->height() << "\n";
     return 0;
 }

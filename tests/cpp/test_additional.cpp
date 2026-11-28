@@ -1,3 +1,4 @@
+#include "vg/pixmap.h"
 #include "doctest.h"
 
 #include <filesystem>
@@ -6,7 +7,7 @@
 #include <cstring>
 #include <fstream>
 
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 
 namespace {
 std::filesystem::path project_root()
@@ -32,104 +33,105 @@ std::string read_file(const std::filesystem::path& path)
 } // namespace
 
 TEST_CASE("Bitmap advanced operations") {
-    // Test Bitmap constructor with data
+    // Test pixmap constructor with data
     const int width = 100;
     const int height = 100;
     const int stride = width * 4;
     std::vector<uint8_t> data(width * height * 4, 0xFF); // White ARGB
     
-    nova::svg::Bitmap bitmap(data.data(), width, height, stride);
-    CHECK_FALSE(bitmap.isNull());
+    nova::vg::pixmap bitmap(data.data(), width, height, stride);
+    CHECK_FALSE(bitmap.is_null());
     CHECK(bitmap.width() == width);
     CHECK(bitmap.height() == height);
     CHECK(bitmap.stride() == stride);
     
     // Test convertToRGBA
-    bitmap.convertToRGBA();
+    bitmap.convert_to_rgba();
     
-    // Test writeToPng() with callback (just test it doesn't crash)
-    // Note: novasvg_write_func_t has signature: void (*)(void* closure, void* data, int size)
-    bool writeResult = bitmap.writeToPng([](void* closure, void* data, int size) {
-        // Do nothing, just accept the data
-    }, nullptr);
-    // Don't check result as it depends on PNG writer
-    
+    // The straight-alpha image made from a bitmap encodes without trouble
+    {
+        nova::vg::pixmap copy(data.data(), width, height, stride);
+        auto image = nova::vg::bitmap_to_rgba_image(copy);
+        CHECK_FALSE(image.empty());
+        CHECK_FALSE(image.to_png().empty());
+    }
+
     // Test move assignment operator
-    nova::svg::Bitmap bitmap2;
+    nova::vg::pixmap bitmap2;
     bitmap2 = std::move(bitmap);
-    CHECK_FALSE(bitmap2.isNull());
-    CHECK(bitmap.isNull()); // Should be null after move
+    CHECK_FALSE(bitmap2.is_null());
+    CHECK(bitmap.is_null()); // Should be null after move
 }
 
 TEST_CASE("Matrix advanced operations") {
-    // Test shear operations (shear values are in radians, so use small values)
-    auto sheared = nova::svg::Matrix::sheared(0.1f, 0.05f);
-    // Don't check exact values as shear uses tangent of angle
-    
-    // Test rotate with center
-    auto rotated = nova::svg::Matrix::rotated(45.0f, 10.0f, 20.0f);
-    
-    // Test matrix multiplication
-    nova::svg::Matrix m1 = nova::svg::Matrix::translated(10.0f, 20.0f);
-    nova::svg::Matrix m2 = nova::svg::Matrix::scaled(2.0f, 3.0f);
-    auto m3 = m1 * m2;
-    
-    // Test multiply method
-    nova::svg::Matrix m4;
-    m4.multiply(m1);
+    // Shear and rotation (radians) just have to produce something that is not the identity.
+    auto sheared = stb::matrix::shearing(0.1f, 0.05f);
+    CHECK_FALSE(sheared.is_identity());
+    auto rotated = stb::matrix::rotation(0.785398f);
+    CHECK_FALSE(rotated.is_identity());
+
+    // then(): the left matrix is applied first, so (0,0) -> (10,20) -> (20,60).
+    stb::matrix m1 = stb::matrix::translation(10.0f, 20.0f);
+    stb::matrix m2 = stb::matrix::scaling(2.0f, 3.0f);
+    auto m3 = m1.then(m2);
+    CHECK(m3.e == doctest::Approx(20.0f));
+    CHECK(m3.f == doctest::Approx(60.0f));
+
+    // Identity.then(m1) is m1
+    auto m4 = stb::matrix().then(m1);
     CHECK(m4.e == doctest::Approx(10.0f));
     CHECK(m4.f == doctest::Approx(20.0f));
-    
-    // Test shear method (just test it doesn't crash)
-    nova::svg::Matrix m5;
+
+    stb::matrix m5;
     m5.shear(0.1f, 0.05f);
-    
-    // Test rotate method with center
-    nova::svg::Matrix m6;
-    m6.rotate(30.0f, 5.0f, 5.0f);
+    CHECK_FALSE(m5.is_identity());
+
+    stb::matrix m6;
+    m6.rotate(0.5f);
+    CHECK_FALSE(m6.is_identity());
 }
 
 TEST_CASE("Box operations") {
     // Test Box constructor with parameters
-    nova::svg::Box box(10.0f, 20.0f, 30.0f, 40.0f);
+    nova::vg::box box(10.0f, 20.0f, 30.0f, 40.0f);
     CHECK(box.x == doctest::Approx(10.0f));
     CHECK(box.y == doctest::Approx(20.0f));
     CHECK(box.w == doctest::Approx(30.0f));
     CHECK(box.h == doctest::Approx(40.0f));
     
     // Test transform method (in-place)
-    nova::svg::Matrix m = nova::svg::Matrix::translated(5.0f, 10.0f);
+    stb::matrix m = stb::matrix::translation(5.0f, 10.0f);
     box.transform(m);
     CHECK(box.x == doctest::Approx(15.0f));
     CHECK(box.y == doctest::Approx(30.0f));
 }
 
 TEST_CASE("TextNode operations") {
-    // Create a simple SVG with text
+    // Create a simple svg with text
     std::string svg_data = R"(<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
         <text id="text1" x="10" y="20">Hello World</text>
     </svg>)";
     
-    auto document = nova::svg::Document::loadFromData(svg_data);
-    REQUIRE(document != nullptr);
+    auto dom = nova::svg::document::load_data(svg_data);
+    REQUIRE(dom != nullptr);
     
-    // Get text element
-    auto textElement = document->getElementById("text1");
-    REQUIRE_FALSE(textElement.isNull());
+    // Get text el
+    auto text_element = dom->element_by_id("text1");
+    REQUIRE_FALSE(text_element.is_null());
     
-    // Get children (should contain text node)
-    auto children = textElement.children();
+    // Get children (should contain text nd)
+    auto children = text_element.children();
     CHECK(children.size() >= 1);
     
-    // Find text node
+    // Find text nd
     for (const auto& child : children) {
-        if (child.isTextNode()) {
-            auto textNode = child.toTextNode();
-            CHECK_FALSE(textNode.isNull());
+        if (child.is_text_node()) {
+            auto textNode = child.to_text_node();
+            CHECK_FALSE(textNode.is_null());
             CHECK(textNode.data() == "Hello World");
             
-            // Test setData
-            textNode.setData("Modified Text");
+            // Test set_data
+            textNode.set_data("Modified Text");
             CHECK(textNode.data() == "Modified Text");
             break;
         }
@@ -138,73 +140,73 @@ TEST_CASE("TextNode operations") {
 
 TEST_CASE("Document render with matrix") {
     auto svg_file = data_path("rect.svg");
-    auto document = nova::svg::Document::loadFromFile(svg_file.string());
-    REQUIRE(document != nullptr);
+    auto dom = nova::svg::document::load_file(svg_file.string());
+    REQUIRE(dom != nullptr);
     
     // Create bitmap
-    nova::svg::Bitmap bitmap(100, 100);
+    nova::vg::pixmap bitmap(100, 100);
     
     // Test render with identity matrix
-    document->render(bitmap, nova::svg::Matrix());
+    dom->render(bitmap, stb::matrix());
     
     // Test render with translation matrix
-    auto matrix = nova::svg::Matrix::translated(10.0f, 20.0f);
-    document->render(bitmap, matrix);
+    auto matrix = stb::matrix::translation(10.0f, 20.0f);
+    dom->render(bitmap, matrix);
     
     // Test render with scaling matrix
-    auto matrix2 = nova::svg::Matrix::scaled(0.5f, 0.5f);
-    document->render(bitmap, matrix2);
+    auto matrix2 = stb::matrix::scaling(0.5f, 0.5f);
+    dom->render(bitmap, matrix2);
 }
 
 TEST_CASE("Element render with matrix") {
     auto svg_file = data_path("rect.svg");
-    auto document = nova::svg::Document::loadFromFile(svg_file.string());
-    REQUIRE(document != nullptr);
+    auto dom = nova::svg::document::load_file(svg_file.string());
+    REQUIRE(dom != nullptr);
     
-    auto docElement = document->documentElement();
+    auto docElement = dom->document_element();
     auto children = docElement.children();
     
     if (!children.empty()) {
-        auto rectElement = children[0].toElement();
-        CHECK_FALSE(rectElement.isNull());
+        auto rectElement = children[0].to_element();
+        CHECK_FALSE(rectElement.is_null());
         
         // Create bitmap
-        nova::svg::Bitmap bitmap(50, 50);
+        nova::vg::pixmap bitmap(50, 50);
         
         // Test render with identity matrix
-        rectElement.render(bitmap, nova::svg::Matrix());
+        rectElement.render(bitmap, stb::matrix());
         
         // Test render with translation matrix
-        auto matrix = nova::svg::Matrix::translated(5.0f, 5.0f);
+        auto matrix = stb::matrix::translation(5.0f, 5.0f);
         rectElement.render(bitmap, matrix);
     }
 }
 
 TEST_CASE("Document methods with edge cases") {
-    // Test with empty SVG
+    // Test with empty svg
     std::string empty_svg = R"(<svg xmlns="http://www.w3.org/2000/svg"></svg>)";
-    auto document = nova::svg::Document::loadFromData(empty_svg);
-    REQUIRE(document != nullptr);
+    auto dom = nova::svg::document::load_data(empty_svg);
+    REQUIRE(dom != nullptr);
     
-    // Test width/height with empty SVG
-    CHECK(document->width() == doctest::Approx(0.0f));
-    CHECK(document->height() == doctest::Approx(0.0f));
+    // Test width/height with empty svg
+    CHECK(dom->width() == doctest::Approx(0.0f));
+    CHECK(dom->height() == doctest::Approx(0.0f));
     
-    // Test boundingBox with empty SVG
-    auto bbox = document->boundingBox();
+    // Test bounding_box with empty svg
+    auto bbox = dom->bounding_box();
     CHECK(bbox.w == doctest::Approx(0.0f));
     CHECK(bbox.h == doctest::Approx(0.0f));
     
-    // Test renderToBitmap with empty dimensions
-    auto bitmap = document->renderToBitmap(0, 0);
-    CHECK(bitmap.isNull());
+    // Test render_to_pixmap with empty dimensions
+    auto bitmap = dom->render_to_pixmap(0, 0);
+    CHECK(bitmap.is_null());
     
-    // Test renderToBitmap with auto-scaling from empty SVG
-    auto bitmap2 = document->renderToBitmap(-1, 100);
-    CHECK(bitmap2.isNull());
+    // Test render_to_pixmap with auto-scaling from empty svg
+    auto bitmap2 = dom->render_to_pixmap(-1, 100);
+    CHECK(bitmap2.is_null());
     
-    auto bitmap3 = document->renderToBitmap(100, -1);
-    CHECK(bitmap3.isNull());
+    auto bitmap3 = dom->render_to_pixmap(100, -1);
+    CHECK(bitmap3.is_null());
 }
 
 TEST_CASE("Query selector edge cases") {
@@ -215,15 +217,15 @@ TEST_CASE("Query selector edge cases") {
         </g>
     </svg>)";
     
-    auto document = nova::svg::Document::loadFromData(svg_data);
-    REQUIRE(document != nullptr);
+    auto dom = nova::svg::document::load_data(svg_data);
+    REQUIRE(dom != nullptr);
     
-    // Test querySelectorAll with class selector (if supported)
+    // Test query_selector_all with class selector (if supported)
     // Note: This may not work depending on CSS selector support
     
-    // Test getElementById with nested element
-    auto group = document->getElementById("group1");
-    CHECK_FALSE(group.isNull());
+    // Test element_by_id with nested el
+    auto group = dom->element_by_id("group1");
+    CHECK_FALSE(group.is_null());
     
     // Test children of group
     auto groupChildren = group.children();
@@ -235,25 +237,25 @@ TEST_CASE("Apply stylesheet edge cases") {
         <rect id="rect1" x="10" y="10" width="80" height="80"/>
     </svg>)";
     
-    auto document = nova::svg::Document::loadFromData(svg_data);
-    REQUIRE(document != nullptr);
+    auto dom = nova::svg::document::load_data(svg_data);
+    REQUIRE(dom != nullptr);
     
     // Apply empty stylesheet
-    document->applyStyleSheet("");
+    dom->apply_style_sheet("");
     
     // Apply stylesheet with invalid CSS (should not crash)
-    document->applyStyleSheet("invalid { css: syntax; }");
+    dom->apply_style_sheet("invalid { css: syntax; }");
     
     // Apply valid CSS
-    document->applyStyleSheet("#rect1 { fill: #FF0000; }");
+    dom->apply_style_sheet("#rect1 { fill: #FF0000; }");
 }
 
 TEST_CASE("Node equality operators") {
     auto svg_file = data_path("rect.svg");
-    auto document = nova::svg::Document::loadFromFile(svg_file.string());
-    REQUIRE(document != nullptr);
+    auto dom = nova::svg::document::load_file(svg_file.string());
+    REQUIRE(dom != nullptr);
     
-    auto docElement = document->documentElement();
+    auto docElement = dom->document_element();
     auto children = docElement.children();
     
     if (children.size() >= 1) {
@@ -264,8 +266,8 @@ TEST_CASE("Node equality operators") {
         CHECK(node1 == node2);
         CHECK_FALSE(node1 != node2);
         
-        // Test with null node
-        nova::svg::Node nullNode;
+        // Test with null nd
+        nova::svg::node nullNode;
         CHECK_FALSE(node1 == nullNode);
         CHECK(node1 != nullNode);
         

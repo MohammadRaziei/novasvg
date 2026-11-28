@@ -1,0 +1,752 @@
+#ifndef NOVA_CANVAS_H
+#define NOVA_CANVAS_H
+
+#include <cstdint>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+#include <utility>
+#include <functional>
+#include <optional>
+#include <memory>
+#include <vector>
+#include <array>
+#include <string>
+
+#include <stb/outline.hpp>  // stb::matrix
+
+// raster_canvas: novasvg's 2D drawing surface (paths, fills, strokes, gradients,
+// text, blending), plus the Path/Rect/Transform/Point primitives that go
+// with it. Self-contained -- pulls in exactly the vg:: engine pieces
+// it needs plus Font (for fill_text/stroke_text) -- so it's usable without
+// the svg/parsing layer, e.g. to draw directly onto a pixmap.
+#include "color.h"
+#include "font.h"
+#include "pixmap.h"
+#include "render.h"
+
+namespace nova::vg {
+
+// `stb::color` now lives in color.h (a single merged class covering both
+// this engine's needs and the richer string-parsing/blending API) --
+// no separate definition here anymore.
+
+class point {
+public:
+    constexpr point() = default;
+    constexpr point(const stb::point& point_) : point(point_.x, point_.y) {}
+    constexpr point(float x, float y) : x(x), y(y) {}
+
+    constexpr void move(float dx, float dy) { x += dx; y += dy; }
+    constexpr void move(float d) { move(d, d); }
+    constexpr void move(const point& p) { move(p.x, p.y); }
+
+    constexpr void scale(float sx, float sy) { x *= sx; y *= sy; }
+    constexpr void scale(float s) { scale(s, s); }
+
+    constexpr float dot(const point& p) const { return x * p.x + y * p.y; }
+
+public:
+    float x{0};
+    float y{0};
+};
+
+constexpr point operator+(const point& a, const point& b)
+{
+    return point(a.x + b.x, a.y + b.y);
+}
+
+constexpr point operator-(const point& a, const point& b)
+{
+    return point(a.x - b.x, a.y - b.y);
+}
+
+constexpr point operator-(const point& a)
+{
+    return point(-a.x, -a.y);
+}
+
+constexpr point& operator+=(point& a, const point& b)
+{
+    a.move(b);
+    return a;
+}
+
+constexpr point& operator-=(point& a, const point& b)
+{
+    a.move(-b);
+    return a;
+}
+
+constexpr float operator*(const point& a, const point& b)
+{
+    return a.dot(b);
+}
+
+class size {
+public:
+    constexpr size() = default;
+    constexpr size(float w, float h) : w(w), h(h) {}
+
+    constexpr void expand(float dw, float dh) { w += dw; h += dh; }
+    constexpr void expand(float d) { expand(d, d); }
+    constexpr void expand(const size& s) { expand(s.w, s.h); }
+
+    constexpr void scale(float sw, float sh) { w *= sw; h *= sh; }
+    constexpr void scale(float s) { scale(s, s); }
+
+    constexpr bool empty() const { return w <= 0.f || h <= 0.f; }
+    constexpr bool is_zero() const { return w <= 0.f && h <= 0.f; }
+    constexpr bool is_valid() const { return w >= 0.f && h >= 0.f; }
+
+public:
+    float w{0};
+    float h{0};
+};
+
+constexpr size operator+(const size& a, const size& b)
+{
+    return size(a.w + b.w, a.h + b.h);
+}
+
+constexpr size operator-(const size& a, const size& b)
+{
+    return size(a.w - b.w, a.h - b.h);
+}
+
+constexpr size operator-(const size& a)
+{
+    return size(-a.w, -a.h);
+}
+
+constexpr size& operator+=(size& a, const size& b)
+{
+    a.expand(b);
+    return a;
+}
+
+constexpr size& operator-=(size& a, const size& b)
+{
+    a.expand(-b);
+    return a;
+}
+
+class box;
+
+class rect {
+public:
+    constexpr rect() = default;
+    constexpr explicit rect(const vg::size& size_) : rect(size_.w, size_.h) {}
+    constexpr rect(float width, float height) : rect(0, 0, width, height) {}
+    constexpr rect(const point& origin, const vg::size& size_) : rect(origin.x, origin.y, size_.w, size_.h) {}
+    constexpr rect(const rect_t& rect_) : rect(rect_.x, rect_.y, rect_.w, rect_.h) {}
+    constexpr rect(float x, float y, float w, float h) : x(x), y(y), w(w), h(h) {}
+
+    rect(const box& box_);
+    operator box() const;
+
+    constexpr void move(float dx, float dy) { x += dx; y += dy; }
+    constexpr void move(float d) { move(d, d); }
+    constexpr void move(const point& p) { move(p.x, p.y); }
+
+    constexpr void scale(float sx, float sy) { x *= sx; y *= sy; w *= sx; h *= sy; }
+    constexpr void scale(float s) { scale(s, s); }
+
+    constexpr void inflate(float dx, float dy) { x -= dx; y -= dy; w += dx * 2.f; h += dy * 2.f; }
+    constexpr void inflate(float d) { inflate(d, d); }
+
+    constexpr bool contains(float px, float py) const { return px >= x && px <= x + w && py >= y && py <= y + h; }
+    constexpr bool contains(const point& p) const { return contains(p.x, p.y); }
+
+    constexpr rect intersected(const rect& rect_) const;
+    constexpr rect united(const rect& rect_) const;
+
+    constexpr rect& intersect(const rect& o);
+    constexpr rect& unite(const rect& o);
+
+    constexpr point origin() const { return point(x, y); }
+    constexpr vg::size size() const { return vg::size(w, h); }
+
+    constexpr float right() const { return x + w; }
+    constexpr float bottom() const { return y + h; }
+
+    constexpr bool empty() const { return w <= 0.f || h <= 0.f; }
+    constexpr bool is_zero() const { return w <= 0.f && h <= 0.f; }
+    constexpr bool is_valid() const { return w >= 0.f && h >= 0.f; }
+
+    static const rect empty_rect;
+    static const rect invalid;
+    static const rect infinite;
+
+public:
+    float x{0};
+    float y{0};
+    float w{0};
+    float h{0};
+};
+
+constexpr rect rect::intersected(const rect& rect_) const
+{
+    if(!rect_.is_valid())
+        return *this;
+    if(!is_valid())
+        return rect_;
+    auto l = STB_MAX(x, rect_.x);
+    auto t = STB_MAX(y, rect_.y);
+    auto r = STB_MIN(x + w, rect_.x + rect_.w);
+    auto b = STB_MIN(y + h, rect_.y + rect_.h);
+    if(l >= r || t >= b)
+        return rect::empty_rect;
+    return rect(l, t, r - l, b - t);
+}
+
+constexpr rect rect::united(const rect& rect_) const
+{
+    if(!rect_.is_valid())
+        return *this;
+    if(!is_valid())
+        return rect_;
+    auto l = STB_MIN(x, rect_.x);
+    auto t = STB_MIN(y, rect_.y);
+    auto r = STB_MAX(x + w, rect_.x + rect_.w);
+    auto b = STB_MAX(y + h, rect_.y + rect_.h);
+    return rect(l, t, r - l, b - t);
+}
+
+constexpr rect& rect::intersect(const rect& o)
+{
+    *this = intersected(o);
+    return *this;
+}
+
+constexpr rect& rect::unite(const rect& o)
+{
+    *this = united(o);
+    return *this;
+}
+
+
+class transform {
+public:
+    transform();
+    transform(float a, float b, float c, float d, float e, float f);
+    transform(const stb::matrix& matrix) : m_matrix(matrix) {}
+
+    transform operator*(const transform& transform_) const;
+    transform& operator*=(const transform& transform_);
+
+    transform& multiply(const transform& transform_);
+    transform& translate(float tx, float ty);
+    transform& scale(float sx, float sy);
+    transform& rotate(float angle, float cx = 0.f, float cy = 0.f);
+    transform& shear(float shx, float shy);
+
+    transform& post_multiply(const transform& transform_);
+    transform& post_translate(float tx, float ty);
+    transform& post_scale(float sx, float sy);
+    transform& post_rotate(float angle, float cx = 0.f, float cy = 0.f);
+    transform& post_shear(float shx, float shy);
+
+    transform inverse() const;
+    transform& invert();
+
+    void reset();
+
+    point map_point(float x, float y) const;
+    point map_point(const point& point_) const;
+    rect map_rect(const rect& rect_) const;
+
+    float x_scale() const;
+    float y_scale() const;
+
+    const stb::matrix& matrix() const { return m_matrix; }
+    stb::matrix& matrix() { return m_matrix; }
+
+    bool parse(const char* data, size_t length_);
+
+    static transform translated(float tx, float ty);
+    static transform scaled(float sx, float sy);
+    static transform rotated(float angle, float cx, float cy);
+    static transform sheared(float shx, float shy);
+
+    static const transform identity;
+
+private:
+    stb::matrix m_matrix;
+};
+
+
+// A path is an stb::outline. Arcs (`outline::arc_to`) and boxes (`outline::tight_bounds`) are libstb's; the engine adds
+// one thing on top (src/sources/vg/outline_util.cpp):
+//   parse_path  SVG path data ("M 0 0 L ..."), replaces the content; partial data stays on error, as in SVG
+bool parse_path(outline& path_, const char* data, size_t length_);
+
+enum class segment_kind { move_to, line_to, cubic_to, close };
+
+// Walks an outline as move / line / cubic / close. A quadratic curve is raised to a cubic; `close` carries the
+// start point of its contour in points[0].
+class outline_walker {
+public:
+    explicit outline_walker(const outline& path_);
+    segment_kind current_segment(std::array<point, 3>& points) const;
+    bool done() const { return m_index >= m_segments.size(); }
+    void next() { ++m_index; }
+private:
+    struct segment {
+        segment_kind command;
+        point points[3];
+    };
+    std::vector<segment> m_segments;
+    size_t m_index = 0;
+};
+} // namespace nova::vg
+
+namespace nova::vg {
+
+using dash_pattern = std::vector<float>;
+
+class stroke_data {
+public:
+    explicit stroke_data(float line_width = 1.f) : m_line_width(line_width) {}
+
+    void set_line_width(float line_width) { m_line_width = line_width; }
+    float line_width() const { return m_line_width; }
+
+    void set_miter_limit(float miter_limit) { m_miter_limit = miter_limit; }
+    float miter_limit() const { return m_miter_limit; }
+
+    void set_dash_offset(float dash_offset) { m_dash_offset = dash_offset; }
+    float dash_offset() const { return m_dash_offset; }
+
+    void set_dash_array(dash_pattern dash_array_) { m_dash_array = std::move(dash_array_); }
+    const dash_pattern& dash_array() const { return m_dash_array; }
+
+    void set_line_cap(stb::line_cap line_cap_) { m_line_cap = line_cap_; }
+    stb::line_cap line_cap() const { return m_line_cap; }
+
+    void set_line_join(stb::line_join line_join_) { m_line_join = line_join_; }
+    stb::line_join line_join() const { return m_line_join; }
+
+private:
+    float m_line_width;
+    float m_miter_limit{4.f};
+    float m_dash_offset{0.f};
+    stb::line_cap m_line_cap{stb::line_cap::butt};
+    stb::line_join m_line_join{stb::line_join::miter};
+    dash_pattern m_dash_array;
+};
+
+using gradient_stop = gradient_stop_t;
+using gradient_stops = std::vector<gradient_stop>;
+
+class pixmap;
+class canvas;
+class raster_canvas;
+
+/// A mask on a group, for a canvas that can keep it as a vector (canvas::vector_masks()): the group shows through
+/// only where the mask is. Without this, a mask is applied to the group's pixels by `layer_effects`.
+struct layer_mask {
+    /// Paints the mask's content, in the same coordinates as the group's content, on the canvas that begin_layer()
+    /// was called on. The canvas calls it from end_layer(), after the group's content, and sets up where it goes.
+    std::function<void()> draw;
+    /// The mask is the luminance of what `draw` paints (a luminance mask), or its alpha (an alpha mask, a clip mask).
+    bool luminance = true;
+};
+
+/// What a group of drawing operations (a layer) asks of the canvas it is drawn on.
+struct layer_params {
+    rect bounds;                          ///< the part of the canvas the group may touch, in the canvas's coordinates; the canvas clips it to itself
+    blend_mode blend = blend_mode::normal; ///< how the finished group is composited back
+    float opacity = 1.f;                  ///< and with how much of it
+    bool needs_pixels = false;            ///< the group's pixels are needed when it ends, for `layer_effects` (masks, filters)
+    std::optional<layer_mask> mask;       ///< a mask kept as a vector: only for a canvas whose vector_masks() is true, and then without needs_pixels
+};
+
+/// Changes to the finished pixels of a group, which only pixels can express (filters; clip masks and masks too, unless
+/// the canvas keeps them as vectors: layer_mask).
+/// The canvas calls it from end_layer() with the group's pixels, before compositing the group back. It is only
+/// called for a group begun with `needs_pixels` set.
+using layer_effects = std::function<void(raster_canvas& layer)>;
+
+/// A group in progress: what begin_layer() hands out and end_layer() takes back.
+struct layer_scope {
+    layer_params params;
+    /// Where the group's content is drawn. Null when the canvas takes the group in place (a vector backend that
+    /// composites groups itself): draw on the canvas as usual and, unlike a layer, a plain clip stays a vector clip.
+    std::shared_ptr<canvas> target;
+    /// Applied to the transform of everything drawn on `target`: the identity, or the scale of the bitmap a vector
+    /// backend made for a group that needs pixels.
+    transform pre_transform = transform::identity;
+
+    bool in_place() const { return target == nullptr; }
+};
+
+/// Backend-independent drawing target.
+///
+/// What every backend (raster, PDF) can express: a paint source (colour, gradient, pattern), fill and stroke of
+/// paths and text, clipping, images, groups with opacity and blending (layers), and a save/restore stack.
+/// Masks and filters need pixels; a group that wants them says so (`layer_params::needs_pixels`) and passes
+/// `layer_effects` to end_layer(). A vector backend then makes a bitmap for that group only.
+class canvas {
+public:
+    virtual ~canvas() = default;
+
+    virtual void set_color(const color& color_) = 0;
+    virtual void set_color(float r, float g, float b, float a) = 0;
+    virtual void set_linear_gradient(float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stops& stops, const transform& transform_) = 0;
+    virtual void set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method_value spread, const gradient_stops& stops, const transform& transform_) = 0;
+
+    virtual void fill_path(const outline& path_, fill_rule fill_rule_, const transform& transform_) = 0;
+    virtual void stroke_path(const outline& path_, const stroke_data& stroke_data_, const transform& transform_) = 0;
+
+    virtual void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) = 0;
+    virtual void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) = 0;
+
+    virtual void clip_path(const outline& path_, fill_rule clip_rule, const transform& transform_) = 0;
+    virtual void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) = 0;
+
+    virtual void draw_image(const pixmap& image, const rect& dst_rect, const rect& src_rect, const transform& transform_) = 0;
+
+    /// Makes `tile` the paint source: an image repeated over the plane, mapped by `tile_to_user`, at `opacity`.
+    /// The tile should have been drawn at raster_scale() pixels per user unit.
+    virtual void set_pattern(const pixmap& tile, const transform& tile_to_user, float opacity) = 0;
+
+    /// Pixels per user unit of the bitmaps this canvas wants made for it (pattern tiles, groups with effects):
+    /// 1 for a pixel canvas, whose own coordinates are pixels.
+    virtual float raster_scale() const { return 1.f; }
+
+    /// Whether a group's mask can stay a vector (layer_params::mask) instead of being applied to its pixels. A mask
+    /// is then exact at any zoom and costs no bitmap; a canvas that cannot says false and gets `layer_effects`.
+    virtual bool vector_masks() const { return false; }
+
+    /// Starts a group: draw its content on `scope.target`, or on this canvas when `scope.in_place()`, and hand
+    /// the scope back to end_layer(). Groups nest and must end in the reverse order; every save() made inside
+    /// one must be restored inside it.
+    virtual layer_scope begin_layer(const layer_params& params) = 0;
+    /// Ends the group: runs `effects` on its pixels if `params.needs_pixels`, then composites it with its
+    /// blend mode and opacity.
+    virtual void end_layer(layer_scope&& scope, const layer_effects& effects = {}) = 0;
+
+    virtual void save() = 0;
+    virtual void restore() = 0;
+};
+
+class raster_canvas final : public canvas, public std::enable_shared_from_this<raster_canvas> {
+public:
+    static std::shared_ptr<raster_canvas> create(const pixmap& bitmap);
+    static std::shared_ptr<raster_canvas> create(float x, float y, float width, float height);
+    static std::shared_ptr<raster_canvas> create(const rect& extents);
+
+    void set_color(const color& color_) override;
+    void set_color(float r, float g, float b, float a) override;
+    void set_linear_gradient(float x1, float y1, float x2, float y2, spread_method_value spread, const gradient_stops& stops, const transform& transform_) override;
+    void set_radial_gradient(float cx, float cy, float r, float fx, float fy, spread_method_value spread, const gradient_stops& stops, const transform& transform_) override;
+    void set_texture(const raster_canvas& source, texture_type type_, float opacity, const transform& transform_);
+
+    void fill_path(const outline& path_, fill_rule fill_rule_, const transform& transform_) override;
+    void stroke_path(const outline& path_, const stroke_data& stroke_data_, const transform& transform_) override;
+
+    void fill_text(const std::u32string_view& text, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) override;
+    void stroke_text(const std::u32string_view& text, float stroke_width, const sized_font& font_, const point& origin, const transform& transform_, const shaping_context& context = {}) override;
+
+    void clip_path(const outline& path_, fill_rule clip_rule, const transform& transform_) override;
+    void clip_rect(const rect& rect_, fill_rule clip_rule, const transform& transform_) override;
+
+    void draw_image(const pixmap& image, const rect& dst_rect, const rect& src_rect, const transform& transform_) override;
+    void blend_canvas(const raster_canvas& canvas, composite_op op, blend_mode mode, float opacity);
+
+    void set_pattern(const pixmap& tile, const transform& tile_to_user, float opacity) override;
+    layer_scope begin_layer(const layer_params& params) override;
+    void end_layer(layer_scope&& scope, const layer_effects& effects = {}) override;
+
+    void save() override;
+    void restore() override;
+
+    void convert_to_luminance_mask();
+    // standard "fast almost-gaussian" trick browsers/thorvg also use)
+    // rather than a true gaussian convolution kernel -- visually
+    // indistinguishable for the stdDeviation ranges svg content actually
+    // uses, and O(w*h) instead of O(w*h*kernel). Upgrade path: replace the
+    // naive per-pixel box blur loop with a moving-sum/summed-area version
+    // if profiling ever shows this mattering for very large canvases.
+    void box_blur(float std_deviation_x, float std_deviation_y);
+
+    // Composites `this` (already blurred, tinted to flood_color/flood_opacity
+    // by the caller) as a drop shadow: offsets by (dx, dy) and draws
+    // `original` on top of it, replacing this canvas's contents in place.
+    void composite_drop_shadow_under(const raster_canvas& original, float dx, float dy);
+
+    // Recolors every pixel to flood_color while preserving its alpha
+    // (scaled by flood_opacity), for feDropShadow/feFlood.
+    void tint_to_flood_color(const color& flood_color, float flood_opacity);
+
+    // Fills every pixel fully opaque white; paired with tint_to_flood_color()
+    // this gives feFlood's "solid flood-color rectangle" result.
+    void fill_opaque_white();
+
+    // Shifts this canvas's pixels by (dx, dy) in place; area exposed at
+    // the edges becomes transparent.
+    void shift(float dx, float dy);
+
+    // Porter-Duff compositing operators needed by feComposite/feMerge.
+    // (arithmetic is intentionally not offered -- see svg_fe_composite_element)
+    enum class porter_duff { over, in, out, atop, exclusive_or };
+    void composite_with(const raster_canvas& src, porter_duff mode);
+    void composite_over(const raster_canvas& src) ;
+
+    // feComposite operator="arithmetic": result = k1*i1*i2 + k2*i1 + k3*i2 + k4
+    // per channel, in normalized [0,1] premultiplied space, clamped back to
+    // [0,1]. `src` is i1, `this` (already holding in2's pixels) is i2 --
+    // the result replaces `this` in place.
+    void composite_arithmetic(const raster_canvas& src, float k1, float k2, float k3, float k4);
+
+    // Raw memcpy of `other`'s pixel buffer into this one -- both must be
+    // the same width/height/stride (caller's responsibility).
+    void copy_pixels_from(const raster_canvas& other);
+
+    int x() const { return m_x; }
+    int y() const { return m_y; }
+    int width() const;
+    int height() const;
+
+    rect extents() const { return rect(m_x, m_y, width(), height()); }
+
+    const std::shared_ptr<surface_t>& surface() const { return m_surface; }
+    canvas_t* handle() const { return m_canvas; }
+
+    ~raster_canvas();
+
+private:
+    raster_canvas(const pixmap& bitmap);
+    raster_canvas(int x, int y, int width, int height);
+    std::shared_ptr<surface_t> m_surface;
+    canvas_t* m_canvas;
+    stb::matrix m_translation;
+    const int m_x;
+    const int m_y;
+};
+
+#include <cfloat>
+#include <cmath>
+
+// ---------------------------------------------------------------
+// Implementation (formerly graphics.hpp, merged in -- everything
+// here is inline, so there is no more reason to keep
+// declarations and definitions in separate files).
+// ---------------------------------------------------------------
+
+// stb::color::black()/White/Transparent are defined once, in color.h.
+
+inline const rect rect::empty_rect(0, 0, 0, 0);
+inline const rect rect::invalid(0, 0, -1, -1);
+inline const rect rect::infinite(-FLT_MAX / 2.f, -FLT_MAX / 2.f, FLT_MAX, FLT_MAX);
+
+// Rect::Rect(const Box&) is defined in novasvg.h, right after Box itself --
+// Box belongs to the svg/document layer, not here, so this file (which
+// stays usable without that layer) only declares the conversion, it
+// doesn't define it.
+
+inline const transform transform::identity(1, 0, 0, 1, 0, 0);
+
+
+
+// Transform::Transform(const stb::matrix&) is defined in geometry.cpp, so
+// this file (which stays usable without that layer) only declares the
+// conversion, it doesn't define it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ponytail: single-axis box blur pass, edge-extended, operating in place
+// on premultiplied ARGB. Blurring premultiplied channels directly (rather
+// than un-premultiplying first) is correct and is what real
+// implementations do too.
+// One box-blur pass over an ARGB32 surface: every pixel becomes the average of the (2*radius+1) pixels along its
+// row (horizontal) or column, with the edge pixel standing in for anything past the edge.
+//
+// Runs a sliding window -- add the pixel entering the window, drop the one leaving -- so the cost per pixel does
+// not depend on the radius. The sums are exact integers, and each is converted back with the same
+// `uint32_t(float(sum) * (1 / (2*radius+1)))` as a window summed from scratch would be, so the output is
+// identical to the straightforward version.
+static void box_blur_pass(unsigned char* data, int width, int height, int stride, int radius, bool horizontal)
+{
+    if(radius <= 0 || width <= 0 || height <= 0)
+        return;
+    auto* scratch = static_cast<unsigned char*>(malloc(size_t(stride) * size_t(height)));
+    if(!scratch)
+        return;
+    memcpy(scratch, data, size_t(stride) * size_t(height));
+
+    const float iarr = 1.f / float(radius * 2 + 1);
+    auto pack = [iarr](int32_t a, int32_t r, int32_t g, int32_t b) {
+        return (uint32_t(float(a) * iarr) << 24) | (uint32_t(float(r) * iarr) << 16) | (uint32_t(float(g) * iarr) << 8)
+            | uint32_t(float(b) * iarr);
+    };
+
+    if(horizontal) {
+        for(int y = 0; y < height; ++y) {
+            const auto* in = reinterpret_cast<const uint32_t*>(scratch + size_t(y) * size_t(stride));
+            auto* out = reinterpret_cast<uint32_t*>(data + size_t(y) * size_t(stride));
+            auto at = [in, width](int x) { return in[x < 0 ? 0 : (x >= width ? width - 1 : x)]; };
+
+            int32_t a = 0, r = 0, g = 0, b = 0;
+            for(int k = -radius; k <= radius; ++k) {
+                const uint32_t pixel = at(k);
+                a += (pixel >> 24) & 0xFF;
+                r += (pixel >> 16) & 0xFF;
+                g += (pixel >> 8) & 0xFF;
+                b += pixel & 0xFF;
+            }
+
+            for(int x = 0; x < width; ++x) {
+                out[x] = pack(a, r, g, b);
+                const uint32_t leaving = at(x - radius);
+                const uint32_t entering = at(x + radius + 1);
+                a += int32_t((entering >> 24) & 0xFF) - int32_t((leaving >> 24) & 0xFF);
+                r += int32_t((entering >> 16) & 0xFF) - int32_t((leaving >> 16) & 0xFF);
+                g += int32_t((entering >> 8) & 0xFF) - int32_t((leaving >> 8) & 0xFF);
+                b += int32_t(entering & 0xFF) - int32_t(leaving & 0xFF);
+            }
+        }
+    } else {
+        // Column sums for the whole row at once, so memory is read row by row rather than down a column.
+        std::vector<int32_t> sums(size_t(width) * 4, 0);
+        auto row = [&](int y) {
+            y = y < 0 ? 0 : (y >= height ? height - 1 : y);
+            return reinterpret_cast<const uint32_t*>(scratch + size_t(y) * size_t(stride));
+        };
+
+        for(int k = -radius; k <= radius; ++k) {
+            const uint32_t* p = row(k);
+            for(int x = 0; x < width; ++x) {
+                const uint32_t pixel = p[x];
+                sums[size_t(x) * 4 + 0] += (pixel >> 24) & 0xFF;
+                sums[size_t(x) * 4 + 1] += (pixel >> 16) & 0xFF;
+                sums[size_t(x) * 4 + 2] += (pixel >> 8) & 0xFF;
+                sums[size_t(x) * 4 + 3] += pixel & 0xFF;
+            }
+        }
+
+        for(int y = 0; y < height; ++y) {
+            auto* out = reinterpret_cast<uint32_t*>(data + size_t(y) * size_t(stride));
+            const uint32_t* leaving = row(y - radius);
+            const uint32_t* entering = row(y + radius + 1);
+            for(int x = 0; x < width; ++x) {
+                int32_t* sum = &sums[size_t(x) * 4];
+                out[x] = pack(sum[0], sum[1], sum[2], sum[3]);
+                const uint32_t lp = leaving[x], ep = entering[x];
+                sum[0] += int32_t((ep >> 24) & 0xFF) - int32_t((lp >> 24) & 0xFF);
+                sum[1] += int32_t((ep >> 16) & 0xFF) - int32_t((lp >> 16) & 0xFF);
+                sum[2] += int32_t((ep >> 8) & 0xFF) - int32_t((lp >> 8) & 0xFF);
+                sum[3] += int32_t(ep & 0xFF) - int32_t(lp & 0xFF);
+            }
+        }
+    }
+
+    free(scratch);
+}
+
+// Converts a true gaussian stdDeviation to an equivalent box-blur radius
+// (the well-known 3-box approximation formula), then runs 3 passes.
+//
+// The svg spec's formula gives `d`, the box *width* each pass should use
+// (https://www.w3.org/TR/svg11/filters.html#feGaussianBlurElement) --
+// boxBlurPass below takes a *radius* (box width = 2*radius+1), so d needs
+// halving before rounding. Using d itself as the radius (i.e. a box width
+// of 2d+1) doubles the effective blur: for stdDeviation=4 that's an
+// effective sigma of ~8.5 instead of 4, visibly wider/softer than every
+// other engine's render of the same filter.
+static int gaussian_radius_for_sigma(float sigma)
+{
+    if(sigma <= 0.f)
+        return 0;
+    auto d = sigma * 3.f * std::sqrt(2.f * 3.14159265f) / 4.f;
+    return STB_MAX(1, int(d / 2.f + 0.5f));
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+} // namespace nova::vg
+
+#endif // NOVA_CANVAS_H

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.21)  # libstb needs 3.21
 
 # novasvg_cli.cpp uses std::filesystem, which libc++ marks unavailable below
 # macOS 10.15. cibuildwheel/scikit-build-core can otherwise pass an older
@@ -15,8 +15,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(DynamicVersion)
 
 extract_version_string(
-    HEADER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h"
-    VERSION_PREFIX "NOVASVG_"
+    HEADER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/nova/svg/svg.h"
+    VERSION_PREFIX "NOVA_"
     OUTPUT_VAR PROJECT_VERSION
 )
 
@@ -35,30 +35,134 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(Optimize)
 
 # Project options
-option(NOVASVG_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
-option(NOVASVG_EMBED_DEFAULT_FONT "Compile a Latin subset of DejaVu Sans in as the last-resort fallback font" ON)
-option(NOVASVG_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
-option(NOVASVG_BUILD_PYTHON "Build Python" ${PROJECT_IS_TOP_LEVEL})
-option(NOVASVG_BUILD_DOCS "Build documentation" OFF)
+option(NOVA_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
+option(NOVA_EMBED_DEFAULT_FONT "Compile a Latin subset of DejaVu Sans in as the last-resort fallback font" ON)
+option(NOVA_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
+option(NOVA_BUILD_PYTHON "Build Python" ${PROJECT_IS_TOP_LEVEL})
+option(NOVA_BUILD_DOCS "Build documentation" OFF)
+# Off unless a developer asks for it explicitly (-DNOVA_SANITIZE=ON), in every build type, so release
+# builds and wheels never carry it. It must be set before libstb is fetched below: the flags are
+# directory-scoped, and libstb (font and image parsers) is where untrusted input is decoded.
+option(NOVA_SANITIZE "Build with AddressSanitizer and UndefinedBehaviorSanitizer (GCC/Clang only)" OFF)
 
 
-set(NOVASVG_SOURCE_DIR ${PROJECT_SOURCE_DIR})
+set(NOVA_SOURCE_DIR ${PROJECT_SOURCE_DIR})
 
-# Header-only library: two INTERFACE targets.
-#   novasvg::noflag   headers + compile definitions only
+if(NOVA_SANITIZE)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        message(FATAL_ERROR "NOVA_SANITIZE needs GCC or Clang, not ${CMAKE_CXX_COMPILER_ID}")
+    endif()
+    message(STATUS "NovaSVG: AddressSanitizer + UndefinedBehaviorSanitizer enabled (libstb included)")
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
+    if(NOVA_BUILD_PYTHON)
+        message(WARNING "NOVA_SANITIZE with NOVA_BUILD_PYTHON: `import novasvg` needs libasan preloaded "
+                        "(LD_PRELOAD=$(gcc -print-file-name=libasan.so)); run the C++ tests instead.")
+    endif()
+endif()
+
+# ---- libstb: image/zlib/font engine, linked DYNAMICALLY ---------------------------------------
+# Declared in pyproject.toml ([tool.polybind.deps.libstb]) and resolved by polybind (`pip install polybind`; scikit-build-core
+# installs it from [build-system].requires). Python is needed at configure time. Where libstb comes from:
+#   python   the libstb wheel (the very one the novasvg wheel depends on at run time): headers, stb.so and the CMake package
+#            from `python -m libstb --cmake-dir`. Default: `auto` tries it first.
+#   fetch    git clone of the tag that fits the version range, built here as a shared library (options in the settings).
+# -DPOLYBIND_DEPS_PROVIDER_LIBSTB=fetch|python|uv|pip|system forces one; -DFETCHCONTENT_SOURCE_DIR_LIBSTB=<checkout> makes
+# `fetch` use a local libstb (a change tried together with novasvg); -DPOLYBIND_DEPS_OFFLINE=ON installs and fetches nothing.
+# The tag that passed the tests is recorded in polybind.lock (target polybind_deps_record).
+if(NOVA_SANITIZE AND NOT POLYBIND_DEPS_PROVIDER_LIBSTB)
+    # A wheel's libstb is not sanitized, and the flags above are directory-scoped: libstb has to be built here.
+    set(POLYBIND_DEPS_PROVIDER_LIBSTB fetch)
+endif()
+find_package(Python COMPONENTS Interpreter REQUIRED)
+execute_process(COMMAND "${Python_EXECUTABLE}" -m polybind cmake-dir
+    OUTPUT_VARIABLE _novasvg_polybind_dir OUTPUT_STRIP_TRAILING_WHITESPACE RESULT_VARIABLE _novasvg_polybind_rc ERROR_QUIET)
+if(NOT _novasvg_polybind_rc EQUAL 0)
+    message(FATAL_ERROR "novasvg resolves libstb with polybind, which ${Python_EXECUTABLE} does not have: "
+                        "pip install polybind (or pass -DPython_EXECUTABLE=<an interpreter that has it>)")
+endif()
+include("${_novasvg_polybind_dir}/PolybindDeps.cmake")
+polybind_deps_load()
+polybind_resolve_dep(libstb)
+polybind_deps_record_target()
+
+get_target_property(_novasvg_libstb_type libstb::libstb TYPE)
+if(NOT _novasvg_libstb_type STREQUAL "SHARED_LIBRARY")
+    message(FATAL_ERROR "novasvg requires libstb as a shared library, got: ${_novasvg_libstb_type}")
+endif()
+message(STATUS "NovaSVG: libstb ${POLYBIND_DEP_LIBSTB_VERSION} (${POLYBIND_DEP_LIBSTB_PROVIDER})")
+
+# ---- the compiled libraries --------------------------------------------------------------------
+# Two libraries (ADR-0009):
+#   nova_vg      (alias nova::vg)   the vector-graphics layer: canvas, raster and PDF backends, fonts, path/outline helpers.
+#                                    It does not know SVG. Its private headers are found next to its sources (\"canvas.h\"),
+#                                    and src/sources is NOT on its include path, so it cannot reach the svg headers; the
+#                                    test `nova_vg_layering` also checks the public headers and the sources for svg includes.
+#   novasvg_core                     the SVG layer (nova::svg): document, DOM, CSS, renderer. Links nova_vg.
+file(GLOB NOVA_VG_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/vg/*.cpp")
+add_library(nova_vg STATIC ${NOVA_VG_SOURCES})
+add_library(nova::vg ALIAS nova_vg)
+set_target_properties(nova_vg PROPERTIES POSITION_INDEPENDENT_CODE ON EXPORT_NAME vg)
+target_compile_definitions(nova_vg PRIVATE NOVA_BUILDING_LIBRARY)
+get_target_property(_nova_vg_type nova_vg TYPE)
+if(_nova_vg_type STREQUAL "STATIC_LIBRARY")
+    target_compile_definitions(nova_vg PUBLIC NOVA_STATIC_DEFINE)   # NOVA_API empty for consumers
+endif()
+target_include_directories(nova_vg PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:include>")
+# Everything that links novasvg links libstb too (dynamic).
+target_link_libraries(nova_vg PUBLIC libstb::libstb)
+if(NOT NOVA_EMBED_DEFAULT_FONT)
+    target_compile_definitions(nova_vg PUBLIC NOVA_DISABLE_EMBEDDED_FONT)
+else()
+    # The last-resort fonts (zlib-compressed Latin subsets of DejaVu Sans, Sans Mono and Serif, made by tools/gen_default_font.py and
+    # committed) become a header of byte arrays in the build tree (see cmake/EmbedFile.cmake).
+    include(EmbedFile)
+    set(_nova_fonts "${CMAKE_CURRENT_SOURCE_DIR}/data/fonts/embedded")
+    embed_files(
+        OUTPUT    "${CMAKE_CURRENT_BINARY_DIR}/generated/nova_embedded_fonts.hpp"
+        NAMESPACE nova::vg::detail
+        FILES     embedded_font_regular     "${_nova_fonts}/DejaVuSans.ttf.z"
+                  embedded_font_bold        "${_nova_fonts}/DejaVuSans-Bold.ttf.z"
+                  embedded_font_italic      "${_nova_fonts}/DejaVuSans-Oblique.ttf.z"
+                  embedded_font_bold_italic "${_nova_fonts}/DejaVuSans-BoldOblique.ttf.z"
+                  embedded_font_mono        "${_nova_fonts}/DejaVuSansMono.ttf.z"
+                  embedded_font_mono_bold   "${_nova_fonts}/DejaVuSansMono-Bold.ttf.z"
+                  embedded_font_serif       "${_nova_fonts}/DejaVuSerif.ttf.z"
+                  embedded_font_serif_bold  "${_nova_fonts}/DejaVuSerif-Bold.ttf.z")
+    target_include_directories(nova_vg PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+endif()
+novasvg_optimize(nova_vg)
+
+# The HTML renderer for <foreignObject> (ADR-0010). OFF: the core has no HTML code at all, a document starts
+# without a foreignObject renderer and skips those elements unless set_foreign_object_renderer() gives it one.
+option(NOVA_FOREIGN_OBJECT_SIMPLE "Build the built-in simple HTML renderer for <foreignObject>" ON)
+file(GLOB NOVA_SVG_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/*.cpp")
+if(NOVA_FOREIGN_OBJECT_SIMPLE)
+    file(GLOB NOVA_FOREIGN_OBJECT_SOURCES CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/foreign_object/html_style.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/foreign_object/simple.cpp")
+else()
+    set(NOVA_FOREIGN_OBJECT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/sources/svg/foreign_object/none.cpp")
+endif()
+list(APPEND NOVA_SVG_SOURCES ${NOVA_FOREIGN_OBJECT_SOURCES})
+add_library(novasvg_core STATIC ${NOVA_SVG_SOURCES})
+set_target_properties(novasvg_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_definitions(novasvg_core PRIVATE NOVA_BUILDING_LIBRARY)
+# The svg sources reach the vg private headers (canvas.h, font.h, ...) as "vg/x.h".
+target_include_directories(novasvg_core PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/sources")
+target_link_libraries(novasvg_core PUBLIC nova_vg)
+novasvg_optimize(novasvg_core)
+
+# Two consumer-facing targets (kept while the library is still partly header-only):
+#   novasvg::noflag   the core, no optimisation flags on the consumer
 #   novasvg::novasvg  noflag + optimisation flags (-O3 / /O2 ...): what nearly everybody wants.
 #                     Link novasvg::noflag instead to opt out of the flags.
 add_library(novasvg_noflag INTERFACE)
 add_library(novasvg::noflag ALIAS novasvg_noflag)
 set_target_properties(novasvg_noflag PROPERTIES EXPORT_NAME noflag)
-
-if(NOT NOVASVG_EMBED_DEFAULT_FONT)
-    target_compile_definitions(novasvg_noflag INTERFACE NOVASVG_DISABLE_EMBEDDED_FONT)
-endif()
-
-target_include_directories(novasvg_noflag INTERFACE
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-    "$<INSTALL_INTERFACE:include>")
+target_link_libraries(novasvg_noflag INTERFACE novasvg_core)
 
 add_library(novasvg INTERFACE)
 add_library(novasvg::novasvg ALIAS novasvg)
@@ -66,16 +170,23 @@ target_link_libraries(novasvg INTERFACE novasvg_noflag)
 novasvg_optimize(novasvg)   # flags travel to every consumer of novasvg::novasvg
 
 # Add CLI executable
-add_executable(novasvg_cli src/novasvg_cli.cpp)
+add_executable(novasvg_cli src/cli/novasvg_cli.cpp)
 target_link_libraries(novasvg_cli PRIVATE novasvg::novasvg)
 set_target_properties(novasvg_cli PROPERTIES OUTPUT_NAME novasvg)
+# The installed CLI finds the libstb it was installed with (bin/ and lib/ are siblings); the build tree
+# already has the right RUNPATH. On Windows stb.dll is installed next to novasvg.exe.
+if(APPLE)
+    set_target_properties(novasvg_cli PROPERTIES INSTALL_RPATH "@loader_path/../lib")
+elseif(UNIX)
+    set_target_properties(novasvg_cli PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
+endif()
 novasvg_optimize(novasvg_cli)
 
 
 # target_compile_features(novasvg INTERFACE cxx_std_17)
 
 
-if(NOVASVG_BUILD_PYTHON OR DEFINED SKBUILD)
+if(NOVA_BUILD_PYTHON OR DEFINED SKBUILD)
     add_subdirectory(${PROJECT_SOURCE_DIR}/src/bindings/python)
     if(DEFINED SKBUILD)
         return()
@@ -87,20 +198,8 @@ install(TARGETS novasvg_cli
     RUNTIME DESTINATION bin
 )
 
-# Generate single-header distribution if NOVASVG_DIST_DIR is defined
-if(DEFINED NOVASVG_DIST_DIR)
-    add_custom_target(novasvg_dist_header
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${NOVASVG_DIST_DIR}/novasvg
-        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h 
-            ${NOVASVG_DIST_DIR}/novasvg/novasvg.h 
-            -I ${CMAKE_CURRENT_SOURCE_DIR}/include
-        COMMENT "Generating single-header distribution: ${NOVASVG_DIST_DIR}/novasvg/novasvg.h"
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-    )
-endif()
-
 # Tests
-if(NOVASVG_BUILD_TESTS)
+if(NOVA_BUILD_TESTS)
     enable_testing()
     set(CMAKE_CTEST_ARGUMENTS "--output-on-failure" "-V")
     add_subdirectory(${PROJECT_SOURCE_DIR}/tests)
@@ -108,7 +207,7 @@ endif()
 
 
 # Examples
-if(NOVASVG_BUILD_EXAMPLES)
+if(NOVA_BUILD_EXAMPLES)
     add_custom_target(novasvg_build_examples
         COMMAND ${CMAKE_COMMAND} -E echo "Building examples..."
     )
@@ -129,7 +228,7 @@ endif()
 
 
 # Documentation (Doxygen)
-if(NOVASVG_BUILD_DOCS)
+if(NOVA_BUILD_DOCS)
     add_subdirectory(${PROJECT_SOURCE_DIR}/docs)
 endif()
 
@@ -140,23 +239,24 @@ install(DIRECTORY include/ DESTINATION include)
 # CMake package: find_package(novasvg) -> novasvg::novasvg (optimised) / novasvg::noflag.
 # Only the top-level project installs it by default, so that embedding novasvg through
 # FetchContent/add_subdirectory doesn't change the parent project's install tree.
-option(NOVASVG_INSTALL "Install the CMake package (novasvgConfig.cmake, novasvg::novasvg, novasvg::noflag)" ${PROJECT_IS_TOP_LEVEL})
-if(NOVASVG_INSTALL)
+option(NOVA_INSTALL "Install the CMake package (novasvgConfig.cmake, novasvg::novasvg, novasvg::noflag)" ${PROJECT_IS_TOP_LEVEL})
+if(NOVA_INSTALL)
     include(CMakePackageConfigHelpers)
     include(GNUInstallDirs)
-    set(NOVASVG_INSTALL_CMAKEDIR "${CMAKE_INSTALL_DATADIR}/cmake/novasvg" CACHE STRING
+    set(NOVA_INSTALL_CMAKEDIR "${CMAKE_INSTALL_DATADIR}/cmake/novasvg" CACHE STRING
         "Where novasvgConfig.cmake is installed (relative to the install prefix)")
 
-    install(TARGETS novasvg_noflag novasvg EXPORT novasvgTargets)
+    install(TARGETS nova_vg novasvg_core novasvg_noflag novasvg EXPORT novasvgTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
     install(EXPORT novasvgTargets
         FILE novasvgTargets.cmake
         NAMESPACE novasvg::
-        DESTINATION "${NOVASVG_INSTALL_CMAKEDIR}")
+        DESTINATION "${NOVA_INSTALL_CMAKEDIR}")
 
     configure_package_config_file(
         "${PROJECT_SOURCE_DIR}/cmake/novasvgConfig.cmake.in"
         "${PROJECT_BINARY_DIR}/novasvgConfig.cmake"
-        INSTALL_DESTINATION "${NOVASVG_INSTALL_CMAKEDIR}")
+        INSTALL_DESTINATION "${NOVA_INSTALL_CMAKEDIR}")
     # 0.x: the API is not frozen yet, so only the same minor version is considered compatible.
     write_basic_package_version_file(
         "${PROJECT_BINARY_DIR}/novasvgConfigVersion.cmake"
@@ -166,5 +266,5 @@ if(NOVASVG_INSTALL)
     install(FILES
         "${PROJECT_BINARY_DIR}/novasvgConfig.cmake"
         "${PROJECT_BINARY_DIR}/novasvgConfigVersion.cmake"
-        DESTINATION "${NOVASVG_INSTALL_CMAKEDIR}")
+        DESTINATION "${NOVA_INSTALL_CMAKEDIR}")
 endif()

@@ -12,7 +12,7 @@
 # ($<CONFIG:Release> ...), so a consumer whose build type is empty or "None" is left alone.
 # Opting out: link `novasvg::noflag` instead of `novasvg::novasvg` (same headers and
 # definitions, no flags; works from the build tree and from an installed package), or
-# build novasvg itself with -DNOVASVG_OPTIMIZE=OFF.
+# build novasvg itself with -DNOVA_OPTIMIZE=OFF.
 # LTO is a per-target property that cannot travel through an INTERFACE target; call
 # novasvg_optimize(<target>) on the consumer if you want it.
 #
@@ -29,13 +29,13 @@
 #   * Optional CPU tuning (-march=native / -mcpu=native), off by default.
 #
 # Options (all can be given with -D on the command line)
-#   NOVASVG_OPTIMIZE             ON   master switch for everything in this file
-#   NOVASVG_ENABLE_LTO           ON   LTO/IPO when supported
-#   NOVASVG_NATIVE_ARCH          OFF  tune for THIS machine's CPU. The binary may
+#   NOVA_OPTIMIZE             ON   master switch for everything in this file
+#   NOVA_ENABLE_LTO           ON   LTO/IPO when supported
+#   NOVA_NATIVE_ARCH          OFF  tune for THIS machine's CPU. The binary may
 #                                     crash on other CPUs. Ignored when
 #                                     cross-compiling, under scikit-build-core /
 #                                     cibuildwheel, for macOS universal builds, and on MSVC.
-#   NOVASVG_KEEP_FRAME_POINTERS  OFF  -fno-omit-frame-pointer: much better call
+#   NOVA_KEEP_FRAME_POINTERS  OFF  -fno-omit-frame-pointer: much better call
 #                                     stacks for `perf record -g` / flamegraphs.
 #
 # `apply_optimization_flags(<target>)` is kept as an alias of novasvg_optimize().
@@ -50,10 +50,10 @@ if(NOT CMAKE_CXX_COMPILER_LOADED)
     message(FATAL_ERROR "Optimize.cmake must be included after project() (the C++ language must be enabled).")
 endif()
 
-option(NOVASVG_OPTIMIZE            "Apply NovaSVG's optimisation flags (-O3 / /O2, LTO) to NovaSVG-owned targets" ON)
-option(NOVASVG_ENABLE_LTO          "Use link-time optimisation in optimised configurations when supported"       ON)
-option(NOVASVG_NATIVE_ARCH         "Tune for the build machine's CPU (binary is NOT portable)"                    OFF)
-option(NOVASVG_KEEP_FRAME_POINTERS "Keep frame pointers so perf/flamegraph call stacks are complete"             OFF)
+option(NOVA_OPTIMIZE            "Apply NovaSVG's optimisation flags (-O3 / /O2, LTO) to NovaSVG-owned targets" ON)
+option(NOVA_ENABLE_LTO          "Use link-time optimisation in optimised configurations when supported"       ON)
+option(NOVA_NATIVE_ARCH         "Tune for the build machine's CPU (binary is NOT portable)"                    OFF)
+option(NOVA_KEEP_FRAME_POINTERS "Keep frame pointers so perf/flamegraph call stacks are complete"             OFF)
 
 # ---------------------------------------------------------------------------
 # Default build type (single-config generators only, top-level project only)
@@ -68,7 +68,7 @@ endif()
 
 get_property(_novasvg_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 
-if(NOVASVG_OPTIMIZE AND _novasvg_top_level AND NOT _novasvg_multi_config AND NOT CMAKE_BUILD_TYPE)
+if(NOVA_OPTIMIZE AND _novasvg_top_level AND NOT _novasvg_multi_config AND NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type (defaulted to Release by NovaSVG)" FORCE)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release RelWithDebInfo MinSizeRel)
     message(STATUS "NovaSVG: CMAKE_BUILD_TYPE was empty -> defaulting to Release")
@@ -77,11 +77,11 @@ endif()
 # ---------------------------------------------------------------------------
 # LTO support probe (runs once per configure; not cached across configures)
 # ---------------------------------------------------------------------------
-set_property(GLOBAL PROPERTY NOVASVG_IPO_SUPPORTED OFF)
-if(NOVASVG_OPTIMIZE AND NOVASVG_ENABLE_LTO)
+set_property(GLOBAL PROPERTY NOVA_IPO_SUPPORTED OFF)
+if(NOVA_OPTIMIZE AND NOVA_ENABLE_LTO)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT _novasvg_ipo OUTPUT _novasvg_ipo_msg LANGUAGES CXX)
-    set_property(GLOBAL PROPERTY NOVASVG_IPO_SUPPORTED ${_novasvg_ipo})
+    set_property(GLOBAL PROPERTY NOVA_IPO_SUPPORTED ${_novasvg_ipo})
     if(NOT _novasvg_ipo)
         message(STATUS "NovaSVG: LTO unavailable with this toolchain, continuing without it")
         message(VERBOSE "NovaSVG: check_ipo_supported said: ${_novasvg_ipo_msg}")
@@ -96,20 +96,20 @@ function(_novasvg_native_arch_flag out)
     set(${out} "" PARENT_SCOPE)
 
     if(CMAKE_CROSSCOMPILING)
-        message(STATUS "NovaSVG: NOVASVG_NATIVE_ARCH ignored (cross-compiling)")
+        message(STATUS "NovaSVG: NOVA_NATIVE_ARCH ignored (cross-compiling)")
         return()
     endif()
     if(DEFINED SKBUILD OR DEFINED ENV{CIBUILDWHEEL})
-        message(STATUS "NovaSVG: NOVASVG_NATIVE_ARCH ignored (building a distributable wheel)")
+        message(STATUS "NovaSVG: NOVA_NATIVE_ARCH ignored (building a distributable wheel)")
         return()
     endif()
     list(LENGTH CMAKE_OSX_ARCHITECTURES _n_osx_arch)
     if(_n_osx_arch GREATER 1)
-        message(STATUS "NovaSVG: NOVASVG_NATIVE_ARCH ignored (multi-architecture macOS build)")
+        message(STATUS "NovaSVG: NOVA_NATIVE_ARCH ignored (multi-architecture macOS build)")
         return()
     endif()
     if(MSVC)
-        message(STATUS "NovaSVG: NOVASVG_NATIVE_ARCH has no MSVC equivalent, ignored")
+        message(STATUS "NovaSVG: NOVA_NATIVE_ARCH has no MSVC equivalent, ignored")
         return()
     endif()
 
@@ -121,7 +121,7 @@ function(_novasvg_native_arch_flag out)
         set(_candidates -march=native -mcpu=native)
     endif()
     foreach(_flag IN LISTS _candidates)
-        string(MAKE_C_IDENTIFIER "NOVASVG_HAS_${_flag}" _var)
+        string(MAKE_C_IDENTIFIER "NOVA_HAS_${_flag}" _var)
         check_cxx_compiler_flag(${_flag} ${_var})
         if(${_var})
             set(${out} ${_flag} PARENT_SCOPE)
@@ -152,11 +152,11 @@ function(_novasvg_collect_flags out)
             "$<$<CONFIG:RelWithDebInfo>:-g>"
             "$<$<CONFIG:MinSizeRel>:-Os>")
 
-        if(NOVASVG_KEEP_FRAME_POINTERS)
+        if(NOVA_KEEP_FRAME_POINTERS)
             list(APPEND _flags -fno-omit-frame-pointer)
         endif()
 
-        if(NOVASVG_NATIVE_ARCH OR ENABLE_NATIVE) # ENABLE_NATIVE: legacy spelling
+        if(NOVA_NATIVE_ARCH OR ENABLE_NATIVE) # ENABLE_NATIVE: legacy spelling
             _novasvg_native_arch_flag(_native)
             if(_native)
                 list(APPEND _flags ${_native})
@@ -178,7 +178,7 @@ endfunction()
 #   anything else     : flags PRIVATE to the target, plus LTO when supported.
 # ---------------------------------------------------------------------------
 function(novasvg_optimize target)
-    if(NOT NOVASVG_OPTIMIZE)
+    if(NOT NOVA_OPTIMIZE)
         return()
     endif()
     if(NOT TARGET ${target})
@@ -204,8 +204,8 @@ function(novasvg_optimize target)
         target_compile_options(${target} PRIVATE ${_flags})
     endif()
 
-    get_property(_ipo GLOBAL PROPERTY NOVASVG_IPO_SUPPORTED)
-    if(NOVASVG_ENABLE_LTO AND _ipo)
+    get_property(_ipo GLOBAL PROPERTY NOVA_IPO_SUPPORTED)
+    if(NOVA_ENABLE_LTO AND _ipo)
         set_target_properties(${target} PROPERTIES
             INTERPROCEDURAL_OPTIMIZATION_RELEASE        ON
             INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO ON

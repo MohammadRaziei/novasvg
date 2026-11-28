@@ -7,7 +7,7 @@
 #       SOURCE   <file.md>        # path to the Markdown source file
 #       TITLE    <"Page Title">   # displayed in <title> and page header
 #       [NAV_LABEL <"Label">]     # optional short label for topbar nav (defaults to TITLE)
-#       [OUTPUT_DIR <dir>]        # optional override for output dir (default: ${NOVASVG_DOCS_OUT}/<name>)
+#       [OUTPUT_DIR <dir>]        # optional override for output dir (default: ${NOVA_DOCS_OUT}/<name>)
 #   )
 #
 # Each page is built as:
@@ -15,15 +15,15 @@
 #
 # Prerequisites (must be set before including this file):
 #   Python3_EXECUTABLE   — Python 3 interpreter (from find_package(Python3))
-#   NOVASVG_DOCS_OUT       — root output directory for all docs
-#   NOVASVG_DOCS_SRC       — source directory of the docs folder (contains page.html.in, novasvg-docs.css)
+#   NOVA_DOCS_OUT       — root output directory for all docs
+#   NOVA_DOCS_SRC       — source directory of the docs folder (contains page.html.in, novasvg-docs.css)
 #   LOGO_SQ              — path to the SVG logo file (for embedding)
 #   PROJECT_VERSION      — project version string
 
 cmake_minimum_required(VERSION 3.19)
 
 # ── Verify prerequisites ──────────────────────────────────────────────────────
-foreach(_var Python3_EXECUTABLE NOVASVG_DOCS_OUT NOVASVG_DOCS_SRC PROJECT_VERSION)
+foreach(_var Python3_EXECUTABLE NOVA_DOCS_OUT NOVA_DOCS_SRC PROJECT_VERSION)
     if(NOT DEFINED ${_var})
         message(FATAL_ERROR "NovaSVGPages: ${_var} must be defined before including NovaSVGPages.cmake")
     endif()
@@ -43,16 +43,16 @@ if(NOT _MDIT_CHECK EQUAL 0)
 endif()
 
 # ── Internal helper: path to the convert script ──────────────────────────────
-set(_NOVASVG_CONVERT_SCRIPT "${NOVASVG_DOCS_SRC}/convert_page.py"
+set(_NOVA_CONVERT_SCRIPT "${NOVA_DOCS_SRC}/convert_page.py"
     CACHE INTERNAL "Path to the novasvg md→html conversion script")
 
-set(_NOVASVG_PAGE_TEMPLATE "${NOVASVG_DOCS_SRC}/page.html.in"
+set(_NOVA_PAGE_TEMPLATE "${NOVA_DOCS_SRC}/page.html.in"
     CACHE INTERNAL "Path to the novasvg page HTML template")
 
-set(_NOVASVG_PAGE_CSS "${NOVASVG_DOCS_SRC}/novasvg-docs.css"
+set(_NOVA_PAGE_CSS "${NOVA_DOCS_SRC}/novasvg-docs.css"
     CACHE INTERNAL "Path to novasvg-docs.css")
 
-set(_NOVASVG_SECTION_TEMPLATE "${NOVASVG_DOCS_SRC}/section.html.in"
+set(_NOVA_SECTION_TEMPLATE "${NOVA_DOCS_SRC}/section.html.in"
     CACHE INTERNAL "Path to the novasvg section HTML template")
 
 # ── novasvg_add_page ────────────────────────────────────────────────────────────
@@ -68,32 +68,32 @@ function(novasvg_add_page)
     endif()
 
     if(NOT ARG_OUTPUT_DIR)
-        set(ARG_OUTPUT_DIR "${NOVASVG_DOCS_OUT}/${ARG_NAME}")
+        set(ARG_OUTPUT_DIR "${NOVA_DOCS_OUT}/${ARG_NAME}")
     endif()
 
     set(_OUTPUT_HTML "${ARG_OUTPUT_DIR}/index.html")
 
     # Resolve absolute source path
     if(NOT IS_ABSOLUTE "${ARG_SOURCE}")
-        set(ARG_SOURCE "${NOVASVG_DOCS_SRC}/${ARG_SOURCE}")
+        set(ARG_SOURCE "${NOVA_DOCS_SRC}/${ARG_SOURCE}")
     endif()
 
     add_custom_command(
         OUTPUT "${_OUTPUT_HTML}"
-        COMMAND ${Python3_EXECUTABLE} "${_NOVASVG_CONVERT_SCRIPT}"
+        COMMAND ${Python3_EXECUTABLE} "${_NOVA_CONVERT_SCRIPT}"
             --input     "${ARG_SOURCE}"
             --output    "${_OUTPUT_HTML}"
             --title     "${ARG_TITLE}"
             --nav-label "${ARG_NAV_LABEL}"
-            --template  "${_NOVASVG_PAGE_TEMPLATE}"
-            --css       "${_NOVASVG_PAGE_CSS}"
+            --template  "${_NOVA_PAGE_TEMPLATE}"
+            --css       "${_NOVA_PAGE_CSS}"
             --logo      "${LOGO_SQ}"
             --version   "${PROJECT_VERSION}"
         DEPENDS
             "${ARG_SOURCE}"
-            "${_NOVASVG_CONVERT_SCRIPT}"
-            "${_NOVASVG_PAGE_TEMPLATE}"
-            "${_NOVASVG_PAGE_CSS}"
+            "${_NOVA_CONVERT_SCRIPT}"
+            "${_NOVA_PAGE_TEMPLATE}"
+            "${_NOVA_PAGE_CSS}"
         COMMENT "Building page: ${ARG_TITLE}"
         VERBATIM
     )
@@ -101,7 +101,7 @@ function(novasvg_add_page)
     add_custom_target("novasvg_docs_page_${ARG_NAME}" DEPENDS "${_OUTPUT_HTML}")
 
     # Register in the global list so novasvg_docs can depend on all pages
-    set_property(GLOBAL APPEND PROPERTY NOVASVG_PAGE_TARGETS "novasvg_docs_page_${ARG_NAME}")
+    set_property(GLOBAL APPEND PROPERTY NOVA_PAGE_TARGETS "novasvg_docs_page_${ARG_NAME}")
 
     message(STATUS "NovaSVGPages: registered page '${ARG_NAME}' → ${_OUTPUT_HTML}")
 endfunction()
@@ -119,7 +119,7 @@ endfunction()
 #           "installation.rst:Installation"
 #           "usage.md:Usage"
 #           ...
-#       [OUTPUT_DIR <dir>]           # optional override (default: ${NOVASVG_DOCS_OUT}/<name>)
+#       [OUTPUT_DIR <dir>]           # optional override (default: ${NOVA_DOCS_OUT}/<name>)
 #   )
 function(novasvg_add_section)
     cmake_parse_arguments(ARG "" "NAME;TITLE;OUTPUT_DIR" "SOURCES" ${ARGN})
@@ -129,7 +129,7 @@ function(novasvg_add_section)
     endif()
 
     if(NOT ARG_OUTPUT_DIR)
-        set(ARG_OUTPUT_DIR "${NOVASVG_DOCS_OUT}/${ARG_NAME}")
+        set(ARG_OUTPUT_DIR "${NOVA_DOCS_OUT}/${ARG_NAME}")
     endif()
 
     # Build the comma-separated pages string for the Python script
@@ -147,7 +147,7 @@ function(novasvg_add_section)
         endif()
 
         if(NOT IS_ABSOLUTE "${_md_file}")
-            set(_md_file "${NOVASVG_DOCS_SRC}/${_md_file}")
+            set(_md_file "${NOVA_DOCS_SRC}/${_md_file}")
         endif()
 
         if(_PAGES_ARG)
@@ -164,34 +164,34 @@ function(novasvg_add_section)
 
     add_custom_command(
         OUTPUT "${_STAMP}"
-        COMMAND ${Python3_EXECUTABLE} "${_NOVASVG_CONVERT_SCRIPT}"
+        COMMAND ${Python3_EXECUTABLE} "${_NOVA_CONVERT_SCRIPT}"
             --section
             --section-title "${ARG_TITLE}"
             --section-dir   "${ARG_OUTPUT_DIR}"
             --section-pages "${_PAGES_ARG}"
-            --source-dir    "${NOVASVG_DOCS_SRC}"
-            --template      "${_NOVASVG_SECTION_TEMPLATE}"
-            --css           "${_NOVASVG_PAGE_CSS}"
+            --source-dir    "${NOVA_DOCS_SRC}"
+            --template      "${_NOVA_SECTION_TEMPLATE}"
+            --css           "${_NOVA_PAGE_CSS}"
             --logo          "${LOGO_SQ}"
             --version       "${PROJECT_VERSION}"
         DEPENDS
             ${_MD_SOURCES}
-            "${_NOVASVG_CONVERT_SCRIPT}"
-            "${_NOVASVG_SECTION_TEMPLATE}"
-            "${_NOVASVG_PAGE_CSS}"
+            "${_NOVA_CONVERT_SCRIPT}"
+            "${_NOVA_SECTION_TEMPLATE}"
+            "${_NOVA_PAGE_CSS}"
         COMMENT "Building section: ${ARG_TITLE}"
         VERBATIM
     )
 
     add_custom_target("novasvg_docs_section_${ARG_NAME}" DEPENDS "${_STAMP}")
-    set_property(GLOBAL APPEND PROPERTY NOVASVG_PAGE_TARGETS "novasvg_docs_section_${ARG_NAME}")
+    set_property(GLOBAL APPEND PROPERTY NOVA_PAGE_TARGETS "novasvg_docs_section_${ARG_NAME}")
 
     message(STATUS "NovaSVGPages: registered section '${ARG_NAME}' → ${ARG_OUTPUT_DIR}/")
 endfunction()
 
 # ── novasvg_finalize_pages ──────────────────────────────────────────────────────
 macro(novasvg_finalize_pages TARGET)
-    get_property(_page_targets GLOBAL PROPERTY NOVASVG_PAGE_TARGETS)
+    get_property(_page_targets GLOBAL PROPERTY NOVA_PAGE_TARGETS)
     if(_page_targets)
         add_dependencies(${TARGET} ${_page_targets})
     endif()

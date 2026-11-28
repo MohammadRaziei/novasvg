@@ -16,3 +16,4 @@ Reference
 
 .. autofunction:: novasvg.svg2png
 .. autofunction:: novasvg.version_string
+.. autofunction:: novasvg.is_valid_selector

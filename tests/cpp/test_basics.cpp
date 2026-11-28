@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <string>
 
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 
 namespace {
 std::filesystem::path project_root()
@@ -18,24 +18,25 @@ std::filesystem::path data_path(const std::string& filename)
 } // namespace
 
 TEST_CASE("Version reporting") {
-    CHECK(nova::svg::version() == NOVASVG_VERSION);
-    CHECK(nova::svg::versionString() == NOVASVG_VERSION_STRING);
+    CHECK(nova::svg::version() == NOVA_VERSION);
+    CHECK(nova::svg::version_string() == NOVA_VERSION_STRING);
 }
 
 TEST_CASE("Load SVG data from file and render") {
     auto svg_file = data_path("rect.svg");
-    auto document = nova::svg::Document::loadFromFile(svg_file.string());
-    REQUIRE(document != nullptr);
-    CHECK(document->width() == doctest::Approx(64.0f));
-    CHECK(document->height() == doctest::Approx(64.0f));
+    auto dom = nova::svg::document::load_file(svg_file.string());
+    REQUIRE(dom != nullptr);
+    CHECK(dom->width() == doctest::Approx(64.0f));
+    CHECK(dom->height() == doctest::Approx(64.0f));
 
-    nova::svg::Bitmap bitmap = document->renderToBitmap(64, 64);
-    CHECK_FALSE(bitmap.isNull());
-    CHECK(bitmap.width() == 64);
-    CHECK(bitmap.height() == 64);
+    stb::image image = dom->render_to_image(64, 64);
+    CHECK_FALSE(image.empty());
+    CHECK(image.width() == 64);
+    CHECK(image.height() == 64);
+    CHECK(image.format() == stb::pixel_format::rgba);
 }
 
 TEST_CASE("Missing SVG file returns null document") {
-    auto document = nova::svg::Document::loadFromFile((project_root() / "data" / "missing.svg").string());
-    CHECK(document == nullptr);
+    auto dom = nova::svg::document::load_file((project_root() / "data" / "missing.svg").string());
+    CHECK(dom == nullptr);
 }

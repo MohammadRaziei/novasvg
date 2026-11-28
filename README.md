@@ -5,7 +5,7 @@
 
 # NovaSVG
 
-**A header-only C++17 SVG renderer: parse, query, restyle and rasterize SVG with one `#include`.**
+**A C++17 SVG renderer: parse, query, restyle and rasterize SVG, built on [libstb](https://github.com/mohammadraziei/libstb).**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
 [![C++17](https://img.shields.io/badge/C++-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
@@ -15,7 +15,6 @@
 
 [Documentation](https://mohammadraziei.github.io/novasvg) ·
 [Benchmarks](https://mohammadraziei.github.io/novasvg/benchmarks) ·
-[Single header](https://github.com/MohammadRaziei/novasvg/releases/download/__beta__/novasvg.h) ·
 [Python](https://pypi.org/project/novasvg/) ·
 [Issues](https://github.com/MohammadRaziei/novasvg/issues)
 
@@ -25,7 +24,7 @@
 
 ## Why NovaSVG
 
-- **Nothing to link.** Drop in `novasvg.h` (or the `include/` folder) and you are done. No submodules, no system libraries, no fontconfig.
+- **One dependency.** Images, zlib and fonts come from [libstb](https://github.com/mohammadraziei/libstb), a shared library that CMake gets for you (the libstb wheel, or a git checkout; see below). No system libraries, no fontconfig.
 - **Renders what real diagrams contain.** Gradients, patterns, clip paths, masks, markers, a full SVG filter pipeline, CSS styling, embedded fonts, and `<foreignObject>` text, which is what Mermaid uses for every label.
 - **Close to a browser.** Compared against Chromium on a 60-sample corpus, including 49 Mermaid diagrams. See [how it stacks up](#how-it-compares).
 - **More than a renderer.** Query elements with CSS selectors, rewrite styles, read bounding boxes and matrices, and render a single element on its own.
@@ -37,27 +36,23 @@
 ### C++
 
 ```cpp
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 #include <iostream>
 
 int main() {
-    auto doc = nova::svg::Document::loadFromFile("artwork.svg");
+    auto doc = nova::svg::document::load_file("artwork.svg");
     if (!doc) return 1;
 
     // 640 px wide, height follows the aspect ratio, white background
-    auto bitmap = doc->renderToBitmap(640, -1, nova::svg::Color::white());
-    bitmap.writeToPng("artwork.png");        // also writeToJpg / writeToBmp / writeToTga
+    stb::image image = doc->render_to_image(640, -1, stb::color::white());
+    image.write_png("artwork.png");          // also write_jpg / write_bmp / write_tga
 
     // Query it like a DOM
-    for (auto& rect : doc->querySelectorAll("rect"))
-        std::cout << rect.getAttribute("id") << '\n';
+    for (auto& rect : doc->query_selector_all("rect"))
+        std::cout << rect.attribute("id") << '\n';
 
     std::cout << doc->width() << " x " << doc->height() << '\n';
 }
-```
-
-```bash
-g++ -std=c++17 -O2 -Iinclude main.cpp -o main
 ```
 
 ### Command line
@@ -65,6 +60,7 @@ g++ -std=c++17 -O2 -Iinclude main.cpp -o main
 ```bash
 novasvg input.svg                                  # -> input.png
 novasvg input.svg -o out.png -w 800 -b FFFFFF      # width 800, white background
+novasvg input.svg -o out.pdf                       # a vector PDF, not a bitmap
 novasvg input.svg --style "rect { fill: tomato; }" # restyle before rendering
 novasvg info input.svg                             # size, bounding box, element count
 novasvg query "circle" input.svg --json            # CSS-selector search
@@ -91,10 +87,6 @@ More in [README_PYTHON.md](README_PYTHON.md).
 
 ## Installation
 
-**Single header.** Download [`novasvg.h`](https://github.com/MohammadRaziei/novasvg/releases/download/__beta__/novasvg.h) and include it. Every function is `inline`, so it is safe to include from any number of translation units.
-
-**Copy the headers.** Put `include/novasvg/` in your project and `#include <novasvg/novasvg.h>`.
-
 **CMake `FetchContent`.**
 
 ```cmake
@@ -106,6 +98,8 @@ FetchContent_MakeAvailable(novasvg)
 
 target_link_libraries(my_app PRIVATE novasvg::novasvg)
 ```
+
+libstb is declared in `[tool.polybind.deps.libstb]` of `pyproject.toml` and resolved by [polybind](https://github.com/mohammadraziei/polybind) while CMake configures, so configuring needs Python with polybind (`pip install polybind`). `-DPOLYBIND_DEPS_PROVIDER_LIBSTB=fetch` builds libstb from git instead of using the wheel (`NOVA_SANITIZE` does that by itself), and `-DFETCHCONTENT_SOURCE_DIR_LIBSTB=<checkout>` uses a local libstb with it. The tag that passed the tests is in `polybind.lock`.
 
 **Installed package.**
 
@@ -160,30 +154,36 @@ Not implemented yet: per-primitive filter regions, `feColorMatrix` / `feTurbulen
 
 ### Fonts
 
-Font lookup works like a browser, with no OS font library involved. A `font-family` stack is walked name by name: an installed or registered font first, then a metric-compatible stand-in (`arial` → Liberation Sans / Arimo, `times new roman` → Liberation Serif / Tinos, `calibri` → Carlito, ...), then the generic keywords. A ~40 KB Latin subset of DejaVu Sans is compiled in as the last resort, so text renders even on a machine with no fonts installed. For the best fidelity, install a metric-compatible family such as `fonts-liberation`.
+Font lookup works like a browser, with no OS font library involved. A `font-family` stack is walked name by name: an installed or registered font first, then a metric-compatible stand-in (`arial` → Liberation Sans / Arimo, `times new roman` → Liberation Serif / Tinos, `calibri` → Carlito, ...), then the generic keywords. Latin subsets of DejaVu Sans (regular, bold, oblique, bold oblique), DejaVu Sans Mono and DejaVu Serif (regular and bold) are compiled in as the last resort (125 KB, zlib-compressed), so text renders even on a machine with no fonts installed: `monospace` gets equal-width characters and `serif` gets serifs. For the best fidelity, install a metric-compatible family such as `fonts-liberation`.
 
 ```cpp
-nova::svg::addFontFaceFromFile("Inter", /*bold=*/false, /*italic=*/false, "Inter-Regular.ttf");
+#include <nova/vg/font.h>
+
+nova::vg::add_font_file("Inter-Regular.ttf");   // every face of the file, under the family and weight the font declares
 ```
 
-Disable the embedded font with `-DNOVASVG_EMBED_DEFAULT_FONT=OFF` or by defining `NOVASVG_DISABLE_EMBEDDED_FONT`.
+Disable the embedded font with `-DNOVA_EMBED_DEFAULT_FONT=OFF` or by defining `NOVA_DISABLE_EMBEDDED_FONT`.
 
 ## API overview
 
 | Class | Main members |
 |---|---|
-| `Document` | `loadFromFile()` · `loadFromData()` · `renderToBitmap()` · `querySelectorAll()` · `getElementById()` · `applyStyleSheet()` · `width()` / `height()` · `boundingBox()` |
-| `Element` | `getAttribute()` / `setAttribute()` / `hasAttribute()` · `render()` · `getLocalBoundingBox()` / `getGlobalBoundingBox()` · `getLocalMatrix()` / `getGlobalMatrix()` |
-| `Bitmap` | `writeToPng()` / `writeToJpg()` / `writeToBmp()` / `writeToTga()` · `data()` (ARGB32 premultiplied) · `width()` / `height()` / `stride()` · `convertToRGBA()` |
-| `Matrix` | `translate()` · `scale()` · `rotate()` · `shear()` · `inverse()` · `operator*` |
+| `nova::svg::document` | `load_file()` · `load_data()` · `render_to_image()` · `render_to_pixmap()` · `query_selector_all()` · `apply_style_sheet()` · `width()` / `height()` · `bounding_box()` |
+| `nova::svg::document` (PDF) | `render_to_pdf()` · `save_pdf()`: a one-page vector PDF (C++, Python and the CLI); masks and clip masks stay vector, text can be selected and searched, or embedded as real text in a font subset (`pdf_text`, `--pdf-text`), `title()` is the PDF's title |
+| `nova::svg::element` | `attribute()` / `set_attribute()` / `has_attribute()` · `render()` · `local_bounding_box()` / `global_bounding_box()` · `local_matrix()` / `global_matrix()` |
+| `nova::svg` (free functions) | `measure_text()` size a text without building a document · `is_valid_selector()` tell a wrong selector from one that matches nothing |
+| `nova::vg` | `add_font_file()` register a font file (`nova/vg/font.h`) |
+| `stb::image` (libstb) | `write_png()` / `write_jpg()` / `write_bmp()` / `write_tga()` · `data()` · `width()` / `height()` / `stride()` |
+| `nova::vg::pixmap` | the drawing layer's surface (ARGB32 premultiplied), for `nova::vg` users |
+| `stb::matrix` (libstb) | `translate()` · `scale()` · `rotate()` · `shear()` · `inverse()` · `then()` |
 
-Full reference: [mohammadraziei.github.io/novasvg](https://mohammadraziei.github.io/novasvg), or build it locally with `-DNOVASVG_BUILD_DOCS=ON`.
+Full reference: [mohammadraziei.github.io/novasvg](https://mohammadraziei.github.io/novasvg), or build it locally with `-DNOVA_BUILD_DOCS=ON`.
 
 ## Command-line reference
 
 | Option | Description |
 |---|---|
-| `-o, --output <file>` | Output PNG (default: input name with `.png`) |
+| `-o, --output <file>` | Output file, by extension: `.png` `.bmp` `.tga` `.jpg` or `.pdf` (default: input name with `.png`). A `.pdf` is a one-page vector PDF at the SVG's own size, so `-w`, `-H`, `-s` and `-b` do not apply to it |
 | `-w, --width <px>` / `-H, --height <px>` | Output size |
 | `-s, --scale <factor>` | Scale factor, e.g. `2.0` |
 | `-b, --background-color <hex>` | `RRGGBB` or `RRGGBBAA` (default: transparent) |
@@ -191,9 +191,9 @@ Full reference: [mohammadraziei.github.io/novasvg](https://mohammadraziei.github
 
 | Subcommand | Description |
 |---|---|
-| `convert` | Convert to PNG. This is the default, so `novasvg in.svg` works on its own |
+| `convert` | Convert to an image or PDF. This is the default, so `novasvg in.svg` works on its own |
 | `info` | Size, bounding box and element count; add `--json` for machine-readable output |
-| `query` | Find elements by CSS selector, e.g. `novasvg query "rect[fill='red']" in.svg` |
+| `query` | Find elements by CSS selector, e.g. `novasvg query "rect[fill='red']" in.svg`; a selector that is not valid is an error (exit 1), `--json` for machine-readable output |
 | `batch` | Convert every SVG in a directory |
 
 `novasvg --help` and `novasvg <subcommand> --help` always list the current options.
@@ -202,19 +202,21 @@ Full reference: [mohammadraziei.github.io/novasvg](https://mohammadraziei.github
 
 | Option | Description | Default |
 |---|---|---|
-| `NOVASVG_BUILD_EXAMPLES` | Build the C++ examples | `ON` when top-level |
-| `NOVASVG_BUILD_TESTS` | Build the unit tests | `ON` when top-level |
-| `NOVASVG_BUILD_PYTHON` | Build the Python bindings | `ON` when top-level |
-| `NOVASVG_BUILD_DOCS` | Build the docs with Doxygen | `OFF` |
-| `NOVASVG_INSTALL` | Install the CMake package (`novasvg::novasvg`, `novasvg::noflag`) | `ON` when top-level |
-| `NOVASVG_DIST_DIR` | Generate the single-header distribution into this directory | unset |
-| `NOVASVG_EMBED_DEFAULT_FONT` | Compile in the fallback font | `ON` |
+| `NOVA_BUILD_EXAMPLES` | Build the C++ examples | `ON` when top-level |
+| `NOVA_BUILD_TESTS` | Build the unit tests | `ON` when top-level |
+| `NOVA_BUILD_PYTHON` | Build the Python bindings | `ON` when top-level |
+| `NOVA_BUILD_DOCS` | Build the docs with Doxygen | `OFF` |
+| `NOVA_INSTALL` | Install the CMake package (`novasvg::novasvg`, `novasvg::noflag`) | `ON` when top-level |
+| `NOVA_EMBED_DEFAULT_FONT` | Compile in the fallback fonts (DejaVu Sans, Sans Mono and Serif subsets) | `ON` |
+| `NOVA_FOREIGN_OBJECT_SIMPLE` | Build the built-in simple HTML renderer for `<foreignObject>` | `ON` |
+| `NOVA_SANITIZE` | Build novasvg and libstb with AddressSanitizer and UndefinedBehaviorSanitizer (GCC and Clang) | `OFF` |
 
 ## Repository layout
 
 ```
-include/novasvg/    the library (novasvg.h + detail/)
-src/                command-line tool and Python bindings
+include/nova/       the public headers (nova/vg, nova/svg)
+src/sources/        the engine (svg, vg, utils)
+src/cli, src/bindings/  command-line tool and Python bindings
 examples/cpp/       small runnable samples
 tests/              C++ (doctest) and Python (pytest) tests
 benchmarks/         comparison against resvg, lunasvg, thorvg, nanosvg, cairosvg and Chromium
@@ -227,7 +229,7 @@ docs/               documentation site sources
 Issues and pull requests are welcome. Please fork, work on a feature branch, add a test when you change behaviour, and open a PR.
 
 ```bash
-cmake -B build -DNOVASVG_BUILD_TESTS=ON && cmake --build build -j
+cmake -B build -DNOVA_BUILD_TESTS=ON && cmake --build build -j
 ctest --test-dir build
 ```
 
@@ -237,7 +239,7 @@ ctest --test-dir build
 
 ## Acknowledgments
 
-NovaSVG grew out of the architecture of [lunasvg](https://github.com/sammycage/lunasvg), restructured as a flat, dependency-free, single-header library. The story is in [`docs/about.md`](docs/about.md).
+NovaSVG grew out of the architecture of [lunasvg](https://github.com/sammycage/lunasvg), restructured as a small library on top of libstb. The story is in [`docs/about.md`](docs/about.md).
 
 ---
 

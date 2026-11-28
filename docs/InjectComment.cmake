@@ -50,8 +50,8 @@ endif()
 
 # ── Read template and substitute ─────────────────────────────────────────────
 file(READ "${COMMENT_IN}" _COMMENT_TEMPLATE)
-string(REPLACE "NOVASVG_ASCII_ART"   "${_ASCII_FORMATTED}" _COMMENT "${_COMMENT_TEMPLATE}")
-string(REPLACE "NOVASVG_VERSION"     "${PROJECT_VERSION}"  _COMMENT "${_COMMENT}")
+string(REPLACE "NOVA_ASCII_ART"   "${_ASCII_FORMATTED}" _COMMENT "${_COMMENT_TEMPLATE}")
+string(REPLACE "NOVA_VERSION"     "${PROJECT_VERSION}"  _COMMENT "${_COMMENT}")
 
 # ── Collect all HTML files under OUTPUT_DIR ───────────────────────────────────
 file(GLOB_RECURSE _HTML_FILES "${OUTPUT_DIR}/*.html")

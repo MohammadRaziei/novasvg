@@ -1,13 +1,14 @@
 [build-system]
 requires = [
     "scikit-build-core>=1.0.0",
-    "nanobind>=2.0.0"
+    "nanobind>=2.0.0",
+    "polybind>=0.6.4",   # resolves the native dependencies below; installs the build-time ones into the build environment
 ]
 build-backend = "scikit_build_core.build"
 
 [project]
 name = "novasvg"
-dynamic = ["version"]
+dynamic = ["version", "dependencies"]
 description = "NovaSVG is a header-only SVG library with Python bindings"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -27,17 +28,15 @@ classifiers = [
     "Topic :: Multimedia :: Graphics",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-# No runtime dependencies. NumPy is only needed if you call Bitmap.numpy(), which raises a clear
-# ImportError when it is missing.
-dependencies = []
+# dependencies come from [tool.polybind.deps] (libstb, which the wheel loads as a shared library). NumPy is only needed
+# if you call Bitmap.numpy(), which raises a clear ImportError when it is missing.
 scripts.novasvg = "novasvg.__main__:main"
 scripts.novasvg-cli = "novasvg.native_cli:run"
 
 [project.optional-dependencies]
 numpy = ["numpy"]
 pillow = ["pillow"]
-stb = ["libstb"]
-test = ["pytest-xdist", "fonttools", "pillow", "libstb>=0.7.0,<0.9", "numpy>=1.20.0"]
+test = ["pytest-xdist", "fonttools", "pillow", "numpy>=1.20.0", "pypdfium2"]
 
 
 [project.urls]
@@ -45,24 +44,47 @@ Homepage = "https://github.com/mohammadraziei/novasvg"
 Repository = "https://github.com/mohammadraziei/novasvg"
 Documentation = "https://mohammadraziei.github.io/novasvg"
 
+[tool.scikit-build.sdist]
+include = ["polybind.lock"]   # the sdist builds against the tag that passed the tests
+
 [tool.scikit-build.cmake]
 args = ["-DCMAKE_BUILD_TYPE=Release", "--no-warn-unused-cli"]
 build-type = "Release"
 define.CMAKE_BUILD_PARALLEL_LEVEL = "8"
-define.NOVASVG_BUILD_PYTHON = "ON"
-define.NOVASVG_BUILD_TESTS = "OFF"
-define.NOVASVG_BUILD_DOCS = "OFF"
-define.NOVASVG_BUILD_EXAMPLES = "OFF"
+define.NOVA_BUILD_PYTHON = "ON"
+define.NOVA_BUILD_TESTS = "OFF"
+define.NOVA_BUILD_DOCS = "OFF"
+define.NOVA_BUILD_EXAMPLES = "OFF"
+define.NOVA_SANITIZE = "OFF"
 
+
+[[tool.dynamic-metadata]]
+provider = "polybind.metadata"
+
+[tool.polybind]
+schema = 1
+
+# libstb: images, zlib and fonts. A shared library: the wheel depends on the libstb wheel (runtime), and the build uses
+# the very same one (buildtime), so what novasvg is compiled against is what it loads. 0.x: a minor version may break the
+# API, hence the range. `fetch` builds it from git when there is no wheel (and for NOVA_SANITIZE builds).
+[tool.polybind.deps.libstb]
+description  = "images, zlib and fonts (shared library)"
+version-spec = "~=0.11.0"
+targets      = ["libstb::libstb"]
+runtime      = true
+buildtime    = true
+python.package = "libstb"
+fetch.url    = "https://github.com/mohammadraziei/libstb.git"
+fetch.build-options = { STB_BUILD_SHARED = "ON", STB_BUILD_TESTS = "OFF", STB_BUILD_PYTHON = "OFF", STB_BUILD_EXAMPLES = "OFF", STB_BUILD_DOCS = "OFF" }
 
 [[tool.dynamic-metadata]]
 field = "version"
 provider = "scikit_build_core.metadata.regex"
-input = "include/novasvg/novasvg.h"
+input = "include/nova/svg/svg.h"
 regex = '''(?sx)
-\#define \s+ NOVASVG_VERSION_MAJOR \s+ (?P<major>\d+) .*?
-\#define \s+ NOVASVG_VERSION_MINOR \s+ (?P<minor>\d+) .*?
-\#define \s+ NOVASVG_VERSION_PATCH \s+ (?P<patch>\d+) .*?
+\#define \s+ NOVA_VERSION_MAJOR \s+ (?P<major>\d+) .*?
+\#define \s+ NOVA_VERSION_MINOR \s+ (?P<minor>\d+) .*?
+\#define \s+ NOVA_VERSION_PATCH \s+ (?P<patch>\d+) .*?
 '''
 result = "{major}.{minor}.{patch}"
 
@@ -81,12 +103,19 @@ select = "cp312-*"
 inherit.environment = "append"
 environment = { SKBUILD_WHEEL_PY_API = "cp312" }
 
+[tool.cibuildwheel.linux]
+# libstb.so comes from the libstb wheel (the module's runpath points at it): auditwheel must neither look for it nor copy it
+# in, or the repair fails with "required library libstb.so could not be located".
+repair-wheel-command = "auditwheel repair --exclude libstb.so -w {dest_dir} {wheel}"
+
 [tool.cibuildwheel.macos]
 # novasvg_cli.cpp uses std::filesystem, unavailable in libc++ below 10.15.
 # Without this, cibuildwheel's default (10.13 for the universal2 x86_64
 # slice) tags the wheel as macosx_10_9/10_13 while the compiled binary
 # actually needs 10.15, and delocate-wheel refuses to repair the mismatch.
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
+# Same for libstb (delocate's --exclude is a substring match; not run on macOS yet).
+repair-wheel-command = "delocate-wheel --require-archs {delocate_archs} --exclude libstb -w {dest_dir} -v {wheel}"
 
 
 [tool.pytest.ini_options]

@@ -1,5 +1,5 @@
 <!--
-NOVASVG_ASCII_ART
+NOVA_ASCII_ART
 
   NovaSVG — a header-only C++17 SVG library
   with a command-line tool and Python bindings.
@@ -8,7 +8,7 @@ NOVASVG_ASCII_ART
   Email   : mohammadraziei1375@gmail.com
   GitHub  : https://github.com/MohammadRaziei/novasvg
   License : MIT
-  Version : NOVASVG_VERSION
+  Version : NOVA_VERSION
 
   Generated automatically by the NovaSVG build system.
   Do not edit manually.

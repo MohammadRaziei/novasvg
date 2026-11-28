@@ -7,7 +7,7 @@ project(NovaSVGBenchmarks LANGUAGES CXX)
 # driven directly through their own C/C++ API, each in one process
 # (native/*_native_bench.cpp): novasvg is pulled in by
 # cmake/FetchNovasvg.cmake (FetchContent; point it at a local tree with
-# -DFETCHCONTENT_SOURCE_DIR_NOVASVG_SRC=...);
+# -DFETCHCONTENT_SOURCE_DIR_NOVA_SRC=...);
 # lunasvg is a real CMake project (FetchContent); nanosvg is a single-header
 # C library compiled straight in; thorvg ships only a meson build, so
 # cmake/FetchThorvg.cmake drives meson+ninja itself; resvg is Rust, so
@@ -30,14 +30,14 @@ project(NovaSVGBenchmarks LANGUAGES CXX)
 #   index.html                                   report/generate_report.py, built from render_benchmark.json
 #
 # Tunables (cmake -D<name>=<value>):
-#   NOVASVG_BENCH_RUNS    renders per (engine, sample) cell, median reported (default 5)
-#   NOVASVG_BENCH_WIDTH / NOVASVG_BENCH_HEIGHT   shared output size in px (default 320x320)
-#   NOVASVG_BENCH_LUNASVG_GIT_TAG / _THORVG_GIT_TAG / _RESVG_GIT_TAG
+#   NOVA_BENCH_RUNS    renders per (engine, sample) cell, median reported (default 5)
+#   NOVA_BENCH_WIDTH / NOVA_BENCH_HEIGHT   shared output size in px (default 320x320)
+#   NOVA_BENCH_LUNASVG_GIT_TAG / _THORVG_GIT_TAG / _RESVG_GIT_TAG
 #     which checkout each fetched engine is built from (novasvg itself:
-#     NOVASVG_BENCH_GIT_URL / _GIT_TAG, see above; README.md has resvg's rust-version caveat)
+#     NOVA_BENCH_GIT_URL / _GIT_TAG, see above; README.md has resvg's rust-version caveat)
 # See README.md for the full rundown and what's still ponytail-scoped for later.
 
-set(NOVASVG_BENCH_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/outputs" CACHE PATH
+set(NOVA_BENCH_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/outputs" CACHE PATH
     "Where everything lands: renders/<engine>/ (PNGs + that engine's result.json), render_benchmark.json and index.html -- what is meant to be committed/shared")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")

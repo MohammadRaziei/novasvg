@@ -20,18 +20,32 @@ if(DEFINED SKBUILD)
     # Python >=3.12 gets one abi3 wheel via nanobind's STABLE_ABI (Limited API);
     # below that, STABLE_ABI isn't available so each version still builds its own wheel.
     if(Python_VERSION VERSION_GREATER_EQUAL "3.12")
-        set(NOVASVG_NANOBIND_ABI_OPTION STABLE_ABI)
+        set(NOVA_NANOBIND_ABI_OPTION STABLE_ABI)
     else()
-        set(NOVASVG_NANOBIND_ABI_OPTION "")
+        set(NOVA_NANOBIND_ABI_OPTION "")
     endif()
 
+    # NB_DOMAIN: nanobind modules of one process share their type registry unless they say otherwise, and libstb's
+    # module registers stb::matrix too ("type 'Matrix' was already registered" and the import aborts when both are
+    # loaded). A domain of its own keeps the two apart; novasvg and libstb meet in Python (novasvg.interop).
     nanobind_add_module(novasvg_py
-        ${NOVASVG_NANOBIND_ABI_OPTION}
+        NB_DOMAIN novasvg
+        ${NOVA_NANOBIND_ABI_OPTION}
         ${BINDING_SOURCE_FILE}
     )
 
     # Link against the novasvg library
     target_link_libraries(novasvg_py PRIVATE novasvg::novasvg)
+    # The binding reaches into the private SVG layer (foreignObject text measurement); see REFACTOR_CHECKLIST.md.
+    target_include_directories(novasvg_py PRIVATE "${PROJECT_SOURCE_DIR}/src/sources")
+
+    # libstb is a shared library and the wheel puts it in site-packages/libstb/sdk/lib (next to the `novasvg`
+    # package; libstb installs its SDK as a regular prefix, libstb/sdk/{include,lib}). Without this runpath `import novasvg` only works if something imported `libstb` first.
+    if(APPLE)
+        set_target_properties(novasvg_py PROPERTIES INSTALL_RPATH "@loader_path/../libstb/sdk/lib")
+    elseif(UNIX)
+        set_target_properties(novasvg_py PROPERTIES INSTALL_RPATH "$ORIGIN/../libstb/sdk/lib")
+    endif()
 
     # Generate Python stubs
     # Run stubgen from the directory that actually contains the built module.
@@ -47,17 +61,6 @@ if(DEFINED SKBUILD)
         COMMENT "Generating Python stubs (.pyi) for novasvg_py..."
     )
     
-    # Generate the single-header distribution for the Python package 
-    add_custom_command(
-        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/novasvg/novasvg.h"
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${dist_path}/novasvg
-        COMMAND quom ${CMAKE_CURRENT_SOURCE_DIR}/include/novasvg/novasvg.h 
-            "${CMAKE_CURRENT_BINARY_DIR}/novasvg/novasvg.h"
-            -I ${CMAKE_CURRENT_SOURCE_DIR}/include
-        MAIN_DEPENDENCY novasvg
-        COMMENT "Generating: ${CMAKE_CURRENT_BINARY_DIR}/novasvg/novasvg.h"
-    )
-
     # Install rules for the Python package
     # This installs the compiled module (.so or .pyd) and the python source files
 
@@ -79,6 +82,20 @@ if(DEFINED SKBUILD)
     )
 
     # Installation
+    # The CLI sits in novasvg/bin, so the libstb wheel is two levels up (the plain-install runpath, ../lib, does not exist here).
+    if(APPLE)
+        set_target_properties(novasvg_cli PROPERTIES INSTALL_RPATH "@loader_path/../../libstb/sdk/lib")
+    elseif(UNIX)
+        set_target_properties(novasvg_cli PROPERTIES INSTALL_RPATH "$ORIGIN/../../libstb/sdk/lib")
+    endif()
+    # SKBUILD=2 is the install tree of the CMake-driven build (cmake --build, ctest), not a wheel: there is no libstb wheel next
+    # to the package, so the module and the CLI also look in the directory of the libstb they were linked against.
+    if(SKBUILD EQUAL 2 AND UNIX)
+        foreach(_t novasvg_py novasvg_cli)
+            get_target_property(_rp ${_t} INSTALL_RPATH)
+            set_target_properties(${_t} PROPERTIES INSTALL_RPATH "${_rp};$<TARGET_FILE_DIR:libstb::libstb>")
+        endforeach()
+    endif()
     install(TARGETS novasvg_cli
         RUNTIME DESTINATION novasvg/bin
     )
@@ -116,33 +133,45 @@ endif()
 # CMAKE_BUILD_TYPE the user asked for; fall back to Release so multi-config
 # generators don't silently produce a Debug .pyd against a release Python.
 if(CMAKE_BUILD_TYPE)
-    set(NOVASVG_PYTHON_CONFIG ${CMAKE_BUILD_TYPE})
+    set(NOVA_PYTHON_CONFIG ${CMAKE_BUILD_TYPE})
 else()
-    set(NOVASVG_PYTHON_CONFIG Release)
+    set(NOVA_PYTHON_CONFIG Release)
 endif()
 
-set(NOVASVG_PYTHON_INSTALL_DIR ${CMAKE_BINARY_DIR}/python/install)
+set(NOVA_PYTHON_INSTALL_DIR ${CMAKE_BINARY_DIR}/python/install)
+
+# The nested build resolves libstb on its own; every setting that decides where it comes from has to reach it too,
+# or the module is built against another libstb than the rest.
+set(NOVA_PYTHON_FORWARDED_ARGS "")
+foreach(_v FETCHCONTENT_SOURCE_DIR_LIBSTB POLYBIND_DEPS_PROVIDER POLYBIND_DEPS_PROVIDER_LIBSTB POLYBIND_DEPS_PREFER_PROVIDER
+           POLYBIND_DEPS_PYTHON POLYBIND_DEPS_OFFLINE POLYBIND_DEPS_PIN)
+    if(DEFINED ${_v})
+        list(APPEND NOVA_PYTHON_FORWARDED_ARGS "-D${_v}=${${_v}}")
+    endif()
+endforeach()
+
 ExternalProject_Add(novasvg_build_python
     SOURCE_DIR ${CMAKE_SOURCE_DIR}
     BINARY_DIR ${CMAKE_BINARY_DIR}/python/build
-    INSTALL_DIR ${NOVASVG_PYTHON_INSTALL_DIR}
+    INSTALL_DIR ${NOVA_PYTHON_INSTALL_DIR}
     
     # Pass configuration arguments to CMake
     CMAKE_ARGS  
         --no-warn-unused-cli
-        -DNOVASVG_BUILD_PYTHON="ON"
+        -DNOVA_BUILD_PYTHON="ON"
         -DSKBUILD=2
         -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/python/install
         -Dnanobind_DIR=${NANOBIND_CMAKE_DIR}
-        -DCMAKE_BUILD_TYPE=${NOVASVG_PYTHON_CONFIG}
+        -DCMAKE_BUILD_TYPE=${NOVA_PYTHON_CONFIG}
         -DPython_EXECUTABLE=${Python_EXECUTABLE}
+        ${NOVA_PYTHON_FORWARDED_ARGS}
 
     # Multi-config generators (Visual Studio, Xcode) ignore CMAKE_BUILD_TYPE:
     # tell the nested build/install which configuration to use explicitly.
-    BUILD_COMMAND ${CMAKE_COMMAND} --build . --config ${NOVASVG_PYTHON_CONFIG} --parallel 8
+    BUILD_COMMAND ${CMAKE_COMMAND} --build . --config ${NOVA_PYTHON_CONFIG} --parallel 8
     
     # Ensure the build step runs the install command
-    INSTALL_COMMAND ${CMAKE_COMMAND} --build . --target install --config ${NOVASVG_PYTHON_CONFIG} --parallel 8
+    INSTALL_COMMAND ${CMAKE_COMMAND} --build . --target install --config ${NOVA_PYTHON_CONFIG} --parallel 8
     
     # Build this target always, useful for testing workflows
     BUILD_ALWAYS 1

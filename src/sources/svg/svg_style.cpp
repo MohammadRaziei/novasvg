@@ -1,0 +1,1136 @@
+// The CSS side of the svg reader (declared in svg_style.h).
+#include "svgelement.h"
+#include "svg_style.h"
+
+#include "utils/text.h"
+#include <cassert>
+#include <exception>
+#include <unordered_map>
+#include <vector>
+
+#include <stb/zlib.hpp>
+
+#include "vg/render.h"
+#include <stb/util.hpp> // try_base64_decode (data: URIs)
+#include <optional>
+
+
+namespace nova::svg {
+using namespace vg;
+
+bool rule_data::match(const svg_element* el) const
+{
+    return match_selector(m_selector, el);
+}
+
+inline constexpr bool equals(std::string_view value, std::string_view subvalue)
+{
+    return value.compare(subvalue) == 0;
+}
+
+inline constexpr bool contains(std::string_view value, std::string_view subvalue)
+{
+    return value.find(subvalue) != std::string_view::npos;
+}
+
+inline constexpr bool includes(std::string_view value, std::string_view subvalue)
+{
+    if(subvalue.empty() || subvalue.length() > value.length())
+        return false;
+    std::string_view input(value);
+    while(!input.empty()) {
+        skip_optional_spaces(input);
+        std::string_view start(input);
+        while(!input.empty() && !IS_WS(input.front()))
+            input.remove_prefix(1);
+        if(subvalue == start.substr(0, start.length() - input.length())) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+inline constexpr bool startswith(std::string_view value, std::string_view subvalue)
+{
+    if(subvalue.empty() || subvalue.length() > value.length())
+        return false;
+    return subvalue == value.substr(0, subvalue.size());
+}
+
+inline constexpr bool endswith(std::string_view value, std::string_view subvalue)
+{
+    if(subvalue.empty() || subvalue.length() > value.length())
+        return false;
+    return subvalue == value.substr(value.size() - subvalue.size(), subvalue.size());
+}
+
+inline constexpr bool dashequals(std::string_view value, std::string_view subvalue)
+{
+    if(startswith(value, subvalue))
+        return (value.length() == subvalue.length() || value.at(subvalue.length()) == '-');
+    return false;
+}
+
+static bool match_attribute_value(const attribute_selector& selector, std::string_view value)
+{
+    if(selector.match_type_ == attribute_selector::match_type::none)
+        return !value.empty();
+    if(selector.match_type_ == attribute_selector::match_type::equals)
+        return equals(value, selector.value);
+    if(selector.match_type_ == attribute_selector::match_type::contains)
+        return contains(value, selector.value);
+    if(selector.match_type_ == attribute_selector::match_type::includes)
+        return includes(value, selector.value);
+    if(selector.match_type_ == attribute_selector::match_type::starts_with)
+        return startswith(value, selector.value);
+    if(selector.match_type_ == attribute_selector::match_type::ends_with)
+        return endswith(value, selector.value);
+    if(selector.match_type_ == attribute_selector::match_type::dash_equals)
+        return dashequals(value, selector.value);
+    return false;
+}
+
+static bool match_attribute_selector(const attribute_selector& selector, const svg_element* el)
+{
+    if(selector.id == property_id::unknown) {
+        const auto* value = el->find_custom_attribute(selector.name);
+        if(value == nullptr)
+            return false;
+        if(selector.match_type_ == attribute_selector::match_type::none)
+            return true; // `[attr]` matches an attribute that is there, even an empty one
+        return match_attribute_value(selector, *value);
+    }
+
+    return match_attribute_value(selector, el->attribute(selector.id));
+}
+
+static bool match_simple_selector(const css_simple_selector& selector, const svg_element* el);
+
+static bool match_pseudo_class_selector(const pseudo_class_selector& selector, const svg_element* el)
+{
+    if(selector.type_ == pseudo_class_selector::type::empty)
+        return el->children().empty();
+    if(selector.type_ == pseudo_class_selector::type::root)
+        return el->is_root_element();
+    if(selector.type_ == pseudo_class_selector::type::is) {
+        for(const auto& sub_selector : selector.sub_selectors) {
+            for(const auto& simple_selector_ : sub_selector) {
+                if(!match_simple_selector(simple_selector_, el)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    if(selector.type_ == pseudo_class_selector::type::not_) {
+        for(const auto& sub_selector : selector.sub_selectors) {
+            for(const auto& simple_selector_ : sub_selector) {
+                if(match_simple_selector(simple_selector_, el)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    if(selector.type_ == pseudo_class_selector::type::first_child)
+        return !el->previous_element();
+    if(selector.type_ == pseudo_class_selector::type::last_child)
+        return !el->next_element();
+    if(selector.type_ == pseudo_class_selector::type::only_child)
+        return !(el->previous_element() || el->next_element());
+    if(selector.type_ == pseudo_class_selector::type::first_of_type) {
+        auto sibling = el->previous_element();
+        while(sibling) {
+            if(sibling->id() == el->id())
+                return false;
+            sibling = sibling->previous_element();
+        }
+
+        return true;
+    }
+
+    if(selector.type_ == pseudo_class_selector::type::last_of_type) {
+        auto sibling = el->next_element();
+        while(sibling) {
+            if(sibling->id() == el->id())
+                return false;
+            sibling = sibling->next_element();
+        }
+
+        return true;
+    }
+
+    if(selector.type_ == pseudo_class_selector::type::nth_child
+        || selector.type_ == pseudo_class_selector::type::nth_last_child
+        || selector.type_ == pseudo_class_selector::type::nth_of_type
+        || selector.type_ == pseudo_class_selector::type::nth_last_of_type) {
+        const bool from_end = selector.type_ == pseudo_class_selector::type::nth_last_child
+            || selector.type_ == pseudo_class_selector::type::nth_last_of_type;
+        const bool of_type = selector.type_ == pseudo_class_selector::type::nth_of_type
+            || selector.type_ == pseudo_class_selector::type::nth_last_of_type;
+        long position = 1;
+        auto sibling = from_end ? el->next_element() : el->previous_element();
+        while(sibling) {
+            if(!of_type || sibling->id() == el->id())
+                ++position;
+            sibling = from_end ? sibling->next_element() : sibling->previous_element();
+        }
+
+        // is there an n >= 0 with a*n + b == position ?
+        const long a = selector.nth_a;
+        const long diff = position - selector.nth_b;
+        if(a == 0)
+            return diff == 0;
+        return diff % a == 0 && diff / a >= 0;
+    }
+
+    return false;
+}
+
+static bool match_simple_selector(const css_simple_selector& selector, const svg_element* el)
+{
+    if(selector.id != element_id::star && selector.id != el->id())
+        return false;
+    for(const auto& sel : selector.attribute_selectors) {
+        if(!match_attribute_selector(sel, el)) {
+            return false;
+        }
+    }
+
+    for(const auto& sel : selector.pseudo_class_selectors) {
+        if(!match_pseudo_class_selector(sel, el)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool match_selector(const css_selector& selector, const svg_element* el)
+{
+    if(selector.empty())
+        return false;
+    auto it = selector.rbegin();
+    auto end = selector.rend();
+    if(!match_simple_selector(*it, el)) {
+        return false;
+    }
+
+    auto combinator_ = it->combinator_;
+    ++it;
+
+    while(it != end) {
+        switch(combinator_) {
+        case css_simple_selector::combinator::child:
+        case css_simple_selector::combinator::descendant:
+            el = el->parent_element();
+            break;
+        case css_simple_selector::combinator::direct_adjacent:
+        case css_simple_selector::combinator::in_direct_adjacent:
+            el = el->previous_element();
+            break;
+        case css_simple_selector::combinator::none:
+            assert(false);
+        }
+
+        if(el == nullptr)
+            return false;
+        if(match_simple_selector(*it, el)) {
+            combinator_ = it->combinator_;
+            ++it;
+        } else if(combinator_ != css_simple_selector::combinator::descendant
+            && combinator_ != css_simple_selector::combinator::in_direct_adjacent) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+inline bool read_css_identifier(std::string_view& input, std::string& output)
+{
+    if(input.empty() || !IS_CSS_STARTNAMECHAR(input.front()))
+        return false;
+    output.clear();
+    do {
+        output.push_back(input.front());
+        input.remove_prefix(1);
+    } while(!input.empty() && IS_CSS_NAMECHAR(input.front()));
+    return true;
+}
+
+static bool parse_tag_selector(std::string_view& input, css_simple_selector& simple_selector_)
+{
+    std::string name;
+    if(skip_delimiter(input, '*'))
+        simple_selector_.id = element_id::star;
+    else if(read_css_identifier(input, name)) {
+        simple_selector_.id = elementid(name);
+        for(auto& ch : name)
+            ch = utils::to_lower(ch);
+        simple_selector_.tag = name;
+    } else {
+        return false;
+    }
+    return true;
+}
+
+static bool parse_id_selector(std::string_view& input, css_simple_selector& simple_selector_)
+{
+    attribute_selector a;
+    a.id = property_id::id;
+    a.match_type_ = attribute_selector::match_type::equals;
+    if(!read_css_identifier(input, a.value))
+        return false;
+    simple_selector_.attribute_selectors.push_back(std::move(a));
+    return true;
+}
+
+static bool parse_class_selector(std::string_view& input, css_simple_selector& simple_selector_)
+{
+    attribute_selector a;
+    a.id = property_id::class_;
+    a.match_type_ = attribute_selector::match_type::includes;
+    if(!read_css_identifier(input, a.value))
+        return false;
+    simple_selector_.attribute_selectors.push_back(std::move(a));
+    return true;
+}
+
+static bool parse_attribute_selector(std::string_view& input, css_simple_selector& simple_selector_)
+{
+    std::string name;
+    skip_optional_spaces(input);
+    if(!read_css_identifier(input, name))
+        return false;
+    attribute_selector a;
+    a.id = propertyid(name);
+    a.name = name;
+    a.match_type_ = attribute_selector::match_type::none;
+    if(skip_delimiter(input, '='))
+        a.match_type_ = attribute_selector::match_type::equals;
+    else if(skip_string(input, "*="))
+        a.match_type_ = attribute_selector::match_type::contains;
+    else if(skip_string(input, "~="))
+        a.match_type_ = attribute_selector::match_type::includes;
+    else if(skip_string(input, "^="))
+        a.match_type_ = attribute_selector::match_type::starts_with;
+    else if(skip_string(input, "$="))
+        a.match_type_ = attribute_selector::match_type::ends_with;
+    else if(skip_string(input, "|="))
+        a.match_type_ = attribute_selector::match_type::dash_equals;
+    if(a.match_type_ != attribute_selector::match_type::none) {
+        skip_optional_spaces(input);
+        if(!read_css_identifier(input, a.value)) {
+            if(input.empty() || !(input.front() == '\"' || input.front() == '\''))
+                return false;
+            auto quote = input.front();
+            input.remove_prefix(1);
+            auto n = input.find(quote);
+            if(n == std::string_view::npos)
+                return false;
+            a.value.assign(input.substr(0, n));
+            input.remove_prefix(n + 1);
+        }
+    }
+
+    skip_optional_spaces(input);
+    if(!skip_delimiter(input, ']'))
+        return false;
+    simple_selector_.attribute_selectors.push_back(std::move(a));
+    return true;
+}
+
+static bool parse_selectors(std::string_view& input, selector_list& selectors);
+
+// Parses the `An+B` micro-syntax of :nth-child() & co: `odd`, `even`, `3`, `2n`, `-n+3`, `2n + 1`...
+static bool parse_nth_formula(std::string_view text, int& a, int& b)
+{
+    std::string f;
+    for(char ch : text) {
+        if(!IS_WS(ch))
+            f.push_back(utils::to_lower(ch));
+    }
+
+    if(f.empty())
+        return false;
+    if(f == "odd") {
+        a = 2;
+        b = 1;
+        return true;
+    }
+
+    if(f == "even") {
+        a = 2;
+        b = 0;
+        return true;
+    }
+
+    auto parse_int = [](const std::string& t, int& out) {
+        size_t i = 0;
+        bool negative = false;
+        if(i < t.size() && (t[i] == '+' || t[i] == '-'))
+            negative = t[i++] == '-';
+        if(i >= t.size() || t.size() - i > 6)
+            return false;
+        int v = 0;
+        for(; i < t.size(); ++i) {
+            if(t[i] < '0' || t[i] > '9')
+                return false;
+            v = v * 10 + (t[i] - '0');
+        }
+
+        out = negative ? -v : v;
+        return true;
+    };
+
+    auto n = f.find('n');
+    if(n == std::string::npos) {
+        a = 0;
+        return parse_int(f, b);
+    }
+
+    auto a_part = f.substr(0, n);
+    auto b_part = f.substr(n + 1);
+    if(a_part.empty() || a_part == "+")
+        a = 1;
+    else if(a_part == "-")
+        a = -1;
+    else if(!parse_int(a_part, a))
+        return false;
+    if(b_part.empty()) {
+        b = 0;
+        return true;
+    }
+
+    if(b_part[0] != '+' && b_part[0] != '-')
+        return false;
+    return parse_int(b_part, b);
+}
+
+static bool parse_pseudo_class_selector(std::string_view& input, css_simple_selector& simple_selector_)
+{
+    std::string name;
+    if(!read_css_identifier(input, name))
+        return false;
+    pseudo_class_selector selector;
+    if(name.compare("empty") == 0)
+        selector.type_ = pseudo_class_selector::type::empty;
+    else if(name.compare("root") == 0)
+        selector.type_ = pseudo_class_selector::type::root;
+    else if(name.compare("not") == 0)
+        selector.type_ = pseudo_class_selector::type::not_;
+    else if(name.compare("first-child") == 0)
+        selector.type_ = pseudo_class_selector::type::first_child;
+    else if(name.compare("last-child") == 0)
+        selector.type_ = pseudo_class_selector::type::last_child;
+    else if(name.compare("only-child") == 0)
+        selector.type_ = pseudo_class_selector::type::only_child;
+    else if(name.compare("first-of-type") == 0)
+        selector.type_ = pseudo_class_selector::type::first_of_type;
+    else if(name.compare("last-of-type") == 0)
+        selector.type_ = pseudo_class_selector::type::last_of_type;
+    else if(name.compare("only-of-type") == 0)
+        selector.type_ = pseudo_class_selector::type::only_of_type;
+    else if(name.compare("nth-child") == 0)
+        selector.type_ = pseudo_class_selector::type::nth_child;
+    else if(name.compare("nth-last-child") == 0)
+        selector.type_ = pseudo_class_selector::type::nth_last_child;
+    else if(name.compare("nth-of-type") == 0)
+        selector.type_ = pseudo_class_selector::type::nth_of_type;
+    else if(name.compare("nth-last-of-type") == 0)
+        selector.type_ = pseudo_class_selector::type::nth_last_of_type;
+    if(selector.type_ == pseudo_class_selector::type::nth_child
+        || selector.type_ == pseudo_class_selector::type::nth_last_child
+        || selector.type_ == pseudo_class_selector::type::nth_of_type
+        || selector.type_ == pseudo_class_selector::type::nth_last_of_type) {
+        skip_optional_spaces(input);
+        if(!skip_delimiter(input, '('))
+            return false;
+        auto close = input.find(')');
+        if(close == std::string_view::npos)
+            return false;
+        if(!parse_nth_formula(input.substr(0, close), selector.nth_a, selector.nth_b))
+            return false;
+        input.remove_prefix(close + 1);
+    }
+
+    if(selector.type_ == pseudo_class_selector::type::is || selector.type_ == pseudo_class_selector::type::not_) {
+        skip_optional_spaces(input);
+        if(!skip_delimiter(input, '('))
+            return false;
+        skip_optional_spaces(input);
+        if(!parse_selectors(input, selector.sub_selectors))
+            return false;
+        skip_optional_spaces(input);
+        if(!skip_delimiter(input, ')')) {
+            return false;
+        }
+    }
+
+    simple_selector_.pseudo_class_selectors.push_back(std::move(selector));
+    return true;
+}
+
+static bool parse_simple_selector(std::string_view& input, css_simple_selector& simple_selector_, bool& failed)
+{
+    auto consumed = parse_tag_selector(input, simple_selector_);
+    do {
+        if(skip_delimiter(input, '#'))
+            failed = !parse_id_selector(input, simple_selector_);
+        else if(skip_delimiter(input, '.'))
+            failed = !parse_class_selector(input, simple_selector_);
+        else if(skip_delimiter(input, '['))
+            failed = !parse_attribute_selector(input, simple_selector_);
+        else if(skip_delimiter(input, ':'))
+            failed = !parse_pseudo_class_selector(input, simple_selector_);
+        else
+            break;
+        consumed = true;
+    } while(!failed);
+    return consumed && !failed;
+}
+
+static bool parse_combinator(std::string_view& input, css_simple_selector::combinator& combinator_)
+{
+    combinator_ = css_simple_selector::combinator::none;
+    while(!input.empty() && IS_WS(input.front())) {
+        combinator_ = css_simple_selector::combinator::descendant;
+        input.remove_prefix(1);
+    }
+
+    if(skip_delimiter_and_optional_spaces(input, '>'))
+        combinator_ = css_simple_selector::combinator::child;
+    else if(skip_delimiter_and_optional_spaces(input, '+'))
+        combinator_ = css_simple_selector::combinator::direct_adjacent;
+    else if(skip_delimiter_and_optional_spaces(input, '~'))
+        combinator_ = css_simple_selector::combinator::in_direct_adjacent;
+    return combinator_ != css_simple_selector::combinator::none;
+}
+
+static bool parse_selector(std::string_view& input, css_selector& selector)
+{
+    auto combinator_ = css_simple_selector::combinator::none;
+    do {
+        bool failed = false;
+        css_simple_selector simple_selector_(combinator_);
+        if(!parse_simple_selector(input, simple_selector_, failed))
+            return !failed && (combinator_ == css_simple_selector::combinator::descendant);
+        selector.push_back(std::move(simple_selector_));
+    } while(parse_combinator(input, combinator_));
+    return true;
+}
+
+static bool parse_selectors(std::string_view& input, selector_list& selectors)
+{
+    do {
+        css_selector selector;
+        if(!parse_selector(input, selector))
+            return false;
+        selectors.push_back(std::move(selector));
+    } while(skip_delimiter_and_optional_spaces(input, ','));
+    return true;
+}
+
+bool is_custom_property_name(std::string_view name)
+{
+    return name.size() > 2 && name[0] == '-' && name[1] == '-';
+}
+
+static bool parse_declarations(std::string_view& input, declaration_list& declarations)
+{
+    if(!skip_delimiter(input, '{'))
+        return false;
+    skip_optional_spaces(input);
+    do {
+        std::string name;
+        if(!read_css_identifier(input, name))
+            return false;
+        skip_optional_spaces(input);
+        if(!skip_delimiter(input, ':'))
+            return false;
+        skip_optional_spaces(input);
+        std::string_view value(input);
+        while(!input.empty() && !(input.front() == '!' || input.front() == ';' || input.front() == '}'))
+            input.remove_prefix(1);
+        value.remove_suffix(input.length());
+        strip_trailing_spaces(value);
+
+        declaration declaration_;
+        declaration_.specificity = specificity::stylesheet;
+        declaration_.id = propertyid(name);
+        declaration_.value.assign(value);
+        const bool custom = is_custom_property_name(name);
+        if(!custom) {
+            for(auto& ch : name)
+                ch = utils::to_lower(ch);
+        }
+        declaration_.name = name;
+        if(skip_delimiter(input, '!')) {
+            skip_optional_spaces(input);
+            if(!skip_string(input, "important"))
+                return false;
+            declaration_.specificity = specificity::stylesheet_important;
+        }
+
+        // `background-color` is no svg property, but the HTML inside a foreignObject paints it; a custom
+        // property (`--x`) is none either, but `var(--x)` in the values of the elements below reads it
+        if(declaration_.id != property_id::unknown || custom || declaration_.name == "background-color")
+            declarations.push_back(std::move(declaration_));
+        skip_optional_spaces_or_delimiter(input, ';');
+    } while(!input.empty() && input.front() != '}');
+    return skip_delimiter(input, '}');
+}
+
+static bool parse_rule(std::string_view& input, rule& rule_)
+{
+    if(!parse_selectors(input, rule_.selectors))
+        return false;
+    return parse_declarations(input, rule_.declarations);
+}
+
+// Splits a `src:` value on its *top-level* commas (each a
+// `url(...)` optionally followed by `format(...)`) -- paren-depth-aware
+// so a comma inside url()/format() (none occur in valid CSS, but
+// malformed input shouldn't split incorrectly) doesn't split the list.
+static std::vector<std::string_view> split_top_level_commas(std::string_view value)
+{
+    std::vector<std::string_view> parts;
+    size_t start = 0;
+    int depth = 0;
+    for(size_t i = 0; i < value.size(); ++i) {
+        auto ch = value[i];
+        if(ch == '(')
+            ++depth;
+        else if(ch == ')') {
+            if(depth > 0)
+                --depth;
+        } else if(ch == ',' && depth == 0) {
+            parts.push_back(value.substr(start, i - start));
+            start = i + 1;
+        }
+    }
+    parts.push_back(value.substr(start));
+    return parts;
+}
+
+static std::string_view strip_quotes(std::string_view value)
+{
+    strip_leading_and_trailing_spaces(value);
+    if(!value.empty() && (value.front() == '\'' || value.front() == '"')) {
+        auto quote = value.front();
+        value.remove_prefix(1);
+        if(!value.empty() && value.back() == quote)
+            value.remove_suffix(1);
+    }
+    return value;
+}
+
+// Decodes a base64 payload holding TrueType/OpenType (SFNT) or WOFF 1.0 data into a
+// font_face; a null face when the payload is malformed or is not a font libstb reads
+// (WOFF2 is not). Shared by `@font-face` data URIs and the embedded
+// fallback font.
+static font_face font_face_from_base64(std::string_view payload)
+{
+    std::optional<std::vector<uint8_t>> decoded = stb::try_base64_decode(payload);
+    if(!decoded)
+        return font_face();
+    return font_face(std::move(*decoded));
+}
+
+// Loads an `@font-face` rule's embedded font (a `src: url(data:...)`
+// entry) and registers it, matching what the CSS itself declares:
+// `font-family`, `font-weight` (one weight or a range, `300 800`) and
+// `font-style` (italic or oblique). Only *embedded* fonts
+// (data: URIs) are in scope -- a `url("external.ttf")` reference isn't
+// something we can resolve without filesystem/network context the svg
+// doesn't provide, and is silently skipped, same as before this existed.
+//
+// TrueType/OpenType (SFNT) and WOFF 1.0 data are understood (libstb's
+// font loader reads both); WOFF2 is not. Rather than inspect each src
+// alternative's `format()` hint to guess which might work, this just tries
+// loading each in turn and keeps the first one that actually parses as a
+// font, exactly matching how real `@font-face` `src` fallback lists are
+// meant to be read (most-preferred format first, older formats after).
+static void parse_font_face_rule(std::string_view block)
+{
+    auto family_value = find_raw_declaration_value(block, "font-family");
+    if(!family_value)
+        return;
+    auto family = strip_quotes(*family_value);
+    if(family.empty())
+        return;
+
+    auto src_value = find_raw_declaration_value(block, "src");
+    if(!src_value)
+        return;
+
+    // The src value is where the megabytes are (the font itself, base64). font-weight/font-style are never
+    // inside it, so look for them in what lies before and after it.
+    const auto src_offset = size_t(src_value->data() - block.data());
+    const auto before = block.substr(0, src_offset);
+    const auto after = block.substr(src_offset + src_value->size());
+    auto find_outside_src = [&](std::string_view property) {
+        auto value = find_raw_declaration_value(before, property);
+        return value ? value : find_raw_declaration_value(after, property);
+    };
+
+    // font-weight descriptor: `normal`, `bold`, one number or a range of two (`300 800`); absent means none declared.
+    std::optional<std::pair<int, int>> declared_weight;
+    if(auto weight_value = find_outside_src("font-weight")) {
+        std::string_view rest = *weight_value;
+        strip_leading_and_trailing_spaces(rest);
+        const auto space = rest.find_first_of(" \t\r\n");
+        std::string first_text(rest.substr(0, space)), second_text;
+        if(space != std::string_view::npos) {
+            std::string_view tail = rest.substr(space);
+            strip_leading_and_trailing_spaces(tail);
+            second_text = std::string(tail);
+        }
+        for(auto& ch : first_text)
+            ch = utils::to_lower(ch);
+        if(second_text.find_first_of(" \t\r\n") == std::string::npos) {  // at most two values
+            const int first = parse_font_weight(first_text, font_weight_normal);
+            const int second = second_text.empty() ? first : parse_font_weight(second_text, font_weight_normal);
+            declared_weight = std::make_pair(std::min(first, second), std::max(first, second));
+        }
+    }
+
+    auto italic = false;
+    if(auto style_value = find_outside_src("font-style")) {
+        std::string style(*style_value);
+        for(auto& ch : style)
+            ch = utils::to_lower(ch);
+        italic = style.find("italic") != std::string::npos || style.find("oblique") != std::string::npos;
+    }
+
+    for(auto alternative : split_top_level_commas(*src_value)) {
+        auto url_pos = alternative.find("url(");
+        if(url_pos == std::string_view::npos)
+            continue;
+        auto content_start = url_pos + 4;
+        auto close_paren = alternative.find(')', content_start);
+        if(close_paren == std::string_view::npos)
+            continue;
+        auto url = strip_quotes(alternative.substr(content_start, close_paren - content_start));
+
+        if(url.compare(0, 5, "data:") != 0)
+            continue; // not embedded -- out of scope, see comment above
+        auto base64_pos = url.find("base64,");
+        if(base64_pos == std::string_view::npos)
+            continue;
+        auto payload = url.substr(base64_pos + 7);
+
+        auto face = font_face_from_base64(payload);
+        if(face.is_null())
+            continue; // malformed, or a format libstb does not read (WOFF2) -- try the next alternative
+
+        if(declared_weight)
+            global_font_face_cache()->add_font_face(std::string(family), declared_weight->first, declared_weight->second, italic, face);
+        else
+            global_font_face_cache()->add_font_face(std::string(family), false, italic, face);
+        return; // first successfully-loaded alternative wins
+    }
+}
+
+rule_data_list parse_style_sheet(std::string_view input)
+{
+    rule_data_list rules;
+    while(!input.empty()) {
+        skip_optional_spaces(input);
+        if(skip_delimiter(input, '@')) {
+            std::string at_keyword;
+            read_css_identifier(input, at_keyword);
+            for(auto& ch : at_keyword)
+                ch = utils::to_lower(ch);
+
+            if(at_keyword == "font-face") {
+                skip_optional_spaces(input);
+                if(skip_delimiter(input, '{')) {
+                    int depth = 1;
+                    size_t block_length = 0;
+                    auto block = input;
+                    // An embedded font makes this block hundreds of kilobytes, with no brace inside it but the
+                    // last: look for that one with memchr, and only walk character by character if a `{`
+                    // shows up before it.
+                    if(auto* close = static_cast<const char*>(std::memchr(input.data(), '}', input.size()))) {
+                        const size_t n = size_t(close - input.data());
+                        if(std::memchr(input.data(), '{', n) == nullptr) {
+                            block_length = n + 1;
+                            depth = 0;
+                        }
+                    }
+
+                    while(block_length < input.size() && depth > 0) {
+                        auto ch = input[block_length];
+                        if(ch == '{') ++depth;
+                        else if(ch == '}') --depth;
+                        ++block_length;
+                    }
+                    parse_font_face_rule(block.substr(0, depth == 0 ? block_length - 1 : block_length));
+                    input.remove_prefix(block_length);
+                }
+                continue;
+            }
+
+            int depth = 0;
+            while(!input.empty()) {
+                auto ch = input.front();
+                input.remove_prefix(1);
+                if(ch == ';' && depth == 0)
+                    break;
+                if(ch == '{') ++depth;
+                else if(ch == '}' && depth > 0) {
+                    if(depth == 1)
+                        break;
+                    --depth;
+                }
+            }
+
+            continue;
+        }
+
+        rule rule_;
+        const auto rule_start = input;
+        if(!parse_rule(input, rule_)) {
+            // Invalid or unsupported rule: drop only this rule (CSS error recovery) and carry on with the
+            // next one, instead of discarding the rest of the stylesheet.
+            input = rule_start;
+            int depth = 0;
+            bool in_block = false;
+            while(!input.empty()) {
+                auto ch = input.front();
+                input.remove_prefix(1);
+                if(ch == '{') {
+                    ++depth;
+                    in_block = true;
+                } else if(ch == '}' && depth > 0) {
+                    if(--depth == 0)
+                        break;
+                } else if(ch == ';' && !in_block) {
+                    break;
+                }
+            }
+
+            continue;
+        }
+
+        for(const auto& selector : rule_.selectors) {
+            size_t specificity = 0;
+            for(const auto& simple_selector_ : selector) {
+                specificity += (simple_selector_.id == element_id::star) ? 0x0 : 0x1;
+                for(const auto& attribute_selector_ : simple_selector_.attribute_selectors) {
+                    specificity += (attribute_selector_.id == property_id::id) ? 0x10000 : 0x100;
+                }
+                for(const auto& pseudo_class_selector_ : simple_selector_.pseudo_class_selectors) {
+                    specificity += 0x100;
+                }
+            }
+
+            rules.emplace_back(selector, rule_.declarations, specificity, rules.size());
+        }
+    }
+
+    return rules;
+}
+
+selector_list parse_query_selectors(std::string_view input)
+{
+    selector_list selectors;
+    strip_leading_and_trailing_spaces(input);
+    if(!parse_selectors(input, selectors)
+        || !input.empty()) {
+        return selector_list();
+    }
+
+    return selectors;
+}
+
+// Removes a trailing `!important` (any case, any spacing around the bang) from a declaration value and
+// reports whether there was one. `fill:#f9f !important` is the colour #f9f, flagged important -- it is
+// not a colour called "#f9f !important".
+
+void parse_inline_style(std::string_view input, svg_element* el)
+{
+    std::string name;
+    skip_optional_spaces(input);
+    while(read_css_identifier(input, name)) {
+        skip_optional_spaces(input);
+        if(!skip_delimiter(input, ':'))
+            return;
+        std::string value;
+        while(!input.empty() && input.front() != ';') {
+            value.push_back(input.front());
+            input.remove_prefix(1);
+        }
+
+        if(is_custom_property_name(name)) {
+            const bool important = strip_important_flag(value);
+            el->set_custom_property(important ? specificity::inline_important : specificity::inline_style, name, value);
+            skip_optional_spaces_or_delimiter(input, ';');
+            continue;
+        }
+
+        auto id = csspropertyid(name);
+        if(id != property_id::unknown) {
+            const bool important = strip_important_flag(value);
+            el->set_attribute(important ? specificity::inline_important : specificity::inline_style, id, value);
+        }
+        skip_optional_spaces_or_delimiter(input, ';');
+    }
+}
+
+void remove_style_comments(std::string& value)
+{
+    auto start = value.find("/*");
+    while(start != std::string::npos) {
+        auto end = value.find("*/", start + 2);
+        value.erase(start, end - start + 2);
+        start = value.find("/*");
+    }
+}
+
+bool decode_text(std::string_view input, std::string& output)
+{
+    output.clear();
+    while(!input.empty()) {
+        // Copy the plain text up to the next `&` in one go; a style sheet with an embedded font is hundreds
+        // of kilobytes with no entity in it at all.
+        auto amp = input.find('&');
+        if(amp == std::string_view::npos) {
+            output.append(input.data(), input.size());
+            return true;
+        }
+
+        output.append(input.data(), amp);
+        input.remove_prefix(amp + 1);
+
+        if(skip_delimiter(input, '#')) {
+            int base = 10;
+            if(skip_delimiter(input, 'x'))
+                base = 16;
+            unsigned int cp;
+            if(!parse_integer(input, cp, base))
+                return false;
+            char c[5] = {0, 0, 0, 0, 0};
+            if(cp < 0x80) {
+                c[1] = 0;
+                c[0] = char(cp);
+            } else if(cp < 0x800) {
+                c[2] = 0;
+                c[1] = char((cp & 0x3F) | 0x80);
+                cp >>= 6;
+                c[0] = char(cp | 0xC0);
+            } else if(cp < 0x10000) {
+                c[3] = 0;
+                c[2] = char((cp & 0x3F) | 0x80);
+                cp >>= 6;
+                c[1] = char((cp & 0x3F) | 0x80);
+                cp >>= 6;
+                c[0] = char(cp | 0xE0);
+            } else if(cp < 0x200000) {
+                c[4] = 0;
+                c[3] = char((cp & 0x3F) | 0x80);
+                cp >>= 6;
+                c[2] = char((cp & 0x3F) | 0x80);
+                cp >>= 6;
+                c[1] = char((cp & 0x3F) | 0x80);
+                cp >>= 6;
+                c[0] = char(cp | 0xF0);
+            }
+
+            output.append(c);
+        } else {
+            if(skip_string(input, "amp")) {
+                output.push_back('&');
+            } else if(skip_string(input, "lt")) {
+                output.push_back('<');
+            } else if(skip_string(input, "gt")) {
+                output.push_back('>');
+            } else if(skip_string(input, "quot")) {
+                output.push_back('\"');
+            } else if(skip_string(input, "apos")) {
+                output.push_back('\'');
+            } else {
+                return false;
+            }
+        }
+
+        if(!skip_delimiter(input, ';')) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+constexpr bool IS_STARTNAMECHAR(int c) { return IS_ALPHA(c) ||  c == '_' || c == ':'; }
+constexpr bool IS_NAMECHAR(int c) { return IS_STARTNAMECHAR(c) || IS_NUM(c) || c == '-' || c == '.'; }
+
+bool read_identifier(std::string_view& input, std::string& output)
+{
+    if(input.empty() || !IS_STARTNAMECHAR(input.front()))
+        return false;
+    output.clear();
+    do {
+        output.push_back(input.front());
+        input.remove_prefix(1);
+    } while(!input.empty() && IS_NAMECHAR(input.front()));
+    return true;
+}
+
+
+// ---------------------------------------------------------------------------------------------------
+// The HTML inside a <foreignObject>, styled by the dom's CSS.
+//
+// ForeignObjectSimple paints HTML as plain text in one colour on one optional box, so all the CSS has to
+// answer is: which `color` does the text end up with, and which `background-color` box sits behind it.
+// A browser answers that with the cascade, and the part that matters in practice (mermaid) is a selector
+// that reaches *through* the foreignObject into the svg around it: `.section-0 span{color:black}` styles a
+// <span> because the <g class="section-0"> it lives in matches. So the HTML tags are modelled as nodes
+// that have a parent chain -- first the HTML ancestors, then the foreignObject, then the svg elements
+// above it -- and the very same selector matcher the svg elements use walks that chain.
+// ---------------------------------------------------------------------------------------------------
+
+
+static bool match_html_simple_selector(const css_simple_selector& selector, const html_node& nd)
+{
+    if(selector.id != element_id::star && (selector.tag.empty() || selector.tag != nd.tag))
+        return false;
+    if(!selector.pseudo_class_selectors.empty())
+        return false; // :first-child, :not(...) & co are not modelled for HTML
+    for(const auto& attribute : selector.attribute_selectors) {
+        std::string_view value;
+        if(attribute.id == property_id::class_)
+            value = nd.class_name;
+        else if(attribute.id == property_id::id)
+            value = nd.id;
+        else if(attribute.id == property_id::style)
+            value = nd.style;
+        if(!match_attribute_value(attribute, value))
+            return false;
+    }
+
+    return true;
+}
+
+// matchSelector() for an HTML nd: the rightmost compound must match the nd, the ones before it its
+// ancestors -- HTML elements first, then `owner` (the foreignObject) and the svg elements above it.
+// Sibling combinators (+ ~) are not modelled for HTML, so a selector using one never matches.
+bool match_html_selector(const css_selector& selector, const std::vector<html_node>& nodes, int index, const svg_element* owner)
+{
+    if(selector.empty())
+        return false;
+    auto parent_of = [&](const style_node& nd) {
+        if(nd.html) {
+            if(nd.html->parent >= 0)
+                return style_node{&nodes[nd.html->parent], nullptr};
+            return style_node{nullptr, owner};
+        }
+
+        return style_node{nullptr, nd.svg->parent_element()};
+    };
+    auto matches = [](const css_simple_selector& simple, const style_node& nd) {
+        return nd.html ? match_html_simple_selector(simple, *nd.html) : match_simple_selector(simple, nd.svg);
+    };
+
+    style_node nd{&nodes[index], nullptr};
+    auto it = selector.rbegin();
+    auto end = selector.rend();
+    if(!matches(*it, nd))
+        return false;
+    auto combinator_ = it->combinator_;
+    ++it;
+    while(it != end) {
+        if(combinator_ != css_simple_selector::combinator::child && combinator_ != css_simple_selector::combinator::descendant)
+            return false;
+        nd = parent_of(nd);
+        if(!nd)
+            return false;
+        if(matches(*it, nd)) {
+            combinator_ = it->combinator_;
+            ++it;
+        } else if(combinator_ != css_simple_selector::combinator::descendant) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// One RuleDataList out of several stylesheets applied one after another, each parsed on its own (a rule
+// the parser can't read ends only its own sheet) and numbered on from the sheets before it, so a later
+// sheet wins a tie. Sorted the way apply_style_sheet() sorts.
+rule_data_list parse_style_sheets(const std::vector<std::string>& sheets)
+{
+    rule_data_list all;
+    for(const auto& sheet : sheets) {
+        for(auto& rule : parse_style_sheet(sheet))
+            all.emplace_back(rule.selector(), rule.declarations(), rule.specificity(), all.size());
+    }
+
+    std::sort(all.begin(), all.end());
+    return all;
+}
+
+rule_index::rule_index(const rule_data_list& rules) : m_by_tag(256)
+{
+    for(size_t i = 0; i < rules.size(); ++i) {
+        const auto& selector = rules[i].selector();
+        if(selector.empty())
+            continue; // can never match
+        const auto& last = selector.back();
+        if(last.id != element_id::star) {
+            m_by_tag[size_t(last.id)].push_back(uint32_t(i));
+            continue;
+        }
+
+        const std::string* class_name = nullptr;
+        for(const auto& attribute : last.attribute_selectors) {
+            if(attribute.id == property_id::class_ && attribute.match_type_ == attribute_selector::match_type::includes
+                && !attribute.value.empty()) {
+                class_name = &attribute.value;
+                break;
+            }
+        }
+
+        if(class_name)
+            m_by_class[*class_name].push_back(uint32_t(i));
+        else
+            m_other.push_back(uint32_t(i));
+    }
+}
+
+void rule_index::candidates(const svg_element* el, std::vector<uint32_t>& out) const
+{
+    out.clear();
+    const auto& tagged = m_by_tag[size_t(el->id())];
+    out.insert(out.end(), tagged.begin(), tagged.end());
+    out.insert(out.end(), m_other.begin(), m_other.end());
+    if(!m_by_class.empty()) {
+        std::string_view classes(el->attribute(property_id::class_));
+        while(!classes.empty()) {
+            skip_optional_spaces(classes);
+            size_t n = 0;
+            while(n < classes.size() && !IS_WS(classes[n]))
+                ++n;
+            if(n > 0) {
+                auto it = m_by_class.find(std::string(classes.substr(0, n)));
+                if(it != m_by_class.end())
+                    out.insert(out.end(), it->second.begin(), it->second.end());
+            }
+            classes.remove_prefix(n);
+        }
+    }
+
+    std::sort(out.begin(), out.end());
+    out.erase(std::unique(out.begin(), out.end()), out.end());
+}
+
+} // namespace nova::svg

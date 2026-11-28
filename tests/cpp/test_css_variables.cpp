@@ -3,7 +3,7 @@
 #include <array>
 #include <string>
 
-#include <novasvg/novasvg.h>
+#include <nova/svg/svg.h>
 
 // CSS custom properties (`--x: value`) and `var(--x, fallback)`.
 //
@@ -14,11 +14,10 @@ using Pixel = std::array<int, 4>;
 
 Pixel centre(const std::string& svg)
 {
-    auto document = nova::svg::Document::loadFromData(svg);
-    REQUIRE(document != nullptr);
-    auto bitmap = document->renderToBitmap(40, 40);
-    bitmap.convertToRGBA();
-    const uint8_t* p = bitmap.data() + 20 * bitmap.stride() + 20 * 4;
+    auto dom = nova::svg::document::load_data(svg);
+    REQUIRE(dom != nullptr);
+    auto image = dom->render_to_image(40, 40);
+    const uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
     return {p[0], p[1], p[2], p[3]};
 }
 
@@ -71,7 +70,7 @@ TEST_CASE("var(): custom properties inherit, and a descendant can override them"
 {
     CHECK(centre(svg("--c:red", "<g>" + rect + "fill=\"var(--c)\"/></g>")) == red);
     CHECK(centre(svg("--c:red", "<g style=\"--c:green\">" + rect + "fill=\"var(--c)\"/></g>")) == green);
-    // An override is seen by the descendants of the element that has it only.
+    // An override is seen by the descendants of the el that has it only.
     CHECK(centre(svg("--c:red", "<g style=\"--c:green\"/>" + rect + "fill=\"var(--c)\"/>")) == red);
 }
 
@@ -117,11 +116,17 @@ TEST_CASE("var(): a <use> copy gets the value its original computed")
 
 TEST_CASE("var(): a stylesheet applied after loading changes what var() gives")
 {
-    auto document = nova::svg::Document::loadFromData(svg("--c:red", rect + "fill=\"var(--c)\"/>"));
-    REQUIRE(document != nullptr);
-    document->applyStyleSheet(":root{--c:blue !important}");
-    auto bitmap = document->renderToBitmap(40, 40);
-    bitmap.convertToRGBA();
-    const uint8_t* p = bitmap.data() + 20 * bitmap.stride() + 20 * 4;
+    auto dom = nova::svg::document::load_data(svg("--c:red", rect + "fill=\"var(--c)\"/>"));
+    REQUIRE(dom != nullptr);
+    dom->apply_style_sheet(":root{--c:blue !important}");
+    auto image = dom->render_to_image(40, 40);
+    const uint8_t* p = image.data() + 20 * image.stride() + 20 * 4;
     CHECK(Pixel{p[0], p[1], p[2], p[3]} == blue);
+}
+
+// `!important` is matched without regard to case (nova::utils::iequals).
+TEST_CASE("an !IMPORTANT flag in any letter case wins over a later declaration")
+{
+    const std::string body = "<rect width=\"40\" height=\"40\" style=\"fill:#0000ff !ImPoRtAnT; fill:#ff0000\"/>";
+    CHECK(centre(svg("", body)) == Pixel{0, 0, 255, 255});
 }
