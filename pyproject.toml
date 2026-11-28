@@ -2,7 +2,7 @@
 requires = [
     "scikit-build-core>=1.0.0",
     "nanobind>=2.0.0",
-    "polybind>=0.6.3",   # resolves the native dependencies below; installs the build-time ones into the build environment
+    "polybind>=0.6.4",   # resolves the native dependencies below; installs the build-time ones into the build environment
 ]
 build-backend = "scikit_build_core.build"
 

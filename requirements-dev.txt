@@ -1,7 +1,7 @@
 # build dependencies
 scikit-build-core
 nanobind
-polybind>=0.6.3   # resolves libstb for a CMake configure ([tool.polybind.deps.libstb] in pyproject.toml)
+polybind>=0.6.4   # resolves libstb for a CMake configure ([tool.polybind.deps.libstb] in pyproject.toml)
 
 # development dependencies
 build
