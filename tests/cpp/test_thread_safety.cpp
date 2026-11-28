@@ -83,20 +83,17 @@ TEST_CASE("threads: separate documents load and render at the same time, each gi
 
 namespace fs = std::filesystem;
 
-// Every sample of the repository (data/ and the golden set), one document at a time, rendered to an image and to a PDF by
+// Every sample of the repository (data/), one document at a time, rendered to an image and to a PDF by
 // three threads at once. The same document, so what the threads share is what a document fills in lazily: its layout and
 // the memo of every paint bounding box. Odd documents have their layout done first, even ones leave it to the threads.
 TEST_CASE("threads: one document rendered from several threads, every sample, layout done or not")
 {
     const fs::path root = fs::path(__FILE__).parent_path().parent_path().parent_path();
     std::vector<fs::path> files;
-    for(const char* dir : {"data", "refactor/golden-svg"}) {
-        if(!fs::exists(root / dir))
-            continue;
-        for(const auto& e : fs::recursive_directory_iterator(root / dir))
-            if(e.path().extension() == ".svg")
-                files.push_back(e.path());
-    }
+    REQUIRE(fs::exists(root / "data"));
+    for(const auto& e : fs::recursive_directory_iterator(root / "data"))
+        if(e.path().extension() == ".svg")
+            files.push_back(e.path());
     REQUIRE(!files.empty());
     int index = 0;
     for(const auto& f : files) {

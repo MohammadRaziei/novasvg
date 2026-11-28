@@ -4,11 +4,6 @@ file(GLOB NOVA_TEST_SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/test_*.cpp
 )
 
-# TEMPORARY refactor hook: verification tests that only make sense while the refactor runs live in the
-# gitignored /refactor/temp-tests and are compiled in when present. Remove this block when the refactor ends.
-file(GLOB NOVA_REFACTOR_TEST_SOURCES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/refactor/temp-tests/test_*.cpp)
-list(APPEND NOVA_TEST_SOURCES ${NOVA_REFACTOR_TEST_SOURCES})
-
 add_executable(test_novasvg_cpp ${NOVA_TEST_SOURCES})
 
 set(NOVA_TEST_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")

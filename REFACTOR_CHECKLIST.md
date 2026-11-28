@@ -409,7 +409,7 @@ Scripted (not by hand): every namespace-scope `NOVA_INLINE` definition (non-temp
 5. [ ] Promote layers/pattern/mask to virtuals of `canvas`; PDF: vector `SMask` for masks, gradient reflect/repeat, per-stop alpha, font embedding,
        multi-page, metadata; element-level `render_to_pdf`; CLI `-o x.pdf|png|jpg`.
 6. [ ] Python binding back on (switched off for now by the maintainer): update for `render_to_pdf`, fonts, private includes; rerun the 433 tests.
-7. [ ] Step 7 (README, Doxygen, CI, wheels, install tree) and delete the temporary `refactor/` material and the hook in `tests/cpp/CMakeLists.txt`.
+7. [ ] Step 7 (README, Doxygen, CI, wheels, install tree) and delete the temporary `refactor/` material (the hook in `tests/cpp/CMakeLists.txt` and the `refactor/golden-svg` entry of `test_thread_safety.cpp` are already gone: no test reads `refactor/` any more).
 
 ## Logging on stb::logging (session 3, after the full gate)
 
