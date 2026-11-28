@@ -1,17 +1,19 @@
 # build dependencies
 scikit-build-core
 nanobind
+polybind>=0.6.3   # resolves libstb for a CMake configure ([tool.polybind.deps.libstb] in pyproject.toml)
 
 # development dependencies
 build
 twine
 
-# testing dependencies (keep in step with the `test` extra in pyproject.toml)
+# testing dependencies (keep in step with the `test` extra in pyproject.toml; libstb is a runtime dependency of the wheel,
+# listed here so that the Python tests that import it run)
 pytest
 pytest-cov
 fonttools
 pillow
-libstb>=0.9.0
+libstb~=0.11.0
 numpy
 
 # documentation dependencies (doxygen/graphviz themselves are installed via

@@ -82,6 +82,20 @@ if(DEFINED SKBUILD)
     )
 
     # Installation
+    # The CLI sits in novasvg/bin, so the libstb wheel is two levels up (the plain-install runpath, ../lib, does not exist here).
+    if(APPLE)
+        set_target_properties(novasvg_cli PROPERTIES INSTALL_RPATH "@loader_path/../../libstb/sdk/lib")
+    elseif(UNIX)
+        set_target_properties(novasvg_cli PROPERTIES INSTALL_RPATH "$ORIGIN/../../libstb/sdk/lib")
+    endif()
+    # SKBUILD=2 is the install tree of the CMake-driven build (cmake --build, ctest), not a wheel: there is no libstb wheel next
+    # to the package, so the module and the CLI also look in the directory of the libstb they were linked against.
+    if(SKBUILD EQUAL 2 AND UNIX)
+        foreach(_t novasvg_py novasvg_cli)
+            get_target_property(_rp ${_t} INSTALL_RPATH)
+            set_target_properties(${_t} PROPERTIES INSTALL_RPATH "${_rp};$<TARGET_FILE_DIR:libstb::libstb>")
+        endforeach()
+    endif()
     install(TARGETS novasvg_cli
         RUNTIME DESTINATION novasvg/bin
     )
@@ -126,12 +140,15 @@ endif()
 
 set(NOVA_PYTHON_INSTALL_DIR ${CMAKE_BINARY_DIR}/python/install)
 
-# The nested build fetches libstb on its own; a local libstb checkout given to this one (a libstb change tried
-# together with novasvg) has to reach it too, or the module is built against another libstb than the rest.
+# The nested build resolves libstb on its own; every setting that decides where it comes from has to reach it too,
+# or the module is built against another libstb than the rest.
 set(NOVA_PYTHON_FORWARDED_ARGS "")
-if(FETCHCONTENT_SOURCE_DIR_LIBSTB)
-    list(APPEND NOVA_PYTHON_FORWARDED_ARGS -DFETCHCONTENT_SOURCE_DIR_LIBSTB=${FETCHCONTENT_SOURCE_DIR_LIBSTB})
-endif()
+foreach(_v FETCHCONTENT_SOURCE_DIR_LIBSTB POLYBIND_DEPS_PROVIDER POLYBIND_DEPS_PROVIDER_LIBSTB POLYBIND_DEPS_PREFER_PROVIDER
+           POLYBIND_DEPS_PYTHON POLYBIND_DEPS_OFFLINE POLYBIND_DEPS_PIN)
+    if(DEFINED ${_v})
+        list(APPEND NOVA_PYTHON_FORWARDED_ARGS "-D${_v}=${${_v}}")
+    endif()
+endforeach()
 
 ExternalProject_Add(novasvg_build_python
     SOURCE_DIR ${CMAKE_SOURCE_DIR}

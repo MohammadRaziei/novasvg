@@ -83,7 +83,7 @@ Notes:
 
 #### Interop: memoryview, NumPy, DLPack, Pillow
 
-NumPy, Pillow and [libstb](https://github.com/MohammadRaziei/libstb) are optional extras (`pip install "novasvg[numpy]"`, `"novasvg[pillow]"`, `"novasvg[stb]"`); `import novasvg` never loads them.
+NumPy and Pillow are optional extras (`pip install "novasvg[numpy]"`, `"novasvg[pillow]"`); `import novasvg` never loads them. [libstb](https://github.com/MohammadRaziei/libstb) is a dependency of the wheel (novasvg loads its shared library), but its Python module is imported only by `to_stb()` / `from_stb()`.
 
 ```python
 import numpy as np

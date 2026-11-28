@@ -62,37 +62,35 @@ if(NOVA_SANITIZE)
 endif()
 
 # ---- libstb: image/zlib/font engine, linked DYNAMICALLY ---------------------------------------
-# Fetched from git with FetchContent. Point FETCHCONTENT_SOURCE_DIR_LIBSTB at a local checkout to
-# work on both projects side by side, or pass -DFETCHCONTENT_FULLY_DISCONNECTED=ON to stay offline.
-include(FetchContent)
-set(NOVA_LIBSTB_GIT_REPOSITORY "https://github.com/mohammadraziei/libstb.git" CACHE STRING
-    "libstb repository to fetch")
-set(NOVA_LIBSTB_GIT_TAG "master" CACHE STRING
-    "libstb commit, tag or branch to fetch")
-
-# libstb is always built as a shared library here, and none of its extras are wanted.
-set(STB_BUILD_SHARED   ON  CACHE BOOL "novasvg links libstb dynamically" FORCE)
-set(STB_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
-set(STB_BUILD_PYTHON   OFF CACHE BOOL "" FORCE)
-set(STB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(STB_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
-
-FetchContent_Declare(libstb
-    GIT_REPOSITORY "${NOVA_LIBSTB_GIT_REPOSITORY}"
-    GIT_TAG        "${NOVA_LIBSTB_GIT_TAG}")
-# libstb appends its own cmake/ directory to CMAKE_MODULE_PATH AFTER ours, and both projects have
-# modules of the same name (Startup, Optimize, DynamicVersion). Left alone, libstb would silently
-# include novasvg's Optimize.cmake and be compiled with novasvg's flags (checked: it lost
-# -fstrict-aliasing). So our modules are hidden while libstb configures.
-set(_novasvg_module_path "${CMAKE_MODULE_PATH}")
-set(CMAKE_MODULE_PATH "")
-FetchContent_MakeAvailable(libstb)
-set(CMAKE_MODULE_PATH "${_novasvg_module_path}")
+# Declared in pyproject.toml ([tool.polybind.deps.libstb]) and resolved by polybind (`pip install polybind`; scikit-build-core
+# installs it from [build-system].requires). Python is needed at configure time. Where libstb comes from:
+#   python   the libstb wheel (the very one the novasvg wheel depends on at run time): headers, stb.so and the CMake package
+#            from `python -m libstb --cmake-dir`. Default: `auto` tries it first.
+#   fetch    git clone of the tag that fits the version range, built here as a shared library (options in the settings).
+# -DPOLYBIND_DEPS_PROVIDER_LIBSTB=fetch|python|uv|pip|system forces one; -DFETCHCONTENT_SOURCE_DIR_LIBSTB=<checkout> makes
+# `fetch` use a local libstb (a change tried together with novasvg); -DPOLYBIND_DEPS_OFFLINE=ON installs and fetches nothing.
+# The tag that passed the tests is recorded in polybind.lock (target polybind_deps_record).
+if(NOVA_SANITIZE AND NOT POLYBIND_DEPS_PROVIDER_LIBSTB)
+    # A wheel's libstb is not sanitized, and the flags above are directory-scoped: libstb has to be built here.
+    set(POLYBIND_DEPS_PROVIDER_LIBSTB fetch)
+endif()
+find_package(Python COMPONENTS Interpreter REQUIRED)
+execute_process(COMMAND "${Python_EXECUTABLE}" -m polybind cmake-dir
+    OUTPUT_VARIABLE _novasvg_polybind_dir OUTPUT_STRIP_TRAILING_WHITESPACE RESULT_VARIABLE _novasvg_polybind_rc ERROR_QUIET)
+if(NOT _novasvg_polybind_rc EQUAL 0)
+    message(FATAL_ERROR "novasvg resolves libstb with polybind, which ${Python_EXECUTABLE} does not have: "
+                        "pip install polybind (or pass -DPython_EXECUTABLE=<an interpreter that has it>)")
+endif()
+include("${_novasvg_polybind_dir}/PolybindDeps.cmake")
+polybind_deps_load()
+polybind_resolve_dep(libstb)
+polybind_deps_record_target()
 
 get_target_property(_novasvg_libstb_type libstb::libstb TYPE)
 if(NOT _novasvg_libstb_type STREQUAL "SHARED_LIBRARY")
     message(FATAL_ERROR "novasvg requires libstb as a shared library, got: ${_novasvg_libstb_type}")
 endif()
+message(STATUS "NovaSVG: libstb ${POLYBIND_DEP_LIBSTB_VERSION} (${POLYBIND_DEP_LIBSTB_PROVIDER})")
 
 # ---- the compiled libraries --------------------------------------------------------------------
 # Two libraries (ADR-0009):

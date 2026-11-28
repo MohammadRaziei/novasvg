@@ -24,7 +24,7 @@
 
 ## Why NovaSVG
 
-- **One dependency.** Images, zlib and fonts come from [libstb](https://github.com/mohammadraziei/libstb), which CMake fetches for you. No system libraries, no fontconfig.
+- **One dependency.** Images, zlib and fonts come from [libstb](https://github.com/mohammadraziei/libstb), a shared library that CMake gets for you (the libstb wheel, or a git checkout; see below). No system libraries, no fontconfig.
 - **Renders what real diagrams contain.** Gradients, patterns, clip paths, masks, markers, a full SVG filter pipeline, CSS styling, embedded fonts, and `<foreignObject>` text, which is what Mermaid uses for every label.
 - **Close to a browser.** Compared against Chromium on a 60-sample corpus, including 49 Mermaid diagrams. See [how it stacks up](#how-it-compares).
 - **More than a renderer.** Query elements with CSS selectors, rewrite styles, read bounding boxes and matrices, and render a single element on its own.
@@ -98,6 +98,8 @@ FetchContent_MakeAvailable(novasvg)
 
 target_link_libraries(my_app PRIVATE novasvg::novasvg)
 ```
+
+libstb is declared in `[tool.polybind.deps.libstb]` of `pyproject.toml` and resolved by [polybind](https://github.com/mohammadraziei/polybind) while CMake configures, so configuring needs Python with polybind (`pip install polybind`). `-DPOLYBIND_DEPS_PROVIDER_LIBSTB=fetch` builds libstb from git instead of using the wheel (`NOVA_SANITIZE` does that by itself), and `-DFETCHCONTENT_SOURCE_DIR_LIBSTB=<checkout>` uses a local libstb with it. The tag that passed the tests is in `polybind.lock`.
 
 **Installed package.**
 

@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Changed
+
+- **libstb is a declared dependency, resolved by polybind.** `[tool.polybind.deps.libstb]` in `pyproject.toml` (`~=0.11.0`) replaces the `FetchContent` block, `NOVA_LIBSTB_GIT_REPOSITORY` and `NOVA_LIBSTB_GIT_TAG`. The wheel now requires the `libstb` wheel (the `stb` extra is gone) and is built against that same libstb, instead of master fetched at build time and then loaded from a different libstb at run time. A CMake configure needs Python with polybind; `-DPOLYBIND_DEPS_PROVIDER_LIBSTB=fetch` builds libstb from git (the tag is recorded in `polybind.lock`), `NOVA_SANITIZE` does that on its own. The CLI in the wheel finds libstb (its runpath pointed at a directory that does not exist in a wheel).
+
 ### Added
 
 - **PDF: text can be real text in an embedded font** (ADR-0019), chosen per call like Illustrator's outline-or-embed: `render_to_pdf(text=...)` / `save_pdf(..., text=...)` (C++ `document::pdf_text`, Python `PdfText`) and `novasvg --pdf-text outlines|embed|embed-ignore-license`. `outlines` (the default) is what it always was. `embed` writes the text in a subset of the font (a Type 0 font, the glyphs the page uses, `/ToUnicode` and an `/ActualText` per run); a font whose license (OS/2 fsType) forbids embedding, or that is CFF or a variable font at a chosen weight, keeps its text as outlines and a warning is logged once per font. `embed_ignore_license` skips the license check: whoever asks for it answers for the license. Needs libstb with `stb::subsetter`. Checked with pdfium, pypdf and fontTools.
