@@ -20,15 +20,14 @@ Work in small steps. A step counts as done only when all of the following hold:
 1. The project builds.
 2. The unit tests match or beat the baseline: `test_novasvg_cpp` 64 cases / 377 assertions (plus any tests added
    since), `test_novasvg_embedded_font` 5 / 71, and `test_novasvg_libstb`.
-3. `refactor/golden.py diff` against the golden renders reports **zero differing pixels** (tolerance 0), or each
+3. The golden diff against the golden renders reports **zero differing pixels** (tolerance 0), or each
    difference is explained in the checklist.
 4. `REFACTOR_CHECKLIST.md` is updated with what was verified and what was found.
 5. A zip of the project is delivered.
 
 The golden renders are the 62 PNGs produced by the baseline CLI (commit `85ebfc7`, version 0.11.4) from every
-SVG under `data/`. They live in `refactor/golden-baseline/`, which is listed in `.gitignore`, so they travel in
-the zip but are never committed. They can be regenerated from the baseline commit (the checklist has the
-commands). `golden.py` decodes PNGs before comparing, so changing the PNG encoder does not count as a
+SVG under `data/`. They were kept in an untracked folder (the zip carried them), never committed, and were deleted when the refactor ended. They can be regenerated from the baseline commit (the checklist has the
+commands). The diff tool decoded PNGs before comparing, so changing the PNG encoder does not count as a
 difference. It was tested both ways: two runs of one binary give zero differences, and a deliberate one-level
 change in one pixel is reported.
 
@@ -63,7 +62,7 @@ named commit keeps them reproducible.
 
 ## Action Items
 
-1. [x] `refactor/golden.py` (render and diff) and the baseline renders.
+1. [x] A temporary golden tool (render and diff) and the baseline renders.
 2. [x] Per-step checklist with the exit criteria above.
 3. [ ] Add RTL text, JPEG/GIF images, `mix-blend-mode` and filter SVGs to the golden set (before steps 2b, 3, 5).
 4. [ ] Bring the Python tests into the gate in step 7.

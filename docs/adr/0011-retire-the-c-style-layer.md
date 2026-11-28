@@ -28,7 +28,7 @@ Done (each with tests, golden 0 diff, ASAN):
 1. `blend.{h,cpp}` (1006 lines, Porter-Duff operators): waits for the libstb issue (`composite_op` and `exclusion`).
 2. `surface.cpp` / `pixmap.cpp` (337 lines): `stb::image` with a `pixel_format`.
 3. ~~`color_t`~~ DONE: gradient stops were already 8-bit (`with_alpha`), so `stb::color` is exact. `color_parse` (CSS syntax,
-   148 names) stays until libstb accepts CSS syntax and all keywords: see `refactor/libstb-issues.md` (issues 2 to 5).
+   148 names) stays until libstb accepts CSS syntax and all keywords: see the libstb issues 2 to 5.
 4. `font_face_data`: what it adds over `stb::font` is the glyph cache and the size scale; the rest (metrics, outline,
    kerning, shaping) should call `stb::font` directly. The updated libstb (6af6df8: GPOS marks, `glyph_kind`, shaping
    of a text range) makes this possible for text drawn in pieces.

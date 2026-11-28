@@ -10,7 +10,7 @@ A step is done only when **all** of these hold:
 
 1. The project builds.
 2. The tests match the baseline or better (numbers below).
-3. `refactor/golden.py diff` over the 62 golden renders shows zero differences (or each difference is explained here).
+3. The golden diff over the 62 golden renders shows zero differences (or each difference is explained here).
 4. This file is updated: boxes ticked, findings written under the step.
 5. A zip of the project is delivered, one per step, to be pushed on a new branch.
 
@@ -29,32 +29,31 @@ cmake --build build
 ./build/tests/cpp/test_novasvg_embedded_font
 ./build/tests/cpp/test_novasvg_libstb
 
-# Pixel comparison against the baseline
-python3 refactor/golden.py render ./build/novasvg /tmp/golden-new
-python3 refactor/golden.py diff refactor/golden-baseline /tmp/golden-new
+# Pixel comparison against the baseline: render every SVG of data/ with ./build/novasvg and compare the
+# decoded pixels with the baseline renders (a temporary tool kept outside the repository, deleted at the end)
 ```
 
-`golden.py` decodes the PNGs before comparing, so swapping the PNG encoder does not count as a difference; only
+The golden tool decoded the PNGs before comparing, so swapping the PNG encoder does not count as a difference; only
 pixels do. The tool was tested both ways: two renders of one binary differ by zero, and a one-level change in a
 single pixel (delta 7) is reported.
 
 ## Baseline (version 0.11.4, commit `85ebfc7`)
 
-The golden renders live in `refactor/golden-baseline/`, which is in `.gitignore` (they travel in the zip, never in
-git). If they are lost, regenerate them from the baseline commit:
+The golden renders were kept in an untracked folder (they travelled in the zip, never in git) and were deleted when
+the refactor ended. To regenerate them, build the baseline commit:
 
 ```sh
 git stash -u && git checkout 85ebfc7          # or use a separate worktree
 cmake -S . -B /tmp/b0 -G Ninja -DCMAKE_BUILD_TYPE=Release -DNOVA_BUILD_PYTHON=OFF \
       -DNOVA_BUILD_TESTS=OFF -DNOVA_BUILD_EXAMPLES=OFF && cmake --build /tmp/b0
-python3 refactor/golden.py render /tmp/b0/novasvg refactor/golden-baseline
+# then render every SVG of data/ with /tmp/b0/novasvg
 ```
 
 | Item | Value |
 |---|---|
 | `test_novasvg_cpp` | 64 cases, 377 assertions, all pass |
 | `test_novasvg_embedded_font` | 5 cases, 71 assertions, all pass |
-| golden renders | 62 images (3.2 MB) in `refactor/golden-baseline/` |
+| golden renders | 62 images (3.2 MB), kept outside the repository |
 | Python tests | not run yet (the Python bindings were off in the baseline build) |
 | After step 2a | `test_novasvg_cpp` 70 cases / 443 assertions (`test_image_io` added); the rest unchanged |
 
@@ -106,12 +105,11 @@ examples above only show the direction.
 
 ## Steps
 
-## Temporary refactor-only artifacts (gitignored, deleted when the refactor ends)
-Nothing that exists only to prove the refactor is an official test. All of it lives in `/refactor/` (in `.gitignore`):
-- `refactor/golden.py`, `refactor/golden-svg/`, `refactor/golden-baseline/`: before/after render diff
-- `refactor/temp-tests/test_*.cpp`: verification tests (old scalar loops vs libstb, layer route vs direct drawing);
-  compiled into `test_novasvg_cpp` only while the folder exists, through a marked block in `tests/cpp/CMakeLists.txt`
-  (remove that block at the end)
+## Temporary refactor-only artifacts (deleted: the refactor is finished)
+Nothing that exists only to prove the refactor is an official test. The temporary material lived in an untracked folder
+and is gone, together with the block in `tests/cpp/CMakeLists.txt` that compiled it in:
+- the golden before/after render diff (tool, golden SVGs, baseline renders)
+- verification tests (old scalar loops vs libstb, layer route vs direct drawing)
 Official tests (`tests/`) only describe the behaviour of the library as it is meant to be.
 
 
@@ -119,7 +117,7 @@ Official tests (`tests/`) only describe the behaviour of the library as it is me
 - [x] Clone novasvg and libstb
 - [x] libstb builds (static, standalone)
 - [x] novasvg baseline builds; tests green (numbers above)
-- [x] `refactor/golden.py` written and tested; 62 golden renders made (in `refactor/`, git-ignored)
+- [x] A golden render-diff tool written and tested; 62 golden renders made (untracked, temporary)
 - [x] This checklist
 - [ ] Run the Python tests (needs nanobind; revisit in step 7)
 
@@ -186,7 +184,7 @@ Target is `libstb::libstb` (renamed from `libstb::core` in libstb 0.9).
 - [x] The two conversion call sites (plus `Bitmap::convertToRGBA`) use libstb's `premultiplied_argb_to_rgba` /
       `rgba_to_premultiplied_argb`; `test_premultiply_exact.cpp` compares all 65,536 (alpha, colour) pairs, including
       colour > alpha (mod 256), with the old scalar loops
-- [x] Golden set grown 62 -> 67 (`refactor/golden-svg/`: RTL text, JPEG/GIF/PNG-alpha images, image pattern, 8 blend modes,
+- [x] Golden set grown 62 -> 67 (RTL text, JPEG/GIF/PNG-alpha images, image pattern, 8 blend modes,
       filters); baseline rendered with `85ebfc7`
 - [x] CLI, C++ tests and `sample01` updated
 - [x] Python bindings: the ten encoder bindings became one path (`encode_to_bytes` / `write_to_file` over
@@ -235,7 +233,7 @@ outlines** (`stbtt_GetGlyphShape`), so libstb must grow an API first.
 - [x] Compiled core: `novasvg_core` (STATIC, PIC, LTO) in `CMakeLists.txt`; `novasvg::noflag` / `novasvg::novasvg` link it;
       tests link `novasvg::noflag`; macros moved to `detail/config.h`
 - [x] Moved to `src/sources/vg/*.cpp`: matrix, utils, path, paint, rasterize, surface, blend, canvas (265 symbols in
-      `libnovasvg_core.a`) with `refactor/split_header.py` (temporary tool)
+      `libnovasvg_core.a`) with a temporary script
 - [x] Gate: 79 tests, font test 5 / 71, libstb link check, golden 67 images 0 differ (tol 0)
 - Lesson: no function may be left `NOVA_INLINE` in a header once `render.h` declares it `NOVA_API`
   (undefined reference in TUs that only see the declaration); everything moved, inlining relies on LTO
@@ -409,7 +407,7 @@ Scripted (not by hand): every namespace-scope `NOVA_INLINE` definition (non-temp
 5. [ ] Promote layers/pattern/mask to virtuals of `canvas`; PDF: vector `SMask` for masks, gradient reflect/repeat, per-stop alpha, font embedding,
        multi-page, metadata; element-level `render_to_pdf`; CLI `-o x.pdf|png|jpg`.
 6. [ ] Python binding back on (switched off for now by the maintainer): update for `render_to_pdf`, fonts, private includes; rerun the 433 tests.
-7. [ ] Step 7 (README, Doxygen, CI, wheels, install tree) and delete the temporary `refactor/` material (the hook in `tests/cpp/CMakeLists.txt` and the `refactor/golden-svg` entry of `test_thread_safety.cpp` are already gone: no test reads `refactor/` any more).
+7. [ ] Step 7 (README, Doxygen, CI, wheels, install tree) (the temporary refactor material, the hook in `tests/cpp/CMakeLists.txt` and the golden-svg entry of `test_thread_safety.cpp` are already gone: no test reads it any more).
 
 ## Logging on stb::logging (session 3, after the full gate)
 
@@ -458,6 +456,6 @@ Scripted (not by hand): every namespace-scope `NOVA_INLINE` definition (non-temp
 
 ## Session 5 (2026-11-06): Path, pixmap, layout, nova::vg, svgelement split, snake_case pass 1, foreignObject extension
 
-Zips step11 to step17. See `refactor/handoff.md` (section 4) for the list; ADR-0010 for the foreignObject design.
+Zips step11 to step17. See ADR-0010 for the foreignObject design.
 Gate at step17 (libstb 797038e): C++ 90 cases / 2243 assertions, font test 71, golden 67 images 0 differ at tolerance 0,
-`nova_vg_layering` OK. Open: snake_case pass 2 (195 names, `refactor/tools/rename_pass2.py`), `path_t` C API removal, Python still OFF.
+`nova_vg_layering` OK. Open: snake_case pass 2 (195 names), `path_t` C API removal, Python still OFF.

@@ -120,7 +120,7 @@
   browsers). Less duplication with libstb (ADR-0011): `color_parse` and the 148-name colour table, `map_points`/`mapped_bounds`,
   `arc_to`/`arc_to_radians` and `bounding_rect` are gone and `stb::color::try_parse`, `stb::matrix::map`/`map_rect`, `stb::outline::arc_to`
   and `outline::tight_bounds` are used. Three golden images (`01-venn`, `34-venn`, `42-mindmap-shapes`) changed on arc edge pixels only
-  (libstb splits a semicircle into three cubics, we used two); the old images are in `refactor/golden-baseline-step32/`.
+  (libstb splits a semicircle into three cubics, we used two).
 - `ref_count_t` is `std::atomic<int>` on every platform (the three per-compiler variants are gone).
 - `README_PYTHON.md` used the C++ spelling `stb::color` in its Python examples (a rename slip); it is `Color` again. The generated
   `docs/naming-table-internal.md` is deleted and `docs/naming-table.md` is marked as the applied, historical record of ADR-0004.

@@ -104,8 +104,8 @@ As built, the interface differs from the sketch above in small ways, all in canv
 Checked by: 126 C++ tests (7 new ones for the layer and pattern calls on both backends), the 68 sample renders unchanged, and the
 **68 sample PDFs byte for byte against the build from before the change**, 10 of which hold a bitmap object, 10 a transparency
 group and 5 a tiling pattern (so the new paths are exercised). A first attempt at that comparison was wrong: the command line
-tool writes a PNG whatever the file name says, so it compared PNGs. The PDFs come from `document::render_to_pdf` through the
-tooling test in `refactor/temp-tests/test_pdf_dump.cpp`.
+tool writes a PNG whatever the file name says, so it compared PNGs. The PDFs come from `document::render_to_pdf` through a
+temporary tooling test (not kept in the repository).
 
 Step 2, items 1 and 2:
 - Gradient `spreadMethod` reflect and repeat are written as one shading over as many periods as the page needs (at most 128; the

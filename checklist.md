@@ -440,7 +440,7 @@
 ## نشست ۱۳ نوامبر ۲۰۲۶ — وضعیت ریفکتور (برای چت بعدی)
 
 ### انجام‌شده (گام ۳۹ و ۴۰)
-- [x] libstb: همه‌ی issueهای `refactor/libstb-issues.md` (۱ تا ۱۴) داخل libstb هستن و novasvg ازشون استفاده می‌کنه. دیگه issue نمی‌نویسیم: چیز عمومی که کم باشه مستقیم توی libstb پیاده می‌شه و novasvg بهش سوییچ می‌کنه.
+- [x] libstb: همه‌ی issueهای لیست libstb (۱ تا ۱۴) داخل libstb هستن و novasvg ازشون استفاده می‌کنه. دیگه issue نمی‌نویسیم: چیز عمومی که کم باشه مستقیم توی libstb پیاده می‌شه و novasvg بهش سوییچ می‌کنه.
 - [x] `blend.{h,cpp}`: کد Porter-Duff و blend mode ردیفی رفت (`stb::composite_row`/`composite_solid_row`، SSE2/AVX2)؛ فقط sampling گرادیان و بافت مونده. `vg::blend_mode` و `css_mix_blend_mode` حذف شدن: state کانواس `stb::composite_op op` + `stb::blend_mode mode` دارد، PDF فقط `stb::blend_mode` می‌گیره.
 - [x] `font_face.cpp`: خواننده‌ی sfnt (حدود ۲۶۰ خط) رفت؛ cache با `font::scan`/`system_fonts` پر می‌شه، هر face با اسم typographic و اسم قدیمی ثبت می‌شه و یک‌بار load می‌شه، انتخاب با bold/italic، بعد عرض، بعد وزن. `font_face(std::vector<uint8_t>&&)` برای بایت‌های فونت (data URI و فونت داخلی).
 - [x] `span_buffer_t` و ماکروهای `novasvg_array_*` رفتن: `stb::span_set` (clip/mask). `cubics_only` حذف شد (کد مرده).
@@ -461,7 +461,7 @@
 - [ ] یک مرحله‌ی اسکریپتی: namespace + جابه‌جایی پوشه‌ها + rename به `snake_case` + target جدای CMake برای `nova::vg`
 - [x] لایه‌ها (`begin_layer`/`end_layer`)، pattern و `raster_scale` به‌صورت virtual در `canvas`؛ PDF: spread ی gradient، alpha ی مشترک stop ها، `/Info` (ADR-0014، STEP 54)
 - [ ] PDF: gradient با alpha ی متفاوت (fade) با soft mask، `<mask>` و clip-mask برداری، embed فونت، چندصفحه‌ای؛ عنوان سند از `<title>` (DOM آن را نگه نمی‌دارد)
-- [ ] Step 7 (README، Doxygen، CI، wheel) و پاک‌سازی `refactor/`
+- [ ] Step 7 (README، Doxygen، CI، wheel) و (مواد موقتِ refactor و هوکِ آن در `tests/cpp/CMakeLists.txt` پاک شده‌اند)
 - ASAN با `ASAN_OPTIONS=detect_odr_violation=0` اجرا می‌شه (`std::_Sp_make_shared_tag` هم توی exe هست هم توی libstb.so: false positive شناخته‌شده).
 
 ### یادآوری روش کار

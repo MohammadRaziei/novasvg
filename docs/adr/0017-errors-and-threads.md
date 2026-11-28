@@ -50,7 +50,7 @@ nothing catches it on the way out of the public API. The public headers carry no
 - Eight threads, four rounds each, every one loading and rendering its own document (text, a gradient, a mask, a clip
   mask, a foreignObject, as an image and as a PDF), started on a cold process so that a race in the first use of a cache
   would show: no report, and every result equal to the single-thread one.
-- One document at a time, every SVG in `data/` and `refactor/golden-svg`, rendered by three threads at once to an image
+- One document at a time, every SVG in `data/`, rendered by three threads at once to an image
   and to a PDF, half of the documents with their layout done first and half not: before the lock, 12 reports at two
   places (the `paint_bounding_box()` memo and the read of the same field); with it, none. Nothing else in the renderer
   was reported across those samples.
